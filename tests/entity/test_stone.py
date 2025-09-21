@@ -7,3 +7,9 @@ def test_initialization():
     assert stone.name == "Stone"
     assert stone.getImagePath() == "assets/images/stone.png"
     assert stone.isSolid() == True
+
+
+def test_isPushable():
+    stone = Stone()
+    
+    assert stone.isPushable() == True

@@ -6,3 +6,9 @@ def test_initialization():
 
     assert drawableEntity.getName() == "test"
     assert drawableEntity.getImagePath() == "myimagepath.png"
+
+
+def test_isPushable_default():
+    drawableEntity = DrawableEntity("test", "myimagepath.png")
+    
+    assert drawableEntity.isPushable() == False

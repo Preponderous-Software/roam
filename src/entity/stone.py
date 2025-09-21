@@ -10,3 +10,6 @@ class Stone(DrawableEntity):
 
     def isSolid(self):
         return self.solid
+
+    def isPushable(self):
+        return True

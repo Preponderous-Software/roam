@@ -17,3 +17,6 @@ class DrawableEntity(Entity):
 
     def setImagePath(self, imagePath):
         self.imagePath = imagePath
+
+    def isPushable(self):
+        return False

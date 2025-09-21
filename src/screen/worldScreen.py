@@ -350,8 +350,15 @@ class WorldScreen:
             self.save()
             return
 
+        # Check for pushable entities first, then solid entities
         if self.locationContainsSolidEntity(newLocation):
-            return
+            # Try to push any pushable entities
+            if self.tryPushEntitiesInLocation(newLocation, direction):
+                # Successfully pushed, continue with movement
+                pass
+            else:
+                # Can't push or movement blocked
+                return
 
         # if bear is in the new location, kill the player
         for entityId in list(newLocation.getEntities().keys()):
@@ -466,6 +473,45 @@ class WorldScreen:
             if entity.isSolid():
                 return True
         return False
+
+    def tryPushEntitiesInLocation(self, location, direction):
+        """
+        Attempts to push all pushable entities in the given location.
+        Returns True if all pushable entities were successfully pushed, False otherwise.
+        """
+        pushableEntities = []
+        
+        # Find all pushable entities in the location
+        for entityId in list(location.getEntities().keys()):
+            entity = location.getEntity(entityId)
+            if entity.isSolid() and hasattr(entity, 'isPushable') and entity.isPushable():
+                pushableEntities.append(entity)
+        
+        # If no pushable entities, return False (can't resolve the solid entity blocking)
+        if not pushableEntities:
+            return False
+        
+        # Try to push each pushable entity
+        for entity in pushableEntities:
+            pushTargetLocation = self.getLocationDirection(
+                direction, self.currentRoom.getGrid(), location
+            )
+            
+            # Check if push target is valid
+            if pushTargetLocation == -1:
+                # Can't push beyond room boundary
+                return False
+            
+            if self.locationContainsSolidEntity(pushTargetLocation):
+                # Can't push into another solid entity
+                return False
+            
+            # Perform the push
+            location.removeEntity(entity)
+            pushTargetLocation.addEntity(entity)
+            self.status.set("pushed " + entity.getName())
+        
+        return True
 
     def executePlaceAction(self):
         if self.player.getInventory().getNumTakenInventorySlots() == 0:
