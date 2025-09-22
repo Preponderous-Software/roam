@@ -1,4 +1,5 @@
 import pygame
+from api.api_server import RoamAPIServer
 from config.config import Config
 from player.player import Player
 from lib.graphik.src.graphik import Graphik
@@ -49,6 +50,9 @@ class Roam:
         )
         self.configScreen = ConfigScreen(self.graphik, self.config, self.status)
         self.currentScreen = self.mainMenuScreen
+        
+        # Initialize API server but don't start it yet
+        self.apiServer = None
 
     def initializeGameDisplay(self):
         if self.config.fullscreen:
@@ -62,8 +66,19 @@ class Roam:
 
     def initializeWorldScreen(self):
         self.worldScreen.initialize()
+        
+        # Start API server when world screen is initialized
+        if self.apiServer is None:
+            self.apiServer = RoamAPIServer(self.worldScreen, self.player)
+            if self.apiServer.start():
+                print("REST API server started successfully")
+            else:
+                print("Failed to start REST API server")
 
     def quitApplication(self):
+        # Stop API server if running
+        if self.apiServer and self.apiServer.is_running():
+            self.apiServer.stop()
         pygame.quit()
         quit()
 

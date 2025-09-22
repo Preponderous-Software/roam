@@ -1273,3 +1273,15 @@ class WorldScreen:
 
         self.changeScreen = False
         return self.nextScreen
+
+    def getCurrentRoom(self):
+        """Get the current room"""
+        return self.currentRoom
+
+    def getMap(self):
+        """Get the world map"""
+        return self.map
+
+    def getTickCounter(self):
+        """Get the tick counter"""
+        return self.tickCounter
