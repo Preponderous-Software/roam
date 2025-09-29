@@ -1,6 +1,8 @@
 import random
 
 import pygame
+from entity.excrement import Excrement
+from entity.grass import Grass
 from entity.living.bear import Bear
 from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
@@ -116,6 +118,13 @@ class Room(Environment):
 
             # decrease energy
             entity.removeEnergy(1)
+
+            # check if entity should spawn excrement
+            if entity.shouldSpawnExcrement(tick):
+                # spawn excrement at the old location
+                excrement = Excrement(tick)
+                self.addEntityToLocation(excrement, location)
+                entity.setTickLastExcrement(tick)
 
             # if entity needs energy
             if entity.needsEnergy():
@@ -244,3 +253,22 @@ class Room(Environment):
 
     def setLivingEntities(self, livingEntities):
         self.livingEntities = livingEntities
+
+    def ageExcrement(self, tick):
+        """Convert excrement to grass after it ages for 10 minutes (at 30 ticks per second)"""
+        excrementAgeThreshold = 30 * 60 * 10  # 18000 ticks (10 minutes)
+        
+        excrementToConvert = []
+        for locationId in self.grid.getLocations():
+            location = self.grid.getLocation(locationId)
+            for entityId in list(location.getEntities().keys()):
+                entity = location.getEntity(entityId)
+                if isinstance(entity, Excrement):
+                    if entity.getAge(tick) >= excrementAgeThreshold:
+                        excrementToConvert.append((entity, location))
+        
+        # Convert excrement to grass
+        for excrement, location in excrementToConvert:
+            self.removeEntity(excrement)
+            grass = Grass()
+            self.addEntityToLocation(grass, location)

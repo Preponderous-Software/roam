@@ -1246,6 +1246,9 @@ class WorldScreen:
 
             self.currentRoom.reproduceLivingEntities(self.tickCounter.getTick())
 
+            # age excrement and convert to grass
+            self.currentRoom.ageExcrement(self.tickCounter.getTick())
+
             self.handleMouseOver()
 
             self.handlePlayerActions()

@@ -11,6 +11,7 @@ class LivingEntity(DrawableEntity):
         self.targetEnergy = energy
         self.tickCreated = tickCreated
         self.tickLastReproduced = None
+        self.tickLastExcrement = None
 
     def getEnergy(self):
         return self.energy
@@ -67,3 +68,16 @@ class LivingEntity(DrawableEntity):
 
     def setTickLastReproduced(self, tick):
         self.tickLastReproduced = tick
+
+    def getTickLastExcrement(self):
+        return self.tickLastExcrement
+
+    def setTickLastExcrement(self, tick):
+        self.tickLastExcrement = tick
+
+    def shouldSpawnExcrement(self, currentTick):
+        # Spawn excrement every 5 minutes (at 30 ticks per second)
+        excrementCooldown = 30 * 60 * 5  # 9000 ticks (5 minutes)
+        if self.tickLastExcrement is None:
+            return True
+        return (currentTick - self.tickLastExcrement) >= excrementCooldown

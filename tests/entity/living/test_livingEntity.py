@@ -65,3 +65,30 @@ def test_kill():
 def test_can_eat():
     livingEntity = createLivingEntity()
     assert livingEntity.canEat("test") == False
+
+
+def test_excrement_tick_tracking():
+    livingEntity = createLivingEntity()
+    
+    assert livingEntity.getTickLastExcrement() == None
+    
+    livingEntity.setTickLastExcrement(1000)
+    assert livingEntity.getTickLastExcrement() == 1000
+
+
+def test_should_spawn_excrement():
+    livingEntity = createLivingEntity()
+    
+    # Should spawn excrement initially when never spawned
+    assert livingEntity.shouldSpawnExcrement(1000) == True
+    
+    # Set last excrement tick
+    livingEntity.setTickLastExcrement(1000)
+    
+    # Should not spawn excrement if not enough time has passed
+    assert livingEntity.shouldSpawnExcrement(1000) == False
+    assert livingEntity.shouldSpawnExcrement(1000 + 5000) == False  # Only 5000 ticks passed
+    
+    # Should spawn excrement after cooldown (9000 ticks = 5 minutes at 30 tps)
+    assert livingEntity.shouldSpawnExcrement(1000 + 9000) == True
+    assert livingEntity.shouldSpawnExcrement(1000 + 10000) == True
