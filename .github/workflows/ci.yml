@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-dev
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pygame Pillow jsonschema pytest-cov
+    
+    - name: Run tests
+      run: |
+        python -m pytest tests/ --verbose --cov=src --cov-report=term-missing --cov-report=xml:cov.xml
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./cov.xml
+        fail_ci_if_error: false
