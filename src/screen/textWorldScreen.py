@@ -316,7 +316,7 @@ class TextWorldScreen:
         location = self.getLocationOfPlayer()
         entities = location.getEntities()
         
-        for entity_id, entity in entities.items():
+        for _, entity in entities.items():
             if entity != self.player and self.canBePickedUp(entity):
                 # Try to add to inventory
                 result = self.player.getInventory().placeIntoFirstAvailableInventorySlot(entity)

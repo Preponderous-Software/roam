@@ -66,7 +66,7 @@ class TextUI:
         playerLoc = None
         for loc in grid.getLocations():
             entities = loc.getEntities()
-            for entity_id, entity in entities.items():
+            for _, entity in entities.items():
                 if entity == player:
                     playerLoc = loc
                     break
@@ -92,7 +92,7 @@ class TextUI:
                 elif len(entities) > 0:
                     # Show first non-player entity
                     entity = None
-                    for entity_id, ent in entities.items():
+                    for _, ent in entities.items():
                         if ent != player:
                             entity = ent
                             break
