@@ -65,9 +65,12 @@ class TextUI:
         # Find player location
         playerLoc = None
         for loc in grid.getLocations():
-            entities = room.getEntitiesAtLocation(loc)
-            if player in entities:
-                playerLoc = loc
+            entities = loc.getEntities()
+            for entity_id, entity in entities.items():
+                if entity == player:
+                    playerLoc = loc
+                    break
+            if playerLoc:
                 break
         
         print("  World Grid:")
@@ -81,7 +84,7 @@ class TextUI:
                     row += "? "
                     continue
                 
-                entities = room.getEntitiesAtLocation(loc)
+                entities = loc.getEntities()
                 
                 # Check if player is at this location
                 if playerLoc and loc.getX() == playerLoc.getX() and loc.getY() == playerLoc.getY():
@@ -89,9 +92,9 @@ class TextUI:
                 elif len(entities) > 0:
                     # Show first non-player entity
                     entity = None
-                    for e in entities:
-                        if e != player:
-                            entity = e
+                    for entity_id, ent in entities.items():
+                        if ent != player:
+                            entity = ent
                             break
                     if entity:
                         name = entity.getName().lower()

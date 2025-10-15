@@ -314,9 +314,9 @@ class TextWorldScreen:
     def gatherAtPlayerLocation(self):
         """Gather resources at player location."""
         location = self.getLocationOfPlayer()
-        entities = self.currentRoom.getEntitiesAtLocation(location)
+        entities = location.getEntities()
         
-        for entity in entities:
+        for entity_id, entity in entities.items():
             if entity != self.player and self.canBePickedUp(entity):
                 # Try to add to inventory
                 result = self.player.getInventory().placeIntoFirstAvailableInventorySlot(entity)

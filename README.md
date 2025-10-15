@@ -5,6 +5,8 @@ This game allows you to explore a procedurally-generated 2D world and interact w
 The planning document can be found [here](./PLANNING.md)
 
 ## Controls
+
+### Pygame UI (Default)
 Key | Action
 ------------ | -------------
 w | move up
@@ -19,6 +21,20 @@ right mouse | place
 i | open/close inventory
 print screen | take screenshot
 esc | quit
+
+### Text UI
+Key | Action
+------------ | -------------
+w | move up
+a | move left
+s | move down
+d | move right
+g | gather
+p | place
+1-0 | select item in hotbar
+i | inventory (not yet implemented)
+o | options (not yet implemented)
+q | quit
 
 ## Clone and Run
 ### Clone
@@ -36,6 +52,16 @@ esc | quit
 ### Run
 6. Run the game with the following command:
 > python src/roam.py
+
+#### Text-Based UI Mode
+You can also run the game with a text-based UI instead of the standard pygame UI:
+> python src/roam.py --text
+
+Or use the short form:
+> python src/roam.py -t
+
+To see all available options:
+> python src/roam.py --help
 
 ## Run Script (Linux Only)
 There is also a run.sh script you can execute if you're on linux which will automatically attempt to install the dependencies for you.

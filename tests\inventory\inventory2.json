@@ -1,0 +1,104 @@
+{
+    "inventorySlots": [
+        {
+            "slotIndex": 0,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 1,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 2,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 3,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 4,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 5,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 6,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 7,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 8,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 9,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 10,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 11,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 12,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 13,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 14,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 15,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 16,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 17,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 18,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 19,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 20,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 21,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 22,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 23,
+            "slotContents": []
+        },
+        {
+            "slotIndex": 24,
+            "slotContents": []
+        }
+    ]
+}
