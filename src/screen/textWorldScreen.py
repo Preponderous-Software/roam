@@ -361,7 +361,7 @@ class TextWorldScreen:
     
     def respawnPlayer(self):
         """Respawn player at spawn location."""
-        self.player.setEnergy(self.player.getMaxEnergy())
+        self.player.setEnergy(100)  # Maximum energy is hardcoded to 100 in LivingEntity
         self.player.setDead(False)
         self.currentRoom = self.map.getRoom(0, 0)
         if self.currentRoom == -1:

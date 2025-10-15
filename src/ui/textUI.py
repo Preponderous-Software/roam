@@ -52,7 +52,7 @@ class TextUI:
         
         # Display player info
         energy = player.getEnergy()
-        maxEnergy = player.getMaxEnergy()
+        maxEnergy = 100  # Maximum energy is hardcoded to 100 in LivingEntity
         energyPercent = int((energy / maxEnergy) * 100) if maxEnergy > 0 else 0
         energyBar = "█" * (energyPercent // 10) + "░" * (10 - energyPercent // 10)
         print(f"Energy: [{energyBar}] {energy:.1f}/{maxEnergy:.1f}")
@@ -64,7 +64,7 @@ class TextUI:
         
         # Find player location
         playerLoc = None
-        for loc in grid.getLocations():
+        for loc in grid.getLocations().values():
             entities = loc.getEntities()
             for _, entity in entities.items():
                 if entity == player:
