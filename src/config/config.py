@@ -19,6 +19,7 @@ class Config:
         self.gridSize = 17
         self.worldBorder = 0  # 0 = no border
         self.pathToSaveDirectory = "saves/defaultsavefile"
+        self.uiMode = "pygame"  # "pygame" or "text"
 
         # dynamic (can be changed in game)
         self.debug = True

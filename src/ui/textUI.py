@@ -1,0 +1,157 @@
+# @author Daniel McCoy Stephenson
+# @since October 15th, 2025
+# Text-based UI for Roam
+
+import os
+import sys
+from world.tickCounter import TickCounter
+
+
+class TextUI:
+    """Text-based UI renderer for Roam game."""
+    
+    def __init__(self, tickCounter: TickCounter):
+        self.tickCounter = tickCounter
+        self.statusText = ""
+        self.lastStatusTick = -1
+        self.statusDuration = 60  # ticks to show status
+        
+    def clearScreen(self):
+        """Clear the terminal screen."""
+        os.system('cls' if os.name == 'nt' else 'clear')
+    
+    def setStatus(self, text):
+        """Set status message to display."""
+        self.statusText = text
+        self.lastStatusTick = self.tickCounter.getTick()
+    
+    def getStatus(self):
+        """Get current status message if not expired."""
+        if self.lastStatusTick == -1:
+            return ""
+        currentTick = self.tickCounter.getTick()
+        if currentTick - self.lastStatusTick < self.statusDuration:
+            return self.statusText
+        return ""
+    
+    def drawWorld(self, room, player):
+        """Draw the game world in text format."""
+        self.clearScreen()
+        
+        # Display header
+        print("=" * 60)
+        print(" ROAM - Text Mode".center(60))
+        print("=" * 60)
+        print()
+        
+        # Display status if available
+        status = self.getStatus()
+        if status:
+            print(f"Status: {status}")
+            print()
+        
+        # Display player info
+        energy = player.getEnergy()
+        maxEnergy = player.getMaxEnergy()
+        energyPercent = int((energy / maxEnergy) * 100) if maxEnergy > 0 else 0
+        energyBar = "█" * (energyPercent // 10) + "░" * (10 - energyPercent // 10)
+        print(f"Energy: [{energyBar}] {energy:.1f}/{maxEnergy:.1f}")
+        print()
+        
+        # Display grid
+        grid = room.getGrid()
+        gridSize = grid.getRows()
+        
+        # Find player location
+        playerLoc = None
+        for loc in grid.getLocations():
+            entities = room.getEntitiesAtLocation(loc)
+            if player in entities:
+                playerLoc = loc
+                break
+        
+        print("  World Grid:")
+        print("  " + "─" * (gridSize * 2 + 1))
+        
+        for y in range(gridSize):
+            row = "  │"
+            for x in range(gridSize):
+                loc = grid.getLocationByCoordinates(x, y)
+                if loc == -1:
+                    row += "? "
+                    continue
+                
+                entities = room.getEntitiesAtLocation(loc)
+                
+                # Check if player is at this location
+                if playerLoc and loc.getX() == playerLoc.getX() and loc.getY() == playerLoc.getY():
+                    row += "@ "
+                elif len(entities) > 0:
+                    # Show first non-player entity
+                    entity = None
+                    for e in entities:
+                        if e != player:
+                            entity = e
+                            break
+                    if entity:
+                        name = entity.getName().lower()
+                        if "grass" in name:
+                            row += ", "
+                        elif "tree" in name or "wood" in name:
+                            row += "T "
+                        elif "stone" in name or "ore" in name:
+                            row += "* "
+                        elif "apple" in name or "banana" in name:
+                            row += "o "
+                        elif "bear" in name or "chicken" in name:
+                            row += "A "
+                        else:
+                            row += "? "
+                    else:
+                        row += ". "
+                else:
+                    row += ". "
+            row += "│"
+            print(row)
+        
+        print("  " + "─" * (gridSize * 2 + 1))
+        print()
+        
+        # Display legend
+        print("  Legend: @ = You, T = Tree, * = Stone/Ore, o = Food, A = Animal, . = Empty")
+        print()
+        
+        # Display inventory
+        inventory = player.getInventory()
+        firstTen = inventory.getFirstTenInventorySlots()
+        selectedIdx = inventory.getSelectedInventorySlotIndex()
+        
+        print("  Inventory:")
+        invLine = "  "
+        for i in range(10):
+            if i < len(firstTen):
+                slot = firstTen[i]
+                if slot.isEmpty():
+                    invLine += "[   ]"
+                else:
+                    item = slot.getContents()[0]
+                    count = slot.getNumItems()
+                    itemName = item.getName()[:3].upper()
+                    invLine += f"[{itemName}]" if i != selectedIdx else f">{itemName}<"
+                    if count > 1:
+                        invLine += f"x{count} "
+                    else:
+                        invLine += "   "
+            else:
+                invLine += "[   ]"
+            if i == 4:
+                invLine += "\n  "
+        print(invLine)
+        print()
+        
+        # Display controls
+        print("  Controls:")
+        print("  w/a/s/d = move, 1-0 = select item, g = gather, p = place")
+        print("  i = inventory, o = options, q = quit")
+        print()
+        print("=" * 60)
