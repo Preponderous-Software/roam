@@ -28,7 +28,7 @@ class Roam:
         
         # Initialize UI based on mode
         if self.config.uiMode == "text":
-            # Text mode - don't initialize pygame
+            # Text mode - don't initialize pygame UI
             self.gameDisplay = None
             self.graphik = None
             self.status = None
@@ -40,8 +40,9 @@ class Roam:
             )
             self.currentScreen = self.worldScreen
         else:
-            # Pygame mode - initialize pygame and all screens
-            pygame.init()
+            # Pygame mode - initialize pygame UI and all screens
+            if not pygame.get_init():
+                pygame.init()
             pygame.display.set_icon(pygame.image.load("assets/images/player_down.png"))
             pygame.display.set_caption("Roam" + " (" + config.pathToSaveDirectory + ")")
             self.gameDisplay = self.initializeGameDisplay()
@@ -114,15 +115,10 @@ class Roam:
                 self.quitApplication()
 
 
-pygame.init()
-config = Config()
-
-# Parse command-line arguments for UI mode
+# Parse command-line arguments for UI mode first
+uiMode = "pygame"
 if len(sys.argv) > 1:
-    if sys.argv[1] == "--text" or sys.argv[1] == "-t":
-        config.uiMode = "text"
-        print("Starting Roam in text mode...")
-    elif sys.argv[1] == "--help" or sys.argv[1] == "-h":
+    if sys.argv[1] == "--help" or sys.argv[1] == "-h":
         print("Roam - A procedurally-generated 2D exploration game")
         print()
         print("Usage: python src/roam.py [OPTIONS]")
@@ -132,7 +128,15 @@ if len(sys.argv) > 1:
         print("  --help, -h    Show this help message")
         print()
         sys.exit(0)
+    elif sys.argv[1] == "--text" or sys.argv[1] == "-t":
+        uiMode = "text"
+        print("Starting Roam in text mode...")
 
+# Initialize pygame only if needed
+if uiMode == "pygame":
+    pygame.init()
+
+config = Config(uiMode)
 roam = Roam(config)
 while True:
     result = roam.run()

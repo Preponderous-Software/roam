@@ -4,10 +4,15 @@ import pygame
 
 
 class Config:
-    def __init__(self):
+    def __init__(self, uiMode="pygame"):
         # static (cannot be changed in game)
-        self.displayWidth = pygame.display.Info().current_h * 0.90
-        self.displayHeight = pygame.display.Info().current_h * 0.90
+        if uiMode == "pygame":
+            self.displayWidth = pygame.display.Info().current_h * 0.90
+            self.displayHeight = pygame.display.Info().current_h * 0.90
+        else:
+            # For text mode, use default values
+            self.displayWidth = 800
+            self.displayHeight = 800
         self.black = (0, 0, 0)
         self.white = (255, 255, 255)
         self.playerMovementEnergyCost = 0.2
@@ -19,7 +24,7 @@ class Config:
         self.gridSize = 17
         self.worldBorder = 0  # 0 = no border
         self.pathToSaveDirectory = "saves/defaultsavefile"
-        self.uiMode = "pygame"  # "pygame" or "text"
+        self.uiMode = uiMode  # "pygame" or "text"
 
         # dynamic (can be changed in game)
         self.debug = True

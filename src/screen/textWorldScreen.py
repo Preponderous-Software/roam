@@ -5,6 +5,17 @@ import time
 import sys
 import select
 from config.config import Config
+from entity.apple import Apple
+from entity.banana import Banana
+from entity.coalOre import CoalOre
+from entity.grass import Grass
+from entity.ironOre import IronOre
+from entity.jungleWood import JungleWood
+from entity.leaves import Leaves
+from entity.living.bear import Bear
+from entity.living.chicken import Chicken
+from entity.oakWood import OakWood
+from entity.stone import Stone
 from screen.screenType import ScreenType
 from stats.stats import Stats
 from ui.textUI import TextUI
@@ -280,16 +291,40 @@ class TextWorldScreen:
         newRoom.addEntityToLocation(self.player, newLocation)
         self.currentRoom = newRoom
     
+    def canBePickedUp(self, entity):
+        """Check if an entity can be picked up."""
+        itemTypes = [
+            OakWood,
+            JungleWood,
+            Leaves,
+            Grass,
+            Apple,
+            Stone,
+            CoalOre,
+            IronOre,
+            Chicken,
+            Bear,
+            Banana,
+        ]
+        for itemType in itemTypes:
+            if isinstance(entity, itemType):
+                return True
+        return False
+    
     def gatherAtPlayerLocation(self):
         """Gather resources at player location."""
         location = self.getLocationOfPlayer()
         entities = self.currentRoom.getEntitiesAtLocation(location)
         
         for entity in entities:
-            if entity != self.player and hasattr(entity, 'isGatherable') and entity.isGatherable():
+            if entity != self.player and self.canBePickedUp(entity):
                 # Try to add to inventory
-                if self.player.getInventory().add(entity):
+                result = self.player.getInventory().placeIntoFirstAvailableInventorySlot(entity)
+                if result:
                     self.currentRoom.removeEntity(entity)
+                    from entity.living.livingEntity import LivingEntity
+                    if isinstance(entity, LivingEntity):
+                        self.currentRoom.removeLivingEntity(entity)
                     self.textUI.setStatus(f"gathered {entity.getName()}")
                     self.player.removeEnergy(self.config.playerInteractionEnergyCost)
                     return
