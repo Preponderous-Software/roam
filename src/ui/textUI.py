@@ -154,7 +154,7 @@ class TextUI:
         
         # Display controls
         print("  Controls:")
-        print("  w/a/s/d = move, 1-0 = select item, g = gather, p = place")
-        print("  i = inventory, o = options, q = quit")
+        print("  w/a/s/d or arrow keys = move, 1-0 = select item")
+        print("  g = gather, p = place, q = quit")
         print()
         print("=" * 60)

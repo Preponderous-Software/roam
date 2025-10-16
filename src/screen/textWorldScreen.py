@@ -182,14 +182,14 @@ class TextWorldScreen:
         """Handle keyboard input."""
         from lib.pyenvlib.location import Location
         
-        # Movement
-        if key == 'w':
+        # Movement - WASD keys
+        if key == 'w' or key == 'up':
             self.movePlayer(0)  # up
-        elif key == 's':
+        elif key == 's' or key == 'down':
             self.movePlayer(2)  # down
-        elif key == 'a':
+        elif key == 'a' or key == 'left':
             self.movePlayer(1)  # left
-        elif key == 'd':
+        elif key == 'd' or key == 'right':
             self.movePlayer(3)  # right
         
         # Inventory selection (1-0 keys)
@@ -376,7 +376,19 @@ class TextWorldScreen:
             # Windows doesn't support select on stdin
             import msvcrt
             if msvcrt.kbhit():
-                return msvcrt.getch().decode('utf-8').lower()
+                key = msvcrt.getch()
+                # Handle arrow keys on Windows
+                if key == b'\xe0':  # Arrow key prefix on Windows
+                    key = msvcrt.getch()
+                    if key == b'H':  # Up arrow
+                        return 'up'
+                    elif key == b'P':  # Down arrow
+                        return 'down'
+                    elif key == b'K':  # Left arrow
+                        return 'left'
+                    elif key == b'M':  # Right arrow
+                        return 'right'
+                return key.decode('utf-8').lower()
             return None
         else:
             # Unix-like systems
@@ -388,7 +400,26 @@ class TextWorldScreen:
                 tty.setcbreak(sys.stdin.fileno())
                 rlist, _, _ = select.select([sys.stdin], [], [], timeout)
                 if rlist:
-                    return sys.stdin.read(1).lower()
+                    char = sys.stdin.read(1)
+                    # Handle escape sequences (arrow keys)
+                    if char == '\x1b':  # ESC
+                        # Try to read the rest of the arrow key sequence
+                        rlist, _, _ = select.select([sys.stdin], [], [], 0.01)
+                        if rlist:
+                            char2 = sys.stdin.read(1)
+                            if char2 == '[':
+                                rlist, _, _ = select.select([sys.stdin], [], [], 0.01)
+                                if rlist:
+                                    char3 = sys.stdin.read(1)
+                                    if char3 == 'A':  # Up arrow
+                                        return 'up'
+                                    elif char3 == 'B':  # Down arrow
+                                        return 'down'
+                                    elif char3 == 'C':  # Right arrow
+                                        return 'right'
+                                    elif char3 == 'D':  # Left arrow
+                                        return 'left'
+                    return char.lower()
                 return None
             finally:
                 termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)

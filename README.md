@@ -25,10 +25,10 @@ esc | quit
 ### Text UI
 Key | Action
 ------------ | -------------
-w | move up
-a | move left
-s | move down
-d | move right
+w / ↑ | move up
+a / ← | move left
+s / ↓ | move down
+d / → | move right
 g | gather
 p | place
 1-0 | select item in hotbar
