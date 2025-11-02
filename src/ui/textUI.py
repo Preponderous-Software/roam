@@ -10,13 +10,13 @@ from world.tickCounter import TickCounter
 class TextUI:
     """Text-based UI renderer for Roam game."""
 
-    def __init__(self, tickCounter: TickCounter, target_fps: int = 10):
+    def __init__(self, tickCounter: TickCounter, target_fps: int = 3):
         self.tickCounter = tickCounter
         self.statusText = ""
         self.lastStatusTick = -1
         self.statusDuration = 60  # ticks to show status
 
-        # Frame rate limiting
+        # Frame rate limiting - default to 3 FPS for stable text display
         self.target_fps = target_fps
         self.frame_time = 1.0 / target_fps
         self.last_frame_time = 0.0
@@ -24,8 +24,9 @@ class TextUI:
 
     def clearScreen(self):
         """Clear the terminal screen using ANSI escape codes."""
-        # ANSI escape sequence to clear screen and move cursor to top-left
-        print('\033[2J\033[H', end='', flush=True)
+        # Hide cursor, clear screen, and move cursor to top-left
+        # This reduces flicker by hiding cursor during redraw
+        print('\033[?25l\033[2J\033[H', end='', flush=True)
 
     def setStatus(self, text):
         """Set status message to display."""
@@ -185,3 +186,10 @@ class TextUI:
         print("  g = gather, p = place, q = quit")
         print()
         print("=" * 60)
+        # Show cursor at the end of each frame
+        print('\033[?25h', end='', flush=True)
+    
+    def cleanup(self):
+        """Clean up terminal state on exit."""
+        # Show cursor
+        print('\033[?25h', end='', flush=True)

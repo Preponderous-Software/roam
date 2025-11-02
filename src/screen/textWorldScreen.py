@@ -29,7 +29,7 @@ class TextWorldScreen:
         self.running = True
         self.nextScreen = ScreenType.NONE
         self.changeScreen = False
-        self.textUI = TextUI(tickCounter, target_fps=8)  # Lower FPS for better performance
+        self.textUI = TextUI(tickCounter, target_fps=3)  # 3 FPS for stable text display
 
         # Input handling optimization
         self.input_queue = queue.Queue()
@@ -49,6 +49,7 @@ class TextWorldScreen:
         self.needs_redraw = True
         self.last_player_pos = None
         self.last_inventory_state = None
+        self.last_energy = None  # Track energy for periodic redraws
 
     def initialize(self):
         """Initialize the world screen."""
@@ -231,11 +232,19 @@ class TextWorldScreen:
         """Check if screen needs redrawing due to game state changes."""
         current_pos = self.get_player_position()
         current_inv = self.get_inventory_state()
+        current_status = self.textUI.getStatus()
+        current_energy = int(self.worldController.getPlayer().getEnergy())
 
+        # Only redraw if position, inventory, status changed, or energy changed by 1 or more
         if (current_pos != self.last_player_pos or
-                current_inv != self.last_inventory_state):
+                current_inv != self.last_inventory_state or
+                current_status != getattr(self, 'last_status', '') or
+                self.last_energy is None or
+                abs(current_energy - self.last_energy) >= 1):
             self.last_player_pos = current_pos
             self.last_inventory_state = current_inv
+            self.last_status = current_status
+            self.last_energy = current_energy
             self.needs_redraw = True
 
     def run(self):
@@ -292,6 +301,7 @@ class TextWorldScreen:
         finally:
             # Clean up
             self.stop_input_thread()
+            self.textUI.cleanup()
 
         # Save game state
         self.worldController.save()
