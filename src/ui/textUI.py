@@ -62,29 +62,30 @@ class TextUI:
         """Get the current target FPS."""
         return self.target_fps
 
-    def drawWorld(self, room, player):
-        """Draw the game world in text format."""
+    def drawWorld(self, room, player, viewport_size=None):
+        """Draw the game world in text format.
+        
+        Args:
+            room: The current room
+            player: The player entity
+            viewport_size: Size of viewport (None = full grid, or int for NxN centered view)
+        """
         self.clearScreen()
 
-        # Display header
-        print("=" * 60)
-        print(" ROAM - Text Mode".center(60))
-        print("=" * 60)
-        print()
-
-        # Display status if available
+        # Compact header for mobile
+        print("ROAM")
+        
+        # Display status if available (compact)
         status = self.getStatus()
         if status:
-            print(f"Status: {status}")
-            print()
+            print(f"[{status}]")
 
-        # Display player info
+        # Display player info (compact)
         energy = player.getEnergy()
         maxEnergy = 100  # Maximum energy is hardcoded to 100 in LivingEntity
         energyPercent = int((energy / maxEnergy) * 100) if maxEnergy > 0 else 0
         energyBar = "█" * (energyPercent // 10) + "░" * (10 - energyPercent // 10)
-        print(f"Energy: [{energyBar}] {energy:.1f}/{maxEnergy:.1f}")
-        print()
+        print(f"E:[{energyBar}]{energy:.0f}")
 
         # Display grid
         grid = room.getGrid()
@@ -101,12 +102,26 @@ class TextUI:
             if playerLoc:
                 break
 
-        print("  World Grid:")
-        print("  " + "─" * (gridSize * 2 + 1))
+        # Calculate viewport if specified
+        if viewport_size and viewport_size < gridSize:
+            # Center viewport on player
+            px, py = playerLoc.getX(), playerLoc.getY()
+            half_view = viewport_size // 2
+            
+            start_x = max(0, min(gridSize - viewport_size, px - half_view))
+            start_y = max(0, min(gridSize - viewport_size, py - half_view))
+            end_x = start_x + viewport_size
+            end_y = start_y + viewport_size
+        else:
+            # Show full grid
+            start_x, start_y = 0, 0
+            end_x, end_y = gridSize, gridSize
 
-        for y in range(gridSize):
-            row = "  │"
-            for x in range(gridSize):
+        print("─" * ((end_x - start_x) * 2 + 1))
+
+        for y in range(start_y, end_y):
+            row = "│"
+            for x in range(start_x, end_x):
                 loc = grid.getLocationByCoordinates(x, y)
                 if loc == -1:
                     row += "? "
@@ -145,47 +160,30 @@ class TextUI:
             row += "│"
             print(row)
 
-        print("  " + "─" * (gridSize * 2 + 1))
-        print()
+        print("─" * ((end_x - start_x) * 2 + 1))
 
-        # Display legend
-        print("  Legend: @ = You, T = Tree, * = Stone/Ore, o = Food, A = Animal, . = Empty")
-        print()
-
-        # Display inventory
+        # Display inventory (compact - single line)
         inventory = player.getInventory()
         firstTen = inventory.getFirstTenInventorySlots()
         selectedIdx = inventory.getSelectedInventorySlotIndex()
 
-        print("  Inventory:")
-        invLine = "  "
+        invLine = "["
         for i in range(10):
             if i < len(firstTen):
                 slot = firstTen[i]
                 if slot.isEmpty():
-                    invLine += "[   ]"
+                    invLine += " " if i != selectedIdx else ">"
                 else:
                     item = slot.getContents()[0]
-                    count = slot.getNumItems()
-                    itemName = item.getName()[:3].upper()
-                    invLine += f"[{itemName}]" if i != selectedIdx else f">{itemName}<"
-                    if count > 1:
-                        invLine += f"x{count} "
-                    else:
-                        invLine += "   "
+                    itemName = item.getName()[0].upper()  # First letter only
+                    invLine += itemName if i != selectedIdx else f">{itemName}<"[1]
             else:
-                invLine += "[   ]"
-            if i == 4:
-                invLine += "\n  "
+                invLine += " "
+        invLine += "]"
         print(invLine)
-        print()
 
-        # Display controls
-        print("  Controls:")
-        print("  w/a/s/d or arrow keys = move, 1-0 = select item")
-        print("  g = gather, p = place, q = quit")
-        print()
-        print("=" * 60)
+        # Compact controls
+        print("wasd/↑↓←→:move g:get p:put q:quit")
         # Show cursor at the end of each frame
         print('\033[?25h', end='', flush=True)
     

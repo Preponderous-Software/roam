@@ -180,6 +180,30 @@ class WorldController:
         location = self.getLocationOfPlayer()
         grid = self.currentRoom.getGrid()
         
+        # Check if player is at edge and trying to move beyond it
+        atEdge = self.isPlayerAtEdge(location)
+        movingBeyondEdge = False
+        
+        if atEdge:
+            x, y = location.getX(), location.getY()
+            gridSize = self.config.gridSize
+            
+            # Check if movement would go beyond the edge
+            if direction == 0 and y == 0:  # up at top edge
+                movingBeyondEdge = True
+            elif direction == 1 and x == 0:  # left at left edge
+                movingBeyondEdge = True
+            elif direction == 2 and y == gridSize - 1:  # down at bottom edge
+                movingBeyondEdge = True
+            elif direction == 3 and x == gridSize - 1:  # right at right edge
+                movingBeyondEdge = True
+        
+        if movingBeyondEdge:
+            # Handle room transition
+            self.handleRoomTransition(direction)
+            return True
+        
+        # Normal movement within room
         newLocation = None
         if direction == 0:  # up
             newLocation = grid.getUp(location)
@@ -194,11 +218,6 @@ class WorldController:
             self.currentRoom.removeEntity(self.player)
             self.currentRoom.addEntityToLocation(self.player, newLocation)
             self.player.removeEnergy(self.config.playerMovementEnergyCost)
-            
-            # Check if we need to move to a new room
-            if self.isPlayerAtEdge(newLocation):
-                self.handleRoomTransition(direction)
-            
             return True
         return False
     
@@ -207,14 +226,14 @@ class WorldController:
         x, y = self.currentRoom.getX(), self.currentRoom.getY()
         location = self.getLocationOfPlayer()
         
-        # Determine new room coordinates based on player location
-        if location.getX() == 0:
+        # Determine new room coordinates based on direction
+        if direction == 1:  # left
             x -= 1
-        elif location.getX() == self.config.gridSize - 1:
+        elif direction == 3:  # right
             x += 1
-        elif location.getY() == 0:
+        elif direction == 0:  # up
             y -= 1
-        elif location.getY() == self.config.gridSize - 1:
+        elif direction == 2:  # down
             y += 1
         
         # Get or generate new room
@@ -223,25 +242,27 @@ class WorldController:
             newRoom = self.map.generateNewRoom(x, y)
             self.stats.incrementScore()
             self.stats.incrementRoomsExplored()
-            return "new_room_discovered"
         
-        # Move player to new room at opposite edge
+        # Remove player from current room
         self.currentRoom.removeEntity(self.player)
         
-        # Calculate new location in new room
+        # Calculate new location in new room (opposite edge)
+        gridSize = self.config.gridSize
         newX, newY = location.getX(), location.getY()
-        if location.getX() == 0:
-            newX = self.config.gridSize - 1
-        elif location.getX() == self.config.gridSize - 1:
+        
+        if direction == 1:  # left -> appear on right
+            newX = gridSize - 1
+        elif direction == 3:  # right -> appear on left
             newX = 0
-        elif location.getY() == 0:
-            newY = self.config.gridSize - 1
-        elif location.getY() == self.config.gridSize - 1:
+        elif direction == 0:  # up -> appear on bottom
+            newY = gridSize - 1
+        elif direction == 2:  # down -> appear on top
             newY = 0
         
         newLocation = newRoom.getGrid().getLocationByCoordinates(newX, newY)
         newRoom.addEntityToLocation(self.player, newLocation)
         self.currentRoom = newRoom
+        
         return "room_transition"
     
     def canBePickedUp(self, entity):

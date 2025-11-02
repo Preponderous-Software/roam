@@ -30,6 +30,9 @@ class TextWorldScreen:
         self.nextScreen = ScreenType.NONE
         self.changeScreen = False
         self.textUI = TextUI(tickCounter, target_fps=3)  # 3 FPS for stable text display
+        
+        # Viewport size for mobile-friendly display (None = full grid, 9 = 9x9 viewport)
+        self.viewport_size = 9  # Smaller viewport for mobile
 
         # Input handling optimization
         self.input_queue = queue.Queue()
@@ -273,7 +276,8 @@ class TextWorldScreen:
                         self.needs_redraw = True
                         self.textUI.drawWorld(
                             self.worldController.getCurrentRoom(),
-                            self.worldController.getPlayer()
+                            self.worldController.getPlayer(),
+                            self.viewport_size
                         )
                         time.sleep(2)
                         self.worldController.respawnPlayer()
@@ -291,7 +295,8 @@ class TextWorldScreen:
                 if self.needs_redraw and self.textUI.shouldRender():
                     self.textUI.drawWorld(
                         self.worldController.getCurrentRoom(),
-                        self.worldController.getPlayer()
+                        self.worldController.getPlayer(),
+                        self.viewport_size
                     )
                     self.needs_redraw = False
 
