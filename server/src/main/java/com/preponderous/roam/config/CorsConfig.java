@@ -18,11 +18,15 @@ public class CorsConfig implements WebMvcConfigurer {
         // and restrict to specific domains for security
         String allowedOrigins = System.getenv("ALLOWED_ORIGINS");
         if (allowedOrigins == null || allowedOrigins.isEmpty()) {
-            allowedOrigins = "http://localhost:*"; // Development default
+            // Development default: use specific port instead of invalid wildcard
+            allowedOrigins = "http://localhost:8080,http://localhost:3000,http://localhost:5000";
         }
         
+        // Support comma-separated list of origins
+        String[] allowedOriginArray = allowedOrigins.split("\\s*,\\s*");
+        
         registry.addMapping("/api/**")
-                .allowedOrigins(allowedOrigins)
+                .allowedOrigins(allowedOriginArray)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(false);

@@ -42,6 +42,9 @@ public abstract class LivingEntity extends Entity {
     }
 
     public void addEnergy(double amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException("Amount must be non-negative: " + amount);
+        }
         if (this.energy + amount > MAX_ENERGY) {
             this.energy = MAX_ENERGY;
         } else {
@@ -50,6 +53,9 @@ public abstract class LivingEntity extends Entity {
     }
 
     public void removeEnergy(double amount) {
+        if (amount < 0) {
+            throw new IllegalArgumentException("Amount must be non-negative: " + amount);
+        }
         if (this.energy - amount < MIN_ENERGY) {
             this.energy = MIN_ENERGY;
         } else {

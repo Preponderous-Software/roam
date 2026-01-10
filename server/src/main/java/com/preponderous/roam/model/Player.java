@@ -1,8 +1,5 @@
 package com.preponderous.roam.model;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Represents a player in the game.
  * 
@@ -49,6 +46,11 @@ public class Player extends LivingEntity {
     }
 
     public void setDirection(int direction) {
+        // Validate direction: must be -1 (no movement) or 0-3 (up, left, down, right)
+        if (direction < -1 || direction > 3) {
+            throw new IllegalArgumentException("Direction must be -1 or 0-3, got: " + direction);
+        }
+        
         this.lastDirection = this.direction;
         this.direction = direction;
 

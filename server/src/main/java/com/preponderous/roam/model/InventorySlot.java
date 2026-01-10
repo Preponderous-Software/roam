@@ -35,6 +35,10 @@ public class InventorySlot {
     }
 
     public void add(String itemName) {
+        if (itemName == null || itemName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Item name must not be null or empty");
+        }
+        
         if (this.itemName == null) {
             this.itemName = itemName;
             this.numItems = 1;

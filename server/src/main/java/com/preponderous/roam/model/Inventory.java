@@ -1,6 +1,7 @@
 package com.preponderous.roam.model;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -29,7 +30,7 @@ public class Inventory {
     }
 
     public List<InventorySlot> getInventorySlots() {
-        return inventorySlots;
+        return Collections.unmodifiableList(inventorySlots);
     }
 
     public int getNumInventorySlots() {
@@ -102,6 +103,9 @@ public class Inventory {
     }
 
     public void setSelectedInventorySlotIndex(int index) {
+        if (index < 0 || index >= inventorySlots.size()) {
+            throw new IndexOutOfBoundsException("Selected inventory slot index out of bounds: " + index);
+        }
         this.selectedInventorySlotIndex = index;
     }
 

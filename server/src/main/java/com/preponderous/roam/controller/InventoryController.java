@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/v1/session/{sessionId}/inventory")
-@CrossOrigin(origins = "*")
 public class InventoryController {
 
     @Autowired
@@ -46,6 +45,10 @@ public class InventoryController {
     public ResponseEntity<InventoryDTO> addItem(
             @PathVariable String sessionId,
             @RequestParam String itemName) {
+        
+        if (itemName == null || itemName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Item name must not be null or empty");
+        }
         
         Player player = gameService.getPlayer(sessionId);
         if (player == null) {

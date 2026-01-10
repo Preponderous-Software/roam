@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/v1/session/{sessionId}/player")
-@CrossOrigin(origins = "*")
 public class PlayerController {
     public static final double DEFAULT_FOOD_ENERGY_RESTORE = 10.0;
 
@@ -58,6 +57,10 @@ public class PlayerController {
         }
 
         String action = request.getAction();
+        if (action == null || action.trim().isEmpty()) {
+            throw new IllegalArgumentException("Action must not be null or empty");
+        }
+        
         long currentTick = gameService.getCurrentTick(sessionId);
 
         switch (action) {
@@ -93,9 +96,14 @@ public class PlayerController {
                 break;
             case "consume":
                 if (request.getItemName() != null) {
-                    // Consume food logic - restore default energy amount
-                    // In future, different food types could restore different amounts
-                    playerService.addEnergy(player, DEFAULT_FOOD_ENERGY_RESTORE);
+                    // Consume food logic - remove the item from inventory and restore energy
+                    boolean removed = player.getInventory().removeByItemName(request.getItemName());
+                    if (removed) {
+                        // In future, different food types could restore different amounts
+                        playerService.addEnergy(player, DEFAULT_FOOD_ENERGY_RESTORE);
+                    } else {
+                        throw new IllegalArgumentException("Item not found in inventory: " + request.getItemName());
+                    }
                 }
                 break;
             default:
