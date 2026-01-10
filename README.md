@@ -36,7 +36,24 @@ esc | quit
 
 ## Setup and Run
 
-### Prerequisites
+### Option 1: Docker (Recommended)
+
+The easiest way to run Roam is using Docker:
+
+```bash
+# Start the server
+docker compose up -d roam-server
+
+# Run client (on host)
+cd client
+python3 roam_client.py
+```
+
+See [DOCKER.md](./DOCKER.md) for complete Docker documentation.
+
+### Option 2: Manual Setup
+
+#### Prerequisites
 - **Java 17 or higher** - [Download Java](https://adoptium.net/)
 - **Maven 3.6 or higher** - [Download Maven](https://maven.apache.org/download.cgi)
 - **Python 3.8 or higher** - [Download Python](https://www.python.org/downloads/)
