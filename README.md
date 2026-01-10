@@ -15,10 +15,10 @@ Roam uses a **client-server architecture** implemented in **[PR #242 - Implement
   - Communicates with server via REST API
   - Contains no business logic
 
-For detailed architecture documentation, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+For detailed architecture documentation, see [ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
 ## Planning Document
-The planning document can be found [here](./PLANNING.md)
+The planning document can be found [here](./docs/PLANNING.md)
 
 ## Controls
 Key | Action
@@ -51,7 +51,7 @@ cd src
 python3 roam_client.py
 ```
 
-See [DOCKER.md](./DOCKER.md) for complete Docker documentation.
+See [DOCKER.md](./docs/DOCKER.md) for complete Docker documentation.
 
 ### Option 2: Manual Setup
 
