@@ -13,6 +13,9 @@ from lib.graphik.src.graphik import Graphik
 # @author Daniel McCoy Stephenson
 # @since August 8th, 2022
 class Room(Environment):
+    # Excrement aging threshold: 10 minutes at 30 ticks per second
+    EXCREMENT_AGE_THRESHOLD_TICKS = 30 * 60 * 10  # 18000 ticks
+    
     def __init__(self, name, gridSize, backgroundColor, x, y, graphik: Graphik):
         Environment.__init__(self, name, gridSize)
         self.backgroundColor = backgroundColor
@@ -256,15 +259,13 @@ class Room(Environment):
 
     def ageExcrement(self, tick):
         """Convert excrement to grass after it ages for 10 minutes (at 30 ticks per second)"""
-        excrementAgeThreshold = 30 * 60 * 10  # 18000 ticks (10 minutes)
-        
         excrementToConvert = []
         for locationId in self.grid.getLocations():
             location = self.grid.getLocation(locationId)
             for entityId in list(location.getEntities().keys()):
                 entity = location.getEntity(entityId)
                 if isinstance(entity, Excrement):
-                    if entity.getAge(tick) >= excrementAgeThreshold:
+                    if entity.getAge(tick) >= self.EXCREMENT_AGE_THRESHOLD_TICKS:
                         excrementToConvert.append((entity, location))
         
         # Convert excrement to grass

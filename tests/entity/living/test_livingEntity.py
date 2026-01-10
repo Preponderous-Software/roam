@@ -13,7 +13,7 @@ def test_initialization():
     assert livingEntity.getEnergy() == 50
     assert livingEntity.getTargetEnergy() == 50
     assert livingEntity.getTickCreated() == 0
-    assert livingEntity.getTickLastExcrement() == None
+    assert livingEntity.getTickLastExcrement() is None
 
 
 def test_set_energy():
@@ -110,7 +110,7 @@ def test_can_eat_with_edible_types():
 def test_excrement_tick_tracking():
     livingEntity = createLivingEntity()
     
-    assert livingEntity.getTickLastExcrement() == None
+    assert livingEntity.getTickLastExcrement() is None
     
     livingEntity.setTickLastExcrement(1000)
     assert livingEntity.getTickLastExcrement() == 1000
@@ -137,7 +137,7 @@ def test_should_spawn_excrement():
 def test_tick_last_reproduced():
     livingEntity = createLivingEntity()
     
-    assert livingEntity.getTickLastReproduced() == None
+    assert livingEntity.getTickLastReproduced() is None
     
     livingEntity.setTickLastReproduced(5000)
     assert livingEntity.getTickLastReproduced() == 5000

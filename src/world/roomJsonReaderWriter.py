@@ -7,6 +7,7 @@ from config.config import Config
 from entity.apple import Apple
 from entity.banana import Banana
 from entity.coalOre import CoalOre
+from entity.excrement import Excrement
 from entity.food import Food
 from entity.grass import Grass
 from entity.ironOre import IronOre
@@ -114,7 +115,10 @@ class RoomJsonReaderWriter:
             entityJson["energy"] = entity.getEnergy()
             entityJson["tickCreated"] = entity.getTickCreated()
             entityJson["tickLastReproduced"] = entity.getTickLastReproduced()
+            entityJson["tickLastExcrement"] = entity.getTickLastExcrement()
             entityJson["imagePath"] = entity.getImagePath()
+        elif isinstance(entity, Excrement):
+            entityJson["tickCreated"] = entity.getTickCreated()
         return entityJson
 
     # generate room methods
@@ -209,6 +213,9 @@ class RoomJsonReaderWriter:
         elif entityClass == "Banana":
             entity = Banana()
             entity.setID(UUID(entityJson["id"]))
+        elif entityClass == "Excrement":
+            entity = Excrement(entityJson["tickCreated"])
+            entity.setID(UUID(entityJson["id"]))
         elif entityClass == "Player":
             return None
         else:
@@ -218,6 +225,8 @@ class RoomJsonReaderWriter:
             entity.setEnergy(entityJson["energy"])
             entity.setTickCreated(entityJson["tickCreated"])
             entity.setTickLastReproduced(entityJson["tickLastReproduced"])
+            if "tickLastExcrement" in entityJson:
+                entity.setTickLastExcrement(entityJson["tickLastExcrement"])
             entity.setImagePath(entityJson["imagePath"])
 
         entity.setEnvironmentID(UUID(entityJson["environmentId"]))

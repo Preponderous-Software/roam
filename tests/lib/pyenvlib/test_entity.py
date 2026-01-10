@@ -50,7 +50,7 @@ def test_string_representation():
     
     # Test __str__ method - Entity uses default object representation
     str_repr = str(entity)
-    assert "Entity object" in str_repr
+    assert "object at" in str_repr  # Python's default format includes "object at 0x..."
     
     # Test that the entity has the expected name via getName()
     assert entity.getName() == "TestEntity"

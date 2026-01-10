@@ -1,4 +1,4 @@
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 from src.mapimage.mapImageUpdater import MapImageUpdater
 from src.world.tickCounter import TickCounter
 from src.config.config import Config
@@ -61,8 +61,6 @@ def test_update_map_image():
     
     updater = MapImageUpdater(tickCounter, config)
     updater.mapImageGenerator = mock_generator
-    
-    initial_tick = tickCounter.getTick()
     
     # Call updateMapImage
     updater.updateMapImage()

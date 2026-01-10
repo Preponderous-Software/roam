@@ -12,15 +12,17 @@ def test_initialization():
 
 
 def test_get_image():
-    # Create a temporary PNG file for testing
-    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
-        # Create a simple 1x1 pixel PNG image
-        temp_surface = pygame.Surface((1, 1))
-        temp_surface.fill((255, 255, 255))
-        pygame.image.save(temp_surface, temp_file.name)
-        temp_path = temp_file.name
-    
+    pygame.init()
+    temp_path = None
     try:
+        # Create a temporary PNG file for testing
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
+            # Create a simple 1x1 pixel PNG image
+            temp_surface = pygame.Surface((1, 1))
+            temp_surface.fill((255, 255, 255))
+            pygame.image.save(temp_surface, temp_file.name)
+            temp_path = temp_file.name
+        
         drawableEntity = DrawableEntity("test", temp_path)
         image = drawableEntity.getImage()
         
@@ -29,8 +31,9 @@ def test_get_image():
         assert image.get_width() == 1
         assert image.get_height() == 1
     finally:
+        pygame.quit()
         # Clean up the temporary file
-        if os.path.exists(temp_path):
+        if temp_path is not None and os.path.exists(temp_path):
             os.unlink(temp_path)
 
 

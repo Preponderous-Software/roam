@@ -4,6 +4,9 @@ from entity.drawableEntity import DrawableEntity
 # @author Daniel McCoy Stephenson
 # @since August 5th, 2022
 class LivingEntity(DrawableEntity):
+    # Excrement spawning cooldown: 5 minutes at 30 ticks per second
+    EXCREMENT_COOLDOWN_TICKS = 30 * 60 * 5  # 9000 ticks
+    
     def __init__(self, name, color, energy, edibleEntityTypes, tickCreated):
         DrawableEntity.__init__(self, name, color)
         self.energy = energy
@@ -77,7 +80,6 @@ class LivingEntity(DrawableEntity):
 
     def shouldSpawnExcrement(self, currentTick):
         # Spawn excrement every 5 minutes (at 30 ticks per second)
-        excrementCooldown = 30 * 60 * 5  # 9000 ticks (5 minutes)
         if self.tickLastExcrement is None:
             return True
-        return (currentTick - self.tickLastExcrement) >= excrementCooldown
+        return (currentTick - self.tickLastExcrement) >= self.EXCREMENT_COOLDOWN_TICKS

@@ -70,30 +70,19 @@ def test_save_and_load():
         assert newTickCounter.getTick() == 12345  # Should load saved value
 
 
-def test_warning_threshold():
+def test_warning_threshold(capsys):
     config = Config()
     tickCounter = TickCounter(config)
     
     # Manually set an old timestamp to trigger warning
     tickCounter.lastTimestamp = time.time() - 1.0  # 1 second ago
     
-    # Capture output by temporarily modifying print (in a real test framework, you'd use proper mocking)
-    original_print = print
-    captured_output = []
+    # Increment tick should trigger a warning
+    tickCounter.incrementTick()
     
-    def mock_print(*args, **kwargs):
-        captured_output.append(' '.join(str(arg) for arg in args))
+    # Capture the output
+    captured = capsys.readouterr()
     
-    import builtins
-    builtins.print = mock_print
-    
-    try:
-        tickCounter.incrementTick()
-        
-        # Should have printed a warning
-        assert len(captured_output) > 0
-        assert "WARNING: Tick took" in captured_output[0]
-        assert "milliseconds to complete" in captured_output[0]
-    finally:
-        # Restore original print
-        builtins.print = original_print
+    # Should have printed a warning
+    assert "WARNING: Tick took" in captured.out
+    assert "milliseconds to complete" in captured.out
