@@ -9,12 +9,18 @@ import java.util.List;
  * @author Daniel McCoy Stephenson
  */
 public class Inventory {
+    public static final int DEFAULT_INVENTORY_SIZE = 25;
+    
     private final List<InventorySlot> inventorySlots;
     private final int size;
     private int selectedInventorySlotIndex;
 
     public Inventory() {
-        this.size = 25;
+        this(DEFAULT_INVENTORY_SIZE);
+    }
+    
+    public Inventory(int size) {
+        this.size = size;
         this.inventorySlots = new ArrayList<>();
         for (int i = 0; i < size; i++) {
             inventorySlots.add(new InventorySlot());

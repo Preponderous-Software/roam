@@ -6,6 +6,8 @@ package com.preponderous.roam.model;
  * @author Daniel McCoy Stephenson
  */
 public class InventorySlot {
+    public static final int DEFAULT_MAX_STACK_SIZE = 64;
+    
     private String itemName;
     private int numItems;
     private final int maxStackSize;
@@ -13,7 +15,7 @@ public class InventorySlot {
     public InventorySlot() {
         this.itemName = null;
         this.numItems = 0;
-        this.maxStackSize = 64;
+        this.maxStackSize = DEFAULT_MAX_STACK_SIZE;
     }
 
     public boolean isEmpty() {

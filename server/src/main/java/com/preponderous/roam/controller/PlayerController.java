@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/session/{sessionId}/player")
 @CrossOrigin(origins = "*")
 public class PlayerController {
+    public static final double DEFAULT_FOOD_ENERGY_RESTORE = 10.0;
 
     @Autowired
     private GameService gameService;
@@ -92,8 +93,9 @@ public class PlayerController {
                 break;
             case "consume":
                 if (request.getItemName() != null) {
-                    // Consume food logic
-                    playerService.addEnergy(player, 10.0);
+                    // Consume food logic - restore default energy amount
+                    // In future, different food types could restore different amounts
+                    playerService.addEnergy(player, DEFAULT_FOOD_ENERGY_RESTORE);
                 }
                 break;
             default:

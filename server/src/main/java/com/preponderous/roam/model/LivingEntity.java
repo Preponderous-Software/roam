@@ -9,6 +9,9 @@ import java.util.List;
  * @author Daniel McCoy Stephenson
  */
 public abstract class LivingEntity extends Entity {
+    public static final double MIN_ENERGY = 0.0;
+    public static final double MAX_ENERGY = 100.0;
+    
     private double energy;
     private double targetEnergy;
     private final long tickCreated;
@@ -29,26 +32,26 @@ public abstract class LivingEntity extends Entity {
     }
 
     public void setEnergy(double energy) {
-        if (energy < 0) {
-            this.energy = 0;
-        } else if (energy > 100) {
-            this.energy = 100;
+        if (energy < MIN_ENERGY) {
+            this.energy = MIN_ENERGY;
+        } else if (energy > MAX_ENERGY) {
+            this.energy = MAX_ENERGY;
         } else {
             this.energy = energy;
         }
     }
 
     public void addEnergy(double amount) {
-        if (this.energy + amount > 100) {
-            this.energy = 100;
+        if (this.energy + amount > MAX_ENERGY) {
+            this.energy = MAX_ENERGY;
         } else {
             this.energy += amount;
         }
     }
 
     public void removeEnergy(double amount) {
-        if (this.energy - amount < 0) {
-            this.energy = 0;
+        if (this.energy - amount < MIN_ENERGY) {
+            this.energy = MIN_ENERGY;
         } else {
             this.energy -= amount;
         }

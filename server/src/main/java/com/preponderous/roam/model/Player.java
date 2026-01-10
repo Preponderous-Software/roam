@@ -9,6 +9,11 @@ import java.util.List;
  * @author Daniel McCoy Stephenson
  */
 public class Player extends LivingEntity {
+    public static final int DEFAULT_MOVEMENT_SPEED = 30;
+    public static final int DEFAULT_GATHER_SPEED = 30;
+    public static final int DEFAULT_PLACE_SPEED = 30;
+    public static final double DEFAULT_PLAYER_ENERGY = 100.0;
+    
     private int direction; // -1 when not moving
     private int lastDirection;
     private Inventory inventory;
@@ -23,7 +28,7 @@ public class Player extends LivingEntity {
     private boolean crouching;
 
     public Player(long tickCreated) {
-        super("Player", "assets/images/player_down.png", 100, tickCreated);
+        super("Player", "assets/images/player_down.png", DEFAULT_PLAYER_ENERGY, tickCreated);
         this.direction = -1;
         this.lastDirection = -1;
         this.inventory = new Inventory();
@@ -32,9 +37,9 @@ public class Player extends LivingEntity {
         this.tickLastMoved = -1;
         this.tickLastGathered = -1;
         this.tickLastPlaced = -1;
-        this.movementSpeed = 30;
-        this.gatherSpeed = 30;
-        this.placeSpeed = 30;
+        this.movementSpeed = DEFAULT_MOVEMENT_SPEED;
+        this.gatherSpeed = DEFAULT_GATHER_SPEED;
+        this.placeSpeed = DEFAULT_PLACE_SPEED;
         this.crouching = false;
         this.setSolid(false);
     }
