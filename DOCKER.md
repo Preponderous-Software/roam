@@ -84,9 +84,12 @@ Docker Compose configuration defining services:
 Optional Dockerfile for the Python client:
 
 - Based on Python 3.11
+- Installs build tools (gcc, g++, make) for compiling pygame
 - Installs pygame and SDL dependencies
 - Requires X11 display forwarding
 - Connects to server via environment variable
+
+**Note**: The client image is larger (~500MB) due to build dependencies required for pygame compilation.
 
 ## Commands
 
