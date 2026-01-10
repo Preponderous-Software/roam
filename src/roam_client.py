@@ -190,7 +190,7 @@ class RoamClient:
     def add_item(self, item_name: str):
         """Add item to inventory."""
         try:
-            inventory = self.api_client.add_item_to_inventory(item_name)
+            self.api_client.add_item_to_inventory(item_name)
             # Refresh player data to get updated inventory
             self.player_data = self.api_client.get_player()
             self.update_local_state_from_player_data()
