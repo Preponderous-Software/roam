@@ -4,6 +4,13 @@ This document is a work in progress. It is a place to collect ideas and plan out
 ## Overview
 Roam is a 2D survival game where the player explores a procedurally-generated world and interacts with their surroundings.
 
+## Architecture
+Roam uses a client-server architecture:
+- **Server (Java/Spring Boot)**: Manages game state, business logic, and provides REST API
+- **Client (Python)**: Handles UI rendering, user input, and calls server APIs
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation.
+
 ## Mechanics
 ### Energy
 Energy will decrease when the player moves and will replenish when the player eats food.
