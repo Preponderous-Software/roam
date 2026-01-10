@@ -28,7 +28,7 @@ docker compose up -d roam-server
 docker compose logs -f roam-server
 
 # Run client on host (in another terminal)
-cd client
+cd src
 python3 roam_client.py
 ```
 
@@ -400,7 +400,7 @@ roam-client:
 docker compose up -d roam-server
 
 # Terminal 2: Run client natively
-cd client
+cd src
 python3 roam_client.py http://localhost:8080
 ```
 
@@ -418,7 +418,7 @@ docker compose up -d roam-server
 docker compose ps
 
 # Run test script
-cd client
+cd src
 python3 test_client.py
 ```
 

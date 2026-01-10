@@ -7,8 +7,10 @@ Tests the API communication logic.
 import sys
 import os
 
-# Add parent directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+# Ensure we can import from current directory (src)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
 
 from client.api_client import RoamAPIClient
 

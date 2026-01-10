@@ -9,7 +9,7 @@ A complete Python client application (`client/roam_client.py`) has been implemen
 ## Location
 
 ```
-/client/
+/src/
 ├── __init__.py
 ├── README.md
 ├── roam_client.py      # Main client application
@@ -167,7 +167,7 @@ class RoamClient:
 
 ## API Usage
 
-The client uses `RoamAPIClient` from `src/client/api_client.py`:
+The client uses `RoamAPIClient` from `src/src/api_client.py`:
 
 ```python
 from client.api_client import RoamAPIClient

@@ -45,7 +45,7 @@ The easiest way to run Roam is using Docker:
 docker compose up -d roam-server
 
 # Run client (on host)
-cd client
+cd src
 python3 roam_client.py
 ```
 
@@ -88,11 +88,11 @@ The server will start on `http://localhost:8080`. Keep this terminal window open
 
 #### Option 1: New Server-Backed Client (Recommended)
 
-The new client application (`client/roam_client.py`) uses the Spring Boot backend for all game logic.
+The new client application (`src/roam_client.py`) uses the Spring Boot backend for all game logic.
 
-1. Open a new terminal and navigate to the client directory:
+1. Open a new terminal and navigate to the src directory:
 ```bash
-cd client
+cd src
 ```
 
 2. Install Python dependencies (if not already installed):
@@ -118,7 +118,7 @@ The client will connect to the server and start a new game session.
 - ✅ Player movement, inventory, and energy management
 - ✅ Clean separation of UI and game logic
 
-See [client/README.md](./client/README.md) for detailed documentation.
+See [src/CLIENT_README.md](./src/CLIENT_README.md) for detailed documentation.
 
 #### Option 2: Original Python Client (Legacy)
 
