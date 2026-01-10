@@ -36,7 +36,6 @@ class RoamClient:
             config: Configuration object
             server_url: URL of the Spring Boot server
         """
-        pygame.init()
         pygame.display.set_icon(pygame.image.load("assets/images/player_down.png"))
         
         self.config = config
@@ -405,6 +404,9 @@ def main():
     print("Make sure the Spring Boot server is running!")
     print("=" * 60)
     print()
+
+    # Initialize pygame
+    pygame.init()
     
     # Create config and client
     config = Config()
