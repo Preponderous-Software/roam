@@ -170,7 +170,7 @@ python3 roam.py http://localhost:8080
 
 **Note**: This client now uses the server for all game logic. Complex features like world generation and entity management will be added in Phase 4 of the migration (server-side implementation).
 
-See [CLIENT_REFACTORING_SUMMARY.md](./CLIENT_REFACTORING_SUMMARY.md) and [REFACTORING_NOTES.md](./REFACTORING_NOTES.md) for detailed information about the refactoring.
+See [CLIENT_REFACTORING_SUMMARY.md](./docs/CLIENT_REFACTORING_SUMMARY.md) and [REFACTORING_NOTES.md](./docs/REFACTORING_NOTES.md) for detailed information about the refactoring. For the complete implementation, see [PR: Complete Client Refactoring](https://github.com/Preponderous-Software/roam-prototype/pull/complete-client-refactoring).
 
 ## Run Script (Linux Only)
 There is also a run.sh script you can execute if you're on linux which will automatically attempt to install the dependencies for you.
