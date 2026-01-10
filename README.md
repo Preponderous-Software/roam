@@ -69,6 +69,44 @@ The server will start on `http://localhost:8080`. Keep this terminal window open
 
 ### Start the Client
 
+#### Option 1: New Server-Backed Client (Recommended)
+
+The new client application (`client/roam_client.py`) uses the Spring Boot backend for all game logic.
+
+1. Open a new terminal and navigate to the client directory:
+```bash
+cd client
+```
+
+2. Install Python dependencies (if not already installed):
+```bash
+pip install -r ../requirements.txt
+```
+
+3. Run the client:
+```bash
+python3 roam_client.py
+```
+
+Or use the provided script:
+```bash
+./run_client.sh
+```
+
+The client will connect to the server and start a new game session.
+
+**Features**:
+- ✅ No business logic in client (all on server)
+- ✅ Real-time server communication via REST API
+- ✅ Player movement, inventory, and energy management
+- ✅ Clean separation of UI and game logic
+
+See [client/README.md](./client/README.md) for detailed documentation.
+
+#### Option 2: Original Python Client (Legacy)
+
+The original monolithic Python client (`src/roam.py`) contains its own game logic.
+
 1. Open a new terminal and navigate to the project root directory.
 
 2. Install Python dependencies:
@@ -81,7 +119,7 @@ pip install -r requirements.txt
 python src/roam.py
 ```
 
-The game window should open and connect to the server.
+**Note**: This client does not use the server and will be deprecated in favor of the server-backed architecture.
 
 ## Run Script (Linux Only)
 There is also a run.sh script you can execute if you're on linux which will automatically attempt to install the dependencies for you.
