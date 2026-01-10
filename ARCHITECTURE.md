@@ -2,7 +2,7 @@
 
 ## Overview
 
-Roam uses a client-server architecture where:
+Roam uses a client-server architecture implemented in **[PR #242 - Implement client-server architecture with Spring Boot backend, REST API, pygame client, and Docker support](https://github.com/Preponderous-Software/roam-prototype/pull/242)** where:
 - **Server (Java/Spring Boot)**: Authoritative source for game state and business logic
 - **Client (Python)**: Handles presentation, UI rendering, and user interaction
 

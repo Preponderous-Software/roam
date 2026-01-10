@@ -1,6 +1,6 @@
 # PR Review Comments - Resolution Summary
 
-This document summarizes the changes made in response to the PR review comments.
+This document summarizes the changes made in response to the review comments for **[PR #242 - Implement client-server architecture with Spring Boot backend, REST API, pygame client, and Docker support](https://github.com/Preponderous-Software/roam-prototype/pull/242)**.
 
 ## Changes Made (Commit a906591)
 

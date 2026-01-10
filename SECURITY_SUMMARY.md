@@ -1,5 +1,7 @@
 # Security Summary
 
+This document summarizes security considerations and vulnerability remediation for **[PR #242 - Implement client-server architecture with Spring Boot backend, REST API, pygame client, and Docker support](https://github.com/Preponderous-Software/roam-prototype/pull/242)**.
+
 ## Vulnerabilities Addressed
 
 ### 1. Requests Library (CVE-2024-35195) ✅ FIXED

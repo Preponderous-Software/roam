@@ -1,6 +1,6 @@
 # Server-Backed Client Implementation
 
-This document describes the new server-backed Python client application created for the Roam game.
+This document describes the new server-backed Python client application created for the Roam game as part of **[PR #242 - Implement client-server architecture with Spring Boot backend, REST API, pygame client, and Docker support](https://github.com/Preponderous-Software/roam-prototype/pull/242)**.
 
 ## Overview
 

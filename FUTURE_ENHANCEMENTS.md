@@ -1,6 +1,6 @@
 # Future Enhancements for Roam Client-Server Architecture
 
-This document outlines future work items that are intentionally deferred beyond the initial client-server architecture implementation. Each work item represents a significant feature enhancement that builds upon the foundation established in this PR.
+This document outlines future work items that are intentionally deferred beyond the initial client-server architecture implementation completed in **[PR #242 - Implement client-server architecture with Spring Boot backend, REST API, pygame client, and Docker support](https://github.com/Preponderous-Software/roam-prototype/pull/242)**. Each work item represents a significant feature enhancement that builds upon the foundation established in that PR.
 
 ---
 

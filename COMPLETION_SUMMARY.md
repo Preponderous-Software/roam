@@ -2,7 +2,7 @@
 
 ## Summary
 
-This pull request successfully implements a client-server architecture for the Roam game, transitioning from a monolithic Python application to a distributed system with:
+**[PR #242 - Implement client-server architecture with Spring Boot backend, REST API, pygame client, and Docker support](https://github.com/Preponderous-Software/roam-prototype/pull/242)** successfully implements a client-server architecture for the Roam game, transitioning from a monolithic Python application to a distributed system with:
 
 - **Java Spring Boot Server**: Authoritative source for all game state and business logic
 - **Python Client**: Presentation layer that communicates with server via REST API
