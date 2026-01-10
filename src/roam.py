@@ -98,6 +98,9 @@ class Roam:
             self.status.set(f"Server connection failed: {e}")
             import traceback
             traceback.print_exc()
+            # Return to main menu on failure
+            self.nextScreen = ScreenType.MAIN_MENU_SCREEN
+            self.changeScreen = True
     
     def _updatePlayerFromServerData(self, player_data):
         """Update local player object from server data."""
@@ -155,6 +158,27 @@ server_url = "http://localhost:8080"
 if len(sys.argv) > 1:
     server_url = sys.argv[1]
 
+# Validate server URL format
+from urllib.parse import urlparse
+
+try:
+    parsed = urlparse(server_url)
+    if not parsed.scheme or not parsed.netloc:
+        raise ValueError("Invalid URL format")
+    if parsed.scheme not in ['http', 'https']:
+        raise ValueError("Only HTTP and HTTPS protocols are supported")
+except Exception as e:
+    print("=" * 60)
+    print("ERROR: Invalid server URL")
+    print("=" * 60)
+    print(f"URL: {server_url}")
+    print(f"Error: {e}")
+    print()
+    print("Usage: python3 roam.py [server_url]")
+    print("Example: python3 roam.py http://localhost:8080")
+    print("=" * 60)
+    sys.exit(1)
+
 print("=" * 60)
 print("Roam - Server-Backed Client")
 print("=" * 60)
@@ -168,4 +192,11 @@ while True:
     result = roam.run()
     if result != "restart":
         break
+    # Clean up session before restarting
+    try:
+        if getattr(roam, "session_id", None):
+            roam.api_client.delete_session()
+            print("Session ended")
+    except Exception as e:
+        print(f"Error ending session: {e}")
     roam = Roam(config, server_url)

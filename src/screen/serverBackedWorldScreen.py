@@ -81,17 +81,20 @@ class ServerBackedWorldScreen:
         self._updateInventoryFromServerData(inventory_data)
     
     def _updateInventoryFromServerData(self, inventory_data):
-        """Update player inventory from server data."""
+        """Update player inventory from server data.
+
+        NOTE: The server inventory structure is currently different from the local
+        representation, and full synchronization logic has not yet been defined.
+        To avoid accidentally wiping the client's inventory without being able to
+        faithfully reconstruct it, this method is intentionally a no-op until the
+        inventory model between client and server is finalized.
+        """
         if not inventory_data:
             return
         
-        # Clear current inventory
-        self.player.getInventory().clear()
-        
-        # Note: Server inventory structure is different from local
-        # For now, we'll just track basic info
-        slots = inventory_data.get('slots', [])
-        # TODO: Properly sync inventory when server adds more detailed item management
+        # TODO: Implement non-destructive inventory synchronization once the server's
+        #       inventory/item model is stable and the local inventory API is aligned.
+        #       For now, we avoid clearing or modifying the existing inventory.
     
     def movePlayer(self, direction: int):
         """Send move action to server."""
@@ -119,11 +122,16 @@ class ServerBackedWorldScreen:
             self.status.set("Stopped")
         except Exception as e:
             print(f"Failed to stop: {e}")
+            self.status.set(f"Stop failed: {e}")
     
     def toggleGathering(self):
         """Toggle gathering state."""
         try:
-            is_gathering = self.player_data.get('gathering', False)
+            # Safely handle case where player_data may be None
+            is_gathering = False
+            if self.player_data:
+                is_gathering = self.player_data.get('gathering', False)
+            
             self.player_data = self.api_client.perform_player_action(
                 "gather",
                 gathering=not is_gathering
@@ -133,6 +141,7 @@ class ServerBackedWorldScreen:
             self.status.set(f"Player {status}")
         except Exception as e:
             print(f"Failed to toggle gathering: {e}")
+            self.status.set(f"Gathering toggle failed: {e}")
     
     def handleKeyDownEvent(self, key):
         """Handle key press events."""
@@ -140,16 +149,12 @@ class ServerBackedWorldScreen:
             self.nextScreen = ScreenType.OPTIONS_SCREEN
             self.changeScreen = True
         elif key == pygame.K_w or key == pygame.K_UP:
-            self.player.setDirection(0)
             self.movePlayer(0)
         elif key == pygame.K_a or key == pygame.K_LEFT:
-            self.player.setDirection(1)
             self.movePlayer(1)
         elif key == pygame.K_s or key == pygame.K_DOWN:
-            self.player.setDirection(2)
             self.movePlayer(2)
         elif key == pygame.K_d or key == pygame.K_RIGHT:
-            self.player.setDirection(3)
             self.movePlayer(3)
         elif key == pygame.K_SPACE:
             self.stopPlayer()
@@ -159,11 +164,13 @@ class ServerBackedWorldScreen:
             self.nextScreen = ScreenType.INVENTORY_SCREEN
             self.changeScreen = True
         elif key == pygame.K_LSHIFT:
-            self.player.setMovementSpeed(
-                self.player.getMovementSpeed() * self.config.runSpeedFactor
-            )
+            # Movement speed changes are handled by the server in a server-backed world.
+            # Do not modify player speed locally to avoid client-server desynchronization.
+            pass
         elif key == pygame.K_LCTRL:
-            self.player.setCrouching(True)
+            # Crouching state changes are handled by the server in a server-backed world.
+            # Do not modify crouch state locally to avoid client-server desynchronization.
+            pass
         elif key == pygame.K_F3:
             # toggle debug mode
             self.config.debug = not self.config.debug
@@ -186,13 +193,19 @@ class ServerBackedWorldScreen:
             self.status.set(f"Added {item_name}")
         except Exception as e:
             print(f"Failed to add item: {e}")
+            self.status.set(f"Failed to add {item_name}")
     
     def _consumeFood(self):
         """Consume food from inventory."""
         try:
+            # Ensure we have player data before attempting to consume food
+            if not self.player_data:
+                self.status.set("No player data available")
+                return
+
             # For now, just try to consume first item (simplified)
-            inventory_data = self.player_data.get('inventory', {})
-            slots = inventory_data.get('slots', [])
+            inventory_data = self.player_data.get('inventory') or {}
+            slots = inventory_data.get('slots') or []
             
             for slot in slots:
                 if not slot.get('empty', True):
@@ -209,23 +222,26 @@ class ServerBackedWorldScreen:
             self.status.set("No food to consume")
         except Exception as e:
             print(f"Failed to consume: {e}")
+            self.status.set(f"Consume failed: {e}")
     
     def handleKeyUpEvent(self, key):
         """Handle key release events."""
         if (key == pygame.K_w or key == pygame.K_UP) and self.player.getDirection() == 0:
-            self.player.setDirection(-1)
+            self.stopPlayer()
         elif (key == pygame.K_a or key == pygame.K_LEFT) and self.player.getDirection() == 1:
-            self.player.setDirection(-1)
+            self.stopPlayer()
         elif (key == pygame.K_s or key == pygame.K_DOWN) and self.player.getDirection() == 2:
-            self.player.setDirection(-1)
+            self.stopPlayer()
         elif (key == pygame.K_d or key == pygame.K_RIGHT) and self.player.getDirection() == 3:
-            self.player.setDirection(-1)
+            self.stopPlayer()
         elif key == pygame.K_LSHIFT:
-            self.player.setMovementSpeed(
-                self.player.getMovementSpeed() / self.config.runSpeedFactor
-            )
+            # Movement speed changes are handled by the server in a server-backed world.
+            # Do not modify player speed locally to avoid client-server desynchronization.
+            pass
         elif key == pygame.K_LCTRL:
-            self.player.setCrouching(False)
+            # Crouching state changes are handled by the server in a server-backed world.
+            # Do not modify crouch state locally to avoid client-server desynchronization.
+            pass
     
     def updateTick(self):
         """Update game tick on server."""
@@ -234,6 +250,8 @@ class ServerBackedWorldScreen:
             self.server_tick = session_data.get('currentTick', self.server_tick)
         except Exception as e:
             print(f"Failed to update tick: {e}")
+            # Inform the user via the status message as well
+            self.status.set("Failed to update server tick")
     
     def draw(self):
         """Draw the world screen."""
@@ -392,7 +410,6 @@ class ServerBackedWorldScreen:
     def _drawControls(self):
         """Draw controls help text."""
         display_width = self.graphik.getGameDisplay().get_width()
-        display_height = self.graphik.getGameDisplay().get_height()
         
         font = pygame.font.Font(None, 20)
         controls = [
