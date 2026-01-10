@@ -1,0 +1,50 @@
+# Docker Compose configuration for Roam
+
+services:
+  # Spring Boot Server
+  roam-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: roam-server
+    ports:
+      - "8080:8080"
+    environment:
+      # CORS configuration - add client origins as needed
+      ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5000,http://host.docker.internal:*"
+      # JVM options
+      JAVA_OPTS: "-Xmx512m -Xms256m"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - roam-network
+
+  # Python Client (optional - requires X11 display)
+  # Uncomment to run client in Docker (Linux with X11 only)
+  # roam-client:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.client
+  #   container_name: roam-client
+  #   environment:
+  #     - DISPLAY=${DISPLAY}
+  #     - SERVER_URL=http://roam-server:8080
+  #   volumes:
+  #     - /tmp/.X11-unix:/tmp/.X11-unix:rw
+  #     - ${HOME}/.Xauthority:/root/.Xauthority:rw
+  #   depends_on:
+  #     roam-server:
+  #       condition: service_healthy
+  #   network_mode: host
+  #   # Or use:
+  #   # networks:
+  #   #   - roam-network
+
+networks:
+  roam-network:
+    driver: bridge

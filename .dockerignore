@@ -1,0 +1,66 @@
+# Git
+.git
+.gitignore
+.github
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Documentation
+*.md
+!server/README.md
+PLANNING.md
+LICENSE
+pics
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info
+dist
+build
+.pytest_cache
+.coverage
+
+# Test files (not needed in production image)
+tests
+pytest.ini
+test.sh
+
+# Server build artifacts (will be created during build)
+server/target
+server/.mvn
+
+# Client files (not needed in server image)
+# Note: Dockerfile.client will copy these separately
+# client/
+# src/
+# assets/
+
+# Development files
+run.sh
+format.sh
+demo_api.py
+version.txt
+
+# Temporary files
+tmp
+*.log
+*.tmp
+
+# Docker files themselves
+Dockerfile
+Dockerfile.client
+compose.yml
+.dockerignore
+DOCKER.md
+
+# Misc
+schemas

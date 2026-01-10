@@ -1,0 +1,43 @@
+# Dockerfile for Roam Python Client
+# Note: Requires X11 display access (Linux/macOS with XQuartz)
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies for pygame
+# Build tools are needed for compiling pygame from source
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    make \
+    libsdl2-dev \
+    libsdl2-image-dev \
+    libsdl2-mixer-dev \
+    libsdl2-ttf-dev \
+    libfreetype6-dev \
+    libportmidi-dev \
+    libjpeg-dev \
+    python3-setuptools \
+    python3-dev \
+    python3-numpy \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy client application and source dependencies
+COPY client/ ./client/
+COPY src/ ./src/
+COPY assets/ ./assets/
+
+# Set working directory to client
+WORKDIR /app/client
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1
+ENV SDL_VIDEODRIVER=x11
+ENV SERVER_URL=http://roam-server:8080
+
+# Run the client
+CMD ["python3", "roam_client.py"]

@@ -16,7 +16,12 @@ class Status:
 
     def set(self, text):
         self.text = text
-        self.tickLastSet = self.tickCounter.getTick()
+        # Handle case where tickCounter is None (server-backed client)
+        if self.tickCounter:
+            self.tickLastSet = self.tickCounter.getTick()
+        else:
+            # Use a simple counter for server-backed clients
+            self.tickLastSet = 0 if self.tickLastSet == -1 else self.tickLastSet + 1
 
     def clear(self):
         self.text = -1
@@ -45,6 +50,9 @@ class Status:
         return self.tickLastSet
 
     def checkForExpiration(self, currentTick):
+        # Skip expiration check if tickCounter is not used
+        if self.tickLastSet == -1:
+            return
         expiryTick = self.tickLastSet + self.durationInTicks
         if currentTick > expiryTick:
             self.clear()
