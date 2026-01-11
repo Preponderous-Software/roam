@@ -53,7 +53,8 @@ public class WorldGenerationService {
 
     /**
      * Generate biome distribution for a room.
-     * Creates a dominant biome (70%) with variation (30%) for natural appearance.
+     * Creates a predominantly Grassland environment (90%) with occasional variation (10%).
+     * This matches the original implementation which had mostly grass.
      * 
      * @param room the Room to populate with biomes
      * @param random the Random instance for deterministic generation
@@ -62,17 +63,14 @@ public class WorldGenerationService {
         int width = room.getWidth();
         int height = room.getHeight();
         
-        // Select a dominant biome for the room
-        Biome dominantBiome = Biome.values()[random.nextInt(Biome.values().length)];
-        
-        // Fill the room with variations
+        // Fill the room with mostly Grassland (matching original implementation)
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 Biome biome;
                 
-                // 70% chance of dominant biome, 30% chance of random variation
-                if (random.nextDouble() < 0.7) {
-                    biome = dominantBiome;
+                // 90% Grassland, 10% random variation for visual interest
+                if (random.nextDouble() < 0.9) {
+                    biome = Biome.GRASSLAND;
                 } else {
                     biome = Biome.values()[random.nextInt(Biome.values().length)];
                 }
