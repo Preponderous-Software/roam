@@ -275,16 +275,7 @@ class ServerBackedWorldScreen:
             logger.info("ESC pressed - opening options menu")
             self.nextScreen = ScreenType.OPTIONS_SCREEN
             self.changeScreen = True
-        # Room navigation with arrow keys + shift (must be checked BEFORE regular arrow keys)
-        elif key == pygame.K_UP and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            self._navigate_to_room(self.current_room_x, self.current_room_y - 1, "north")
-        elif key == pygame.K_DOWN and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            self._navigate_to_room(self.current_room_x, self.current_room_y + 1, "south")
-        elif key == pygame.K_LEFT and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            self._navigate_to_room(self.current_room_x - 1, self.current_room_y, "west")
-        elif key == pygame.K_RIGHT and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            self._navigate_to_room(self.current_room_x + 1, self.current_room_y, "east")
-        # Regular arrow key movement (without shift)
+        # Regular arrow key movement
         elif key == pygame.K_w or key == pygame.K_UP:
             self.movePlayer(0)
         elif key == pygame.K_a or key == pygame.K_LEFT:
@@ -326,35 +317,41 @@ class ServerBackedWorldScreen:
             # toggle debug mode
             self.config.debug = not self.config.debug
             logger.info(f"Debug mode toggled: {self.config.debug}")
-        # Test keys for adding items (temporary)
+        # Number keys for inventory selection
         elif key == pygame.K_1:
-            logger.debug("Test key 1 - adding apple")
-            self._addTestItem("apple")
+            self._selectInventorySlot(0)
         elif key == pygame.K_2:
-            logger.debug("Test key 2 - adding banana")
-            self._addTestItem("banana")
+            self._selectInventorySlot(1)
         elif key == pygame.K_3:
-            logger.debug("Test key 3 - adding stone")
-            self._addTestItem("stone")
+            self._selectInventorySlot(2)
+        elif key == pygame.K_4:
+            self._selectInventorySlot(3)
+        elif key == pygame.K_5:
+            self._selectInventorySlot(4)
+        elif key == pygame.K_6:
+            self._selectInventorySlot(5)
+        elif key == pygame.K_7:
+            self._selectInventorySlot(6)
+        elif key == pygame.K_8:
+            self._selectInventorySlot(7)
+        elif key == pygame.K_9:
+            self._selectInventorySlot(8)
+        elif key == pygame.K_0:
+            self._selectInventorySlot(9)
         elif key == pygame.K_e:
             logger.debug("E key pressed - consuming food")
             self._consumeFood()
     
-    def _addTestItem(self, item_name: str):
-        """Add test item to inventory (for testing)."""
-        logger.debug(f"Adding test item to inventory: {item_name}")
+    def _selectInventorySlot(self, slot_index: int):
+        """Select an inventory slot."""
         try:
-            logger.debug(f"Calling API: add_item_to_inventory({item_name})")
-            self.api_client.add_item_to_inventory(item_name)
-            logger.debug("Fetching updated player state")
-            self.player_data = self.api_client.get_player()
-            logger.info(f"Item added successfully: {item_name}")
+            logger.debug(f"Selecting inventory slot {slot_index}")
+            self.player_data = self.api_client.select_inventory_slot(slot_index)
             self._updatePlayerFromServerData(self.player_data)
-            self.status.set(f"Added {item_name}")
+            self.status.set(f"Selected slot {slot_index + 1}")
         except Exception as e:
-            logger.error(f"Failed to add item {item_name}: {e}", exc_info=True)
-            print(f"Failed to add item: {e}")
-            self.status.set(f"Failed to add {item_name}")
+            logger.error(f"Failed to select slot {slot_index}: {e}", exc_info=True)
+            self.status.set(f"Slot selection failed")
     
     def _consumeFood(self):
         """Consume food from inventory."""

@@ -5,6 +5,8 @@ import com.preponderous.roam.model.LivingEntity;
 import com.preponderous.roam.model.Room;
 import com.preponderous.roam.model.World;
 import com.preponderous.roam.model.entity.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -18,6 +20,8 @@ import java.util.Random;
  */
 @Service
 public class EntityManager {
+    private static final Logger logger = LoggerFactory.getLogger(EntityManager.class);
+    
     // Spawn rates per room (0.0 to 1.0)
     public static final double TREE_SPAWN_RATE = 0.05;
     public static final double ROCK_SPAWN_RATE = 0.03;
@@ -35,6 +39,7 @@ public class EntityManager {
      * @param currentTick the current game tick for entity creation timestamps
      */
     public void spawnInitialEntities(Room room, World world, long currentTick) {
+        logger.info("Spawning entities in room ({}, {})", room.getRoomX(), room.getRoomY());
         long seed = world.getConfig().getSeed() + room.getRoomX() * 10000L + room.getRoomY() * 100L;
         Random random = new Random(seed);
         
@@ -44,6 +49,7 @@ public class EntityManager {
         
         // Spawn trees - calculate expected count based on spawn rate
         int expectedTrees = (int) (totalTiles * TREE_SPAWN_RATE);
+        logger.debug("Spawning {} trees in room ({}, {})", expectedTrees, room.getRoomX(), room.getRoomY());
         for (int i = 0; i < expectedTrees; i++) {
             Tree tree = new Tree();
             int x = random.nextInt(width);
@@ -54,6 +60,7 @@ public class EntityManager {
         
         // Spawn rocks
         int expectedRocks = (int) (totalTiles * ROCK_SPAWN_RATE);
+        logger.debug("Spawning {} rocks in room ({}, {})", expectedRocks, room.getRoomX(), room.getRoomY());
         for (int i = 0; i < expectedRocks; i++) {
             Rock rock = new Rock();
             int x = random.nextInt(width);
@@ -64,6 +71,7 @@ public class EntityManager {
         
         // Spawn bushes
         int expectedBushes = (int) (totalTiles * BUSH_SPAWN_RATE);
+        logger.debug("Spawning {} bushes in room ({}, {})", expectedBushes, room.getRoomX(), room.getRoomY());
         for (int i = 0; i < expectedBushes; i++) {
             Bush bush = new Bush();
             int x = random.nextInt(width);

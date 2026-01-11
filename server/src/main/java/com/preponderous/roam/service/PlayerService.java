@@ -3,6 +3,8 @@ package com.preponderous.roam.service;
 import com.preponderous.roam.model.Player;
 import com.preponderous.roam.model.Room;
 import com.preponderous.roam.model.World;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class PlayerService {
+    private static final Logger logger = LoggerFactory.getLogger(PlayerService.class);
     
     @Autowired
     private WorldGenerationService worldGenerationService;
@@ -149,17 +152,21 @@ public class PlayerService {
         if (newTileX < 0) {
             newRoomX--;
             newTileX = worldGenerationService.getOrGenerateRoom(world, newRoomX, newRoomY, currentTick).getWidth() - 1;
+            logger.info("Player transitioning to room ({}, {}) from west", newRoomX, newRoomY);
         } else if (newTileX >= currentRoom.getWidth()) {
             newRoomX++;
             newTileX = 0;
+            logger.info("Player transitioning to room ({}, {}) from east", newRoomX, newRoomY);
         }
 
         if (newTileY < 0) {
             newRoomY--;
             newTileY = worldGenerationService.getOrGenerateRoom(world, newRoomX, newRoomY, currentTick).getHeight() - 1;
+            logger.info("Player transitioning to room ({}, {}) from north", newRoomX, newRoomY);
         } else if (newTileY >= currentRoom.getHeight()) {
             newRoomY++;
             newTileY = 0;
+            logger.info("Player transitioning to room ({}, {}) from south", newRoomX, newRoomY);
         }
 
         // Get the destination room
@@ -172,10 +179,14 @@ public class PlayerService {
                      destinationLocationId.equals(entity.getLocationId()));
 
         if (blocked) {
+            logger.debug("Player movement blocked by solid entity at ({}, {}, {}, {})", newRoomX, newRoomY, newTileX, newTileY);
             return false; // Movement blocked by solid entity
         }
 
         // Update player position
+        logger.debug("Player moved from ({}, {}, {}, {}) to ({}, {}, {}, {})", 
+                    currentRoomX, currentRoomY, currentTileX, currentTileY,
+                    newRoomX, newRoomY, newTileX, newTileY);
         player.setRoomX(newRoomX);
         player.setRoomY(newRoomY);
         player.setTileX(newTileX);
