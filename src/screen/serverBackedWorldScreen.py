@@ -224,6 +224,16 @@ class ServerBackedWorldScreen:
             logger.info("ESC pressed - opening options menu")
             self.nextScreen = ScreenType.OPTIONS_SCREEN
             self.changeScreen = True
+        # Room navigation with arrow keys + shift (must be checked BEFORE regular arrow keys)
+        elif key == pygame.K_UP and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+            self._navigate_to_room(self.current_room_x, self.current_room_y - 1, "north")
+        elif key == pygame.K_DOWN and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+            self._navigate_to_room(self.current_room_x, self.current_room_y + 1, "south")
+        elif key == pygame.K_LEFT and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+            self._navigate_to_room(self.current_room_x - 1, self.current_room_y, "west")
+        elif key == pygame.K_RIGHT and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+            self._navigate_to_room(self.current_room_x + 1, self.current_room_y, "east")
+        # Regular arrow key movement (without shift)
         elif key == pygame.K_w or key == pygame.K_UP:
             self.movePlayer(0)
         elif key == pygame.K_a or key == pygame.K_LEFT:
@@ -267,15 +277,6 @@ class ServerBackedWorldScreen:
         elif key == pygame.K_e:
             logger.debug("E key pressed - consuming food")
             self._consumeFood()
-        # Room navigation with arrow keys + shift
-        elif key == pygame.K_UP and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            self._navigate_to_room(self.current_room_x, self.current_room_y - 1, "north")
-        elif key == pygame.K_DOWN and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            self._navigate_to_room(self.current_room_x, self.current_room_y + 1, "south")
-        elif key == pygame.K_LEFT and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            self._navigate_to_room(self.current_room_x - 1, self.current_room_y, "west")
-        elif key == pygame.K_RIGHT and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            self._navigate_to_room(self.current_room_x + 1, self.current_room_y, "east")
     
     def _addTestItem(self, item_name: str):
         """Add test item to inventory (for testing)."""
