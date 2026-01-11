@@ -73,6 +73,15 @@ public class MappingService {
         return dto;
     }
 
+    /**
+     * Converts a World domain model to a WorldDTO for API responses.
+     * Returns only world configuration by default to avoid very large responses.
+     * For worlds with many loaded rooms, use toWorldDTOWithRooms() instead if
+     * the full room list is needed.
+     * 
+     * @param world the World domain model to convert
+     * @return a WorldDTO containing world configuration only
+     */
     public WorldDTO toWorldDTO(World world) {
         WorldDTO dto = new WorldDTO();
         WorldConfig config = world.getConfig();
@@ -83,6 +92,25 @@ public class MappingService {
         dto.setResourceDensity(config.getResourceDensity());
         dto.setHazardDensity(config.getHazardDensity());
         
+        // Return only world configuration by default to avoid very large responses.
+        // Call toWorldDTOWithRooms(world) explicitly if rooms should be included.
+        dto.setRooms(new ArrayList<>());
+        
+        return dto;
+    }
+
+    /**
+     * Creates a WorldDTO including all loaded rooms.
+     * This method preserves the original behavior of including all rooms
+     * and may result in large responses for worlds with many loaded rooms.
+     * Use toWorldDTO(world) for configuration-only responses.
+     * 
+     * @param world the World domain model to convert
+     * @return a WorldDTO containing world configuration and all loaded rooms
+     */
+    public WorldDTO toWorldDTOWithRooms(World world) {
+        WorldDTO dto = toWorldDTO(world);
+        
         List<RoomDTO> roomDTOs = world.getRooms().values().stream()
             .map(this::toRoomDTO)
             .collect(Collectors.toList());
@@ -91,6 +119,12 @@ public class MappingService {
         return dto;
     }
 
+    /**
+     * Converts a Room domain model to a RoomDTO for API responses.
+     * 
+     * @param room the Room domain model to convert
+     * @return a RoomDTO containing all room data including tiles
+     */
     public RoomDTO toRoomDTO(Room room) {
         RoomDTO dto = new RoomDTO();
         dto.setRoomX(room.getRoomX());
@@ -110,6 +144,12 @@ public class MappingService {
         return dto;
     }
 
+    /**
+     * Converts a Tile domain model to a TileDTO for API responses.
+     * 
+     * @param tile the Tile domain model to convert
+     * @return a TileDTO containing all tile data
+     */
     public TileDTO toTileDTO(Tile tile) {
         TileDTO dto = new TileDTO();
         dto.setX(tile.getX());

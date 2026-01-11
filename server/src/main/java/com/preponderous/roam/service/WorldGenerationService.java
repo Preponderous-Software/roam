@@ -18,6 +18,12 @@ public class WorldGenerationService {
 
     /**
      * Generate a new room at the specified coordinates.
+     * Uses deterministic random generation based on world seed and room coordinates.
+     * 
+     * @param world the World containing generation configuration
+     * @param roomX the X coordinate of the room in world space
+     * @param roomY the Y coordinate of the room in world space
+     * @return a newly generated Room with biomes, resources, and hazards
      */
     public Room generateRoom(World world, int roomX, int roomY) {
         WorldConfig config = world.getConfig();
@@ -39,6 +45,10 @@ public class WorldGenerationService {
 
     /**
      * Generate biome distribution for a room.
+     * Creates a dominant biome (70%) with variation (30%) for natural appearance.
+     * 
+     * @param room the Room to populate with biomes
+     * @param random the Random instance for deterministic generation
      */
     private void generateBiomes(Room room, Random random) {
         int width = room.getWidth();
@@ -67,6 +77,11 @@ public class WorldGenerationService {
 
     /**
      * Distribute resources across the room.
+     * Places resources probabilistically based on density parameter.
+     * 
+     * @param room the Room to populate with resources
+     * @param random the Random instance for deterministic generation
+     * @param density the probability (0.0-1.0) of a tile containing resources
      */
     private void distributeResources(Room room, Random random, double density) {
         int width = room.getWidth();
@@ -90,6 +105,11 @@ public class WorldGenerationService {
 
     /**
      * Place environmental hazards in the room.
+     * Hazards are only placed on tiles without resources.
+     * 
+     * @param room the Room to populate with hazards
+     * @param random the Random instance for deterministic generation
+     * @param density the probability (0.0-1.0) of a tile containing a hazard
      */
     private void placeHazards(Room room, Random random, double density) {
         int width = room.getWidth();
@@ -112,14 +132,32 @@ public class WorldGenerationService {
 
     /**
      * Get or generate a room for the world.
+     * Thread-safe implementation using synchronized block to prevent race conditions
+     * where multiple threads might generate the same room simultaneously.
+     * 
+     * @param world the World containing generation configuration and room storage
+     * @param roomX the X coordinate of the room in world space
+     * @param roomY the Y coordinate of the room in world space
+     * @return the Room at the specified coordinates (existing or newly generated)
      */
     public Room getOrGenerateRoom(World world, int roomX, int roomY) {
-        if (world.hasRoom(roomX, roomY)) {
-            return world.getRoom(roomX, roomY);
+        // Fast path: try to get an existing room without locking.
+        Room existingRoom = world.getRoom(roomX, roomY);
+        if (existingRoom != null) {
+            return existingRoom;
         }
-        
-        Room room = generateRoom(world, roomX, roomY);
-        world.addRoom(room);
-        return room;
+
+        // Synchronize to avoid generating the same room multiple times concurrently.
+        synchronized (world) {
+            // Re-check in case another thread created the room while we were waiting.
+            existingRoom = world.getRoom(roomX, roomY);
+            if (existingRoom != null) {
+                return existingRoom;
+            }
+
+            Room room = generateRoom(world, roomX, roomY);
+            world.addRoom(room);
+            return room;
+        }
     }
 }
