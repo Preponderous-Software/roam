@@ -6,6 +6,8 @@ import com.preponderous.roam.model.World;
 import com.preponderous.roam.model.entity.*;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 /**
@@ -112,7 +114,7 @@ public class EntityManager {
         // Future: Implement AI movement, reproduction, resource respawning, etc.
         
         // Collect depleted harvestable entities to remove
-        java.util.List<String> entitiesToRemove = new java.util.ArrayList<>();
+        List<String> entitiesToRemove = new ArrayList<>();
         
         for (Entity entity : room.getEntitiesList()) {
             if ((entity instanceof Tree && ((Tree) entity).isDepleted()) ||
