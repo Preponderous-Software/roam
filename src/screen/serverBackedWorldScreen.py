@@ -269,29 +269,13 @@ class ServerBackedWorldScreen:
             self._consumeFood()
         # Room navigation with arrow keys + shift
         elif key == pygame.K_UP and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            logger.info("Shift+Up pressed - navigating to room north")
-            new_x = self.current_room_x
-            new_y = self.current_room_y - 1
-            if not self.load_room(new_x, new_y):
-                logger.error(f"Failed to load room at ({new_x}, {new_y}) when navigating north")
+            self._navigate_to_room(self.current_room_x, self.current_room_y - 1, "north")
         elif key == pygame.K_DOWN and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            logger.info("Shift+Down pressed - navigating to room south")
-            new_x = self.current_room_x
-            new_y = self.current_room_y + 1
-            if not self.load_room(new_x, new_y):
-                logger.error(f"Failed to load room at ({new_x}, {new_y}) when navigating south")
+            self._navigate_to_room(self.current_room_x, self.current_room_y + 1, "south")
         elif key == pygame.K_LEFT and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            logger.info("Shift+Left pressed - navigating to room west")
-            new_x = self.current_room_x - 1
-            new_y = self.current_room_y
-            if not self.load_room(new_x, new_y):
-                logger.error(f"Failed to load room at ({new_x}, {new_y}) when navigating west")
+            self._navigate_to_room(self.current_room_x - 1, self.current_room_y, "west")
         elif key == pygame.K_RIGHT and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            logger.info("Shift+Right pressed - navigating to room east")
-            new_x = self.current_room_x + 1
-            new_y = self.current_room_y
-            if not self.load_room(new_x, new_y):
-                logger.error(f"Failed to load room at ({new_x}, {new_y}) when navigating east")
+            self._navigate_to_room(self.current_room_x + 1, self.current_room_y, "east")
     
     def _addTestItem(self, item_name: str):
         """Add test item to inventory (for testing)."""
@@ -346,6 +330,19 @@ class ServerBackedWorldScreen:
             print(f"Failed to consume: {e}")
             self.status.set(f"Consume failed: {e}")
     
+    def _navigate_to_room(self, new_x: int, new_y: int, direction: str):
+        """
+        Navigate to a room in the specified direction.
+        
+        Args:
+            new_x: X coordinate of the target room
+            new_y: Y coordinate of the target room
+            direction: Direction name for logging (e.g., "north", "south")
+        """
+        logger.info(f"Navigating to room {direction}: ({new_x}, {new_y})")
+        if not self.load_room(new_x, new_y):
+            logger.error(f"Failed to load room at ({new_x}, {new_y}) when navigating {direction}")
+    
     def load_room(self, room_x: int, room_y: int) -> bool:
         """
         Load a room from the server.
@@ -389,6 +386,11 @@ class ServerBackedWorldScreen:
         """
         # Remove '#' if present
         hex_color = hex_color.lstrip('#')
+        
+        # Validate length
+        if len(hex_color) != 6:
+            logger.warning(f"Invalid hex color length '{hex_color}' (expected 6 characters)")
+            return self.unknown_biome_color
         
         # Convert hex to RGB
         try:
