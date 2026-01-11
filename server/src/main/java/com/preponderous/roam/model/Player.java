@@ -23,6 +23,12 @@ public class Player extends LivingEntity {
     private int gatherSpeed;
     private int placeSpeed;
     private boolean crouching;
+    
+    // Position in world space
+    private int roomX;
+    private int roomY;
+    private int tileX;
+    private int tileY;
 
     public Player(long tickCreated) {
         super("Player", "assets/images/player_down.png", DEFAULT_PLAYER_ENERGY, tickCreated);
@@ -39,6 +45,12 @@ public class Player extends LivingEntity {
         this.placeSpeed = DEFAULT_PLACE_SPEED;
         this.crouching = false;
         this.setSolid(false);
+        
+        // Initialize player at starting position (room 0,0, center of room)
+        this.roomX = 0;
+        this.roomY = 0;
+        this.tileX = 0;
+        this.tileY = 0;
     }
 
     public int getDirection() {
@@ -155,5 +167,37 @@ public class Player extends LivingEntity {
 
     public boolean isMoving() {
         return direction != -1;
+    }
+
+    public int getRoomX() {
+        return roomX;
+    }
+
+    public void setRoomX(int roomX) {
+        this.roomX = roomX;
+    }
+
+    public int getRoomY() {
+        return roomY;
+    }
+
+    public void setRoomY(int roomY) {
+        this.roomY = roomY;
+    }
+
+    public int getTileX() {
+        return tileX;
+    }
+
+    public void setTileX(int tileX) {
+        this.tileX = tileX;
+    }
+
+    public int getTileY() {
+        return tileY;
+    }
+
+    public void setTileY(int tileY) {
+        this.tileY = tileY;
     }
 }

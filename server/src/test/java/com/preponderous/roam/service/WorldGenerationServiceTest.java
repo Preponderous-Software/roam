@@ -18,7 +18,7 @@ class WorldGenerationServiceTest {
         WorldConfig config = WorldConfig.getDefault();
         World world = new World(config);
         
-        Room room = worldGenerationService.generateRoom(world, 0, 0);
+        Room room = worldGenerationService.generateRoom(world, 0, 0, 0L);
         
         assertNotNull(room);
         assertEquals(0, room.getRoomX());
@@ -65,8 +65,8 @@ class WorldGenerationServiceTest {
         WorldConfig config = WorldConfig.getDefault();
         World world = new World(config);
         
-        Room room1 = worldGenerationService.generateRoom(world, 0, 0);
-        Room room2 = worldGenerationService.generateRoom(world, 1, 1);
+        Room room1 = worldGenerationService.generateRoom(world, 0, 0, 0L);
+        Room room2 = worldGenerationService.generateRoom(world, 1, 1, 0L);
         
         assertNotNull(room1);
         assertNotNull(room2);
@@ -82,7 +82,7 @@ class WorldGenerationServiceTest {
         WorldConfig config = new WorldConfig(12345L, 32, 32, 1.0, 0.0); // 100% resources
         World world = new World(config);
         
-        Room room = worldGenerationService.generateRoom(world, 0, 0);
+        Room room = worldGenerationService.generateRoom(world, 0, 0, 0L);
         
         // With 100% density, most tiles should have resources
         int tilesWithResources = 0;
@@ -102,7 +102,7 @@ class WorldGenerationServiceTest {
         WorldConfig config = new WorldConfig(12345L, 32, 32, 0.0, 1.0); // 100% hazards
         World world = new World(config);
         
-        Room room = worldGenerationService.generateRoom(world, 0, 0);
+        Room room = worldGenerationService.generateRoom(world, 0, 0, 0L);
         
         // With 100% density, most tiles should have hazards
         int tilesWithHazards = 0;
@@ -126,8 +126,8 @@ class WorldGenerationServiceTest {
         World world1 = new World(config1);
         World world2 = new World(config2);
         
-        Room room1 = worldGenerationService.generateRoom(world1, 5, 5);
-        Room room2 = worldGenerationService.generateRoom(world2, 5, 5);
+        Room room1 = worldGenerationService.generateRoom(world1, 5, 5, 0L);
+        Room room2 = worldGenerationService.generateRoom(world2, 5, 5, 0L);
         
         // Same seed and coordinates should produce identical rooms
         assertEquals(room1.getRoomX(), room2.getRoomX());

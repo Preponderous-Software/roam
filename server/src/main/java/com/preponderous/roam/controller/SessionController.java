@@ -13,6 +13,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
  * REST controller for game session management.
  * 
@@ -107,8 +111,32 @@ public class SessionController {
         }
         
         World world = gameState.getWorld();
-        Room room = worldGenerationService.getOrGenerateRoom(world, x, y);
+        long currentTick = gameState.getCurrentTick();
+        Room room = worldGenerationService.getOrGenerateRoom(world, x, y, currentTick);
         RoomDTO roomDTO = mappingService.toRoomDTO(room);
         return ResponseEntity.ok(roomDTO);
+    }
+
+    /**
+     * Get all entities in a session across all loaded rooms.
+     */
+    @GetMapping("/{sessionId}/entities")
+    public ResponseEntity<List<EntityDTO>> getEntities(@PathVariable String sessionId) {
+        GameState gameState = gameService.getSession(sessionId);
+        if (gameState == null) {
+            throw new SessionNotFoundException(sessionId);
+        }
+        
+        World world = gameState.getWorld();
+        List<EntityDTO> allEntities = new ArrayList<>();
+        
+        for (Room room : world.getRooms().values()) {
+            List<EntityDTO> roomEntities = room.getEntitiesList().stream()
+                .map(mappingService::toEntityDTO)
+                .collect(Collectors.toList());
+            allEntities.addAll(roomEntities);
+        }
+        
+        return ResponseEntity.ok(allEntities);
     }
 }
