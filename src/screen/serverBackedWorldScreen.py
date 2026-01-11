@@ -495,6 +495,7 @@ class ServerBackedWorldScreen:
     def _drawDebugInfo(self):
         """Draw debug information."""
         display_width = self.graphik.getGameDisplay().get_width()
+        display_height = self.graphik.getGameDisplay().get_height()
         
         font = pygame.font.Font(None, 20)
         debug_texts = [
