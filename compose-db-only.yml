@@ -15,7 +15,7 @@ services:
     environment:
       POSTGRES_DB: roam
       POSTGRES_USER: roam
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-roamdev}
     volumes:
       - postgres-dev-data:/var/lib/postgresql/data
       - ./server/scripts/backup:/backups
