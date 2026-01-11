@@ -62,6 +62,12 @@ class ServerBackedWorldScreen:
         # Can be overridden via Config.tile_size to match server room dimensions/display size.
         self.tile_size = getattr(self.config, "tile_size", 32)
         
+        # Mouse state tracking for continuous gathering
+        self.mouse_button_held = {1: False, 3: False}  # Track left and right mouse buttons
+        self.last_gather_tile = None
+        self.gather_cooldown_frames = 0  # Frames since last gather
+        self.gather_cooldown_max = 10  # Gather every 10 frames when holding
+        
         # Load player sprites with error handling
         self.player_sprites = {}
         sprite_paths = {
@@ -391,44 +397,72 @@ class ServerBackedWorldScreen:
     def handleMouseButtonDown(self, event):
         """Handle mouse button press events."""
         if event.button == 1:  # Left click - gather
+            self.mouse_button_held[1] = True
             logger.debug(f"Left click at position ({event.pos[0]}, {event.pos[1]})")
-            # Convert screen coordinates to tile coordinates
-            tile_coords = self._screen_to_tile_coords(event.pos[0], event.pos[1])
-            if tile_coords:
-                tile_x, tile_y = tile_coords
-                logger.debug(f"Clicking on tile ({tile_x}, {tile_y})")
-                # Trigger gathering action at the clicked tile
-                try:
-                    self.player_data = self.api_client.perform_player_action(
-                        "gather",
-                        gathering=True,
-                        tile_x=tile_x,
-                        tile_y=tile_y
-                    )
-                    self._updatePlayerFromServerData(self.player_data)
-                    self.status.set(f"Gathered at ({tile_x}, {tile_y})")
-                except Exception as e:
-                    logger.error(f"Failed to gather: {e}", exc_info=True)
-                    self.status.set(f"Gather failed")
+            self._performGatherAt(event.pos[0], event.pos[1])
         elif event.button == 3:  # Right click - place
+            self.mouse_button_held[3] = True
             logger.debug(f"Right click at position ({event.pos[0]}, {event.pos[1]})")
-            # Convert screen coordinates to tile coordinates
-            tile_coords = self._screen_to_tile_coords(event.pos[0], event.pos[1])
-            if tile_coords:
-                tile_x, tile_y = tile_coords
-                logger.debug(f"Placing on tile ({tile_x}, {tile_y})")
-                # Trigger placing action at the clicked tile
-                try:
-                    self.player_data = self.api_client.perform_player_action(
-                        "place",
-                        placing=True,
-                        tile_x=tile_x,
-                        tile_y=tile_y
-                    )
-                    self._updatePlayerFromServerData(self.player_data)
+            self._performPlaceAt(event.pos[0], event.pos[1])
+    
+    def handleMouseButtonUp(self, event):
+        """Handle mouse button release events."""
+        if event.button == 1:
+            self.mouse_button_held[1] = False
+            self.last_gather_tile = None
+        elif event.button == 3:
+            self.mouse_button_held[3] = False
+    
+    def _performGatherAt(self, screen_x: int, screen_y: int):
+        """Perform gather action at screen coordinates."""
+        # Convert screen coordinates to tile coordinates
+        tile_coords = self._screen_to_tile_coords(screen_x, screen_y)
+        if tile_coords:
+            tile_x, tile_y = tile_coords
+            logger.debug(f"Gathering at tile ({tile_x}, {tile_y})")
+            # Trigger gathering action at the clicked tile
+            try:
+                self.player_data = self.api_client.perform_player_action(
+                    "gather",
+                    gathering=True,
+                    tile_x=tile_x,
+                    tile_y=tile_y
+                )
+                self._updatePlayerFromServerData(self.player_data)
+                self.last_gather_tile = (tile_x, tile_y)
+                # Don't show status for every gather to avoid spam
+                if not self.config.debug:
+                    self.status.set("Gathered")
+                else:
+                    self.status.set(f"Gathered at ({tile_x}, {tile_y})")
+            except Exception as e:
+                logger.error(f"Failed to gather: {e}", exc_info=True)
+                if self.config.debug:
+                    self.status.set(f"Gather failed")
+    
+    def _performPlaceAt(self, screen_x: int, screen_y: int):
+        """Perform place action at screen coordinates."""
+        # Convert screen coordinates to tile coordinates
+        tile_coords = self._screen_to_tile_coords(screen_x, screen_y)
+        if tile_coords:
+            tile_x, tile_y = tile_coords
+            logger.debug(f"Placing on tile ({tile_x}, {tile_y})")
+            # Trigger placing action at the clicked tile
+            try:
+                self.player_data = self.api_client.perform_player_action(
+                    "place",
+                    placing=True,
+                    tile_x=tile_x,
+                    tile_y=tile_y
+                )
+                self._updatePlayerFromServerData(self.player_data)
+                if not self.config.debug:
+                    self.status.set("Placed")
+                else:
                     self.status.set(f"Placed at ({tile_x}, {tile_y})")
-                except Exception as e:
-                    logger.error(f"Failed to place: {e}", exc_info=True)
+            except Exception as e:
+                logger.error(f"Failed to place: {e}", exc_info=True)
+                if self.config.debug:
                     self.status.set(f"Place failed")
     
     def _screen_to_tile_coords(self, screen_x: int, screen_y: int):
@@ -502,7 +536,9 @@ class ServerBackedWorldScreen:
             self.current_room_x = room_x
             self.current_room_y = room_y
             logger.debug(f"Room loaded successfully: {len(self.current_room.get('tiles', []))} tiles")
-            self.status.set(f"Loaded room ({room_x}, {room_y})")
+            # Only show "Loaded room" message in debug mode
+            if self.config.debug:
+                self.status.set(f"Loaded room ({room_x}, {room_y})")
             return True
         except Exception as e:
             # Ensure we do not leave a partially loaded or inconsistent room in state
@@ -963,6 +999,19 @@ class ServerBackedWorldScreen:
                     self.handleKeyUpEvent(event.key)
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     self.handleMouseButtonDown(event)
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    self.handleMouseButtonUp(event)
+            
+            # Handle continuous gathering if mouse is held
+            if self.mouse_button_held[1]:
+                self.gather_cooldown_frames += 1
+                if self.gather_cooldown_frames >= self.gather_cooldown_max:
+                    # Get current mouse position
+                    mouse_pos = pygame.mouse.get_pos()
+                    self._performGatherAt(mouse_pos[0], mouse_pos[1])
+                    self.gather_cooldown_frames = 0
+            else:
+                self.gather_cooldown_frames = 0
             
             # Update tick periodically
             tick_counter += 1

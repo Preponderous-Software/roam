@@ -5,6 +5,7 @@ import com.preponderous.roam.dto.PlayerDTO;
 import com.preponderous.roam.exception.SessionNotFoundException;
 import com.preponderous.roam.model.Entity;
 import com.preponderous.roam.model.GameState;
+import com.preponderous.roam.model.LivingEntity;
 import com.preponderous.roam.model.Player;
 import com.preponderous.roam.model.Room;
 import com.preponderous.roam.model.entity.*;
@@ -117,11 +118,18 @@ public class PlayerController {
                         }
                         
                         if (targetEntity != null) {
-                            // Try harvesting harvestable entities
+                            // Try harvesting harvestable entities (trees, rocks, bushes)
                             entityInteractionService.harvestEntity(targetEntity, player);
                             
-                            // Try gathering resources
+                            // Try gathering resources (apples, berries, wood, stone)
                             entityInteractionService.gatherResource(targetEntity, player, currentRoom);
+                            
+                            // Try hunting wildlife (bears, deer, chickens)
+                            if (targetEntity instanceof LivingEntity) {
+                                LivingEntity livingEntity = (LivingEntity) targetEntity;
+                                // Deal 50 damage per gather action (might need multiple clicks to kill)
+                                entityInteractionService.huntEntity(livingEntity, player, currentRoom, 50.0);
+                            }
                         }
                     }
                 }
