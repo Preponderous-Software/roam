@@ -58,9 +58,23 @@ class ServerBackedWorldScreen:
         self.current_room = None
         self.current_room_x = 0
         self.current_room_y = 0
-        # Size of each tile in pixels; default 16 works for 32x32 rooms (512x512).
+        # Size of each tile in pixels; increased from 16 to 24 for better visibility
         # Can be overridden via Config.tile_size to match server room dimensions/display size.
-        self.tile_size = getattr(self.config, "tile_size", 16)
+        self.tile_size = getattr(self.config, "tile_size", 24)
+        
+        # Load player sprites
+        self.player_sprites = {
+            0: pygame.image.load("assets/images/player_up.png"),
+            1: pygame.image.load("assets/images/player_left.png"),
+            2: pygame.image.load("assets/images/player_down.png"),
+            3: pygame.image.load("assets/images/player_right.png")
+        }
+        # Scale sprites to tile size
+        for direction in self.player_sprites:
+            self.player_sprites[direction] = pygame.transform.scale(
+                self.player_sprites[direction],
+                (self.tile_size, self.tile_size)
+            )
         
         # Biome colors (fallback only - prefer server-provided colors)
         # These RGB values match the server's hex color definitions as fallback
@@ -527,35 +541,20 @@ class ServerBackedWorldScreen:
                 screen_x = world_view_x + player_tile_x * self.tile_size
                 screen_y = world_view_y + player_tile_y * self.tile_size
                 
-                # Draw player as blue square
-                pygame.draw.rect(
-                    self.graphik.getGameDisplay(),
-                    (50, 150, 255),
-                    (screen_x + 3, screen_y + 3, self.tile_size - 6, self.tile_size - 6)
-                )
-                
-                # Draw player direction arrow
+                # Draw player sprite based on direction
                 direction = self.player_data.get('direction', -1)
-                if direction >= 0:
-                    center_x = screen_x + self.tile_size // 2
-                    center_y = screen_y + self.tile_size // 2
-                    arrow_len = self.tile_size // 3
-                    
-                    if direction == 0:  # Up
-                        end_x, end_y = center_x, screen_y
-                    elif direction == 1:  # Left
-                        end_x, end_y = screen_x, center_y
-                    elif direction == 2:  # Down
-                        end_x, end_y = center_x, screen_y + self.tile_size
-                    elif direction == 3:  # Right
-                        end_x, end_y = screen_x + self.tile_size, center_y
-                    
-                    pygame.draw.line(
-                        self.graphik.getGameDisplay(),
-                        (255, 255, 0),
-                        (center_x, center_y),
-                        (end_x, end_y),
-                        2
+                last_direction = self.player_data.get('lastDirection', 2)  # Default to down
+                
+                # Use last direction if not moving
+                display_direction = direction if direction >= 0 else last_direction
+                if display_direction < 0:
+                    display_direction = 2  # Default to down
+                
+                # Draw the player sprite
+                if display_direction in self.player_sprites:
+                    self.graphik.getGameDisplay().blit(
+                        self.player_sprites[display_direction],
+                        (screen_x, screen_y)
                     )
         
         # Draw grid lines
@@ -772,59 +771,65 @@ class ServerBackedWorldScreen:
         inventory_data = self.player_data.get('inventory', {})
         slots = inventory_data.get('slots', [])[:10]  # First 10 slots
         
-        # Position at bottom center
-        slot_size = 50
+        # Position at bottom center - larger slots for better visibility
+        slot_size = 60
         spacing = 5
         total_width = len(slots) * (slot_size + spacing)
         start_x = display_width // 2 - total_width // 2
-        start_y = display_height - 100
+        start_y = display_height - 80
         
         # Draw background bar
         bar_padding = 10
         pygame.draw.rect(
             self.graphik.getGameDisplay(),
-            (50, 50, 50),
+            (40, 40, 40),
             (start_x - bar_padding, start_y - bar_padding, 
              total_width + bar_padding * 2, slot_size + bar_padding * 2)
         )
         
         # Draw slots
-        font = pygame.font.Font(None, 20)
+        small_font = pygame.font.Font(None, 18)
+        large_font = pygame.font.Font(None, 32)
         for i, slot in enumerate(slots):
             x = start_x + i * (slot_size + spacing)
             
             # Draw slot background
-            color = (100, 100, 100) if slot.get('empty', True) else (150, 150, 150)
+            color = (80, 80, 80) if slot.get('empty', True) else (120, 120, 120)
             pygame.draw.rect(
                 self.graphik.getGameDisplay(),
                 color,
                 (x, start_y, slot_size, slot_size)
             )
             
+            # Draw border
+            pygame.draw.rect(
+                self.graphik.getGameDisplay(),
+                (60, 60, 60),
+                (x, start_y, slot_size, slot_size),
+                2
+            )
+            
             # Draw item info if not empty
             if not slot.get('empty', True):
-                item_name = slot.get('itemName', '')
                 num_items = slot.get('numItems', 0)
                 
-                # Draw item name (truncated)
-                name_surface = font.render(item_name[:8], True, (255, 255, 255))
-                self.graphik.getGameDisplay().blit(name_surface, (x + 2, start_y + 2))
-                
-                # Draw count
-                count_surface = font.render(str(num_items), True, (255, 255, 100))
+                # Draw count prominently (like original)
+                count_surface = large_font.render(str(num_items), True, (255, 255, 255))
+                text_width = count_surface.get_width()
+                text_height = count_surface.get_height()
                 self.graphik.getGameDisplay().blit(
                     count_surface, 
-                    (x + slot_size - 20, start_y + slot_size - 20)
+                    (x + (slot_size - text_width) // 2, start_y + (slot_size - text_height) // 2)
                 )
             
-            # Draw selection indicator
+            # Draw selection indicator (yellow border)
             selected_index = inventory_data.get('selectedSlotIndex', 0)
             if i == selected_index:
                 pygame.draw.rect(
                     self.graphik.getGameDisplay(),
                     (255, 255, 0),
                     (x, start_y, slot_size, slot_size),
-                    3
+                    4
                 )
     
     def _drawControls(self):
