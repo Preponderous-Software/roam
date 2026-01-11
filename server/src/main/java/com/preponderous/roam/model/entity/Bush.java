@@ -20,6 +20,16 @@ public class Bush extends Entity {
         this.maxHarvestCount = MAX_HARVEST_COUNT;
         this.setSolid(false);
     }
+    
+    /**
+     * Constructor for persistence - creates bush with specific ID.
+     */
+    public Bush(String id) {
+        super(id, "Bush", "assets/images/bush.png");
+        this.harvestCount = 0;
+        this.maxHarvestCount = MAX_HARVEST_COUNT;
+        this.setSolid(false);
+    }
 
     public int getHarvestCount() {
         return harvestCount;

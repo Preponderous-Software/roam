@@ -20,6 +20,16 @@ public class Rock extends Entity {
         this.maxHarvestCount = MAX_HARVEST_COUNT;
         this.setSolid(true);
     }
+    
+    /**
+     * Constructor for persistence - creates rock with specific ID.
+     */
+    public Rock(String id) {
+        super(id, "Rock", "assets/images/rock.png");
+        this.harvestCount = 0;
+        this.maxHarvestCount = MAX_HARVEST_COUNT;
+        this.setSolid(true);
+    }
 
     public int getHarvestCount() {
         return harvestCount;

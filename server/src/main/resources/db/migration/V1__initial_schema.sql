@@ -96,7 +96,8 @@ CREATE INDEX idx_tiles_coordinates ON tiles(room_id, tile_x, tile_y);
 
 -- Game Entities table (trees, rocks, animals, etc.)
 CREATE TABLE game_entities (
-    id VARCHAR(36) PRIMARY KEY,
+    db_id BIGSERIAL PRIMARY KEY,
+    entity_id VARCHAR(36) NOT NULL,
     room_id BIGINT NOT NULL,
     entity_type VARCHAR(100) NOT NULL,
     name VARCHAR(100) NOT NULL,
@@ -111,5 +112,6 @@ CREATE TABLE game_entities (
 );
 
 CREATE INDEX idx_game_entities_room_id ON game_entities(room_id);
+CREATE INDEX idx_game_entities_entity_id ON game_entities(entity_id);
 CREATE INDEX idx_game_entities_type ON game_entities(entity_type);
 CREATE INDEX idx_game_entities_location ON game_entities(location_id);

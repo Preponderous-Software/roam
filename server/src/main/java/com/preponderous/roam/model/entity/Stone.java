@@ -16,6 +16,15 @@ public class Stone extends Entity {
         this.quantity = 1;
         this.setSolid(false);
     }
+    
+    /**
+     * Constructor for persistence - creates stone with specific ID.
+     */
+    public Stone(String id) {
+        super(id, "Stone", "assets/images/stone.png");
+        this.quantity = 1;
+        this.setSolid(false);
+    }
 
     public int getQuantity() {
         return quantity;

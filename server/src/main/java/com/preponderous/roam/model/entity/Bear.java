@@ -24,6 +24,17 @@ public class Bear extends LivingEntity {
         this.aggressive = true;
         this.setSolid(true);
     }
+    
+    /**
+     * Constructor for persistence - creates bear with specific ID.
+     */
+    public Bear(String id, long tickCreated) {
+        super(id, "Bear", "assets/images/bear.png", DEFAULT_ENERGY, tickCreated);
+        this.moveSpeed = DEFAULT_MOVE_SPEED;
+        this.aggressionRange = AGGRESSION_RANGE;
+        this.aggressive = true;
+        this.setSolid(true);
+    }
 
     public int getMoveSpeed() {
         return moveSpeed;

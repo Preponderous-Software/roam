@@ -22,6 +22,16 @@ public class Deer extends LivingEntity {
         this.fleeRange = FLEE_RANGE;
         this.setSolid(false);
     }
+    
+    /**
+     * Constructor for persistence - creates deer with specific ID.
+     */
+    public Deer(String id, long tickCreated) {
+        super(id, "Deer", "assets/images/deer.png", DEFAULT_ENERGY, tickCreated);
+        this.moveSpeed = DEFAULT_MOVE_SPEED;
+        this.fleeRange = FLEE_RANGE;
+        this.setSolid(false);
+    }
 
     public int getMoveSpeed() {
         return moveSpeed;

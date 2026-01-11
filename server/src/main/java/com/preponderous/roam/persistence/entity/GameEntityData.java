@@ -12,8 +12,12 @@ import jakarta.persistence.*;
 public class GameEntityData {
     
     @Id
-    @Column(name = "id", length = 36, nullable = false)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "db_id")
+    private Long dbId;
+    
+    @Column(name = "entity_id", length = 36, nullable = false)
+    private String entityId;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id", nullable = false)
@@ -76,8 +80,8 @@ public class GameEntityData {
     public GameEntityData() {
     }
     
-    public GameEntityData(String id, String entityType, String name, String imagePath) {
-        this.id = id;
+    public GameEntityData(String entityId, String entityType, String name, String imagePath) {
+        this.entityId = entityId;
         this.entityType = entityType;
         this.name = name;
         this.imagePath = imagePath;
@@ -86,12 +90,20 @@ public class GameEntityData {
     
     // Getters and Setters
     
-    public String getId() {
-        return id;
+    public Long getDbId() {
+        return dbId;
     }
     
-    public void setId(String id) {
-        this.id = id;
+    public void setDbId(Long dbId) {
+        this.dbId = dbId;
+    }
+    
+    public String getEntityId() {
+        return entityId;
+    }
+    
+    public void setEntityId(String entityId) {
+        this.entityId = entityId;
     }
     
     public RoomEntity getRoom() {

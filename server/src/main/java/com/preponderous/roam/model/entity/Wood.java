@@ -16,6 +16,15 @@ public class Wood extends Entity {
         this.quantity = 1;
         this.setSolid(false);
     }
+    
+    /**
+     * Constructor for persistence - creates wood with specific ID.
+     */
+    public Wood(String id) {
+        super(id, "Wood", "assets/images/wood.png");
+        this.quantity = 1;
+        this.setSolid(false);
+    }
 
     public int getQuantity() {
         return quantity;

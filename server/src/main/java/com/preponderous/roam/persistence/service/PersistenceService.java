@@ -256,6 +256,7 @@ public class PersistenceService {
     
     private void saveTiles(Room room, RoomEntity roomEntity) {
         roomEntity.getTiles().clear();
+        roomRepository.saveAndFlush(roomEntity);  // Flush to ensure tiles are deleted
         
         Tile[][] tiles = room.getTiles();
         for (int y = 0; y < room.getHeight(); y++) {
@@ -269,10 +270,12 @@ public class PersistenceService {
                 roomEntity.addTile(tileEntity);
             }
         }
+        roomRepository.saveAndFlush(roomEntity);  // Save new tiles
     }
     
     private void saveEntities(Room room, RoomEntity roomEntity) {
         roomEntity.getEntities().clear();
+        roomRepository.saveAndFlush(roomEntity);  // Flush to ensure entities are deleted
         
         for (Entity entity : room.getEntitiesList()) {
             GameEntityData entityData = new GameEntityData(
@@ -367,53 +370,55 @@ public class PersistenceService {
     
     /**
      * Recreate an entity from stored data based on its type.
+     * Preserves the original entity ID.
      */
     private Entity recreateEntity(GameEntityData data) {
         String entityType = data.getEntityType();
+        String id = data.getEntityId();
         
         try {
             switch (entityType) {
                 case "Tree":
-                    Tree tree = new Tree();
+                    Tree tree = new Tree(id);
                     if (data.getHarvestCount() != null) tree.setHarvestCount(data.getHarvestCount());
                     if (data.getMaxHarvestCount() != null) tree.setMaxHarvestCount(data.getMaxHarvestCount());
                     return tree;
                     
                 case "Rock":
-                    Rock rock = new Rock();
+                    Rock rock = new Rock(id);
                     if (data.getHarvestCount() != null) rock.setHarvestCount(data.getHarvestCount());
                     if (data.getMaxHarvestCount() != null) rock.setMaxHarvestCount(data.getMaxHarvestCount());
                     return rock;
                     
                 case "Bush":
-                    Bush bush = new Bush();
+                    Bush bush = new Bush(id);
                     if (data.getHarvestCount() != null) bush.setHarvestCount(data.getHarvestCount());
                     if (data.getMaxHarvestCount() != null) bush.setMaxHarvestCount(data.getMaxHarvestCount());
                     return bush;
                     
                 case "Apple":
-                    Apple apple = new Apple();
+                    Apple apple = new Apple(id);
                     if (data.getEnergyValue() != null) apple.setEnergyValue(data.getEnergyValue());
                     return apple;
                     
                 case "Berry":
-                    Berry berry = new Berry();
+                    Berry berry = new Berry(id);
                     if (data.getEnergyValue() != null) berry.setEnergyValue(data.getEnergyValue());
                     return berry;
                     
                 case "Wood":
-                    Wood wood = new Wood();
+                    Wood wood = new Wood(id);
                     if (data.getQuantity() != null) wood.setQuantity(data.getQuantity());
                     return wood;
                     
                 case "Stone":
-                    Stone stone = new Stone();
+                    Stone stone = new Stone(id);
                     if (data.getQuantity() != null) stone.setQuantity(data.getQuantity());
                     return stone;
                     
                 case "Deer":
                     long tickCreated = data.getTickCreated() != null ? data.getTickCreated() : 0L;
-                    Deer deer = new Deer(tickCreated);
+                    Deer deer = new Deer(id, tickCreated);
                     if (data.getEnergy() != null) deer.setEnergy(data.getEnergy());
                     if (data.getTargetEnergy() != null) deer.setTargetEnergy(data.getTargetEnergy());
                     if (data.getTickLastReproduced() != null) deer.setTickLastReproduced(data.getTickLastReproduced());
@@ -423,7 +428,7 @@ public class PersistenceService {
                     
                 case "Bear":
                     tickCreated = data.getTickCreated() != null ? data.getTickCreated() : 0L;
-                    Bear bear = new Bear(tickCreated);
+                    Bear bear = new Bear(id, tickCreated);
                     if (data.getEnergy() != null) bear.setEnergy(data.getEnergy());
                     if (data.getTargetEnergy() != null) bear.setTargetEnergy(data.getTargetEnergy());
                     if (data.getTickLastReproduced() != null) bear.setTickLastReproduced(data.getTickLastReproduced());
@@ -434,7 +439,7 @@ public class PersistenceService {
                     
                 case "Chicken":
                     tickCreated = data.getTickCreated() != null ? data.getTickCreated() : 0L;
-                    Chicken chicken = new Chicken(tickCreated);
+                    Chicken chicken = new Chicken(id, tickCreated);
                     if (data.getEnergy() != null) chicken.setEnergy(data.getEnergy());
                     if (data.getTargetEnergy() != null) chicken.setTargetEnergy(data.getTargetEnergy());
                     if (data.getTickLastReproduced() != null) chicken.setTickLastReproduced(data.getTickLastReproduced());

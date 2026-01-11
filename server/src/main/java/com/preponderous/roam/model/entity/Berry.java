@@ -18,6 +18,15 @@ public class Berry extends Entity {
         this.energyValue = ENERGY_VALUE;
         this.setSolid(false);
     }
+    
+    /**
+     * Constructor for persistence - creates berry with specific ID.
+     */
+    public Berry(String id) {
+        super(id, "Berry", "assets/images/berry.png");
+        this.energyValue = ENERGY_VALUE;
+        this.setSolid(false);
+    }
 
     public double getEnergyValue() {
         return energyValue;
