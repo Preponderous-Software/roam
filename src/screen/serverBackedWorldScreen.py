@@ -62,19 +62,29 @@ class ServerBackedWorldScreen:
         # Can be overridden via Config.tile_size to match server room dimensions/display size.
         self.tile_size = getattr(self.config, "tile_size", 24)
         
-        # Load player sprites
-        self.player_sprites = {
-            0: pygame.image.load("assets/images/player_up.png"),
-            1: pygame.image.load("assets/images/player_left.png"),
-            2: pygame.image.load("assets/images/player_down.png"),
-            3: pygame.image.load("assets/images/player_right.png")
+        # Load player sprites with error handling
+        self.player_sprites = {}
+        sprite_paths = {
+            0: "assets/images/player_up.png",
+            1: "assets/images/player_left.png",
+            2: "assets/images/player_down.png",
+            3: "assets/images/player_right.png"
         }
-        # Scale sprites to tile size
-        for direction in self.player_sprites:
-            self.player_sprites[direction] = pygame.transform.scale(
-                self.player_sprites[direction],
-                (self.tile_size, self.tile_size)
-            )
+        
+        for direction, path in sprite_paths.items():
+            try:
+                sprite = pygame.image.load(path)
+                # Scale sprites to tile size
+                self.player_sprites[direction] = pygame.transform.scale(
+                    sprite,
+                    (self.tile_size, self.tile_size)
+                )
+            except (pygame.error, FileNotFoundError) as e:
+                logger.warning(f"Failed to load player sprite {path}: {e}")
+                # Create a fallback colored square
+                fallback = pygame.Surface((self.tile_size, self.tile_size))
+                fallback.fill((50, 150, 255))  # Blue color
+                self.player_sprites[direction] = fallback
         
         # Biome colors (fallback only - prefer server-provided colors)
         # These RGB values match the server's hex color definitions as fallback
