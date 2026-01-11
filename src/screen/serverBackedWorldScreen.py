@@ -643,12 +643,24 @@ class ServerBackedWorldScreen:
             pass
     
     def updateTick(self):
-        """Update game tick on server."""
+        """Update game tick on server and refresh player state."""
         try:
             logger.debug(f"Updating tick on server (current: {self.server_tick})")
             session_data = self.api_client.update_tick()
             self.server_tick = session_data.get('currentTick', self.server_tick)
             logger.debug(f"Tick updated: {self.server_tick}")
+            
+            # Fetch updated player data after tick to get new position
+            self.player_data = self.api_client.get_player()
+            self._updatePlayerFromServerData(self.player_data)
+            
+            # Reload room if player changed rooms
+            if self.player_data:
+                player_room_x = self.player_data.get('roomX', 0)
+                player_room_y = self.player_data.get('roomY', 0)
+                if player_room_x != self.current_room_x or player_room_y != self.current_room_y:
+                    logger.info(f"Player moved to new room ({player_room_x}, {player_room_y}), reloading room")
+                    self.load_room(player_room_x, player_room_y)
         except Exception as e:
             logger.error(f"Failed to update tick: {e}", exc_info=True)
             print(f"Failed to update tick: {e}")
