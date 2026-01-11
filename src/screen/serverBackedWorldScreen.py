@@ -53,6 +53,32 @@ class ServerBackedWorldScreen:
         # Server state
         self.player_data = None
         self.server_tick = 0
+        
+        # World rendering
+        self.current_room = None
+        self.current_room_x = 0
+        self.current_room_y = 0
+        # Size of each tile in pixels; default 16 works for 32x32 rooms (512x512).
+        # Can be overridden via Config.tile_size to match server room dimensions/display size.
+        self.tile_size = getattr(self.config, "tile_size", 16)
+        
+        # Biome colors (fallback only - prefer server-provided colors)
+        # These RGB values match the server's hex color definitions as fallback
+        self.biome_colors_fallback = {
+            "Grassland": (144, 238, 144),  # #90EE90
+            "Forest": (34, 139, 34),       # #228B22
+            "Desert": (244, 164, 96),      # #F4A460
+            "Tundra": (224, 255, 255),     # #E0FFFF
+            "Mountain": (128, 128, 128),   # #808080
+            "Swamp": (85, 107, 47)         # #556B2F
+        }
+        
+        # Resource/hazard indicators
+        self.resource_color = (255, 215, 0)  # Gold for resources
+        self.hazard_color = (255, 0, 0)      # Red for hazards
+        self.grid_color = (50, 50, 50)       # Grid line color
+        self.unknown_biome_color = (100, 100, 100)  # Fallback for unknown biomes
+        
         logger.debug("ServerBackedWorldScreen initialized")
         
     def initialize(self):
@@ -71,6 +97,25 @@ class ServerBackedWorldScreen:
             logger.error(f"Failed to fetch player state: {e}", exc_info=True)
             print(f"Failed to fetch player state: {e}")
             self.status.set(f"Server error: {e}")
+        
+        # Load initial room with simple retry mechanism
+        max_retries = 3
+        for attempt in range(1, max_retries + 1):
+            try:
+                logger.debug(f"Loading initial room (0, 0), attempt {attempt}/{max_retries}")
+                self.load_room(0, 0)
+                break
+            except Exception as e:
+                logger.error(f"Failed to load initial room on attempt {attempt}: {e}", exc_info=True)
+                print(f"Failed to load room (attempt {attempt}): {e}")
+                if attempt < max_retries:
+                    # Inform the player that a retry will be attempted
+                    self.status.set(f"Room load failed (attempt {attempt}/{max_retries}), retrying...")
+                    # Small delay before retrying to avoid hammering the server
+                    pygame.time.wait(500)
+                else:
+                    # Final failure message after all retries
+                    self.status.set(f"Room load failed after {max_retries} attempts: {e}")
     
     def _updatePlayerFromServerData(self, player_data):
         """Update local player object from server data."""
@@ -179,6 +224,16 @@ class ServerBackedWorldScreen:
             logger.info("ESC pressed - opening options menu")
             self.nextScreen = ScreenType.OPTIONS_SCREEN
             self.changeScreen = True
+        # Room navigation with arrow keys + shift (must be checked BEFORE regular arrow keys)
+        elif key == pygame.K_UP and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+            self._navigate_to_room(self.current_room_x, self.current_room_y - 1, "north")
+        elif key == pygame.K_DOWN and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+            self._navigate_to_room(self.current_room_x, self.current_room_y + 1, "south")
+        elif key == pygame.K_LEFT and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+            self._navigate_to_room(self.current_room_x - 1, self.current_room_y, "west")
+        elif key == pygame.K_RIGHT and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+            self._navigate_to_room(self.current_room_x + 1, self.current_room_y, "east")
+        # Regular arrow key movement (without shift)
         elif key == pygame.K_w or key == pygame.K_UP:
             self.movePlayer(0)
         elif key == pygame.K_a or key == pygame.K_LEFT:
@@ -276,6 +331,180 @@ class ServerBackedWorldScreen:
             print(f"Failed to consume: {e}")
             self.status.set(f"Consume failed: {e}")
     
+    def _navigate_to_room(self, new_x: int, new_y: int, direction: str):
+        """
+        Navigate to a room in the specified direction.
+        
+        Args:
+            new_x: X coordinate of the target room
+            new_y: Y coordinate of the target room
+            direction: Direction name for logging (e.g., "north", "south")
+        """
+        logger.info(f"Navigating to room {direction}: ({new_x}, {new_y})")
+        if not self.load_room(new_x, new_y):
+            logger.error(f"Failed to load room at ({new_x}, {new_y}) when navigating {direction}")
+    
+    def load_room(self, room_x: int, room_y: int) -> bool:
+        """
+        Load a room from the server.
+        
+        Returns:
+            bool: True if the room was loaded successfully, False otherwise.
+        """
+        try:
+            logger.info(f"Loading room ({room_x}, {room_y})")
+            # Fetch room data from the server first, without mutating state
+            room = self.api_client.get_room(room_x, room_y)
+            
+            # Treat a missing/invalid room as a load failure
+            if not room:
+                raise ValueError(f"Server returned no data for room ({room_x}, {room_y})")
+            
+            # Only update current room state after a successful, valid load
+            self.current_room = room
+            self.current_room_x = room_x
+            self.current_room_y = room_y
+            logger.debug(f"Room loaded successfully: {len(self.current_room.get('tiles', []))} tiles")
+            self.status.set(f"Loaded room ({room_x}, {room_y})")
+            return True
+        except Exception as e:
+            # Ensure we do not leave a partially loaded or inconsistent room in state
+            # Note: We do NOT set current_room to None to keep the previous room visible
+            logger.error(f"Failed to load room ({room_x}, {room_y}): {e}", exc_info=True)
+            print(f"Failed to load room: {e}")
+            self.status.set(f"Room load failed: {e}")
+            return False
+    
+    def _hex_to_rgb(self, hex_color: str) -> tuple:
+        """
+        Convert hex color string to RGB tuple.
+        
+        Args:
+            hex_color: Hex color string (e.g., "#228B22" or "228B22")
+            
+        Returns:
+            tuple: RGB color as (r, g, b)
+        """
+        # Remove '#' if present
+        hex_color = hex_color.lstrip('#')
+        
+        # Validate length
+        if len(hex_color) != 6:
+            logger.warning(f"Invalid hex color length '{hex_color}' (expected 6 characters)")
+            return self.unknown_biome_color
+        
+        # Convert hex to RGB
+        try:
+            return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+        except (ValueError, IndexError) as e:
+            logger.warning(f"Invalid hex color '{hex_color}': {e}")
+            return self.unknown_biome_color
+    
+    def render_world(self):
+        """Render the current room as a tile map."""
+        if not self.current_room:
+            return
+        
+        tiles = self.current_room.get('tiles', [])
+        width = self.current_room.get('width', 32)
+        height = self.current_room.get('height', 32)
+        
+        # Calculate world view position (centered on screen)
+        display_width = self.graphik.getGameDisplay().get_width()
+        display_height = self.graphik.getGameDisplay().get_height()
+        
+        world_pixel_width = width * self.tile_size
+        world_pixel_height = height * self.tile_size
+        
+        world_view_x = (display_width - world_pixel_width) // 2
+        world_view_y = (display_height - world_pixel_height) // 2
+        
+        # Draw each tile
+        for tile_data in tiles:
+            tile_x = tile_data.get('x', 0)
+            tile_y = tile_data.get('y', 0)
+            biome = tile_data.get('biome', 'Grassland')
+            biome_color_hex = tile_data.get('biomeColor')  # Server-provided hex color
+            has_resource = tile_data.get('resourceType') is not None
+            has_hazard = tile_data.get('hasHazard', False)
+            
+            # Calculate screen position
+            screen_x = world_view_x + tile_x * self.tile_size
+            screen_y = world_view_y + tile_y * self.tile_size
+            
+            # Get biome color - prefer server-provided hex color, fall back to hardcoded
+            if biome_color_hex:
+                # Convert hex color string to RGB tuple
+                color = self._hex_to_rgb(biome_color_hex)
+            else:
+                # Fallback to hardcoded colors if server doesn't provide one
+                color = self.biome_colors_fallback.get(biome, self.unknown_biome_color)
+            
+            # Draw tile
+            pygame.draw.rect(
+                self.graphik.getGameDisplay(),
+                color,
+                (screen_x, screen_y, self.tile_size, self.tile_size)
+            )
+            
+            # Draw resource indicator (small circle)
+            if has_resource:
+                center_x = screen_x + self.tile_size // 2
+                center_y = screen_y + self.tile_size // 2
+                pygame.draw.circle(
+                    self.graphik.getGameDisplay(),
+                    self.resource_color,
+                    (center_x, center_y),
+                    3
+                )
+            
+            # Draw hazard indicator (X mark)
+            if has_hazard:
+                pygame.draw.line(
+                    self.graphik.getGameDisplay(),
+                    self.hazard_color,
+                    (screen_x + 2, screen_y + 2),
+                    (screen_x + self.tile_size - 2, screen_y + self.tile_size - 2),
+                    2
+                )
+                pygame.draw.line(
+                    self.graphik.getGameDisplay(),
+                    self.hazard_color,
+                    (screen_x + self.tile_size - 2, screen_y + 2),
+                    (screen_x + 2, screen_y + self.tile_size - 2),
+                    2
+                )
+        
+        # Draw grid lines
+        for x in range(width + 1):
+            start_x = world_view_x + x * self.tile_size
+            pygame.draw.line(
+                self.graphik.getGameDisplay(),
+                self.grid_color,
+                (start_x, world_view_y),
+                (start_x, world_view_y + height * self.tile_size),
+                1
+            )
+        
+        for y in range(height + 1):
+            start_y = world_view_y + y * self.tile_size
+            pygame.draw.line(
+                self.graphik.getGameDisplay(),
+                self.grid_color,
+                (world_view_x, start_y),
+                (world_view_x + width * self.tile_size, start_y),
+                1
+            )
+        
+        # Draw room coordinates label
+        font = pygame.font.Font(None, 24)
+        room_label = font.render(
+            f"Room: ({self.current_room_x}, {self.current_room_y})",
+            True,
+            (255, 255, 255)
+        )
+        self.graphik.getGameDisplay().blit(room_label, (world_view_x, world_view_y - 25))
+    
     def handleKeyUpEvent(self, key):
         """Handle key release events."""
         logger.debug(f"Key up event: {key}")
@@ -318,13 +547,19 @@ class ServerBackedWorldScreen:
     def draw(self):
         """Draw the world screen."""
         # Clear screen with a nice background
-        self.graphik.getGameDisplay().fill((34, 139, 34))  # Forest green background
+        self.graphik.getGameDisplay().fill((20, 20, 30))  # Dark background
+        
+        # Render world first (as background)
+        self.render_world()
         
         # Draw title
-        title_font = pygame.font.Font(None, 48)
+        # Note: The title uses a smaller font (36 instead of 48) and is pinned to the
+        # top-left corner instead of being centered. This keeps the main world view and
+        # player visualization unobstructed in the center of the screen and treats the
+        # title as a lightweight HUD label rather than a dominant splash title.
+        title_font = pygame.font.Font(None, 36)
         title = title_font.render("Roam (Server-Backed)", True, (255, 255, 255))
-        title_rect = title.get_rect(center=(self.graphik.getGameDisplay().get_width() // 2, 40))
-        self.graphik.getGameDisplay().blit(title, title_rect)
+        self.graphik.getGameDisplay().blit(title, (10, 10))
         
         # Draw player visualization (centered)
         display_width = self.graphik.getGameDisplay().get_width()
@@ -478,13 +713,14 @@ class ServerBackedWorldScreen:
             "WASD/Arrows: Move",
             "Space: Stop",
             "G: Gather",
+            "Shift+Arrows: Change Room",
             "I: Inventory",
             "E: Eat",
             "1/2/3: Add Items (test)",
             "ESC: Menu",
         ]
         
-        x = display_width - 200
+        x = display_width - 220
         y = 100
         
         for control in controls:
@@ -495,6 +731,7 @@ class ServerBackedWorldScreen:
     def _drawDebugInfo(self):
         """Draw debug information."""
         display_width = self.graphik.getGameDisplay().get_width()
+        display_height = self.graphik.getGameDisplay().get_height()
         
         font = pygame.font.Font(None, 20)
         debug_texts = [

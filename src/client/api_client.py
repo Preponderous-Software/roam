@@ -306,3 +306,45 @@ class RoamAPIClient:
             raise ValueError("No session ID provided")
         
         return self._make_request("DELETE", f"/api/v1/session/{sid}/inventory")
+    
+    # World Management
+    
+    def get_world(self, session_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Get world data including all loaded rooms.
+        
+        Args:
+            session_id: Session ID (uses stored session_id if not provided)
+            
+        Returns:
+            World data with configuration and rooms
+        """
+        sid = session_id or self.session_id
+        if not sid:
+            raise ValueError("No session ID provided")
+        
+        return self._make_request("GET", f"/api/v1/session/{sid}/world")
+    
+    def get_room(
+        self,
+        room_x: int,
+        room_y: int,
+        session_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Get a specific room by coordinates.
+        Generates the room if it doesn't exist yet.
+        
+        Args:
+            room_x: Room X coordinate
+            room_y: Room Y coordinate
+            session_id: Session ID (uses stored session_id if not provided)
+            
+        Returns:
+            Room data with tiles
+        """
+        sid = session_id or self.session_id
+        if not sid:
+            raise ValueError("No session ID provided")
+        
+        return self._make_request("GET", f"/api/v1/session/{sid}/room/{room_x}/{room_y}")
