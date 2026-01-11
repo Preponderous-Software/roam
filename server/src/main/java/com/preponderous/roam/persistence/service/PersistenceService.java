@@ -50,46 +50,51 @@ public class PersistenceService implements GameStateStorage {
     @Override
     @Transactional
     public void saveGameState(GameState gameState) {
-        logger.info("Saving game state for session: {}", gameState.getSessionId());
-        
-        String sessionId = gameState.getSessionId();
-        
-        // Check if session already exists
-        Optional<GameSessionEntity> existingSession = sessionRepository.findById(sessionId);
-        GameSessionEntity sessionEntity;
-        
-        if (existingSession.isPresent()) {
-            sessionEntity = existingSession.get();
-            logger.debug("Updating existing session: {}", sessionId);
-        } else {
-            sessionEntity = new GameSessionEntity();
-            sessionEntity.setSessionId(sessionId);
-            sessionEntity.setCreatedAt(LocalDateTime.now());
-            logger.debug("Creating new session: {}", sessionId);
+        try {
+            logger.info("Saving game state for session: {}", gameState.getSessionId());
+            
+            String sessionId = gameState.getSessionId();
+            
+            // Check if session already exists
+            Optional<GameSessionEntity> existingSession = sessionRepository.findById(sessionId);
+            GameSessionEntity sessionEntity;
+            
+            if (existingSession.isPresent()) {
+                sessionEntity = existingSession.get();
+                logger.debug("Updating existing session: {}", sessionId);
+            } else {
+                sessionEntity = new GameSessionEntity();
+                sessionEntity.setSessionId(sessionId);
+                sessionEntity.setCreatedAt(LocalDateTime.now());
+                logger.debug("Creating new session: {}", sessionId);
+            }
+            
+            // Update session data
+            sessionEntity.setCurrentTick(gameState.getCurrentTick());
+            sessionEntity.setUpdatedAt(LocalDateTime.now());
+            
+            // Save world config
+            WorldConfig worldConfig = gameState.getWorld().getConfig();
+            sessionEntity.setWorldSeed(worldConfig.getSeed());
+            sessionEntity.setWorldRoomWidth(worldConfig.getRoomWidth());
+            sessionEntity.setWorldRoomHeight(worldConfig.getRoomHeight());
+            sessionEntity.setWorldResourceDensity(worldConfig.getResourceDensity());
+            sessionEntity.setWorldHazardDensity(worldConfig.getHazardDensity());
+            
+            // Save session first
+            sessionEntity = sessionRepository.save(sessionEntity);
+            
+            // Save player
+            savePlayer(gameState.getPlayer(), sessionEntity);
+            
+            // Save rooms
+            saveRooms(gameState.getWorld(), sessionEntity);
+            
+            logger.info("Game state saved successfully for session: {}", sessionId);
+        } catch (Exception e) {
+            logger.error("Failed to save game state for session: {}", gameState.getSessionId(), e);
+            throw new GameStateStorage.StorageException("Failed to save game state", e);
         }
-        
-        // Update session data
-        sessionEntity.setCurrentTick(gameState.getCurrentTick());
-        sessionEntity.setUpdatedAt(LocalDateTime.now());
-        
-        // Save world config
-        WorldConfig worldConfig = gameState.getWorld().getConfig();
-        sessionEntity.setWorldSeed(worldConfig.getSeed());
-        sessionEntity.setWorldRoomWidth(worldConfig.getRoomWidth());
-        sessionEntity.setWorldRoomHeight(worldConfig.getRoomHeight());
-        sessionEntity.setWorldResourceDensity(worldConfig.getResourceDensity());
-        sessionEntity.setWorldHazardDensity(worldConfig.getHazardDensity());
-        
-        // Save session first
-        sessionEntity = sessionRepository.save(sessionEntity);
-        
-        // Save player
-        savePlayer(gameState.getPlayer(), sessionEntity);
-        
-        // Save rooms
-        saveRooms(gameState.getWorld(), sessionEntity);
-        
-        logger.info("Game state saved successfully for session: {}", sessionId);
     }
     
     /**
@@ -98,48 +103,53 @@ public class PersistenceService implements GameStateStorage {
     @Override
     @Transactional(readOnly = true)
     public Optional<GameState> loadGameState(String sessionId) {
-        logger.info("Loading game state for session: {}", sessionId);
-        
-        Optional<GameSessionEntity> sessionEntityOpt = sessionRepository.findById(sessionId);
-        if (sessionEntityOpt.isEmpty()) {
-            logger.warn("Session not found: {}", sessionId);
-            return Optional.empty();
+        try {
+            logger.info("Loading game state for session: {}", sessionId);
+            
+            Optional<GameSessionEntity> sessionEntityOpt = sessionRepository.findById(sessionId);
+            if (sessionEntityOpt.isEmpty()) {
+                logger.warn("Session not found: {}", sessionId);
+                return Optional.empty();
+            }
+            
+            GameSessionEntity sessionEntity = sessionEntityOpt.get();
+            
+            // Reconstruct world config
+            WorldConfig worldConfig = new WorldConfig(
+                sessionEntity.getWorldSeed(),
+                sessionEntity.getWorldRoomWidth(),
+                sessionEntity.getWorldRoomHeight(),
+                sessionEntity.getWorldResourceDensity(),
+                sessionEntity.getWorldHazardDensity()
+            );
+            
+            // Create world
+            World world = new World(worldConfig);
+            
+            // Load rooms
+            List<RoomEntity> roomEntities = roomRepository.findBySessionId(sessionId);
+            for (RoomEntity roomEntity : roomEntities) {
+                Room room = convertToRoom(roomEntity);
+                world.addRoom(room);
+            }
+            
+            // Create game state
+            GameState gameState = new GameState(sessionId, sessionEntity.getCurrentTick(), world);
+            
+            // Load player
+            Optional<PlayerEntityData> playerEntityOpt = playerRepository.findBySessionId(sessionId);
+            if (playerEntityOpt.isPresent()) {
+                Player player = convertToPlayer(playerEntityOpt.get());
+                // Replace the default player with loaded player
+                copyPlayerData(player, gameState.getPlayer());
+            }
+            
+            logger.info("Game state loaded successfully for session: {}", sessionId);
+            return Optional.of(gameState);
+        } catch (Exception e) {
+            logger.error("Failed to load game state for session: {}", sessionId, e);
+            throw new GameStateStorage.StorageException("Failed to load game state", e);
         }
-        
-        GameSessionEntity sessionEntity = sessionEntityOpt.get();
-        
-        // Reconstruct world config
-        WorldConfig worldConfig = new WorldConfig(
-            sessionEntity.getWorldSeed(),
-            sessionEntity.getWorldRoomWidth(),
-            sessionEntity.getWorldRoomHeight(),
-            sessionEntity.getWorldResourceDensity(),
-            sessionEntity.getWorldHazardDensity()
-        );
-        
-        // Create world
-        World world = new World(worldConfig);
-        
-        // Load rooms
-        List<RoomEntity> roomEntities = roomRepository.findBySessionId(sessionId);
-        for (RoomEntity roomEntity : roomEntities) {
-            Room room = convertToRoom(roomEntity);
-            world.addRoom(room);
-        }
-        
-        // Create game state
-        GameState gameState = new GameState(sessionId, sessionEntity.getCurrentTick(), world);
-        
-        // Load player
-        Optional<PlayerEntityData> playerEntityOpt = playerRepository.findBySessionId(sessionId);
-        if (playerEntityOpt.isPresent()) {
-            Player player = convertToPlayer(playerEntityOpt.get());
-            // Replace the default player with loaded player
-            copyPlayerData(player, gameState.getPlayer());
-        }
-        
-        logger.info("Game state loaded successfully for session: {}", sessionId);
-        return Optional.of(gameState);
     }
     
     /**
@@ -148,9 +158,14 @@ public class PersistenceService implements GameStateStorage {
     @Override
     @Transactional
     public void deleteGameState(String sessionId) {
-        logger.info("Deleting game state for session: {}", sessionId);
-        sessionRepository.deleteById(sessionId);
-        logger.info("Game state deleted successfully for session: {}", sessionId);
+        try {
+            logger.info("Deleting game state for session: {}", sessionId);
+            sessionRepository.deleteById(sessionId);
+            logger.info("Game state deleted successfully for session: {}", sessionId);
+        } catch (Exception e) {
+            logger.error("Failed to delete game state for session: {}", sessionId, e);
+            throw new GameStateStorage.StorageException("Failed to delete game state", e);
+        }
     }
     
     /**
@@ -159,10 +174,15 @@ public class PersistenceService implements GameStateStorage {
     @Override
     @Transactional(readOnly = true)
     public List<String> listAllSessionIds() {
-        return sessionRepository.findAllByOrderByUpdatedAtDesc()
-                .stream()
-                .map(GameSessionEntity::getSessionId)
-                .toList();
+        try {
+            return sessionRepository.findAllByOrderByUpdatedAtDesc()
+                    .stream()
+                    .map(GameSessionEntity::getSessionId)
+                    .toList();
+        } catch (Exception e) {
+            logger.error("Failed to list session IDs", e);
+            throw new GameStateStorage.StorageException("Failed to list session IDs", e);
+        }
     }
     
     /**
@@ -180,7 +200,12 @@ public class PersistenceService implements GameStateStorage {
     @Override
     @Transactional(readOnly = true)
     public boolean sessionExists(String sessionId) {
-        return sessionRepository.existsById(sessionId);
+        try {
+            return sessionRepository.existsById(sessionId);
+        } catch (Exception e) {
+            logger.error("Failed to check if session exists: {}", sessionId, e);
+            throw new GameStateStorage.StorageException("Failed to check if session exists", e);
+        }
     }
     
     // Private helper methods

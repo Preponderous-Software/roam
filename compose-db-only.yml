@@ -1,5 +1,9 @@
 # Docker Compose configuration for database only
 # Use this when running the server locally but want PostgreSQL in Docker
+#
+# REQUIRED: Set POSTGRES_PASSWORD environment variable before starting:
+#   export POSTGRES_PASSWORD=your_secure_password
+#   docker-compose -f compose-db-only.yml up -d
 
 services:
   # PostgreSQL Database
@@ -11,7 +15,7 @@ services:
     environment:
       POSTGRES_DB: roam
       POSTGRES_USER: roam
-      POSTGRES_PASSWORD: roam
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres-dev-data:/var/lib/postgresql/data
       - ./server/scripts/backup:/backups

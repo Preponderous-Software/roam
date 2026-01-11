@@ -14,7 +14,7 @@ import java.util.Optional;
  * 
  * <h3>Implementations:</h3>
  * <ul>
- *   <li>{@link JpaPersistenceService} - Database persistence using JPA/Hibernate</li>
+ *   <li>{@link PersistenceService} - Database persistence using JPA/Hibernate</li>
  *   <li>Future: JSON file storage, cloud storage, etc.</li>
  * </ul>
  * 
