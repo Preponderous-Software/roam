@@ -122,23 +122,55 @@ The client will connect to the server and start a new game session.
 
 See [src/CLIENT_README.md](./src/CLIENT_README.md) for detailed documentation.
 
-#### Option 2: Original Python Client (Legacy)
+#### Option 2: Original Python Client (Now Server-Backed)
 
-The original monolithic Python client (`src/roam.py`) contains its own game logic.
+The original Python client (`src/roam.py`) has been refactored to use the server-backed architecture.
 
-1. Open a new terminal and navigate to the project root directory.
+**Features**:
+- ✅ Server-backed game logic (no local business logic)
+- ✅ Rich visual experience with multiple screens
+- ✅ Player movement, inventory, and energy management via REST API
+- ✅ All game state mutations through server
 
-2. Install Python dependencies:
+**Requirements**:
+- Spring Boot server must be running
+- Python 3.8+ with dependencies installed
+
+**Usage**:
+
+1. Ensure the Spring Boot server is running (see above)
+
+2. Open a new terminal and navigate to the src directory:
 ```bash
-pip install -r requirements.txt
+cd src
 ```
 
-3. Run the client:
+3. Install Python dependencies (if not already installed):
 ```bash
-python src/roam.py
+pip install -r ../requirements.txt
 ```
 
-**Note**: This client does not use the server and will be deprecated in favor of the server-backed architecture.
+4. Run the client:
+```bash
+python3 roam.py
+```
+
+Or with custom server URL:
+```bash
+python3 roam.py http://localhost:8080
+```
+
+**Controls**:
+- WASD/Arrows: Move player
+- Space: Stop movement
+- G: Toggle gathering
+- I: Open inventory
+- E: Consume food
+- ESC: Open menu
+
+**Note**: This client now uses the server for all game logic. Complex features like world generation and entity management will be added in Phase 4 of the migration (server-side implementation).
+
+See [CLIENT_REFACTORING_SUMMARY.md](./docs/CLIENT_REFACTORING_SUMMARY.md) and [REFACTORING_NOTES.md](./docs/REFACTORING_NOTES.md) for detailed information about the refactoring. For the complete implementation, see [PR: Complete Client Refactoring](https://github.com/Preponderous-Software/roam-prototype/pull/complete-client-refactoring).
 
 ## Run Script (Linux Only)
 There is also a run.sh script you can execute if you're on linux which will automatically attempt to install the dependencies for you.

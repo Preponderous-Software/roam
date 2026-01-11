@@ -340,7 +340,7 @@ class RoamClient:
         # Status bar at bottom
         if self.status:
             status_text = self.small_font.render(
-                self.status.getText(), 
+                self.status.text,
                 True, (255, 255, 100)
             )
             self.game_display.blit(
