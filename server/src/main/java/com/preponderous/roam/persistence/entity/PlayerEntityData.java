@@ -45,7 +45,7 @@ public class PlayerEntityData {
     @Column(name = "gathering", nullable = false)
     private boolean gathering;
     
-    @Column(name = "placing", nullable = false)
+    @Column(name = "is_placing", nullable = false)
     private boolean placing;
     
     @Column(name = "crouching", nullable = false)
