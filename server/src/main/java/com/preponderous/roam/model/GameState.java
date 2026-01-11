@@ -8,11 +8,13 @@ package com.preponderous.roam.model;
 public class GameState {
     private final String sessionId;
     private final Player player;
+    private final World world;
     private long currentTick;
 
-    public GameState(String sessionId, long initialTick) {
+    public GameState(String sessionId, long initialTick, World world) {
         this.sessionId = sessionId;
         this.player = new Player(initialTick);
+        this.world = world;
         this.currentTick = initialTick;
     }
 
@@ -22,6 +24,10 @@ public class GameState {
 
     public Player getPlayer() {
         return player;
+    }
+
+    public World getWorld() {
+        return world;
     }
 
     public long getCurrentTick() {

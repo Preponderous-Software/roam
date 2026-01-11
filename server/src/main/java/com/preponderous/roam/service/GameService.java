@@ -2,6 +2,9 @@ package com.preponderous.roam.service;
 
 import com.preponderous.roam.model.GameState;
 import com.preponderous.roam.model.Player;
+import com.preponderous.roam.model.World;
+import com.preponderous.roam.model.WorldConfig;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -16,6 +19,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class GameService {
     private final Map<String, GameState> sessions = new ConcurrentHashMap<>();
+    
+    @Autowired
+    private WorldGenerationService worldGenerationService;
 
     /**
      * Create a new game session.
@@ -23,7 +29,15 @@ public class GameService {
     public GameState createSession() {
         String sessionId = UUID.randomUUID().toString();
         long initialTick = 0;
-        GameState gameState = new GameState(sessionId, initialTick);
+        
+        // Generate a new world for the session
+        WorldConfig worldConfig = WorldConfig.getDefault();
+        World world = new World(worldConfig);
+        
+        // Generate the starting room (0, 0)
+        worldGenerationService.getOrGenerateRoom(world, 0, 0);
+        
+        GameState gameState = new GameState(sessionId, initialTick, world);
         sessions.put(sessionId, gameState);
         return gameState;
     }

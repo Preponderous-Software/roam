@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Service for mapping between domain models and DTOs.
@@ -69,6 +70,56 @@ public class MappingService {
         dto.setNumItems(slot.getNumItems());
         dto.setMaxStackSize(slot.getMaxStackSize());
         dto.setEmpty(slot.isEmpty());
+        return dto;
+    }
+
+    public WorldDTO toWorldDTO(World world) {
+        WorldDTO dto = new WorldDTO();
+        WorldConfig config = world.getConfig();
+        
+        dto.setSeed(config.getSeed());
+        dto.setRoomWidth(config.getRoomWidth());
+        dto.setRoomHeight(config.getRoomHeight());
+        dto.setResourceDensity(config.getResourceDensity());
+        dto.setHazardDensity(config.getHazardDensity());
+        
+        List<RoomDTO> roomDTOs = world.getRooms().values().stream()
+            .map(this::toRoomDTO)
+            .collect(Collectors.toList());
+        dto.setRooms(roomDTOs);
+        
+        return dto;
+    }
+
+    public RoomDTO toRoomDTO(Room room) {
+        RoomDTO dto = new RoomDTO();
+        dto.setRoomX(room.getRoomX());
+        dto.setRoomY(room.getRoomY());
+        dto.setWidth(room.getWidth());
+        dto.setHeight(room.getHeight());
+        
+        List<TileDTO> tileDTOs = new ArrayList<>();
+        Tile[][] tiles = room.getTiles();
+        for (int y = 0; y < room.getHeight(); y++) {
+            for (int x = 0; x < room.getWidth(); x++) {
+                tileDTOs.add(toTileDTO(tiles[y][x]));
+            }
+        }
+        dto.setTiles(tileDTOs);
+        
+        return dto;
+    }
+
+    public TileDTO toTileDTO(Tile tile) {
+        TileDTO dto = new TileDTO();
+        dto.setX(tile.getX());
+        dto.setY(tile.getY());
+        dto.setBiome(tile.getBiome().getDisplayName());
+        dto.setBiomeColor(tile.getBiome().getColor());
+        dto.setResourceType(tile.getResourceType());
+        dto.setResourceAmount(tile.getResourceAmount());
+        dto.setHasHazard(tile.hasHazard());
+        dto.setHazardType(tile.getHazardType());
         return dto;
     }
 }
