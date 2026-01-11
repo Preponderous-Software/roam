@@ -348,3 +348,19 @@ class RoamAPIClient:
             raise ValueError("No session ID provided")
         
         return self._make_request("GET", f"/api/v1/session/{sid}/room/{room_x}/{room_y}")
+    
+    def get_entities(self, session_id: Optional[str] = None) -> list:
+        """
+        Get all entities in the session across all loaded rooms.
+        
+        Args:
+            session_id: Session ID (uses stored session_id if not provided)
+            
+        Returns:
+            List of entity data
+        """
+        sid = session_id or self.session_id
+        if not sid:
+            raise ValueError("No session ID provided")
+        
+        return self._make_request("GET", f"/api/v1/session/{sid}/entities")

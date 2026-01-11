@@ -78,8 +78,8 @@ public class Room {
 
     public void addEntity(Entity entity) {
         entities.put(entity.getId(), entity);
-        // Set the entity's location to this room
-        entity.setLocationId(getRoomKey());
+        // Location ID should already be set by caller with full coordinates
+        // Format: roomX,roomY,tileX,tileY
     }
 
     public void removeEntity(String entityId) {

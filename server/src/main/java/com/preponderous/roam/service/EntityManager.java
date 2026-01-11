@@ -37,71 +37,66 @@ public class EntityManager {
         
         int width = room.getWidth();
         int height = room.getHeight();
+        int totalTiles = width * height;
         
-        // Spawn trees
-        for (int i = 0; i < width * height * TREE_SPAWN_RATE; i++) {
-            if (random.nextDouble() < TREE_SPAWN_RATE) {
-                Tree tree = new Tree();
-                int x = random.nextInt(width);
-                int y = random.nextInt(height);
-                tree.setLocationId(room.getRoomX() + "," + room.getRoomY() + "," + x + "," + y);
-                room.addEntity(tree);
-            }
+        // Spawn trees - calculate expected count based on spawn rate
+        int expectedTrees = (int) (totalTiles * TREE_SPAWN_RATE);
+        for (int i = 0; i < expectedTrees; i++) {
+            Tree tree = new Tree();
+            int x = random.nextInt(width);
+            int y = random.nextInt(height);
+            tree.setLocationId(room.getRoomX() + "," + room.getRoomY() + "," + x + "," + y);
+            room.addEntity(tree);
         }
         
         // Spawn rocks
-        for (int i = 0; i < width * height * ROCK_SPAWN_RATE; i++) {
-            if (random.nextDouble() < ROCK_SPAWN_RATE) {
-                Rock rock = new Rock();
-                int x = random.nextInt(width);
-                int y = random.nextInt(height);
-                rock.setLocationId(room.getRoomX() + "," + room.getRoomY() + "," + x + "," + y);
-                room.addEntity(rock);
-            }
+        int expectedRocks = (int) (totalTiles * ROCK_SPAWN_RATE);
+        for (int i = 0; i < expectedRocks; i++) {
+            Rock rock = new Rock();
+            int x = random.nextInt(width);
+            int y = random.nextInt(height);
+            rock.setLocationId(room.getRoomX() + "," + room.getRoomY() + "," + x + "," + y);
+            room.addEntity(rock);
         }
         
         // Spawn bushes
-        for (int i = 0; i < width * height * BUSH_SPAWN_RATE; i++) {
-            if (random.nextDouble() < BUSH_SPAWN_RATE) {
-                Bush bush = new Bush();
-                int x = random.nextInt(width);
-                int y = random.nextInt(height);
-                bush.setLocationId(room.getRoomX() + "," + room.getRoomY() + "," + x + "," + y);
-                room.addEntity(bush);
-            }
+        int expectedBushes = (int) (totalTiles * BUSH_SPAWN_RATE);
+        for (int i = 0; i < expectedBushes; i++) {
+            Bush bush = new Bush();
+            int x = random.nextInt(width);
+            int y = random.nextInt(height);
+            bush.setLocationId(room.getRoomX() + "," + room.getRoomY() + "," + x + "," + y);
+            room.addEntity(bush);
         }
         
         // Spawn bears
-        for (int i = 0; i < width * height * BEAR_SPAWN_RATE; i++) {
-            if (random.nextDouble() < BEAR_SPAWN_RATE) {
-                Bear bear = new Bear(currentTick);
-                int x = random.nextInt(width);
-                int y = random.nextInt(height);
-                bear.setLocationId(room.getRoomX() + "," + room.getRoomY() + "," + x + "," + y);
-                room.addEntity(bear);
-            }
+        int expectedBears = (int) (totalTiles * BEAR_SPAWN_RATE);
+        for (int i = 0; i < expectedBears; i++) {
+            Bear bear = new Bear(currentTick);
+            int x = random.nextInt(width);
+            int y = random.nextInt(height);
+            bear.setLocationId(room.getRoomX() + "," + room.getRoomY() + "," + x + "," + y);
+            room.addEntity(bear);
         }
         
         // Spawn deer
-        for (int i = 0; i < width * height * DEER_SPAWN_RATE; i++) {
-            if (random.nextDouble() < DEER_SPAWN_RATE) {
-                Deer deer = new Deer(currentTick);
-                int x = random.nextInt(width);
-                int y = random.nextInt(height);
-                deer.setLocationId(room.getRoomX() + "," + room.getRoomY() + "," + x + "," + y);
-                room.addEntity(deer);
-            }
+        int expectedDeer = (int) (totalTiles * DEER_SPAWN_RATE);
+        for (int i = 0; i < expectedDeer; i++) {
+            Deer deer = new Deer(currentTick);
+            int x = random.nextInt(width);
+            int y = random.nextInt(height);
+            deer.setLocationId(room.getRoomX() + "," + room.getRoomY() + "," + x + "," + y);
+            room.addEntity(deer);
         }
         
         // Spawn chickens
-        for (int i = 0; i < width * height * CHICKEN_SPAWN_RATE; i++) {
-            if (random.nextDouble() < CHICKEN_SPAWN_RATE) {
-                Chicken chicken = new Chicken(currentTick);
-                int x = random.nextInt(width);
-                int y = random.nextInt(height);
-                chicken.setLocationId(room.getRoomX() + "," + room.getRoomY() + "," + x + "," + y);
-                room.addEntity(chicken);
-            }
+        int expectedChickens = (int) (totalTiles * CHICKEN_SPAWN_RATE);
+        for (int i = 0; i < expectedChickens; i++) {
+            Chicken chicken = new Chicken(currentTick);
+            int x = random.nextInt(width);
+            int y = random.nextInt(height);
+            chicken.setLocationId(room.getRoomX() + "," + room.getRoomY() + "," + x + "," + y);
+            room.addEntity(chicken);
         }
     }
     
@@ -116,18 +111,21 @@ public class EntityManager {
         // For now, basic lifecycle management
         // Future: Implement AI movement, reproduction, resource respawning, etc.
         
-        // Remove depleted harvestable entities
-        room.getEntitiesList().stream()
-            .filter(entity -> entity instanceof Tree && ((Tree) entity).isDepleted())
-            .forEach(entity -> room.removeEntity(entity.getId()));
-            
-        room.getEntitiesList().stream()
-            .filter(entity -> entity instanceof Rock && ((Rock) entity).isDepleted())
-            .forEach(entity -> room.removeEntity(entity.getId()));
-            
-        room.getEntitiesList().stream()
-            .filter(entity -> entity instanceof Bush && ((Bush) entity).isDepleted())
-            .forEach(entity -> room.removeEntity(entity.getId()));
+        // Collect depleted harvestable entities to remove
+        java.util.List<String> entitiesToRemove = new java.util.ArrayList<>();
+        
+        for (Entity entity : room.getEntitiesList()) {
+            if ((entity instanceof Tree && ((Tree) entity).isDepleted()) ||
+                (entity instanceof Rock && ((Rock) entity).isDepleted()) ||
+                (entity instanceof Bush && ((Bush) entity).isDepleted())) {
+                entitiesToRemove.add(entity.getId());
+            }
+        }
+        
+        // Remove all depleted entities
+        for (String entityId : entitiesToRemove) {
+            room.removeEntity(entityId);
+        }
     }
     
     /**

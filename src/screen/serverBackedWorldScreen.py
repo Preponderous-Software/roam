@@ -401,11 +401,12 @@ class ServerBackedWorldScreen:
             return self.unknown_biome_color
     
     def render_world(self):
-        """Render the current room as a tile map."""
+        """Render the current room as a tile map with entities."""
         if not self.current_room:
             return
         
         tiles = self.current_room.get('tiles', [])
+        entities = self.current_room.get('entities', [])
         width = self.current_room.get('width', 32)
         height = self.current_room.get('height', 32)
         
@@ -475,6 +476,88 @@ class ServerBackedWorldScreen:
                     2
                 )
         
+        # Draw entities
+        for entity in entities:
+            location_id = entity.get('locationId', '')
+            if not location_id:
+                continue
+            
+            # Parse location: "roomX,roomY,tileX,tileY"
+            parts = location_id.split(',')
+            if len(parts) >= 4:
+                entity_tile_x = int(parts[2])
+                entity_tile_y = int(parts[3])
+                
+                # Calculate screen position
+                screen_x = world_view_x + entity_tile_x * self.tile_size
+                screen_y = world_view_y + entity_tile_y * self.tile_size
+                
+                # Draw entity based on type
+                entity_type = entity.get('type', '')
+                entity_name = entity.get('name', '')
+                
+                # Entity visualization colors
+                entity_color = self._get_entity_color(entity_type)
+                
+                # Draw entity as a filled rectangle with border
+                pygame.draw.rect(
+                    self.graphik.getGameDisplay(),
+                    entity_color,
+                    (screen_x + 2, screen_y + 2, self.tile_size - 4, self.tile_size - 4)
+                )
+                
+                # Draw border for solid entities
+                if entity.get('solid', False):
+                    pygame.draw.rect(
+                        self.graphik.getGameDisplay(),
+                        (0, 0, 0),
+                        (screen_x + 2, screen_y + 2, self.tile_size - 4, self.tile_size - 4),
+                        2
+                    )
+        
+        # Draw player position indicator if player position is available
+        if self.player_data:
+            player_room_x = self.player_data.get('roomX', 0)
+            player_room_y = self.player_data.get('roomY', 0)
+            player_tile_x = self.player_data.get('tileX', 0)
+            player_tile_y = self.player_data.get('tileY', 0)
+            
+            # Only draw if player is in the current room
+            if player_room_x == self.current_room_x and player_room_y == self.current_room_y:
+                screen_x = world_view_x + player_tile_x * self.tile_size
+                screen_y = world_view_y + player_tile_y * self.tile_size
+                
+                # Draw player as blue square
+                pygame.draw.rect(
+                    self.graphik.getGameDisplay(),
+                    (50, 150, 255),
+                    (screen_x + 3, screen_y + 3, self.tile_size - 6, self.tile_size - 6)
+                )
+                
+                # Draw player direction arrow
+                direction = self.player_data.get('direction', -1)
+                if direction >= 0:
+                    center_x = screen_x + self.tile_size // 2
+                    center_y = screen_y + self.tile_size // 2
+                    arrow_len = self.tile_size // 3
+                    
+                    if direction == 0:  # Up
+                        end_x, end_y = center_x, screen_y
+                    elif direction == 1:  # Left
+                        end_x, end_y = screen_x, center_y
+                    elif direction == 2:  # Down
+                        end_x, end_y = center_x, screen_y + self.tile_size
+                    elif direction == 3:  # Right
+                        end_x, end_y = screen_x + self.tile_size, center_y
+                    
+                    pygame.draw.line(
+                        self.graphik.getGameDisplay(),
+                        (255, 255, 0),
+                        (center_x, center_y),
+                        (end_x, end_y),
+                        2
+                    )
+        
         # Draw grid lines
         for x in range(width + 1):
             start_x = world_view_x + x * self.tile_size
@@ -504,6 +587,34 @@ class ServerBackedWorldScreen:
             (255, 255, 255)
         )
         self.graphik.getGameDisplay().blit(room_label, (world_view_x, world_view_y - 25))
+    
+    def _get_entity_color(self, entity_type: str) -> tuple:
+        """Get color for entity type visualization."""
+        # Wildlife - shades of brown/red
+        if entity_type == 'Bear':
+            return (139, 69, 19)  # Brown
+        elif entity_type == 'Deer':
+            return (210, 180, 140)  # Tan
+        elif entity_type == 'Chicken':
+            return (255, 228, 196)  # Light tan
+        # Interactive objects - shades of green/gray
+        elif entity_type == 'Tree':
+            return (34, 139, 34)  # Forest green
+        elif entity_type == 'Rock':
+            return (128, 128, 128)  # Gray
+        elif entity_type == 'Bush':
+            return (85, 107, 47)  # Dark olive green
+        # Resources - shades of yellow/orange
+        elif entity_type == 'Apple':
+            return (255, 0, 0)  # Red
+        elif entity_type == 'Berry':
+            return (138, 43, 226)  # Purple
+        elif entity_type == 'Wood':
+            return (160, 82, 45)  # Sienna
+        elif entity_type == 'Stone':
+            return (169, 169, 169)  # Dark gray
+        # Default
+        return (200, 200, 200)
     
     def handleKeyUpEvent(self, key):
         """Handle key release events."""
