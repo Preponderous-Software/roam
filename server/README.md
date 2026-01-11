@@ -1,15 +1,62 @@
 # Roam Server
 
-Spring Boot server for the Roam game providing REST API for game state management.
+Spring Boot server for the Roam game providing REST API for game state management with full database persistence.
 
 ## Overview
 
-The Roam server is the authoritative source for all game data and business logic. It exposes a versioned REST API that clients can use to interact with the game state.
+The Roam server is the authoritative source for all game data and business logic. It exposes a versioned REST API that clients can use to interact with the game state. Game sessions, world state, player progress, and entity data are persisted in a relational database (PostgreSQL or H2) using JPA/Hibernate.
+
+## Key Features
+
+- RESTful API for game state management
+- Database persistence with JPA/Hibernate
+- PostgreSQL support for production
+- H2 database for development and testing
+- Flyway database migrations
+- Docker Compose support
+- Automatic and manual save functionality
+- Backup and restore capabilities
 
 ## Requirements
 
 - Java 17 or higher
 - Maven 3.6 or higher
+- Docker and Docker Compose (optional, for running PostgreSQL)
+
+## Quick Start
+
+### With H2 (Development)
+
+```bash
+cd server
+mvn spring-boot:run
+```
+
+The server will start on `http://localhost:8080` using an embedded H2 database.
+
+### With PostgreSQL (Production)
+
+```bash
+# Start PostgreSQL with Docker Compose
+docker-compose -f compose-db-only.yml up -d
+
+# Run server with PostgreSQL profile
+cd server
+mvn spring-boot:run -Dspring.profiles.active=postgresql
+```
+
+### Full Stack with Docker
+
+```bash
+# Start both server and PostgreSQL
+docker-compose up -d
+```
+
+## Database Documentation
+
+For detailed information about database setup, configuration, migrations, backups, and troubleshooting, see:
+
+**[DATABASE.md](DATABASE.md)** - Complete database documentation
 
 ## Building
 
@@ -69,6 +116,28 @@ DELETE /api/v1/session/{sessionId}
 
 Response: 204 No Content
 ```
+
+#### Save Session
+```
+POST /api/v1/session/{sessionId}/save
+
+Response:
+{
+  "message": "Session saved successfully",
+  "sessionId": "uuid"
+}
+```
+
+Manually saves the game session to the database for persistence across server restarts.
+
+#### Load Session
+```
+POST /api/v1/session/{sessionId}/load
+
+Response: Complete session data (same as GET /api/v1/session/{sessionId})
+```
+
+Loads a previously saved game session from the database into memory.
 
 ### Player Management
 
