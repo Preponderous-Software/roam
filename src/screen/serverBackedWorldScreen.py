@@ -286,8 +286,6 @@ class ServerBackedWorldScreen:
             self.movePlayer(3)
         elif key == pygame.K_SPACE:
             self.stopPlayer()
-        elif key == pygame.K_g:
-            self.toggleGathering()
         elif key == pygame.K_i:
             logger.info("I pressed - opening inventory")
             self.nextScreen = ScreenType.INVENTORY_SCREEN
@@ -511,20 +509,27 @@ class ServerBackedWorldScreen:
             screen_x = world_view_x + tile_x * self.tile_size
             screen_y = world_view_y + tile_y * self.tile_size
             
-            # Get biome color - prefer server-provided hex color, fall back to hardcoded
-            if biome_color_hex:
-                # Convert hex color string to RGB tuple
-                color = self._hex_to_rgb(biome_color_hex)
+            # Use grass sprite for Grassland biome, otherwise use color
+            if biome == 'Grassland' and 'Grass' in self.entity_sprites:
+                self.graphik.getGameDisplay().blit(
+                    self.entity_sprites['Grass'],
+                    (screen_x, screen_y)
+                )
             else:
-                # Fallback to hardcoded colors if server doesn't provide one
-                color = self.biome_colors_fallback.get(biome, self.unknown_biome_color)
-            
-            # Draw tile
-            pygame.draw.rect(
-                self.graphik.getGameDisplay(),
-                color,
-                (screen_x, screen_y, self.tile_size, self.tile_size)
-            )
+                # Get biome color - prefer server-provided hex color, fall back to hardcoded
+                if biome_color_hex:
+                    # Convert hex color string to RGB tuple
+                    color = self._hex_to_rgb(biome_color_hex)
+                else:
+                    # Fallback to hardcoded colors if server doesn't provide one
+                    color = self.biome_colors_fallback.get(biome, self.unknown_biome_color)
+                
+                # Draw tile
+                pygame.draw.rect(
+                    self.graphik.getGameDisplay(),
+                    color,
+                    (screen_x, screen_y, self.tile_size, self.tile_size)
+                )
             
             # Draw resource indicator (small circle)
             if has_resource:
@@ -713,7 +718,7 @@ class ServerBackedWorldScreen:
             pass
     
     def updateTick(self):
-        """Update game tick on server and refresh player state."""
+        """Update game tick on server and refresh player and entity state."""
         try:
             logger.debug(f"Updating tick on server (current: {self.server_tick})")
             session_data = self.api_client.update_tick()
@@ -724,13 +729,12 @@ class ServerBackedWorldScreen:
             self.player_data = self.api_client.get_player()
             self._updatePlayerFromServerData(self.player_data)
             
-            # Reload room if player changed rooms
+            # Always reload current room to get updated entity positions
             if self.player_data:
                 player_room_x = self.player_data.get('roomX', 0)
                 player_room_y = self.player_data.get('roomY', 0)
-                if player_room_x != self.current_room_x or player_room_y != self.current_room_y:
-                    logger.info(f"Player moved to new room ({player_room_x}, {player_room_y}), reloading room")
-                    self.load_room(player_room_x, player_room_y)
+                # Reload room every tick to show entity movements
+                self.load_room(player_room_x, player_room_y)
         except Exception as e:
             logger.error(f"Failed to update tick: {e}", exc_info=True)
             print(f"Failed to update tick: {e}")
@@ -773,11 +777,12 @@ class ServerBackedWorldScreen:
         slots = inventory_data.get('slots', [])[:10]  # First 10 slots
         
         # Position at bottom center - larger slots for better visibility
+        # Moved up to avoid overlapping with energy bar (which is at display_height - ~15)
         slot_size = 60
         spacing = 5
         total_width = len(slots) * (slot_size + spacing)
         start_x = display_width // 2 - total_width // 2
-        start_y = display_height - 80
+        start_y = display_height - 100  # Moved from -80 to -100 to avoid energy bar overlap
         
         # Draw background bar
         bar_padding = 10
@@ -841,11 +846,10 @@ class ServerBackedWorldScreen:
         controls = [
             "WASD/Arrows: Move",
             "Space: Stop",
-            "G: Gather",
-            "Shift+Arrows: Change Room",
+            "Click: Gather",
             "I: Inventory",
             "E: Eat",
-            "1/2/3: Add Items (test)",
+            "1-9/0: Select Slot",
             "ESC: Menu",
         ]
         
