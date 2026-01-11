@@ -69,7 +69,12 @@ docker-compose up -d
 
 For detailed information about database setup, configuration, migrations, backups, and troubleshooting, see:
 
-**[DATABASE.md](DATABASE.md)** - Complete database documentation
+- **[DATABASE.md](DATABASE.md)** - Complete database documentation
+- **[STORAGE_ARCHITECTURE.md](STORAGE_ARCHITECTURE.md)** - Storage abstraction layer and future storage options
+
+## Storage Architecture
+
+The server uses an interface-based storage architecture that allows different storage backends (database, JSON files, cloud storage) to be used interchangeably. The current implementation uses JPA/Hibernate with PostgreSQL or H2, but the design supports future implementations like JSON file storage.
 
 ## Building
 

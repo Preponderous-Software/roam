@@ -35,19 +35,27 @@ Three repository interfaces for database access:
 - `PlayerRepository` - Player data access
 - `RoomRepository` - Room data with coordinate lookups
 
-### 5. Persistence Service Layer
-`PersistenceService` provides:
+### 5. Storage Abstraction Layer (NEW)
+`GameStateStorage` interface provides:
+- Abstraction over storage implementations
+- Support for multiple storage backends (database, JSON files, etc.)
+- Interface-based design for flexibility and testability
+
+`PersistenceService` implements `GameStateStorage` with:
 - `saveGameState()` - Save complete game state to database
 - `loadGameState()` - Load game state from database
 - `deleteGameState()` - Remove saved game state
 - `sessionExists()` - Check if session is persisted
+- `listAllSessionIds()` - List all saved session IDs
 - Bi-directional conversion between domain models and JPA entities
 
 ### 6. GameService Integration
 Enhanced `GameService` with:
-- Auto-load from database when session requested but not in memory
+- Uses `GameStateStorage` interface (not concrete implementation)
+- Auto-load from storage when session requested but not in memory
 - Manual `saveSession()` and `loadSession()` methods
 - Optional auto-save every 100 ticks (configurable via `roam.persistence.auto-save`)
+- Transparent storage backend switching
 - Database deletion when session deleted
 
 ### 7. REST API Endpoints
@@ -109,6 +117,8 @@ All tests use H2 in-memory database with `@SpringBootTest` and `@ActiveProfiles(
 
 ## Architecture
 
+### Storage Abstraction Layer
+
 ```
 Client Request
      ↓
@@ -116,7 +126,9 @@ SessionController (REST API)
      ↓
 GameService (Business Logic)
      ↓
-PersistenceService (Persistence Layer)
+GameStateStorage Interface (Abstraction)
+     ↓
+PersistenceService (JPA Implementation)
      ↓
 Spring Data Repositories
      ↓
@@ -126,6 +138,30 @@ JDBC Driver
      ↓
 Database (PostgreSQL/H2)
 ```
+
+**Key Design:**
+- `GameService` depends on `GameStateStorage` interface, not concrete implementation
+- Different storage backends can be swapped without changing game logic
+- Current implementation: JPA/Hibernate with PostgreSQL/H2
+- Future implementations: JSON files, cloud storage, Redis, etc.
+
+### Future Storage Options
+
+The interface design enables easy addition of new storage backends:
+
+**JSON File Storage:**
+- Store game sessions as JSON files
+- No database required for development
+- Human-readable format for debugging
+- Simple backup/restore (copy files)
+
+**Cloud Storage:**
+- AWS S3 / Azure Blob Storage for cloud deployments
+- Redis for high-performance caching
+- MongoDB for document-based storage
+- Distributed databases for scaling
+
+See [STORAGE_ARCHITECTURE.md](STORAGE_ARCHITECTURE.md) for detailed implementation guidance.
 
 ## Data Flow
 

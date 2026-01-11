@@ -5,7 +5,7 @@ import com.preponderous.roam.model.Player;
 import com.preponderous.roam.model.Room;
 import com.preponderous.roam.model.World;
 import com.preponderous.roam.model.WorldConfig;
-import com.preponderous.roam.persistence.service.PersistenceService;
+import com.preponderous.roam.persistence.service.GameStateStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +38,7 @@ public class GameService {
     private EntityManager entityManager;
     
     @Autowired
-    private PersistenceService persistenceService;
+    private GameStateStorage gameStateStorage;
     
     @Value("${roam.persistence.auto-save:false}")
     private boolean autoSaveEnabled;
@@ -77,7 +77,7 @@ public class GameService {
         GameState gameState = sessions.get(sessionId);
         if (gameState == null) {
             // Try to load from database
-            Optional<GameState> loadedState = persistenceService.loadGameState(sessionId);
+            Optional<GameState> loadedState = gameStateStorage.loadGameState(sessionId);
             if (loadedState.isPresent()) {
                 gameState = loadedState.get();
                 sessions.put(sessionId, gameState);
@@ -92,7 +92,7 @@ public class GameService {
      */
     public void deleteSession(String sessionId) {
         sessions.remove(sessionId);
-        persistenceService.deleteGameState(sessionId);
+        gameStateStorage.deleteGameState(sessionId);
         logger.info("Deleted session: {}", sessionId);
     }
 
@@ -100,7 +100,7 @@ public class GameService {
      * Check if a session exists in memory or database.
      */
     public boolean sessionExists(String sessionId) {
-        return sessions.containsKey(sessionId) || persistenceService.sessionExists(sessionId);
+        return sessions.containsKey(sessionId) || gameStateStorage.sessionExists(sessionId);
     }
 
     /**
@@ -144,7 +144,7 @@ public class GameService {
     public void saveSession(String sessionId) {
         GameState gameState = getSession(sessionId);  // Use getSession to ensure auto-load behavior
         if (gameState != null) {
-            persistenceService.saveGameState(gameState);
+            gameStateStorage.saveGameState(gameState);
             logger.info("Saved session: {}", sessionId);
         }
     }
@@ -153,7 +153,7 @@ public class GameService {
      * Load a game session from the database into memory.
      */
     public GameState loadSession(String sessionId) {
-        Optional<GameState> loadedState = persistenceService.loadGameState(sessionId);
+        Optional<GameState> loadedState = gameStateStorage.loadGameState(sessionId);
         if (loadedState.isPresent()) {
             GameState gameState = loadedState.get();
             sessions.put(sessionId, gameState);

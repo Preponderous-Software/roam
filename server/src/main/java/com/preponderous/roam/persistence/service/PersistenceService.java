@@ -17,8 +17,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Service for persisting and loading game state from the database.
- * Handles conversion between domain models and JPA entities.
+ * JPA/Hibernate implementation of game state storage.
+ * Handles conversion between domain models and JPA entities for database persistence.
  * 
  * <h3>Known Limitations:</h3>
  * <ul>
@@ -31,7 +31,7 @@ import java.util.Optional;
  * @author Daniel McCoy Stephenson
  */
 @Service
-public class PersistenceService {
+public class PersistenceService implements GameStateStorage {
     
     private static final Logger logger = LoggerFactory.getLogger(PersistenceService.class);
     
@@ -47,6 +47,7 @@ public class PersistenceService {
     /**
      * Save a game state to the database.
      */
+    @Override
     @Transactional
     public void saveGameState(GameState gameState) {
         logger.info("Saving game state for session: {}", gameState.getSessionId());
@@ -94,6 +95,7 @@ public class PersistenceService {
     /**
      * Load a game state from the database.
      */
+    @Override
     @Transactional(readOnly = true)
     public Optional<GameState> loadGameState(String sessionId) {
         logger.info("Loading game state for session: {}", sessionId);
@@ -143,6 +145,7 @@ public class PersistenceService {
     /**
      * Delete a game state from the database.
      */
+    @Override
     @Transactional
     public void deleteGameState(String sessionId) {
         logger.info("Deleting game state for session: {}", sessionId);
@@ -151,7 +154,20 @@ public class PersistenceService {
     }
     
     /**
-     * List all saved game sessions.
+     * List all saved game session IDs.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> listAllSessionIds() {
+        return sessionRepository.findAllByOrderByUpdatedAtDesc()
+                .stream()
+                .map(GameSessionEntity::getSessionId)
+                .toList();
+    }
+    
+    /**
+     * List all saved game sessions with metadata.
+     * This method is specific to JPA implementation and provides additional session details.
      */
     @Transactional(readOnly = true)
     public List<GameSessionEntity> listAllSessions() {
@@ -161,6 +177,7 @@ public class PersistenceService {
     /**
      * Check if a session exists in the database.
      */
+    @Override
     @Transactional(readOnly = true)
     public boolean sessionExists(String sessionId) {
         return sessionRepository.existsById(sessionId);
