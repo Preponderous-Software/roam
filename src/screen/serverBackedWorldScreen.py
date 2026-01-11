@@ -53,6 +53,27 @@ class ServerBackedWorldScreen:
         # Server state
         self.player_data = None
         self.server_tick = 0
+        
+        # World rendering
+        self.current_room = None
+        self.current_room_x = 0
+        self.current_room_y = 0
+        self.tile_size = 16  # Size of each tile in pixels
+        
+        # Biome colors (matching server-side colors)
+        self.biome_colors = {
+            "Grassland": (144, 238, 144),  # #90EE90
+            "Forest": (34, 139, 34),       # #228B22
+            "Desert": (244, 164, 96),      # #F4A460
+            "Tundra": (224, 255, 255),     # #E0FFFF
+            "Mountain": (128, 128, 128),   # #808080
+            "Swamp": (85, 107, 47)         # #556B2F
+        }
+        
+        # Resource/hazard indicators
+        self.resource_color = (255, 215, 0)  # Gold for resources
+        self.hazard_color = (255, 0, 0)      # Red for hazards
+        
         logger.debug("ServerBackedWorldScreen initialized")
         
     def initialize(self):
@@ -71,6 +92,15 @@ class ServerBackedWorldScreen:
             logger.error(f"Failed to fetch player state: {e}", exc_info=True)
             print(f"Failed to fetch player state: {e}")
             self.status.set(f"Server error: {e}")
+        
+        # Load initial room
+        try:
+            logger.debug("Loading initial room (0, 0)")
+            self.load_room(0, 0)
+        except Exception as e:
+            logger.error(f"Failed to load initial room: {e}", exc_info=True)
+            print(f"Failed to load room: {e}")
+            self.status.set(f"Room load failed: {e}")
     
     def _updatePlayerFromServerData(self, player_data):
         """Update local player object from server data."""
@@ -222,6 +252,19 @@ class ServerBackedWorldScreen:
         elif key == pygame.K_e:
             logger.debug("E key pressed - consuming food")
             self._consumeFood()
+        # Room navigation with arrow keys + shift
+        elif key == pygame.K_UP and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+            logger.info("Shift+Up pressed - navigating to room north")
+            self.load_room(self.current_room_x, self.current_room_y - 1)
+        elif key == pygame.K_DOWN and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+            logger.info("Shift+Down pressed - navigating to room south")
+            self.load_room(self.current_room_x, self.current_room_y + 1)
+        elif key == pygame.K_LEFT and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+            logger.info("Shift+Left pressed - navigating to room west")
+            self.load_room(self.current_room_x - 1, self.current_room_y)
+        elif key == pygame.K_RIGHT and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+            logger.info("Shift+Right pressed - navigating to room east")
+            self.load_room(self.current_room_x + 1, self.current_room_y)
     
     def _addTestItem(self, item_name: str):
         """Add test item to inventory (for testing)."""
@@ -276,6 +319,119 @@ class ServerBackedWorldScreen:
             print(f"Failed to consume: {e}")
             self.status.set(f"Consume failed: {e}")
     
+    def load_room(self, room_x: int, room_y: int):
+        """Load a room from the server."""
+        try:
+            logger.info(f"Loading room ({room_x}, {room_y})")
+            self.current_room = self.api_client.get_room(room_x, room_y)
+            self.current_room_x = room_x
+            self.current_room_y = room_y
+            logger.debug(f"Room loaded successfully: {len(self.current_room.get('tiles', []))} tiles")
+            self.status.set(f"Loaded room ({room_x}, {room_y})")
+        except Exception as e:
+            logger.error(f"Failed to load room ({room_x}, {room_y}): {e}", exc_info=True)
+            print(f"Failed to load room: {e}")
+            self.status.set(f"Room load failed: {e}")
+    
+    def render_world(self):
+        """Render the current room as a tile map."""
+        if not self.current_room:
+            return
+        
+        tiles = self.current_room.get('tiles', [])
+        width = self.current_room.get('width', 32)
+        height = self.current_room.get('height', 32)
+        
+        # Calculate world view position (centered on screen)
+        display_width = self.graphik.getGameDisplay().get_width()
+        display_height = self.graphik.getGameDisplay().get_height()
+        
+        world_pixel_width = width * self.tile_size
+        world_pixel_height = height * self.tile_size
+        
+        world_view_x = (display_width - world_pixel_width) // 2
+        world_view_y = (display_height - world_pixel_height) // 2
+        
+        # Draw each tile
+        for tile_data in tiles:
+            tile_x = tile_data.get('x', 0)
+            tile_y = tile_data.get('y', 0)
+            biome = tile_data.get('biome', 'Grassland')
+            has_resource = tile_data.get('resourceType') is not None
+            has_hazard = tile_data.get('hasHazard', False)
+            
+            # Calculate screen position
+            screen_x = world_view_x + tile_x * self.tile_size
+            screen_y = world_view_y + tile_y * self.tile_size
+            
+            # Get biome color
+            color = self.biome_colors.get(biome, (100, 100, 100))
+            
+            # Draw tile
+            pygame.draw.rect(
+                self.graphik.getGameDisplay(),
+                color,
+                (screen_x, screen_y, self.tile_size, self.tile_size)
+            )
+            
+            # Draw resource indicator (small circle)
+            if has_resource:
+                center_x = screen_x + self.tile_size // 2
+                center_y = screen_y + self.tile_size // 2
+                pygame.draw.circle(
+                    self.graphik.getGameDisplay(),
+                    self.resource_color,
+                    (center_x, center_y),
+                    3
+                )
+            
+            # Draw hazard indicator (X mark)
+            if has_hazard:
+                pygame.draw.line(
+                    self.graphik.getGameDisplay(),
+                    self.hazard_color,
+                    (screen_x + 2, screen_y + 2),
+                    (screen_x + self.tile_size - 2, screen_y + self.tile_size - 2),
+                    2
+                )
+                pygame.draw.line(
+                    self.graphik.getGameDisplay(),
+                    self.hazard_color,
+                    (screen_x + self.tile_size - 2, screen_y + 2),
+                    (screen_x + 2, screen_y + self.tile_size - 2),
+                    2
+                )
+        
+        # Draw grid lines
+        for x in range(width + 1):
+            start_x = world_view_x + x * self.tile_size
+            pygame.draw.line(
+                self.graphik.getGameDisplay(),
+                (50, 50, 50),
+                (start_x, world_view_y),
+                (start_x, world_view_y + height * self.tile_size),
+                1
+            )
+        
+        for y in range(height + 1):
+            start_y = world_view_y + y * self.tile_size
+            pygame.draw.line(
+                self.graphik.getGameDisplay(),
+                (50, 50, 50),
+                (world_view_x, start_y),
+                (world_view_x + width * self.tile_size, start_y),
+                1
+            )
+        
+        # Draw room coordinates label
+        font = pygame.font.Font(None, 24)
+        room_label = font.render(
+            f"Room: ({self.current_room_x}, {self.current_room_y})",
+            True,
+            (255, 255, 255)
+        )
+        self.graphik.getGameDisplay().blit(room_label, (world_view_x, world_view_y - 25))
+    
     def handleKeyUpEvent(self, key):
         """Handle key release events."""
         logger.debug(f"Key up event: {key}")
@@ -318,13 +474,15 @@ class ServerBackedWorldScreen:
     def draw(self):
         """Draw the world screen."""
         # Clear screen with a nice background
-        self.graphik.getGameDisplay().fill((34, 139, 34))  # Forest green background
+        self.graphik.getGameDisplay().fill((20, 20, 30))  # Dark background
+        
+        # Render world first (as background)
+        self.render_world()
         
         # Draw title
-        title_font = pygame.font.Font(None, 48)
+        title_font = pygame.font.Font(None, 36)
         title = title_font.render("Roam (Server-Backed)", True, (255, 255, 255))
-        title_rect = title.get_rect(center=(self.graphik.getGameDisplay().get_width() // 2, 40))
-        self.graphik.getGameDisplay().blit(title, title_rect)
+        self.graphik.getGameDisplay().blit(title, (10, 10))
         
         # Draw player visualization (centered)
         display_width = self.graphik.getGameDisplay().get_width()
@@ -478,13 +636,14 @@ class ServerBackedWorldScreen:
             "WASD/Arrows: Move",
             "Space: Stop",
             "G: Gather",
+            "Shift+Arrows: Change Room",
             "I: Inventory",
             "E: Eat",
             "1/2/3: Add Items (test)",
             "ESC: Menu",
         ]
         
-        x = display_width - 200
+        x = display_width - 220
         y = 100
         
         for control in controls:
