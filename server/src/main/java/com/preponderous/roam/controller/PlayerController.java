@@ -7,6 +7,7 @@ import com.preponderous.roam.model.Entity;
 import com.preponderous.roam.model.GameState;
 import com.preponderous.roam.model.Player;
 import com.preponderous.roam.model.Room;
+import com.preponderous.roam.model.entity.*;
 import com.preponderous.roam.service.EntityInteractionService;
 import com.preponderous.roam.service.GameService;
 import com.preponderous.roam.service.MappingService;
@@ -90,7 +91,7 @@ public class PlayerController {
                     if (request.getGathering()) {
                         playerService.setTickLastGathered(player, currentTick);
                         
-                        // Try to interact with entity in front of player
+                        // Get current game state and room
                         GameState gameState = gameService.getSession(sessionId);
                         Room currentRoom = worldGenerationService.getOrGenerateRoom(
                             gameState.getWorld(), 
@@ -99,7 +100,22 @@ public class PlayerController {
                             currentTick
                         );
                         
-                        Entity targetEntity = entityInteractionService.getEntityInFrontOfPlayer(player, currentRoom);
+                        Entity targetEntity = null;
+                        
+                        // If tile coordinates provided, get entity at that tile
+                        if (request.getTileX() != null && request.getTileY() != null) {
+                            targetEntity = entityInteractionService.getEntityAtTile(
+                                player.getRoomX(), 
+                                player.getRoomY(), 
+                                request.getTileX(), 
+                                request.getTileY(), 
+                                currentRoom
+                            );
+                        } else {
+                            // Otherwise get entity in front of player
+                            targetEntity = entityInteractionService.getEntityInFrontOfPlayer(player, currentRoom);
+                        }
+                        
                         if (targetEntity != null) {
                             // Try harvesting harvestable entities
                             entityInteractionService.harvestEntity(targetEntity, player);
@@ -115,6 +131,43 @@ public class PlayerController {
                     playerService.setPlacing(player, request.getPlacing());
                     if (request.getPlacing()) {
                         playerService.setTickLastPlaced(player, currentTick);
+                        
+                        // Get selected item from inventory
+                        String itemName = player.getInventory().getSelectedInventorySlot().getItemName();
+                        if (itemName != null && !itemName.isEmpty()) {
+                            // Get target tile coordinates
+                            Integer targetTileX = request.getTileX();
+                            Integer targetTileY = request.getTileY();
+                            
+                            if (targetTileX != null && targetTileY != null) {
+                                // Get current room
+                                GameState gameState = gameService.getSession(sessionId);
+                                Room currentRoom = worldGenerationService.getOrGenerateRoom(
+                                    gameState.getWorld(), 
+                                    player.getRoomX(), 
+                                    player.getRoomY(), 
+                                    currentTick
+                                );
+                                
+                                // Check if tile is empty (no solid entity)
+                                String targetLocationId = player.getRoomX() + "," + player.getRoomY() + "," + 
+                                                         targetTileX + "," + targetTileY;
+                                boolean occupied = currentRoom.getEntitiesList().stream()
+                                    .anyMatch(e -> e.isSolid() && targetLocationId.equals(e.getLocationId()));
+                                
+                                if (!occupied) {
+                                    // Create entity based on item name and place it
+                                    Entity placedEntity = createEntityFromItemName(itemName);
+                                    if (placedEntity != null) {
+                                        placedEntity.setLocationId(targetLocationId);
+                                        currentRoom.addEntity(placedEntity);
+                                        
+                                        // Remove item from inventory
+                                        player.getInventory().removeByItemName(itemName);
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 break;
@@ -141,6 +194,31 @@ public class PlayerController {
 
         PlayerDTO playerDTO = mappingService.toPlayerDTO(player);
         return ResponseEntity.ok(playerDTO);
+    }
+
+    /**
+     * Create an entity from an item name for placing.
+     * 
+     * @param itemName the item name
+     * @return the created entity, or null if item cannot be placed
+     */
+    private Entity createEntityFromItemName(String itemName) {
+        switch (itemName) {
+            case "Grass":
+                // Grass is a tile type, not a placeable entity
+                return null;
+            case "Wood":
+                return new Wood();
+            case "Stone":
+                return new Stone();
+            case "Apple":
+                return new Apple();
+            case "Berry":
+                return new Berry();
+            // Trees, rocks, and bushes are not directly placeable from inventory
+            default:
+                return null;
+        }
     }
 
     /**

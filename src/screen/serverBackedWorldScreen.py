@@ -392,20 +392,81 @@ class ServerBackedWorldScreen:
         """Handle mouse button press events."""
         if event.button == 1:  # Left click - gather
             logger.debug(f"Left click at position ({event.pos[0]}, {event.pos[1]})")
-            # Trigger gathering action
-            try:
-                self.player_data = self.api_client.perform_player_action(
-                    "gather",
-                    gathering=True
-                )
-                self._updatePlayerFromServerData(self.player_data)
-                self.status.set("Gathering")
-            except Exception as e:
-                logger.error(f"Failed to start gathering: {e}", exc_info=True)
-                self.status.set(f"Gather failed: {e}")
-        elif event.button == 3:  # Right click - place (if needed later)
+            # Convert screen coordinates to tile coordinates
+            tile_coords = self._screen_to_tile_coords(event.pos[0], event.pos[1])
+            if tile_coords:
+                tile_x, tile_y = tile_coords
+                logger.debug(f"Clicking on tile ({tile_x}, {tile_y})")
+                # Trigger gathering action at the clicked tile
+                try:
+                    self.player_data = self.api_client.perform_player_action(
+                        "gather",
+                        gathering=True,
+                        tile_x=tile_x,
+                        tile_y=tile_y
+                    )
+                    self._updatePlayerFromServerData(self.player_data)
+                    self.status.set(f"Gathered at ({tile_x}, {tile_y})")
+                except Exception as e:
+                    logger.error(f"Failed to gather: {e}", exc_info=True)
+                    self.status.set(f"Gather failed")
+        elif event.button == 3:  # Right click - place
             logger.debug(f"Right click at position ({event.pos[0]}, {event.pos[1]})")
-            pass
+            # Convert screen coordinates to tile coordinates
+            tile_coords = self._screen_to_tile_coords(event.pos[0], event.pos[1])
+            if tile_coords:
+                tile_x, tile_y = tile_coords
+                logger.debug(f"Placing on tile ({tile_x}, {tile_y})")
+                # Trigger placing action at the clicked tile
+                try:
+                    self.player_data = self.api_client.perform_player_action(
+                        "place",
+                        placing=True,
+                        tile_x=tile_x,
+                        tile_y=tile_y
+                    )
+                    self._updatePlayerFromServerData(self.player_data)
+                    self.status.set(f"Placed at ({tile_x}, {tile_y})")
+                except Exception as e:
+                    logger.error(f"Failed to place: {e}", exc_info=True)
+                    self.status.set(f"Place failed")
+    
+    def _screen_to_tile_coords(self, screen_x: int, screen_y: int):
+        """
+        Convert screen coordinates to tile coordinates within the current room.
+        
+        Args:
+            screen_x: Screen X coordinate
+            screen_y: Screen Y coordinate
+            
+        Returns:
+            Tuple of (tile_x, tile_y) or None if outside the world view
+        """
+        if not self.current_room:
+            return None
+        
+        width = self.current_room.get('width', 20)
+        height = self.current_room.get('height', 20)
+        
+        # Calculate world view position (centered on screen)
+        display_width = self.graphik.getGameDisplay().get_width()
+        display_height = self.graphik.getGameDisplay().get_height()
+        
+        world_pixel_width = width * self.tile_size
+        world_pixel_height = height * self.tile_size
+        
+        world_view_x = (display_width - world_pixel_width) // 2
+        world_view_y = (display_height - world_pixel_height) // 2
+        
+        # Convert to tile coordinates
+        tile_x = (screen_x - world_view_x) // self.tile_size
+        tile_y = (screen_y - world_view_y) // self.tile_size
+        
+        # Check if within bounds
+        if 0 <= tile_x < width and 0 <= tile_y < height:
+            return (tile_x, tile_y)
+        
+        return None
     
     def _navigate_to_room(self, new_x: int, new_y: int, direction: str):
         """

@@ -12,6 +12,8 @@ public class PlayerActionRequest {
     private Boolean gathering;
     private Boolean placing;
     private Boolean crouching;
+    private Integer tileX;  // Target tile X coordinate for interactions
+    private Integer tileY;  // Target tile Y coordinate for interactions
 
     public PlayerActionRequest() {
     }
@@ -62,5 +64,21 @@ public class PlayerActionRequest {
 
     public void setCrouching(Boolean crouching) {
         this.crouching = crouching;
+    }
+
+    public Integer getTileX() {
+        return tileX;
+    }
+
+    public void setTileX(Integer tileX) {
+        this.tileX = tileX;
+    }
+
+    public Integer getTileY() {
+        return tileY;
+    }
+
+    public void setTileY(Integer tileY) {
+        this.tileY = tileY;
     }
 }

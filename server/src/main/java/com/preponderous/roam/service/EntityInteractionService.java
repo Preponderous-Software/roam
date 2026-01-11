@@ -173,4 +173,23 @@ public class EntityInteractionService {
             .findFirst()
             .orElse(null);
     }
+    
+    /**
+     * Get entity at a specific tile location.
+     * 
+     * @param roomX the room X coordinate
+     * @param roomY the room Y coordinate
+     * @param tileX the tile X coordinate
+     * @param tileY the tile Y coordinate
+     * @param room the room to search
+     * @return the entity at the specified location, or null if none found
+     */
+    public Entity getEntityAtTile(int roomX, int roomY, int tileX, int tileY, Room room) {
+        String targetLocationId = roomX + "," + roomY + "," + tileX + "," + tileY;
+        
+        return room.getEntitiesList().stream()
+            .filter(entity -> targetLocationId.equals(entity.getLocationId()))
+            .findFirst()
+            .orElse(null);
+    }
 }
