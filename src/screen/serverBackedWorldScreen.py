@@ -58,9 +58,9 @@ class ServerBackedWorldScreen:
         self.current_room = None
         self.current_room_x = 0
         self.current_room_y = 0
-        # Size of each tile in pixels; increased from 16 to 24 for better visibility
+        # Size of each tile in pixels; increased from 16 to 32 for better visibility like original
         # Can be overridden via Config.tile_size to match server room dimensions/display size.
-        self.tile_size = getattr(self.config, "tile_size", 24)
+        self.tile_size = getattr(self.config, "tile_size", 32)
         
         # Load player sprites with error handling
         self.player_sprites = {}
@@ -85,6 +85,33 @@ class ServerBackedWorldScreen:
                 fallback = pygame.Surface((self.tile_size, self.tile_size))
                 fallback.fill((50, 150, 255))  # Blue color
                 self.player_sprites[direction] = fallback
+        
+        # Load entity sprites
+        self.entity_sprites = {}
+        entity_sprite_paths = {
+            'Bear': "assets/images/bear.png",
+            'Chicken': "assets/images/chicken.png",
+            'Tree': "assets/images/oakWood.png",
+            'Rock': "assets/images/stone.png",
+            'Bush': "assets/images/leaves.png",
+            'Apple': "assets/images/apple.png",
+            'Berry': "assets/images/banana.png",  # Using banana as berry placeholder
+            'Wood': "assets/images/jungleWood.png",
+            'Stone': "assets/images/coalOre.png",
+            'Grass': "assets/images/grass.png"
+        }
+        
+        for entity_type, path in entity_sprite_paths.items():
+            try:
+                sprite = pygame.image.load(path)
+                # Scale sprites to tile size
+                self.entity_sprites[entity_type] = pygame.transform.scale(
+                    sprite,
+                    (self.tile_size, self.tile_size)
+                )
+            except (pygame.error, FileNotFoundError) as e:
+                logger.warning(f"Failed to load entity sprite {path} for {entity_type}: {e}")
+                # Don't create fallback, will use colored squares as before
         
         # Biome colors (fallback only - prefer server-provided colors)
         # These RGB values match the server's hex color definitions as fallback
@@ -280,10 +307,21 @@ class ServerBackedWorldScreen:
             # Do not modify player speed locally to avoid client-server desynchronization.
             pass
         elif key == pygame.K_LCTRL:
-            logger.debug("Ctrl key pressed (crouch changes handled server-side)")
-            # Crouching state changes are handled by the server in a server-backed world.
-            # Do not modify crouch state locally to avoid client-server desynchronization.
-            pass
+            logger.debug("Ctrl key pressed - toggling crouch")
+            try:
+                # Toggle crouching state
+                current_crouching = self.player.isCrouching()
+                self.player_data = self.api_client.perform_player_action(
+                    "crouch",
+                    crouching=not current_crouching
+                )
+                self._updatePlayerFromServerData(self.player_data)
+                self.player.setCrouching(not current_crouching)
+                status = "crouching" if not current_crouching else "standing"
+                self.status.set(f"Player {status}")
+            except Exception as e:
+                logger.error(f"Failed to toggle crouch: {e}", exc_info=True)
+                self.status.set(f"Crouch toggle failed: {e}")
         elif key == pygame.K_F3:
             # toggle debug mode
             self.config.debug = not self.config.debug
@@ -354,6 +392,25 @@ class ServerBackedWorldScreen:
             logger.error(f"Failed to consume food: {e}", exc_info=True)
             print(f"Failed to consume: {e}")
             self.status.set(f"Consume failed: {e}")
+    
+    def handleMouseButtonDown(self, event):
+        """Handle mouse button press events."""
+        if event.button == 1:  # Left click - gather
+            logger.debug(f"Left click at position ({event.pos[0]}, {event.pos[1]})")
+            # Trigger gathering action
+            try:
+                self.player_data = self.api_client.perform_player_action(
+                    "gather",
+                    gathering=True
+                )
+                self._updatePlayerFromServerData(self.player_data)
+                self.status.set("Gathering")
+            except Exception as e:
+                logger.error(f"Failed to start gathering: {e}", exc_info=True)
+                self.status.set(f"Gather failed: {e}")
+        elif event.button == 3:  # Right click - place (if needed later)
+            logger.debug(f"Right click at position ({event.pos[0]}, {event.pos[1]})")
+            pass
     
     def _navigate_to_room(self, new_x: int, new_y: int, direction: str):
         """
@@ -520,24 +577,31 @@ class ServerBackedWorldScreen:
                 entity_type = entity.get('type', '')
                 entity_name = entity.get('name', '')
                 
-                # Entity visualization colors
-                entity_color = self._get_entity_color(entity_type)
-                
-                # Draw entity as a filled rectangle with border
-                pygame.draw.rect(
-                    self.graphik.getGameDisplay(),
-                    entity_color,
-                    (screen_x + 2, screen_y + 2, self.tile_size - 4, self.tile_size - 4)
-                )
-                
-                # Draw border for solid entities
-                if entity.get('solid', False):
+                # Try to use sprite first, fall back to colored square
+                if entity_type in self.entity_sprites:
+                    self.graphik.getGameDisplay().blit(
+                        self.entity_sprites[entity_type],
+                        (screen_x, screen_y)
+                    )
+                else:
+                    # Fall back to colored square
+                    entity_color = self._get_entity_color(entity_type)
+                    
+                    # Draw entity as a filled rectangle with border
                     pygame.draw.rect(
                         self.graphik.getGameDisplay(),
-                        (0, 0, 0),
-                        (screen_x + 2, screen_y + 2, self.tile_size - 4, self.tile_size - 4),
-                        2
+                        entity_color,
+                        (screen_x + 2, screen_y + 2, self.tile_size - 4, self.tile_size - 4)
                     )
+                    
+                    # Draw border for solid entities
+                    if entity.get('solid', False):
+                        pygame.draw.rect(
+                            self.graphik.getGameDisplay(),
+                            (0, 0, 0),
+                            (screen_x + 2, screen_y + 2, self.tile_size - 4, self.tile_size - 4),
+                            2
+                        )
         
         # Draw player position indicator if player position is available
         if self.player_data:
@@ -681,84 +745,14 @@ class ServerBackedWorldScreen:
         # Clear screen with a nice background
         self.graphik.getGameDisplay().fill((20, 20, 30))  # Dark background
         
-        # Render world first (as background)
+        # Render world first (as background) - this takes up most of the screen now
         self.render_world()
         
-        # Draw title
-        # Note: The title uses a smaller font (36 instead of 48) and is pinned to the
-        # top-left corner instead of being centered. This keeps the main world view and
-        # player visualization unobstructed in the center of the screen and treats the
-        # title as a lightweight HUD label rather than a dominant splash title.
-        title_font = pygame.font.Font(None, 36)
-        title = title_font.render("Roam (Server-Backed)", True, (255, 255, 255))
-        self.graphik.getGameDisplay().blit(title, (10, 10))
-        
-        # Draw player visualization (centered)
-        display_width = self.graphik.getGameDisplay().get_width()
-        display_height = self.graphik.getGameDisplay().get_height()
-        
-        # Player representation
-        player_size = 64
-        player_x = display_width // 2 - player_size // 2
-        player_y = display_height // 2 - player_size // 2
-        
-        # Draw player circle
-        pygame.draw.circle(
-            self.graphik.getGameDisplay(),
-            (255, 200, 100),
-            (player_x + player_size // 2, player_y + player_size // 2),
-            player_size // 2
-        )
-        
-        # Draw direction indicator
-        direction = self.player.getDirection()
-        if direction >= 0:
-            arrow_length = 30
-            center_x = player_x + player_size // 2
-            center_y = player_y + player_size // 2
-            
-            if direction == 0:  # Up
-                end_x, end_y = center_x, center_y - arrow_length
-            elif direction == 1:  # Left
-                end_x, end_y = center_x - arrow_length, center_y
-            elif direction == 2:  # Down
-                end_x, end_y = center_x, center_y + arrow_length
-            elif direction == 3:  # Right
-                end_x, end_y = center_x + arrow_length, center_y
-            
-            pygame.draw.line(
-                self.graphik.getGameDisplay(),
-                (255, 255, 0),
-                (center_x, center_y),
-                (end_x, end_y),
-                5
-            )
-        
-        # Draw player info panel
-        info_x = 20
-        info_y = 100
-        font = pygame.font.Font(None, 28)
-        
-        info_texts = [
-            f"Energy: {self.player.getEnergy():.1f}/{self.player.getTargetEnergy()}",
-            f"Direction: {['Up', 'Left', 'Down', 'Right', 'None'][direction] if direction >= 0 else 'None'}",
-            f"Moving: {self.player_data.get('moving', False) if self.player_data else False}",
-            f"Gathering: {self.player_data.get('gathering', False) if self.player_data else False}",
-            f"Crouching: {self.player.isCrouching()}",
-        ]
-        
-        for i, text in enumerate(info_texts):
-            surface = font.render(text, True, (255, 255, 255))
-            self.graphik.getGameDisplay().blit(surface, (info_x, info_y + i * 35))
-        
-        # Draw energy bar
+        # Draw energy bar (top of screen)
         self.energyBar.draw()
         
-        # Draw inventory preview
+        # Draw inventory preview (bottom of screen)
         self._drawInventoryPreview()
-        
-        # Draw controls help
-        self._drawControls()
         
         # Draw status bar
         self.status.draw()
@@ -890,7 +884,10 @@ class ServerBackedWorldScreen:
         """Main game loop."""
         logger.info("Starting ServerBackedWorldScreen main loop")
         tick_counter = 0
-        tick_update_frequency = 60  # Update server tick every 60 frames
+        tick_update_frequency = 300  # Update server tick every 300 frames (5 seconds at 60 FPS)
+        
+        clock = pygame.time.Clock()
+        target_fps = 60
         
         while not self.changeScreen:
             for event in pygame.event.get():
@@ -902,6 +899,8 @@ class ServerBackedWorldScreen:
                     self.handleKeyDownEvent(event.key)
                 elif event.type == pygame.KEYUP:
                     self.handleKeyUpEvent(event.key)
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    self.handleMouseButtonDown(event)
             
             # Update tick periodically
             tick_counter += 1
@@ -917,6 +916,9 @@ class ServerBackedWorldScreen:
             
             # Increment local tick counter
             self.tickCounter.incrementTick()
+            
+            # Control frame rate
+            clock.tick(target_fps)
         
         logger.info(f"Exiting ServerBackedWorldScreen, next screen: {self.nextScreen}")
         self.changeScreen = False
