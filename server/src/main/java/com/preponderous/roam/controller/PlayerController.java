@@ -3,10 +3,15 @@ package com.preponderous.roam.controller;
 import com.preponderous.roam.dto.PlayerActionRequest;
 import com.preponderous.roam.dto.PlayerDTO;
 import com.preponderous.roam.exception.SessionNotFoundException;
+import com.preponderous.roam.model.Entity;
+import com.preponderous.roam.model.GameState;
 import com.preponderous.roam.model.Player;
+import com.preponderous.roam.model.Room;
+import com.preponderous.roam.service.EntityInteractionService;
 import com.preponderous.roam.service.GameService;
 import com.preponderous.roam.service.MappingService;
 import com.preponderous.roam.service.PlayerService;
+import com.preponderous.roam.service.WorldGenerationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +34,12 @@ public class PlayerController {
 
     @Autowired
     private MappingService mappingService;
+    
+    @Autowired
+    private EntityInteractionService entityInteractionService;
+    
+    @Autowired
+    private WorldGenerationService worldGenerationService;
 
     /**
      * Get player state.
@@ -78,6 +89,24 @@ public class PlayerController {
                     playerService.setGathering(player, request.getGathering());
                     if (request.getGathering()) {
                         playerService.setTickLastGathered(player, currentTick);
+                        
+                        // Try to interact with entity in front of player
+                        GameState gameState = gameService.getSession(sessionId);
+                        Room currentRoom = worldGenerationService.getOrGenerateRoom(
+                            gameState.getWorld(), 
+                            player.getRoomX(), 
+                            player.getRoomY(), 
+                            currentTick
+                        );
+                        
+                        Entity targetEntity = entityInteractionService.getEntityInFrontOfPlayer(player, currentRoom);
+                        if (targetEntity != null) {
+                            // Try harvesting harvestable entities
+                            entityInteractionService.harvestEntity(targetEntity, player);
+                            
+                            // Try gathering resources
+                            entityInteractionService.gatherResource(targetEntity, player, currentRoom);
+                        }
                     }
                 }
                 break;

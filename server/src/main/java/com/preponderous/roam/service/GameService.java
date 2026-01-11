@@ -2,6 +2,7 @@ package com.preponderous.roam.service;
 
 import com.preponderous.roam.model.GameState;
 import com.preponderous.roam.model.Player;
+import com.preponderous.roam.model.Room;
 import com.preponderous.roam.model.World;
 import com.preponderous.roam.model.WorldConfig;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,12 @@ public class GameService {
     
     @Autowired
     private WorldGenerationService worldGenerationService;
+    
+    @Autowired
+    private PlayerService playerService;
+    
+    @Autowired
+    private EntityManager entityManager;
 
     /**
      * Create a new game session.
@@ -35,9 +42,16 @@ public class GameService {
         World world = new World(worldConfig);
         
         // Generate the starting room (0, 0)
-        worldGenerationService.getOrGenerateRoom(world, 0, 0);
+        Room startingRoom = worldGenerationService.getOrGenerateRoom(world, 0, 0, initialTick);
         
         GameState gameState = new GameState(sessionId, initialTick, world);
+        
+        // Initialize player at center of starting room
+        Player player = gameState.getPlayer();
+        int centerX = startingRoom.getWidth() / 2;
+        int centerY = startingRoom.getHeight() / 2;
+        playerService.setPlayerPosition(player, 0, 0, centerX, centerY);
+        
         sessions.put(sessionId, gameState);
         return gameState;
     }
@@ -78,6 +92,18 @@ public class GameService {
         GameState gameState = getSession(sessionId);
         if (gameState != null) {
             gameState.incrementTick();
+            
+            // Update player movement
+            Player player = gameState.getPlayer();
+            if (player.isMoving()) {
+                playerService.movePlayer(player, gameState.getWorld(), gameState.getCurrentTick());
+            }
+            
+            // Update entities in all loaded rooms
+            World world = gameState.getWorld();
+            for (Room room : world.getRooms().values()) {
+                entityManager.updateEntities(room, gameState.getCurrentTick());
+            }
         }
     }
 
