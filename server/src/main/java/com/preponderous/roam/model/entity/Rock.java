@@ -1,0 +1,53 @@
+package com.preponderous.roam.model.entity;
+
+import com.preponderous.roam.model.Entity;
+
+/**
+ * Represents a rock interactive object.
+ * Rocks can be harvested for stone.
+ * 
+ * @author Daniel McCoy Stephenson
+ */
+public class Rock extends Entity {
+    public static final int MAX_HARVEST_COUNT = 3;
+    
+    private int harvestCount;
+    private int maxHarvestCount;
+
+    public Rock() {
+        super("Rock", "assets/images/rock.png");
+        this.harvestCount = 0;
+        this.maxHarvestCount = MAX_HARVEST_COUNT;
+        this.setSolid(true);
+    }
+
+    public int getHarvestCount() {
+        return harvestCount;
+    }
+
+    public void setHarvestCount(int harvestCount) {
+        this.harvestCount = harvestCount;
+    }
+
+    public int getMaxHarvestCount() {
+        return maxHarvestCount;
+    }
+
+    public void setMaxHarvestCount(int maxHarvestCount) {
+        this.maxHarvestCount = maxHarvestCount;
+    }
+
+    public boolean canHarvest() {
+        return harvestCount < maxHarvestCount;
+    }
+
+    public void harvest() {
+        if (canHarvest()) {
+            harvestCount++;
+        }
+    }
+
+    public boolean isDepleted() {
+        return harvestCount >= maxHarvestCount;
+    }
+}
