@@ -46,6 +46,33 @@ public class GameEntityData {
     @Column(name = "tick_last_reproduced")
     private Long tickLastReproduced;
     
+    // Harvestable entity fields (Tree, Rock, Bush)
+    @Column(name = "harvest_count")
+    private Integer harvestCount;
+    
+    @Column(name = "max_harvest_count")
+    private Integer maxHarvestCount;
+    
+    // Consumable entity fields (Apple, Berry, Wood, Stone)
+    @Column(name = "energy_value")
+    private Double energyValue;
+    
+    @Column(name = "quantity")
+    private Integer quantity;
+    
+    // Animal entity fields (Deer, Bear, Chicken)
+    @Column(name = "move_speed")
+    private Integer moveSpeed;
+    
+    @Column(name = "flee_range")
+    private Double fleeRange;
+    
+    @Column(name = "aggression_range")
+    private Double aggressionRange;
+    
+    @Column(name = "aggressive")
+    private Boolean aggressive;
+    
     public GameEntityData() {
     }
     
@@ -145,5 +172,69 @@ public class GameEntityData {
     
     public void setTickLastReproduced(Long tickLastReproduced) {
         this.tickLastReproduced = tickLastReproduced;
+    }
+    
+    public Integer getHarvestCount() {
+        return harvestCount;
+    }
+    
+    public void setHarvestCount(Integer harvestCount) {
+        this.harvestCount = harvestCount;
+    }
+    
+    public Integer getMaxHarvestCount() {
+        return maxHarvestCount;
+    }
+    
+    public void setMaxHarvestCount(Integer maxHarvestCount) {
+        this.maxHarvestCount = maxHarvestCount;
+    }
+    
+    public Double getEnergyValue() {
+        return energyValue;
+    }
+    
+    public void setEnergyValue(Double energyValue) {
+        this.energyValue = energyValue;
+    }
+    
+    public Integer getQuantity() {
+        return quantity;
+    }
+    
+    public void setQuantity(Integer quantity) {
+        this.quantity = quantity;
+    }
+    
+    public Integer getMoveSpeed() {
+        return moveSpeed;
+    }
+    
+    public void setMoveSpeed(Integer moveSpeed) {
+        this.moveSpeed = moveSpeed;
+    }
+    
+    public Double getFleeRange() {
+        return fleeRange;
+    }
+    
+    public void setFleeRange(Double fleeRange) {
+        this.fleeRange = fleeRange;
+    }
+    
+    public Double getAggressionRange() {
+        return aggressionRange;
+    }
+    
+    public void setAggressionRange(Double aggressionRange) {
+        this.aggressionRange = aggressionRange;
+    }
+    
+    public Boolean getAggressive() {
+        return aggressive;
+    }
+    
+    public void setAggressive(Boolean aggressive) {
+        this.aggressive = aggressive;
     }
 }

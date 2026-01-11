@@ -1,6 +1,7 @@
 package com.preponderous.roam.persistence.service;
 
 import com.preponderous.roam.model.*;
+import com.preponderous.roam.model.entity.*;
 import com.preponderous.roam.persistence.entity.*;
 import com.preponderous.roam.persistence.repository.GameSessionRepository;
 import com.preponderous.roam.persistence.repository.PlayerRepository;
@@ -21,8 +22,6 @@ import java.util.Optional;
  * 
  * <h3>Known Limitations:</h3>
  * <ul>
- *   <li><b>Entity Recreation:</b> Game entities (trees, rocks, animals, etc.) are stored but not fully 
- *       recreated on load. An entity factory is needed to properly instantiate specific entity types.</li>
  *   <li><b>Inventory Slot Preservation:</b> Inventory items are loaded sequentially which may not preserve 
  *       exact slot positions from the original state.</li>
  *   <li><b>Performance:</b> Full collection clearing and re-adding is used for saves. For large worlds, 
@@ -285,12 +284,53 @@ public class PersistenceService {
             entityData.setLocationId(entity.getLocationId());
             entityData.setSolid(entity.isSolid());
             
+            // Save LivingEntity fields
             if (entity instanceof LivingEntity) {
                 LivingEntity living = (LivingEntity) entity;
                 entityData.setEnergy(living.getEnergy());
                 entityData.setTargetEnergy(living.getTargetEnergy());
                 entityData.setTickCreated(living.getTickCreated());
                 entityData.setTickLastReproduced(living.getTickLastReproduced());
+            }
+            
+            // Save entity-specific fields based on type
+            if (entity instanceof Tree) {
+                Tree tree = (Tree) entity;
+                entityData.setHarvestCount(tree.getHarvestCount());
+                entityData.setMaxHarvestCount(tree.getMaxHarvestCount());
+            } else if (entity instanceof Rock) {
+                Rock rock = (Rock) entity;
+                entityData.setHarvestCount(rock.getHarvestCount());
+                entityData.setMaxHarvestCount(rock.getMaxHarvestCount());
+            } else if (entity instanceof Bush) {
+                Bush bush = (Bush) entity;
+                entityData.setHarvestCount(bush.getHarvestCount());
+                entityData.setMaxHarvestCount(bush.getMaxHarvestCount());
+            } else if (entity instanceof Apple) {
+                Apple apple = (Apple) entity;
+                entityData.setEnergyValue(apple.getEnergyValue());
+            } else if (entity instanceof Berry) {
+                Berry berry = (Berry) entity;
+                entityData.setEnergyValue(berry.getEnergyValue());
+            } else if (entity instanceof Wood) {
+                Wood wood = (Wood) entity;
+                entityData.setQuantity(wood.getQuantity());
+            } else if (entity instanceof Stone) {
+                Stone stone = (Stone) entity;
+                entityData.setQuantity(stone.getQuantity());
+            } else if (entity instanceof Deer) {
+                Deer deer = (Deer) entity;
+                entityData.setMoveSpeed(deer.getMoveSpeed());
+                entityData.setFleeRange(deer.getFleeRange());
+            } else if (entity instanceof Bear) {
+                Bear bear = (Bear) entity;
+                entityData.setMoveSpeed(bear.getMoveSpeed());
+                entityData.setAggressionRange(bear.getAggressionRange());
+                entityData.setAggressive(bear.isAggressive());
+            } else if (entity instanceof Chicken) {
+                Chicken chicken = (Chicken) entity;
+                entityData.setMoveSpeed(chicken.getMoveSpeed());
+                entityData.setFleeRange(chicken.getFleeRange());
             }
             
             roomEntity.addEntity(entityData);
@@ -312,11 +352,104 @@ public class PersistenceService {
             room.setTile(tile.getX(), tile.getY(), tile);
         }
         
-        // Load entities - would need entity factory to recreate proper types
-        // For now, this is a simplified version
-        // TODO: Implement entity recreation from stored data
+        // Load entities from database
+        for (GameEntityData entityData : roomEntity.getEntities()) {
+            Entity entity = recreateEntity(entityData);
+            if (entity != null) {
+                entity.setLocationId(entityData.getLocationId());
+                entity.setSolid(entityData.isSolid());
+                room.addEntity(entity);
+            }
+        }
         
         return room;
+    }
+    
+    /**
+     * Recreate an entity from stored data based on its type.
+     */
+    private Entity recreateEntity(GameEntityData data) {
+        String entityType = data.getEntityType();
+        
+        try {
+            switch (entityType) {
+                case "Tree":
+                    Tree tree = new Tree();
+                    if (data.getHarvestCount() != null) tree.setHarvestCount(data.getHarvestCount());
+                    if (data.getMaxHarvestCount() != null) tree.setMaxHarvestCount(data.getMaxHarvestCount());
+                    return tree;
+                    
+                case "Rock":
+                    Rock rock = new Rock();
+                    if (data.getHarvestCount() != null) rock.setHarvestCount(data.getHarvestCount());
+                    if (data.getMaxHarvestCount() != null) rock.setMaxHarvestCount(data.getMaxHarvestCount());
+                    return rock;
+                    
+                case "Bush":
+                    Bush bush = new Bush();
+                    if (data.getHarvestCount() != null) bush.setHarvestCount(data.getHarvestCount());
+                    if (data.getMaxHarvestCount() != null) bush.setMaxHarvestCount(data.getMaxHarvestCount());
+                    return bush;
+                    
+                case "Apple":
+                    Apple apple = new Apple();
+                    if (data.getEnergyValue() != null) apple.setEnergyValue(data.getEnergyValue());
+                    return apple;
+                    
+                case "Berry":
+                    Berry berry = new Berry();
+                    if (data.getEnergyValue() != null) berry.setEnergyValue(data.getEnergyValue());
+                    return berry;
+                    
+                case "Wood":
+                    Wood wood = new Wood();
+                    if (data.getQuantity() != null) wood.setQuantity(data.getQuantity());
+                    return wood;
+                    
+                case "Stone":
+                    Stone stone = new Stone();
+                    if (data.getQuantity() != null) stone.setQuantity(data.getQuantity());
+                    return stone;
+                    
+                case "Deer":
+                    long tickCreated = data.getTickCreated() != null ? data.getTickCreated() : 0L;
+                    Deer deer = new Deer(tickCreated);
+                    if (data.getEnergy() != null) deer.setEnergy(data.getEnergy());
+                    if (data.getTargetEnergy() != null) deer.setTargetEnergy(data.getTargetEnergy());
+                    if (data.getTickLastReproduced() != null) deer.setTickLastReproduced(data.getTickLastReproduced());
+                    if (data.getMoveSpeed() != null) deer.setMoveSpeed(data.getMoveSpeed());
+                    if (data.getFleeRange() != null) deer.setFleeRange(data.getFleeRange());
+                    return deer;
+                    
+                case "Bear":
+                    tickCreated = data.getTickCreated() != null ? data.getTickCreated() : 0L;
+                    Bear bear = new Bear(tickCreated);
+                    if (data.getEnergy() != null) bear.setEnergy(data.getEnergy());
+                    if (data.getTargetEnergy() != null) bear.setTargetEnergy(data.getTargetEnergy());
+                    if (data.getTickLastReproduced() != null) bear.setTickLastReproduced(data.getTickLastReproduced());
+                    if (data.getMoveSpeed() != null) bear.setMoveSpeed(data.getMoveSpeed());
+                    if (data.getAggressionRange() != null) bear.setAggressionRange(data.getAggressionRange());
+                    if (data.getAggressive() != null) bear.setAggressive(data.getAggressive());
+                    return bear;
+                    
+                case "Chicken":
+                    tickCreated = data.getTickCreated() != null ? data.getTickCreated() : 0L;
+                    Chicken chicken = new Chicken(tickCreated);
+                    if (data.getEnergy() != null) chicken.setEnergy(data.getEnergy());
+                    if (data.getTargetEnergy() != null) chicken.setTargetEnergy(data.getTargetEnergy());
+                    if (data.getTickLastReproduced() != null) chicken.setTickLastReproduced(data.getTickLastReproduced());
+                    if (data.getMoveSpeed() != null) chicken.setMoveSpeed(data.getMoveSpeed());
+                    if (data.getFleeRange() != null) chicken.setFleeRange(data.getFleeRange());
+                    return chicken;
+                    
+                default:
+                    logger.warn("Unknown entity type: {}. Entity will not be loaded.", entityType);
+                    return null;
+            }
+        } catch (Exception e) {
+            logger.error("Error recreating entity of type {}: {}", entityType, e.getMessage());
+            return null;
+        }
     }
     
     private Player convertToPlayer(PlayerEntityData playerEntity) {
