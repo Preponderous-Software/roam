@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -94,7 +95,7 @@ public class SessionController {
             throw new SessionNotFoundException(sessionId);
         }
         gameService.saveSession(sessionId);
-        Map<String, String> response = new java.util.HashMap<>();
+        Map<String, String> response = new HashMap<>();
         response.put("message", "Session saved successfully");
         response.put("sessionId", sessionId);
         return ResponseEntity.ok(response);

@@ -19,6 +19,16 @@ import java.util.Optional;
  * Service for persisting and loading game state from the database.
  * Handles conversion between domain models and JPA entities.
  * 
+ * <h3>Known Limitations:</h3>
+ * <ul>
+ *   <li><b>Entity Recreation:</b> Game entities (trees, rocks, animals, etc.) are stored but not fully 
+ *       recreated on load. An entity factory is needed to properly instantiate specific entity types.</li>
+ *   <li><b>Inventory Slot Preservation:</b> Inventory items are loaded sequentially which may not preserve 
+ *       exact slot positions from the original state.</li>
+ *   <li><b>Performance:</b> Full collection clearing and re-adding is used for saves. For large worlds, 
+ *       consider implementing differential updates to only modify changed data.</li>
+ * </ul>
+ * 
  * @author Daniel McCoy Stephenson
  */
 @Service
