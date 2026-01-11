@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -80,6 +81,34 @@ public class SessionController {
         }
         gameService.updateTick(sessionId);
         GameState gameState = gameService.getSession(sessionId);
+        SessionDTO sessionDTO = mappingService.toSessionDTO(gameState);
+        return ResponseEntity.ok(sessionDTO);
+    }
+    
+    /**
+     * Save a game session to the database.
+     */
+    @PostMapping("/{sessionId}/save")
+    public ResponseEntity<Map<String, String>> saveSession(@PathVariable String sessionId) {
+        if (!gameService.sessionExists(sessionId)) {
+            throw new SessionNotFoundException(sessionId);
+        }
+        gameService.saveSession(sessionId);
+        Map<String, String> response = new java.util.HashMap<>();
+        response.put("message", "Session saved successfully");
+        response.put("sessionId", sessionId);
+        return ResponseEntity.ok(response);
+    }
+    
+    /**
+     * Load a game session from the database.
+     */
+    @PostMapping("/{sessionId}/load")
+    public ResponseEntity<SessionDTO> loadSession(@PathVariable String sessionId) {
+        GameState gameState = gameService.loadSession(sessionId);
+        if (gameState == null) {
+            throw new SessionNotFoundException(sessionId);
+        }
         SessionDTO sessionDTO = mappingService.toSessionDTO(gameState);
         return ResponseEntity.ok(sessionDTO);
     }

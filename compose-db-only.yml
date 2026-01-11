@@ -1,0 +1,28 @@
+# Docker Compose configuration for database only
+# Use this when running the server locally but want PostgreSQL in Docker
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: roam-postgres-dev
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: roam
+      POSTGRES_USER: roam
+      POSTGRES_PASSWORD: roam
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+      - ./server/scripts/backup:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U roam -d roam"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  postgres-dev-data:
+    driver: local

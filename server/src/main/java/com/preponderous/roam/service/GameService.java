@@ -5,10 +5,15 @@ import com.preponderous.roam.model.Player;
 import com.preponderous.roam.model.Room;
 import com.preponderous.roam.model.World;
 import com.preponderous.roam.model.WorldConfig;
+import com.preponderous.roam.persistence.service.PersistenceService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -19,6 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Service
 public class GameService {
+    private static final Logger logger = LoggerFactory.getLogger(GameService.class);
+    
     private final Map<String, GameState> sessions = new ConcurrentHashMap<>();
     
     @Autowired
@@ -29,6 +36,12 @@ public class GameService {
     
     @Autowired
     private EntityManager entityManager;
+    
+    @Autowired
+    private PersistenceService persistenceService;
+    
+    @Value("${roam.persistence.auto-save:false}")
+    private boolean autoSaveEnabled;
 
     /**
      * Create a new game session.
@@ -58,23 +71,36 @@ public class GameService {
 
     /**
      * Get an existing game session.
+     * Attempts to load from memory first, then from database if not in memory.
      */
     public GameState getSession(String sessionId) {
-        return sessions.get(sessionId);
+        GameState gameState = sessions.get(sessionId);
+        if (gameState == null) {
+            // Try to load from database
+            Optional<GameState> loadedState = persistenceService.loadGameState(sessionId);
+            if (loadedState.isPresent()) {
+                gameState = loadedState.get();
+                sessions.put(sessionId, gameState);
+                logger.info("Loaded session from database: {}", sessionId);
+            }
+        }
+        return gameState;
     }
 
     /**
-     * Delete a game session.
+     * Delete a game session from memory and database.
      */
     public void deleteSession(String sessionId) {
         sessions.remove(sessionId);
+        persistenceService.deleteGameState(sessionId);
+        logger.info("Deleted session: {}", sessionId);
     }
 
     /**
-     * Check if a session exists.
+     * Check if a session exists in memory or database.
      */
     public boolean sessionExists(String sessionId) {
-        return sessions.containsKey(sessionId);
+        return sessions.containsKey(sessionId) || persistenceService.sessionExists(sessionId);
     }
 
     /**
@@ -104,7 +130,37 @@ public class GameService {
             for (Room room : world.getRooms().values()) {
                 entityManager.updateEntities(room, gameState.getCurrentTick());
             }
+            
+            // Auto-save if enabled (every 100 ticks to avoid too frequent saves)
+            if (autoSaveEnabled && gameState.getCurrentTick() % 100 == 0) {
+                saveSession(sessionId);
+            }
         }
+    }
+    
+    /**
+     * Manually save a game session to the database.
+     */
+    public void saveSession(String sessionId) {
+        GameState gameState = sessions.get(sessionId);
+        if (gameState != null) {
+            persistenceService.saveGameState(gameState);
+            logger.info("Saved session: {}", sessionId);
+        }
+    }
+    
+    /**
+     * Load a game session from the database into memory.
+     */
+    public GameState loadSession(String sessionId) {
+        Optional<GameState> loadedState = persistenceService.loadGameState(sessionId);
+        if (loadedState.isPresent()) {
+            GameState gameState = loadedState.get();
+            sessions.put(sessionId, gameState);
+            logger.info("Loaded session into memory: {}", sessionId);
+            return gameState;
+        }
+        return null;
     }
 
     /**
