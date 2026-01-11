@@ -36,18 +36,31 @@ The server will start on `http://localhost:8080` using an embedded H2 database.
 
 ### With PostgreSQL (Production)
 
+**Security Note**: Set a secure password before starting:
+
 ```bash
+# Copy and configure environment file
+cp .env.example .env
+# Edit .env and set POSTGRES_PASSWORD
+
 # Start PostgreSQL with Docker Compose
 docker-compose -f compose-db-only.yml up -d
 
 # Run server with PostgreSQL profile
 cd server
+export DATABASE_PASSWORD=your_secure_password
 mvn spring-boot:run -Dspring.profiles.active=postgresql
 ```
 
 ### Full Stack with Docker
 
+**Security Note**: Set a secure password before starting:
+
 ```bash
+# Copy and configure environment file
+cp .env.example .env
+# Edit .env and set POSTGRES_PASSWORD
+
 # Start both server and PostgreSQL
 docker-compose up -d
 ```

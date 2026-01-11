@@ -52,14 +52,16 @@ mvn spring-boot:run -Dspring.profiles.active=h2
 For production use with PostgreSQL:
 
 ```bash
-# Set environment variables
+# Set environment variables (REQUIRED for security)
 export DATABASE_URL=jdbc:postgresql://localhost:5432/roam
 export DATABASE_USERNAME=roam
-export DATABASE_PASSWORD=roam
+export DATABASE_PASSWORD=your_secure_password
 
 # Run with PostgreSQL profile
 mvn spring-boot:run -Dspring.profiles.active=postgresql
 ```
+
+**Security Note**: Never use default passwords in production. Always set secure passwords via environment variables.
 
 ### Test Profile
 
@@ -72,6 +74,23 @@ mvn test
 Tests automatically use the `test` profile with an in-memory database.
 
 ## Quick Start with Docker Compose
+
+### Security Setup
+
+**IMPORTANT**: Before running docker-compose, you must set a secure password:
+
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit .env and set a secure POSTGRES_PASSWORD
+nano .env  # or use your preferred editor
+
+# Example .env content:
+# POSTGRES_PASSWORD=MySecurePassword123!
+```
+
+The docker-compose configuration requires the `POSTGRES_PASSWORD` environment variable to be set. This prevents accidental deployment with insecure default passwords.
 
 ### Full Stack (Server + PostgreSQL)
 
@@ -265,9 +284,23 @@ roam:
 
 ## Backup and Restore
 
+### Security Note
+
+Backup and restore scripts require the `DATABASE_PASSWORD` environment variable to be set for security:
+
+```bash
+# Set the database password before running backup/restore
+export DATABASE_PASSWORD=your_secure_password
+```
+
+The scripts will refuse to run without this variable set to prevent using insecure default passwords.
+
 ### Backup Database
 
 ```bash
+# Set password first
+export DATABASE_PASSWORD=your_secure_password
+
 # Backup to default location
 ./server/scripts/backup-db.sh
 
@@ -280,6 +313,9 @@ Backups are automatically compressed with gzip. The script keeps the last 10 bac
 ### Restore Database
 
 ```bash
+# Set password first
+export DATABASE_PASSWORD=your_secure_password
+
 # Restore from backup
 ./server/scripts/restore-db.sh ./server/scripts/backup/roam_backup_20260111_120000.sql.gz
 ```

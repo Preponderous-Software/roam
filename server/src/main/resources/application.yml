@@ -32,8 +32,10 @@ logging:
   level:
     com.preponderous.roam: INFO
     org.springframework.web: INFO
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    # Hibernate SQL logging disabled by default for production
+    # Enable in development profile or set via environment variables
+    org.hibernate.SQL: INFO
+    org.hibernate.type.descriptor.sql.BasicBinder: INFO
 
 # Roam-specific configuration
 roam:
@@ -67,6 +69,12 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
   flyway:
     enabled: true
+
+# Enable debug logging for H2 development profile
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 
 ---
 # PostgreSQL Profile (for production)
@@ -109,4 +117,6 @@ spring:
       ddl-auto: create-drop
     database-platform: org.hibernate.dialect.H2Dialect
   flyway:
+    # Disabled in tests - using ddl-auto: create-drop for faster test execution
+    # Tests validate schema compatibility through integration tests
     enabled: false

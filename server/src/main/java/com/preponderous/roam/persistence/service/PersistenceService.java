@@ -346,13 +346,19 @@ public class PersistenceService {
         
         // Load tiles
         for (TileEntity tileEntity : roomEntity.getTiles()) {
-            Tile tile = new Tile(tileEntity.getTileX(), tileEntity.getTileY(), 
-                               Biome.valueOf(tileEntity.getBiome()));
-            tile.setResourceType(tileEntity.getResourceType());
-            tile.setResourceAmount(tileEntity.getResourceAmount());
-            tile.setHasHazard(tileEntity.isHasHazard());
-            tile.setHazardType(tileEntity.getHazardType());
-            room.setTile(tile.getX(), tile.getY(), tile);
+            try {
+                Tile tile = new Tile(tileEntity.getTileX(), tileEntity.getTileY(), 
+                                   Biome.valueOf(tileEntity.getBiome()));
+                tile.setResourceType(tileEntity.getResourceType());
+                tile.setResourceAmount(tileEntity.getResourceAmount());
+                tile.setHasHazard(tileEntity.isHasHazard());
+                tile.setHazardType(tileEntity.getHazardType());
+                room.setTile(tile.getX(), tile.getY(), tile);
+            } catch (IllegalArgumentException e) {
+                logger.error("Invalid biome value '{}' for tile at ({}, {}) in room ({}, {}). Skipping tile.", 
+                           tileEntity.getBiome(), tileEntity.getTileX(), tileEntity.getTileY(),
+                           room.getRoomX(), room.getRoomY());
+            }
         }
         
         // Load entities from database
@@ -479,11 +485,15 @@ public class PersistenceService {
         // Load inventory
         Inventory inventory = new Inventory();
         List<InventorySlotEntity> slotEntities = playerEntity.getInventorySlots();
-        for (int i = 0; i < slotEntities.size() && i < inventory.getNumInventorySlots(); i++) {
-            InventorySlotEntity slotEntity = slotEntities.get(i);
+        for (InventorySlotEntity slotEntity : slotEntities) {
             if (slotEntity.getItemName() != null && slotEntity.getNumItems() > 0) {
+                // Place items in their original slot positions
+                int slotIndex = slotEntity.getSlotIndex();
                 for (int j = 0; j < slotEntity.getNumItems(); j++) {
-                    inventory.placeIntoFirstAvailableInventorySlot(slotEntity.getItemName());
+                    if (!inventory.placeIntoSlot(slotIndex, slotEntity.getItemName())) {
+                        // Fallback to first available slot if original slot can't accommodate
+                        inventory.placeIntoFirstAvailableInventorySlot(slotEntity.getItemName());
+                    }
                 }
             }
         }

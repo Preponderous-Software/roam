@@ -277,6 +277,10 @@ public class PlayerEntityData {
         this.selectedInventorySlotIndex = selectedInventorySlotIndex;
     }
     
+    /**
+     * Returns the inventory slots. Note: This list is managed by JPA/Hibernate.
+     * Direct modifications are tracked for persistence.
+     */
     public List<InventorySlotEntity> getInventorySlots() {
         return inventorySlots;
     }

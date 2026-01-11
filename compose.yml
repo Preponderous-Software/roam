@@ -8,9 +8,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: roam
-      POSTGRES_USER: roam
-      POSTGRES_PASSWORD: roam
+      POSTGRES_DB: ${POSTGRES_DB:-roam}
+      POSTGRES_USER: ${POSTGRES_USER:-roam}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD environment variable is required. Set it before running docker-compose.}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./server/scripts/backup:/backups
@@ -39,9 +39,9 @@ services:
       JAVA_OPTS: "-Xmx512m -Xms256m"
       # Database configuration
       SPRING_PROFILES_ACTIVE: postgresql
-      DATABASE_URL: jdbc:postgresql://postgres:5432/roam
-      DATABASE_USERNAME: roam
-      DATABASE_PASSWORD: roam
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-roam}
+      DATABASE_USERNAME: ${POSTGRES_USER:-roam}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD environment variable is required.}
     depends_on:
       postgres:
         condition: service_healthy

@@ -9,7 +9,15 @@ DB_HOST="${DATABASE_HOST:-localhost}"
 DB_PORT="${DATABASE_PORT:-5432}"
 DB_NAME="${DATABASE_NAME:-roam}"
 DB_USER="${DATABASE_USERNAME:-roam}"
-DB_PASSWORD="${DATABASE_PASSWORD:-roam}"
+DB_PASSWORD="${DATABASE_PASSWORD:-}"
+
+# Require an explicit database password to avoid using insecure defaults
+if [ -z "${DB_PASSWORD}" ]; then
+  echo "Error: DATABASE_PASSWORD environment variable is not set." >&2
+  echo "Refusing to run backup with a default or empty database password." >&2
+  echo "Please set DATABASE_PASSWORD to the database user's password and rerun this script." >&2
+  exit 1
+fi
 
 # Default backup file name with timestamp
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")

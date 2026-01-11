@@ -124,4 +124,28 @@ public class Inventory {
             return inventorySlots;
         }
     }
+    
+    /**
+     * Place an item into a specific inventory slot. Used for loading saved inventories.
+     * @param slotIndex The slot index to place the item in
+     * @param itemName The name of the item
+     * @return true if the item was successfully placed, false otherwise
+     */
+    public boolean placeIntoSlot(int slotIndex, String itemName) {
+        if (slotIndex < 0 || slotIndex >= inventorySlots.size()) {
+            return false;
+        }
+        
+        InventorySlot slot = inventorySlots.get(slotIndex);
+        if (slot.isEmpty()) {
+            slot.add(itemName);
+            return true;
+        } else if (slot.getItemName().equals(itemName) 
+                && slot.getNumItems() < slot.getMaxStackSize()) {
+            slot.add(itemName);
+            return true;
+        }
+        
+        return false;
+    }
 }

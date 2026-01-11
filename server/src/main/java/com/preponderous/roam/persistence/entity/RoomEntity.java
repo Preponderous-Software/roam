@@ -102,6 +102,10 @@ public class RoomEntity {
         this.height = height;
     }
     
+    /**
+     * Returns the tiles in this room. Note: This list is managed by JPA/Hibernate.
+     * Direct modifications are tracked for persistence.
+     */
     public List<TileEntity> getTiles() {
         return tiles;
     }
@@ -120,6 +124,10 @@ public class RoomEntity {
         tile.setRoom(null);
     }
     
+    /**
+     * Returns the entities in this room. Note: This list is managed by JPA/Hibernate.
+     * Direct modifications are tracked for persistence.
+     */
     public List<GameEntityData> getEntities() {
         return entities;
     }

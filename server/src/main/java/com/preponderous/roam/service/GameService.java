@@ -142,7 +142,7 @@ public class GameService {
      * Manually save a game session to the database.
      */
     public void saveSession(String sessionId) {
-        GameState gameState = sessions.get(sessionId);
+        GameState gameState = getSession(sessionId);  // Use getSession to ensure auto-load behavior
         if (gameState != null) {
             persistenceService.saveGameState(gameState);
             logger.info("Saved session: {}", sessionId);
