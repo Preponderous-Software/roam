@@ -69,8 +69,9 @@ docker-compose up -d
 
 For detailed information about database setup, configuration, migrations, backups, and troubleshooting, see:
 
-- **[DATABASE.md](DATABASE.md)** - Complete database documentation
-- **[STORAGE_ARCHITECTURE.md](STORAGE_ARCHITECTURE.md)** - Storage abstraction layer and future storage options
+- **[DATABASE.md](../docs/DATABASE.md)** - Complete database documentation
+- **[STORAGE_ARCHITECTURE.md](../docs/STORAGE_ARCHITECTURE.md)** - Storage abstraction layer and future storage options
+- **[DATABASE_IMPLEMENTATION_SUMMARY.md](../docs/DATABASE_IMPLEMENTATION_SUMMARY.md)** - Implementation architecture and design decisions
 
 ## Storage Architecture
 

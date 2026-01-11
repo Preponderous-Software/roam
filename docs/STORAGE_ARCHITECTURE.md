@@ -206,6 +206,6 @@ try {
 ## See Also
 
 - [DATABASE.md](DATABASE.md) - JPA/Hibernate implementation details
-- [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - Overall architecture
+- [DATABASE_IMPLEMENTATION_SUMMARY.md](DATABASE_IMPLEMENTATION_SUMMARY.md) - Database persistence architecture
 - `GameStateStorage` interface JavaDoc
 - `PersistenceService` class documentation
