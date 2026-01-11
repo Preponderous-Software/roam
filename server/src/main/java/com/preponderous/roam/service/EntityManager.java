@@ -1,6 +1,7 @@
 package com.preponderous.roam.service;
 
 import com.preponderous.roam.model.Entity;
+import com.preponderous.roam.model.LivingEntity;
 import com.preponderous.roam.model.Room;
 import com.preponderous.roam.model.World;
 import com.preponderous.roam.model.entity.*;
@@ -110,17 +111,59 @@ public class EntityManager {
      * @param currentTick the current game tick
      */
     public void updateEntities(Room room, long currentTick) {
-        // For now, basic lifecycle management
-        // Future: Implement AI movement, reproduction, resource respawning, etc.
+        // Basic lifecycle management and simple AI
         
         // Collect depleted harvestable entities to remove
         List<String> entitiesToRemove = new ArrayList<>();
         
+        Random random = new Random(currentTick + room.getRoomX() * 1000L + room.getRoomY());
+        
         for (Entity entity : room.getEntitiesList()) {
+            // Remove depleted harvestables
             if ((entity instanceof Tree && ((Tree) entity).isDepleted()) ||
                 (entity instanceof Rock && ((Rock) entity).isDepleted()) ||
                 (entity instanceof Bush && ((Bush) entity).isDepleted())) {
                 entitiesToRemove.add(entity.getId());
+            }
+            
+            // Simple AI for wildlife - random movement every few ticks
+            if (entity instanceof LivingEntity && currentTick % 10 == 0) {
+                // 30% chance to move
+                if (random.nextDouble() < 0.3) {
+                    String[] locationParts = entity.getLocationId().split(",");
+                    if (locationParts.length >= 4) {
+                        int roomX = Integer.parseInt(locationParts[0]);
+                        int roomY = Integer.parseInt(locationParts[1]);
+                        int tileX = Integer.parseInt(locationParts[2]);
+                        int tileY = Integer.parseInt(locationParts[3]);
+                        
+                        // Try to move in a random direction
+                        int direction = random.nextInt(4); // 0=up, 1=left, 2=down, 3=right
+                        int newTileX = tileX;
+                        int newTileY = tileY;
+                        
+                        switch (direction) {
+                            case 0: newTileY--; break; // up
+                            case 1: newTileX--; break; // left
+                            case 2: newTileY++; break; // down
+                            case 3: newTileX++; break; // right
+                        }
+                        
+                        // Keep within room bounds
+                        if (newTileX >= 0 && newTileX < room.getWidth() &&
+                            newTileY >= 0 && newTileY < room.getHeight()) {
+                            
+                            // Check if destination is occupied by a solid entity
+                            String newLocationId = roomX + "," + roomY + "," + newTileX + "," + newTileY;
+                            boolean occupied = room.getEntitiesList().stream()
+                                .anyMatch(e -> e.isSolid() && newLocationId.equals(e.getLocationId()));
+                            
+                            if (!occupied) {
+                                entity.setLocationId(newLocationId);
+                            }
+                        }
+                    }
+                }
             }
         }
         
