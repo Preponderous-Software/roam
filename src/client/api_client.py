@@ -132,6 +132,8 @@ class RoamAPIClient:
         gathering: Optional[bool] = None,
         placing: Optional[bool] = None,
         crouching: Optional[bool] = None,
+        tile_x: Optional[int] = None,
+        tile_y: Optional[int] = None,
         session_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
@@ -144,6 +146,8 @@ class RoamAPIClient:
             gathering: Gathering state
             placing: Placing state
             crouching: Crouching state
+            tile_x: Target tile X coordinate (for targeted gather/place)
+            tile_y: Target tile Y coordinate (for targeted gather/place)
             session_id: Session ID (uses stored session_id if not provided)
             
         Returns:
@@ -164,6 +168,10 @@ class RoamAPIClient:
             payload["placing"] = placing
         if crouching is not None:
             payload["crouching"] = crouching
+        if tile_x is not None:
+            payload["tileX"] = tile_x
+        if tile_y is not None:
+            payload["tileY"] = tile_y
         
         return self._make_request(
             "POST",
@@ -348,3 +356,19 @@ class RoamAPIClient:
             raise ValueError("No session ID provided")
         
         return self._make_request("GET", f"/api/v1/session/{sid}/room/{room_x}/{room_y}")
+    
+    def get_entities(self, session_id: Optional[str] = None) -> list:
+        """
+        Get all entities in the session across all loaded rooms.
+        
+        Args:
+            session_id: Session ID (uses stored session_id if not provided)
+            
+        Returns:
+            List of entity data
+        """
+        sid = session_id or self.session_id
+        if not sid:
+            raise ValueError("No session ID provided")
+        
+        return self._make_request("GET", f"/api/v1/session/{sid}/entities")

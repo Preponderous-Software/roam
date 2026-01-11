@@ -1,13 +1,14 @@
 package com.preponderous.roam.service;
 
 import com.preponderous.roam.model.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Random;
 
 /**
  * Service for procedural world generation.
- * Generates rooms with biomes, resources, and hazards.
+ * Generates rooms with biomes, resources, hazards, and entities.
  * 
  * @author Daniel McCoy Stephenson
  */
@@ -16,6 +17,9 @@ public class WorldGenerationService {
     private static final String[] RESOURCE_TYPES = {"Wood", "Stone", "Iron", "Gold", "Herbs"};
     private static final String[] HAZARD_TYPES = {"Spike Trap", "Poisonous Plant", "Lava Pool", "Ice Patch"};
 
+    @Autowired
+    private EntityManager entityManager;
+
     /**
      * Generate a new room at the specified coordinates.
      * Uses deterministic random generation based on world seed and room coordinates.
@@ -23,9 +27,10 @@ public class WorldGenerationService {
      * @param world the World containing generation configuration
      * @param roomX the X coordinate of the room in world space
      * @param roomY the Y coordinate of the room in world space
-     * @return a newly generated Room with biomes, resources, and hazards
+     * @param currentTick the current game tick for entity timestamps
+     * @return a newly generated Room with biomes, resources, hazards, and entities
      */
-    public Room generateRoom(World world, int roomX, int roomY) {
+    public Room generateRoom(World world, int roomX, int roomY, long currentTick) {
         WorldConfig config = world.getConfig();
         Random random = new Random(config.getSeed() + roomX * 1000L + roomY);
         
@@ -40,12 +45,16 @@ public class WorldGenerationService {
         // Place hazards
         placeHazards(room, random, config.getHazardDensity());
         
+        // Spawn entities
+        entityManager.spawnInitialEntities(room, world, currentTick);
+        
         return room;
     }
 
     /**
      * Generate biome distribution for a room.
-     * Creates a dominant biome (70%) with variation (30%) for natural appearance.
+     * Creates a predominantly Grassland environment (90%) with occasional variation (10%).
+     * This matches the original implementation which had mostly grass.
      * 
      * @param room the Room to populate with biomes
      * @param random the Random instance for deterministic generation
@@ -54,17 +63,14 @@ public class WorldGenerationService {
         int width = room.getWidth();
         int height = room.getHeight();
         
-        // Select a dominant biome for the room
-        Biome dominantBiome = Biome.values()[random.nextInt(Biome.values().length)];
-        
-        // Fill the room with variations
+        // Fill the room with mostly Grassland (matching original implementation)
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 Biome biome;
                 
-                // 70% chance of dominant biome, 30% chance of random variation
-                if (random.nextDouble() < 0.7) {
-                    biome = dominantBiome;
+                // 90% Grassland, 10% random variation for visual interest
+                if (random.nextDouble() < 0.9) {
+                    biome = Biome.GRASSLAND;
                 } else {
                     biome = Biome.values()[random.nextInt(Biome.values().length)];
                 }
@@ -138,9 +144,10 @@ public class WorldGenerationService {
      * @param world the World containing generation configuration and room storage
      * @param roomX the X coordinate of the room in world space
      * @param roomY the Y coordinate of the room in world space
+     * @param currentTick the current game tick for entity timestamps
      * @return the Room at the specified coordinates (existing or newly generated)
      */
-    public Room getOrGenerateRoom(World world, int roomX, int roomY) {
+    public Room getOrGenerateRoom(World world, int roomX, int roomY, long currentTick) {
         // Fast path: try to get an existing room without locking.
         Room existingRoom = world.getRoom(roomX, roomY);
         if (existingRoom != null) {
@@ -155,9 +162,21 @@ public class WorldGenerationService {
                 return existingRoom;
             }
 
-            Room room = generateRoom(world, roomX, roomY);
+            Room room = generateRoom(world, roomX, roomY, currentTick);
             world.addRoom(room);
             return room;
         }
+    }
+    
+    /**
+     * Get or generate a room for the world (without tick parameter for backward compatibility).
+     * 
+     * @param world the World containing generation configuration and room storage
+     * @param roomX the X coordinate of the room in world space
+     * @param roomY the Y coordinate of the room in world space
+     * @return the Room at the specified coordinates (existing or newly generated)
+     */
+    public Room getOrGenerateRoom(World world, int roomX, int roomY) {
+        return getOrGenerateRoom(world, roomX, roomY, 0L);
     }
 }

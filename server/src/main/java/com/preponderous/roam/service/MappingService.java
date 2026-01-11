@@ -2,6 +2,7 @@ package com.preponderous.roam.service;
 
 import com.preponderous.roam.dto.*;
 import com.preponderous.roam.model.*;
+import com.preponderous.roam.model.entity.*;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -44,6 +45,10 @@ public class MappingService {
         dto.setGatherSpeed(player.getGatherSpeed());
         dto.setPlaceSpeed(player.getPlaceSpeed());
         dto.setInventory(toInventoryDTO(player.getInventory()));
+        dto.setRoomX(player.getRoomX());
+        dto.setRoomY(player.getRoomY());
+        dto.setTileX(player.getTileX());
+        dto.setTileY(player.getTileY());
         return dto;
     }
 
@@ -123,7 +128,7 @@ public class MappingService {
      * Converts a Room domain model to a RoomDTO for API responses.
      * 
      * @param room the Room domain model to convert
-     * @return a RoomDTO containing all room data including tiles
+     * @return a RoomDTO containing all room data including tiles and entities
      */
     public RoomDTO toRoomDTO(Room room) {
         RoomDTO dto = new RoomDTO();
@@ -140,6 +145,11 @@ public class MappingService {
             }
         }
         dto.setTiles(tileDTOs);
+        
+        List<EntityDTO> entityDTOs = room.getEntitiesList().stream()
+            .map(this::toEntityDTO)
+            .collect(Collectors.toList());
+        dto.setEntities(entityDTOs);
         
         return dto;
     }
@@ -160,6 +170,91 @@ public class MappingService {
         dto.setResourceAmount(tile.getResourceAmount());
         dto.setHasHazard(tile.hasHazard());
         dto.setHazardType(tile.getHazardType());
+        return dto;
+    }
+
+    /**
+     * Converts an Entity domain model to an EntityDTO for API responses.
+     * 
+     * @param entity the Entity domain model to convert
+     * @return an EntityDTO containing all entity data
+     */
+    public EntityDTO toEntityDTO(Entity entity) {
+        EntityDTO dto = new EntityDTO();
+        dto.setId(entity.getId());
+        dto.setName(entity.getName());
+        dto.setType(entity.getClass().getSimpleName());
+        dto.setImagePath(entity.getImagePath());
+        dto.setLocationId(entity.getLocationId());
+        dto.setSolid(entity.isSolid());
+        
+        // Add type-specific fields
+        if (entity instanceof LivingEntity) {
+            LivingEntity living = (LivingEntity) entity;
+            dto.setEnergy(living.getEnergy());
+            dto.setTargetEnergy(living.getTargetEnergy());
+        }
+        
+        if (entity instanceof Tree) {
+            Tree tree = (Tree) entity;
+            dto.setHarvestCount(tree.getHarvestCount());
+            dto.setMaxHarvestCount(tree.getMaxHarvestCount());
+            dto.setCanHarvest(tree.canHarvest());
+        }
+        
+        if (entity instanceof Rock) {
+            Rock rock = (Rock) entity;
+            dto.setHarvestCount(rock.getHarvestCount());
+            dto.setMaxHarvestCount(rock.getMaxHarvestCount());
+            dto.setCanHarvest(rock.canHarvest());
+        }
+        
+        if (entity instanceof Bush) {
+            Bush bush = (Bush) entity;
+            dto.setHarvestCount(bush.getHarvestCount());
+            dto.setMaxHarvestCount(bush.getMaxHarvestCount());
+            dto.setCanHarvest(bush.canHarvest());
+        }
+        
+        if (entity instanceof Apple) {
+            Apple apple = (Apple) entity;
+            dto.setEnergyValue(apple.getEnergyValue());
+        }
+        
+        if (entity instanceof Berry) {
+            Berry berry = (Berry) entity;
+            dto.setEnergyValue(berry.getEnergyValue());
+        }
+        
+        if (entity instanceof Wood) {
+            Wood wood = (Wood) entity;
+            dto.setQuantity(wood.getQuantity());
+        }
+        
+        if (entity instanceof Stone) {
+            Stone stone = (Stone) entity;
+            dto.setQuantity(stone.getQuantity());
+        }
+        
+        if (entity instanceof Bear) {
+            Bear bear = (Bear) entity;
+            dto.setMoveSpeed(bear.getMoveSpeed());
+            dto.setAggressionRange(bear.getAggressionRange());
+            dto.setAggressive(bear.isAggressive());
+        }
+        
+        if (entity instanceof Deer) {
+            Deer deer = (Deer) entity;
+            dto.setMoveSpeed(deer.getMoveSpeed());
+            dto.setFleeRange(deer.getFleeRange());
+        }
+        
+        if (entity instanceof Chicken) {
+            Chicken chicken = (Chicken) entity;
+            dto.setMoveSpeed(chicken.getMoveSpeed());
+            dto.setFleeRange(chicken.getFleeRange());
+        }
+        
         return dto;
     }
 }

@@ -1,8 +1,13 @@
 package com.preponderous.roam.model;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * Represents a single room in the game world.
- * Each room contains a grid of tiles.
+ * Each room contains a grid of tiles and entities.
  * 
  * @author Daniel McCoy Stephenson
  */
@@ -12,6 +17,7 @@ public class Room {
     private final int width;
     private final int height;
     private final Tile[][] tiles;
+    private final Map<String, Entity> entities;
 
     public Room(int roomX, int roomY, int width, int height) {
         this.roomX = roomX;
@@ -19,6 +25,7 @@ public class Room {
         this.width = width;
         this.height = height;
         this.tiles = new Tile[height][width];
+        this.entities = new ConcurrentHashMap<>();
         
         // Initialize all tiles
         for (int y = 0; y < height; y++) {
@@ -59,5 +66,31 @@ public class Room {
         if (x >= 0 && x < width && y >= 0 && y < height) {
             tiles[y][x] = tile;
         }
+    }
+
+    public Map<String, Entity> getEntities() {
+        return entities;
+    }
+
+    public List<Entity> getEntitiesList() {
+        return new ArrayList<>(entities.values());
+    }
+
+    public void addEntity(Entity entity) {
+        entities.put(entity.getId(), entity);
+        // Location ID should already be set by caller with full coordinates
+        // Format: roomX,roomY,tileX,tileY
+    }
+
+    public void removeEntity(String entityId) {
+        entities.remove(entityId);
+    }
+
+    public Entity getEntity(String entityId) {
+        return entities.get(entityId);
+    }
+
+    private String getRoomKey() {
+        return roomX + "," + roomY;
     }
 }

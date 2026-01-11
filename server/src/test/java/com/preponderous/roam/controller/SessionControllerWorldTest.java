@@ -47,10 +47,10 @@ class SessionControllerWorldTest {
         WorldDTO world = response.getBody();
         assertNotNull(world);
         assertTrue(world.getSeed() > 0);
-        assertEquals(32, world.getRoomWidth());
-        assertEquals(32, world.getRoomHeight());
+        assertEquals(20, world.getRoomWidth());  // Updated to match new default
+        assertEquals(20, world.getRoomHeight());  // Updated to match new default
         assertTrue(world.getResourceDensity() > 0);
-        assertTrue(world.getHazardDensity() > 0);
+        assertEquals(0.0, world.getHazardDensity());  // Updated: hazards removed
         assertNotNull(world.getRooms());
     }
 
@@ -79,10 +79,10 @@ class SessionControllerWorldTest {
         assertNotNull(room);
         assertEquals(0, room.getRoomX());
         assertEquals(0, room.getRoomY());
-        assertEquals(32, room.getWidth());
-        assertEquals(32, room.getHeight());
+        assertEquals(20, room.getWidth());  // Updated to match new default
+        assertEquals(20, room.getHeight());  // Updated to match new default
         assertNotNull(room.getTiles());
-        assertEquals(32 * 32, room.getTiles().size());
+        assertEquals(20 * 20, room.getTiles().size());  // Updated to match new default
     }
 
     @Test

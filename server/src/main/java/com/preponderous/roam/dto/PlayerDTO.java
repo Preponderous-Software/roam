@@ -24,6 +24,12 @@ public class PlayerDTO {
     private int gatherSpeed;
     private int placeSpeed;
     private InventoryDTO inventory;
+    
+    // Position in world space
+    private int roomX;
+    private int roomY;
+    private int tileX;
+    private int tileY;
 
     public PlayerDTO() {
     }
@@ -171,5 +177,37 @@ public class PlayerDTO {
 
     public void setInventory(InventoryDTO inventory) {
         this.inventory = inventory;
+    }
+
+    public int getRoomX() {
+        return roomX;
+    }
+
+    public void setRoomX(int roomX) {
+        this.roomX = roomX;
+    }
+
+    public int getRoomY() {
+        return roomY;
+    }
+
+    public void setRoomY(int roomY) {
+        this.roomY = roomY;
+    }
+
+    public int getTileX() {
+        return tileX;
+    }
+
+    public void setTileX(int tileX) {
+        this.tileX = tileX;
+    }
+
+    public int getTileY() {
+        return tileY;
+    }
+
+    public void setTileY(int tileY) {
+        this.tileY = tileY;
     }
 }

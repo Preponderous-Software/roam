@@ -33,10 +33,10 @@ public class WorldConfig {
     public static WorldConfig getDefault() {
         return new WorldConfig(
             System.currentTimeMillis(),
-            32,  // Default room width
-            32,  // Default room height
+            20,  // Room width - reduced from 32 to match original
+            20,  // Room height - reduced from 32 to match original
             0.1, // 10% resource density
-            0.05 // 5% hazard density
+            0.0  // 0% hazard density - hazards not in original implementation
         );
     }
 

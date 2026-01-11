@@ -58,9 +58,66 @@ class ServerBackedWorldScreen:
         self.current_room = None
         self.current_room_x = 0
         self.current_room_y = 0
-        # Size of each tile in pixels; default 16 works for 32x32 rooms (512x512).
+        # Size of each tile in pixels; increased from 16 to 32 for better visibility like original
         # Can be overridden via Config.tile_size to match server room dimensions/display size.
-        self.tile_size = getattr(self.config, "tile_size", 16)
+        self.tile_size = getattr(self.config, "tile_size", 32)
+        
+        # Mouse state tracking for continuous gathering
+        self.mouse_button_held = {1: False, 3: False}  # Track left and right mouse buttons
+        self.last_gather_tile = None
+        self.gather_cooldown_frames = 0  # Frames since last gather
+        self.gather_cooldown_max = 10  # Gather every 10 frames when holding
+        
+        # Load player sprites with error handling
+        self.player_sprites = {}
+        sprite_paths = {
+            0: "assets/images/player_up.png",
+            1: "assets/images/player_left.png",
+            2: "assets/images/player_down.png",
+            3: "assets/images/player_right.png"
+        }
+        
+        for direction, path in sprite_paths.items():
+            try:
+                sprite = pygame.image.load(path)
+                # Scale sprites to tile size
+                self.player_sprites[direction] = pygame.transform.scale(
+                    sprite,
+                    (self.tile_size, self.tile_size)
+                )
+            except (pygame.error, FileNotFoundError) as e:
+                logger.warning(f"Failed to load player sprite {path}: {e}")
+                # Create a fallback colored square
+                fallback = pygame.Surface((self.tile_size, self.tile_size))
+                fallback.fill((50, 150, 255))  # Blue color
+                self.player_sprites[direction] = fallback
+        
+        # Load entity sprites
+        self.entity_sprites = {}
+        entity_sprite_paths = {
+            'Bear': "assets/images/bear.png",
+            'Chicken': "assets/images/chicken.png",
+            'Tree': "assets/images/oakWood.png",
+            'Rock': "assets/images/stone.png",
+            'Bush': "assets/images/leaves.png",
+            'Apple': "assets/images/apple.png",
+            'Berry': "assets/images/banana.png",  # Using banana as berry placeholder
+            'Wood': "assets/images/jungleWood.png",
+            'Stone': "assets/images/coalOre.png",
+            'Grass': "assets/images/grass.png"
+        }
+        
+        for entity_type, path in entity_sprite_paths.items():
+            try:
+                sprite = pygame.image.load(path)
+                # Scale sprites to tile size
+                self.entity_sprites[entity_type] = pygame.transform.scale(
+                    sprite,
+                    (self.tile_size, self.tile_size)
+                )
+            except (pygame.error, FileNotFoundError) as e:
+                logger.warning(f"Failed to load entity sprite {path} for {entity_type}: {e}")
+                # Don't create fallback, will use colored squares as before
         
         # Biome colors (fallback only - prefer server-provided colors)
         # These RGB values match the server's hex color definitions as fallback
@@ -224,16 +281,7 @@ class ServerBackedWorldScreen:
             logger.info("ESC pressed - opening options menu")
             self.nextScreen = ScreenType.OPTIONS_SCREEN
             self.changeScreen = True
-        # Room navigation with arrow keys + shift (must be checked BEFORE regular arrow keys)
-        elif key == pygame.K_UP and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            self._navigate_to_room(self.current_room_x, self.current_room_y - 1, "north")
-        elif key == pygame.K_DOWN and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            self._navigate_to_room(self.current_room_x, self.current_room_y + 1, "south")
-        elif key == pygame.K_LEFT and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            self._navigate_to_room(self.current_room_x - 1, self.current_room_y, "west")
-        elif key == pygame.K_RIGHT and pygame.key.get_mods() & pygame.KMOD_SHIFT:
-            self._navigate_to_room(self.current_room_x + 1, self.current_room_y, "east")
-        # Regular arrow key movement (without shift)
+        # Regular arrow key movement
         elif key == pygame.K_w or key == pygame.K_UP:
             self.movePlayer(0)
         elif key == pygame.K_a or key == pygame.K_LEFT:
@@ -244,8 +292,6 @@ class ServerBackedWorldScreen:
             self.movePlayer(3)
         elif key == pygame.K_SPACE:
             self.stopPlayer()
-        elif key == pygame.K_g:
-            self.toggleGathering()
         elif key == pygame.K_i:
             logger.info("I pressed - opening inventory")
             self.nextScreen = ScreenType.INVENTORY_SCREEN
@@ -256,43 +302,60 @@ class ServerBackedWorldScreen:
             # Do not modify player speed locally to avoid client-server desynchronization.
             pass
         elif key == pygame.K_LCTRL:
-            logger.debug("Ctrl key pressed (crouch changes handled server-side)")
-            # Crouching state changes are handled by the server in a server-backed world.
-            # Do not modify crouch state locally to avoid client-server desynchronization.
-            pass
+            logger.debug("Ctrl key pressed - toggling crouch")
+            try:
+                # Toggle crouching state
+                current_crouching = self.player.isCrouching()
+                self.player_data = self.api_client.perform_player_action(
+                    "crouch",
+                    crouching=not current_crouching
+                )
+                self._updatePlayerFromServerData(self.player_data)
+                self.player.setCrouching(not current_crouching)
+                status = "crouching" if not current_crouching else "standing"
+                self.status.set(f"Player {status}")
+            except Exception as e:
+                logger.error(f"Failed to toggle crouch: {e}", exc_info=True)
+                self.status.set(f"Crouch toggle failed: {e}")
         elif key == pygame.K_F3:
             # toggle debug mode
             self.config.debug = not self.config.debug
             logger.info(f"Debug mode toggled: {self.config.debug}")
-        # Test keys for adding items (temporary)
+        # Number keys for inventory selection
         elif key == pygame.K_1:
-            logger.debug("Test key 1 - adding apple")
-            self._addTestItem("apple")
+            self._selectInventorySlot(0)
         elif key == pygame.K_2:
-            logger.debug("Test key 2 - adding banana")
-            self._addTestItem("banana")
+            self._selectInventorySlot(1)
         elif key == pygame.K_3:
-            logger.debug("Test key 3 - adding stone")
-            self._addTestItem("stone")
+            self._selectInventorySlot(2)
+        elif key == pygame.K_4:
+            self._selectInventorySlot(3)
+        elif key == pygame.K_5:
+            self._selectInventorySlot(4)
+        elif key == pygame.K_6:
+            self._selectInventorySlot(5)
+        elif key == pygame.K_7:
+            self._selectInventorySlot(6)
+        elif key == pygame.K_8:
+            self._selectInventorySlot(7)
+        elif key == pygame.K_9:
+            self._selectInventorySlot(8)
+        elif key == pygame.K_0:
+            self._selectInventorySlot(9)
         elif key == pygame.K_e:
             logger.debug("E key pressed - consuming food")
             self._consumeFood()
     
-    def _addTestItem(self, item_name: str):
-        """Add test item to inventory (for testing)."""
-        logger.debug(f"Adding test item to inventory: {item_name}")
+    def _selectInventorySlot(self, slot_index: int):
+        """Select an inventory slot."""
         try:
-            logger.debug(f"Calling API: add_item_to_inventory({item_name})")
-            self.api_client.add_item_to_inventory(item_name)
-            logger.debug("Fetching updated player state")
-            self.player_data = self.api_client.get_player()
-            logger.info(f"Item added successfully: {item_name}")
+            logger.debug(f"Selecting inventory slot {slot_index}")
+            self.player_data = self.api_client.select_inventory_slot(slot_index)
             self._updatePlayerFromServerData(self.player_data)
-            self.status.set(f"Added {item_name}")
+            self.status.set(f"Selected slot {slot_index + 1}")
         except Exception as e:
-            logger.error(f"Failed to add item {item_name}: {e}", exc_info=True)
-            print(f"Failed to add item: {e}")
-            self.status.set(f"Failed to add {item_name}")
+            logger.error(f"Failed to select slot {slot_index}: {e}", exc_info=True)
+            self.status.set(f"Slot selection failed")
     
     def _consumeFood(self):
         """Consume food from inventory."""
@@ -331,6 +394,114 @@ class ServerBackedWorldScreen:
             print(f"Failed to consume: {e}")
             self.status.set(f"Consume failed: {e}")
     
+    def handleMouseButtonDown(self, event):
+        """Handle mouse button press events."""
+        if event.button == 1:  # Left click - gather
+            self.mouse_button_held[1] = True
+            logger.debug(f"Left click at position ({event.pos[0]}, {event.pos[1]})")
+            self._performGatherAt(event.pos[0], event.pos[1])
+        elif event.button == 3:  # Right click - place
+            self.mouse_button_held[3] = True
+            logger.debug(f"Right click at position ({event.pos[0]}, {event.pos[1]})")
+            self._performPlaceAt(event.pos[0], event.pos[1])
+    
+    def handleMouseButtonUp(self, event):
+        """Handle mouse button release events."""
+        if event.button == 1:
+            self.mouse_button_held[1] = False
+            self.last_gather_tile = None
+        elif event.button == 3:
+            self.mouse_button_held[3] = False
+    
+    def _performGatherAt(self, screen_x: int, screen_y: int):
+        """Perform gather action at screen coordinates."""
+        # Convert screen coordinates to tile coordinates
+        tile_coords = self._screen_to_tile_coords(screen_x, screen_y)
+        if tile_coords:
+            tile_x, tile_y = tile_coords
+            logger.debug(f"Gathering at tile ({tile_x}, {tile_y})")
+            # Trigger gathering action at the clicked tile
+            try:
+                self.player_data = self.api_client.perform_player_action(
+                    "gather",
+                    gathering=True,
+                    tile_x=tile_x,
+                    tile_y=tile_y
+                )
+                self._updatePlayerFromServerData(self.player_data)
+                self.last_gather_tile = (tile_x, tile_y)
+                # Don't show status for every gather to avoid spam
+                if not self.config.debug:
+                    self.status.set("Gathered")
+                else:
+                    self.status.set(f"Gathered at ({tile_x}, {tile_y})")
+            except Exception as e:
+                logger.error(f"Failed to gather: {e}", exc_info=True)
+                if self.config.debug:
+                    self.status.set(f"Gather failed")
+    
+    def _performPlaceAt(self, screen_x: int, screen_y: int):
+        """Perform place action at screen coordinates."""
+        # Convert screen coordinates to tile coordinates
+        tile_coords = self._screen_to_tile_coords(screen_x, screen_y)
+        if tile_coords:
+            tile_x, tile_y = tile_coords
+            logger.debug(f"Placing on tile ({tile_x}, {tile_y})")
+            # Trigger placing action at the clicked tile
+            try:
+                self.player_data = self.api_client.perform_player_action(
+                    "place",
+                    placing=True,
+                    tile_x=tile_x,
+                    tile_y=tile_y
+                )
+                self._updatePlayerFromServerData(self.player_data)
+                if not self.config.debug:
+                    self.status.set("Placed")
+                else:
+                    self.status.set(f"Placed at ({tile_x}, {tile_y})")
+            except Exception as e:
+                logger.error(f"Failed to place: {e}", exc_info=True)
+                if self.config.debug:
+                    self.status.set(f"Place failed")
+    
+    def _screen_to_tile_coords(self, screen_x: int, screen_y: int):
+        """
+        Convert screen coordinates to tile coordinates within the current room.
+        
+        Args:
+            screen_x: Screen X coordinate
+            screen_y: Screen Y coordinate
+            
+        Returns:
+            Tuple of (tile_x, tile_y) or None if outside the world view
+        """
+        if not self.current_room:
+            return None
+        
+        width = self.current_room.get('width', 20)
+        height = self.current_room.get('height', 20)
+        
+        # Calculate world view position (centered on screen)
+        display_width = self.graphik.getGameDisplay().get_width()
+        display_height = self.graphik.getGameDisplay().get_height()
+        
+        world_pixel_width = width * self.tile_size
+        world_pixel_height = height * self.tile_size
+        
+        world_view_x = (display_width - world_pixel_width) // 2
+        world_view_y = (display_height - world_pixel_height) // 2
+        
+        # Convert to tile coordinates
+        tile_x = (screen_x - world_view_x) // self.tile_size
+        tile_y = (screen_y - world_view_y) // self.tile_size
+        
+        # Check if within bounds
+        if 0 <= tile_x < width and 0 <= tile_y < height:
+            return (tile_x, tile_y)
+        
+        return None
+    
     def _navigate_to_room(self, new_x: int, new_y: int, direction: str):
         """
         Navigate to a room in the specified direction.
@@ -365,7 +536,9 @@ class ServerBackedWorldScreen:
             self.current_room_x = room_x
             self.current_room_y = room_y
             logger.debug(f"Room loaded successfully: {len(self.current_room.get('tiles', []))} tiles")
-            self.status.set(f"Loaded room ({room_x}, {room_y})")
+            # Only show "Loaded room" message in debug mode
+            if self.config.debug:
+                self.status.set(f"Loaded room ({room_x}, {room_y})")
             return True
         except Exception as e:
             # Ensure we do not leave a partially loaded or inconsistent room in state
@@ -401,11 +574,12 @@ class ServerBackedWorldScreen:
             return self.unknown_biome_color
     
     def render_world(self):
-        """Render the current room as a tile map."""
+        """Render the current room as a tile map with entities."""
         if not self.current_room:
             return
         
         tiles = self.current_room.get('tiles', [])
+        entities = self.current_room.get('entities', [])
         width = self.current_room.get('width', 32)
         height = self.current_room.get('height', 32)
         
@@ -432,20 +606,27 @@ class ServerBackedWorldScreen:
             screen_x = world_view_x + tile_x * self.tile_size
             screen_y = world_view_y + tile_y * self.tile_size
             
-            # Get biome color - prefer server-provided hex color, fall back to hardcoded
-            if biome_color_hex:
-                # Convert hex color string to RGB tuple
-                color = self._hex_to_rgb(biome_color_hex)
+            # Use grass sprite for Grassland biome, otherwise use color
+            if biome == 'Grassland' and 'Grass' in self.entity_sprites:
+                self.graphik.getGameDisplay().blit(
+                    self.entity_sprites['Grass'],
+                    (screen_x, screen_y)
+                )
             else:
-                # Fallback to hardcoded colors if server doesn't provide one
-                color = self.biome_colors_fallback.get(biome, self.unknown_biome_color)
-            
-            # Draw tile
-            pygame.draw.rect(
-                self.graphik.getGameDisplay(),
-                color,
-                (screen_x, screen_y, self.tile_size, self.tile_size)
-            )
+                # Get biome color - prefer server-provided hex color, fall back to hardcoded
+                if biome_color_hex:
+                    # Convert hex color string to RGB tuple
+                    color = self._hex_to_rgb(biome_color_hex)
+                else:
+                    # Fallback to hardcoded colors if server doesn't provide one
+                    color = self.biome_colors_fallback.get(biome, self.unknown_biome_color)
+                
+                # Draw tile
+                pygame.draw.rect(
+                    self.graphik.getGameDisplay(),
+                    color,
+                    (screen_x, screen_y, self.tile_size, self.tile_size)
+                )
             
             # Draw resource indicator (small circle)
             if has_resource:
@@ -474,6 +655,80 @@ class ServerBackedWorldScreen:
                     (screen_x + 2, screen_y + self.tile_size - 2),
                     2
                 )
+        
+        # Draw entities
+        for entity in entities:
+            location_id = entity.get('locationId', '')
+            if not location_id:
+                continue
+            
+            # Parse location: "roomX,roomY,tileX,tileY"
+            parts = location_id.split(',')
+            if len(parts) >= 4:
+                entity_tile_x = int(parts[2])
+                entity_tile_y = int(parts[3])
+                
+                # Calculate screen position
+                screen_x = world_view_x + entity_tile_x * self.tile_size
+                screen_y = world_view_y + entity_tile_y * self.tile_size
+                
+                # Draw entity based on type
+                entity_type = entity.get('type', '')
+                entity_name = entity.get('name', '')
+                
+                # Try to use sprite first, fall back to colored square
+                if entity_type in self.entity_sprites:
+                    self.graphik.getGameDisplay().blit(
+                        self.entity_sprites[entity_type],
+                        (screen_x, screen_y)
+                    )
+                else:
+                    # Fall back to colored square
+                    entity_color = self._get_entity_color(entity_type)
+                    
+                    # Draw entity as a filled rectangle with border
+                    pygame.draw.rect(
+                        self.graphik.getGameDisplay(),
+                        entity_color,
+                        (screen_x + 2, screen_y + 2, self.tile_size - 4, self.tile_size - 4)
+                    )
+                    
+                    # Draw border for solid entities
+                    if entity.get('solid', False):
+                        pygame.draw.rect(
+                            self.graphik.getGameDisplay(),
+                            (0, 0, 0),
+                            (screen_x + 2, screen_y + 2, self.tile_size - 4, self.tile_size - 4),
+                            2
+                        )
+        
+        # Draw player position indicator if player position is available
+        if self.player_data:
+            player_room_x = self.player_data.get('roomX', 0)
+            player_room_y = self.player_data.get('roomY', 0)
+            player_tile_x = self.player_data.get('tileX', 0)
+            player_tile_y = self.player_data.get('tileY', 0)
+            
+            # Only draw if player is in the current room
+            if player_room_x == self.current_room_x and player_room_y == self.current_room_y:
+                screen_x = world_view_x + player_tile_x * self.tile_size
+                screen_y = world_view_y + player_tile_y * self.tile_size
+                
+                # Draw player sprite based on direction
+                direction = self.player_data.get('direction', -1)
+                last_direction = self.player_data.get('lastDirection', 2)  # Default to down
+                
+                # Use last direction if not moving
+                display_direction = direction if direction >= 0 else last_direction
+                if display_direction < 0:
+                    display_direction = 2  # Default to down
+                
+                # Draw the player sprite
+                if display_direction in self.player_sprites:
+                    self.graphik.getGameDisplay().blit(
+                        self.player_sprites[display_direction],
+                        (screen_x, screen_y)
+                    )
         
         # Draw grid lines
         for x in range(width + 1):
@@ -505,6 +760,34 @@ class ServerBackedWorldScreen:
         )
         self.graphik.getGameDisplay().blit(room_label, (world_view_x, world_view_y - 25))
     
+    def _get_entity_color(self, entity_type: str) -> tuple:
+        """Get color for entity type visualization."""
+        # Wildlife - shades of brown/red
+        if entity_type == 'Bear':
+            return (139, 69, 19)  # Brown
+        elif entity_type == 'Deer':
+            return (210, 180, 140)  # Tan
+        elif entity_type == 'Chicken':
+            return (255, 228, 196)  # Light tan
+        # Interactive objects - shades of green/gray
+        elif entity_type == 'Tree':
+            return (34, 139, 34)  # Forest green
+        elif entity_type == 'Rock':
+            return (128, 128, 128)  # Gray
+        elif entity_type == 'Bush':
+            return (85, 107, 47)  # Dark olive green
+        # Resources - shades of yellow/orange
+        elif entity_type == 'Apple':
+            return (255, 0, 0)  # Red
+        elif entity_type == 'Berry':
+            return (138, 43, 226)  # Purple
+        elif entity_type == 'Wood':
+            return (160, 82, 45)  # Sienna
+        elif entity_type == 'Stone':
+            return (169, 169, 169)  # Dark gray
+        # Default
+        return (200, 200, 200)
+    
     def handleKeyUpEvent(self, key):
         """Handle key release events."""
         logger.debug(f"Key up event: {key}")
@@ -532,12 +815,23 @@ class ServerBackedWorldScreen:
             pass
     
     def updateTick(self):
-        """Update game tick on server."""
+        """Update game tick on server and refresh player and entity state."""
         try:
             logger.debug(f"Updating tick on server (current: {self.server_tick})")
             session_data = self.api_client.update_tick()
             self.server_tick = session_data.get('currentTick', self.server_tick)
             logger.debug(f"Tick updated: {self.server_tick}")
+            
+            # Fetch updated player data after tick to get new position
+            self.player_data = self.api_client.get_player()
+            self._updatePlayerFromServerData(self.player_data)
+            
+            # Always reload current room to get updated entity positions
+            if self.player_data:
+                player_room_x = self.player_data.get('roomX', 0)
+                player_room_y = self.player_data.get('roomY', 0)
+                # Reload room every tick to show entity movements
+                self.load_room(player_room_x, player_room_y)
         except Exception as e:
             logger.error(f"Failed to update tick: {e}", exc_info=True)
             print(f"Failed to update tick: {e}")
@@ -549,84 +843,14 @@ class ServerBackedWorldScreen:
         # Clear screen with a nice background
         self.graphik.getGameDisplay().fill((20, 20, 30))  # Dark background
         
-        # Render world first (as background)
+        # Render world first (as background) - this takes up most of the screen now
         self.render_world()
         
-        # Draw title
-        # Note: The title uses a smaller font (36 instead of 48) and is pinned to the
-        # top-left corner instead of being centered. This keeps the main world view and
-        # player visualization unobstructed in the center of the screen and treats the
-        # title as a lightweight HUD label rather than a dominant splash title.
-        title_font = pygame.font.Font(None, 36)
-        title = title_font.render("Roam (Server-Backed)", True, (255, 255, 255))
-        self.graphik.getGameDisplay().blit(title, (10, 10))
-        
-        # Draw player visualization (centered)
-        display_width = self.graphik.getGameDisplay().get_width()
-        display_height = self.graphik.getGameDisplay().get_height()
-        
-        # Player representation
-        player_size = 64
-        player_x = display_width // 2 - player_size // 2
-        player_y = display_height // 2 - player_size // 2
-        
-        # Draw player circle
-        pygame.draw.circle(
-            self.graphik.getGameDisplay(),
-            (255, 200, 100),
-            (player_x + player_size // 2, player_y + player_size // 2),
-            player_size // 2
-        )
-        
-        # Draw direction indicator
-        direction = self.player.getDirection()
-        if direction >= 0:
-            arrow_length = 30
-            center_x = player_x + player_size // 2
-            center_y = player_y + player_size // 2
-            
-            if direction == 0:  # Up
-                end_x, end_y = center_x, center_y - arrow_length
-            elif direction == 1:  # Left
-                end_x, end_y = center_x - arrow_length, center_y
-            elif direction == 2:  # Down
-                end_x, end_y = center_x, center_y + arrow_length
-            elif direction == 3:  # Right
-                end_x, end_y = center_x + arrow_length, center_y
-            
-            pygame.draw.line(
-                self.graphik.getGameDisplay(),
-                (255, 255, 0),
-                (center_x, center_y),
-                (end_x, end_y),
-                5
-            )
-        
-        # Draw player info panel
-        info_x = 20
-        info_y = 100
-        font = pygame.font.Font(None, 28)
-        
-        info_texts = [
-            f"Energy: {self.player.getEnergy():.1f}/{self.player.getTargetEnergy()}",
-            f"Direction: {['Up', 'Left', 'Down', 'Right', 'None'][direction] if direction >= 0 else 'None'}",
-            f"Moving: {self.player_data.get('moving', False) if self.player_data else False}",
-            f"Gathering: {self.player_data.get('gathering', False) if self.player_data else False}",
-            f"Crouching: {self.player.isCrouching()}",
-        ]
-        
-        for i, text in enumerate(info_texts):
-            surface = font.render(text, True, (255, 255, 255))
-            self.graphik.getGameDisplay().blit(surface, (info_x, info_y + i * 35))
-        
-        # Draw energy bar
+        # Draw energy bar (top of screen)
         self.energyBar.draw()
         
-        # Draw inventory preview
+        # Draw inventory preview (bottom of screen)
         self._drawInventoryPreview()
-        
-        # Draw controls help
-        self._drawControls()
         
         # Draw status bar
         self.status.draw()
@@ -649,59 +873,66 @@ class ServerBackedWorldScreen:
         inventory_data = self.player_data.get('inventory', {})
         slots = inventory_data.get('slots', [])[:10]  # First 10 slots
         
-        # Position at bottom center
-        slot_size = 50
+        # Position at bottom center - larger slots for better visibility
+        # Moved up to avoid overlapping with energy bar (which is at display_height - ~15)
+        slot_size = 60
         spacing = 5
         total_width = len(slots) * (slot_size + spacing)
         start_x = display_width // 2 - total_width // 2
-        start_y = display_height - 100
+        start_y = display_height - 100  # Moved from -80 to -100 to avoid energy bar overlap
         
         # Draw background bar
         bar_padding = 10
         pygame.draw.rect(
             self.graphik.getGameDisplay(),
-            (50, 50, 50),
+            (40, 40, 40),
             (start_x - bar_padding, start_y - bar_padding, 
              total_width + bar_padding * 2, slot_size + bar_padding * 2)
         )
         
         # Draw slots
-        font = pygame.font.Font(None, 20)
+        small_font = pygame.font.Font(None, 18)
+        large_font = pygame.font.Font(None, 32)
         for i, slot in enumerate(slots):
             x = start_x + i * (slot_size + spacing)
             
             # Draw slot background
-            color = (100, 100, 100) if slot.get('empty', True) else (150, 150, 150)
+            color = (80, 80, 80) if slot.get('empty', True) else (120, 120, 120)
             pygame.draw.rect(
                 self.graphik.getGameDisplay(),
                 color,
                 (x, start_y, slot_size, slot_size)
             )
             
+            # Draw border
+            pygame.draw.rect(
+                self.graphik.getGameDisplay(),
+                (60, 60, 60),
+                (x, start_y, slot_size, slot_size),
+                2
+            )
+            
             # Draw item info if not empty
             if not slot.get('empty', True):
-                item_name = slot.get('itemName', '')
                 num_items = slot.get('numItems', 0)
                 
-                # Draw item name (truncated)
-                name_surface = font.render(item_name[:8], True, (255, 255, 255))
-                self.graphik.getGameDisplay().blit(name_surface, (x + 2, start_y + 2))
-                
-                # Draw count
-                count_surface = font.render(str(num_items), True, (255, 255, 100))
+                # Draw count prominently (like original)
+                count_surface = large_font.render(str(num_items), True, (255, 255, 255))
+                text_width = count_surface.get_width()
+                text_height = count_surface.get_height()
                 self.graphik.getGameDisplay().blit(
                     count_surface, 
-                    (x + slot_size - 20, start_y + slot_size - 20)
+                    (x + (slot_size - text_width) // 2, start_y + (slot_size - text_height) // 2)
                 )
             
-            # Draw selection indicator
+            # Draw selection indicator (yellow border)
             selected_index = inventory_data.get('selectedSlotIndex', 0)
             if i == selected_index:
                 pygame.draw.rect(
                     self.graphik.getGameDisplay(),
                     (255, 255, 0),
                     (x, start_y, slot_size, slot_size),
-                    3
+                    4
                 )
     
     def _drawControls(self):
@@ -712,11 +943,10 @@ class ServerBackedWorldScreen:
         controls = [
             "WASD/Arrows: Move",
             "Space: Stop",
-            "G: Gather",
-            "Shift+Arrows: Change Room",
+            "Click: Gather",
             "I: Inventory",
             "E: Eat",
-            "1/2/3: Add Items (test)",
+            "1-9/0: Select Slot",
             "ESC: Menu",
         ]
         
@@ -752,7 +982,10 @@ class ServerBackedWorldScreen:
         """Main game loop."""
         logger.info("Starting ServerBackedWorldScreen main loop")
         tick_counter = 0
-        tick_update_frequency = 60  # Update server tick every 60 frames
+        tick_update_frequency = 20  # Update server tick every 20 frames (~3 ticks/sec at 60 FPS)
+        
+        clock = pygame.time.Clock()
+        target_fps = 60
         
         while not self.changeScreen:
             for event in pygame.event.get():
@@ -764,6 +997,21 @@ class ServerBackedWorldScreen:
                     self.handleKeyDownEvent(event.key)
                 elif event.type == pygame.KEYUP:
                     self.handleKeyUpEvent(event.key)
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    self.handleMouseButtonDown(event)
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    self.handleMouseButtonUp(event)
+            
+            # Handle continuous gathering if mouse is held
+            if self.mouse_button_held[1]:
+                self.gather_cooldown_frames += 1
+                if self.gather_cooldown_frames >= self.gather_cooldown_max:
+                    # Get current mouse position
+                    mouse_pos = pygame.mouse.get_pos()
+                    self._performGatherAt(mouse_pos[0], mouse_pos[1])
+                    self.gather_cooldown_frames = 0
+            else:
+                self.gather_cooldown_frames = 0
             
             # Update tick periodically
             tick_counter += 1
@@ -779,6 +1027,9 @@ class ServerBackedWorldScreen:
             
             # Increment local tick counter
             self.tickCounter.incrementTick()
+            
+            # Control frame rate
+            clock.tick(target_fps)
         
         logger.info(f"Exiting ServerBackedWorldScreen, next screen: {self.nextScreen}")
         self.changeScreen = False

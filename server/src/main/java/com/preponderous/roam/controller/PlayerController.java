@@ -3,10 +3,17 @@ package com.preponderous.roam.controller;
 import com.preponderous.roam.dto.PlayerActionRequest;
 import com.preponderous.roam.dto.PlayerDTO;
 import com.preponderous.roam.exception.SessionNotFoundException;
+import com.preponderous.roam.model.Entity;
+import com.preponderous.roam.model.GameState;
+import com.preponderous.roam.model.LivingEntity;
 import com.preponderous.roam.model.Player;
+import com.preponderous.roam.model.Room;
+import com.preponderous.roam.model.entity.*;
+import com.preponderous.roam.service.EntityInteractionService;
 import com.preponderous.roam.service.GameService;
 import com.preponderous.roam.service.MappingService;
 import com.preponderous.roam.service.PlayerService;
+import com.preponderous.roam.service.WorldGenerationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +36,12 @@ public class PlayerController {
 
     @Autowired
     private MappingService mappingService;
+    
+    @Autowired
+    private EntityInteractionService entityInteractionService;
+    
+    @Autowired
+    private WorldGenerationService worldGenerationService;
 
     /**
      * Get player state.
@@ -78,6 +91,46 @@ public class PlayerController {
                     playerService.setGathering(player, request.getGathering());
                     if (request.getGathering()) {
                         playerService.setTickLastGathered(player, currentTick);
+                        
+                        // Get current game state and room
+                        GameState gameState = gameService.getSession(sessionId);
+                        Room currentRoom = worldGenerationService.getOrGenerateRoom(
+                            gameState.getWorld(), 
+                            player.getRoomX(), 
+                            player.getRoomY(), 
+                            currentTick
+                        );
+                        
+                        Entity targetEntity = null;
+                        
+                        // If tile coordinates provided, get entity at that tile
+                        if (request.getTileX() != null && request.getTileY() != null) {
+                            targetEntity = entityInteractionService.getEntityAtTile(
+                                player.getRoomX(), 
+                                player.getRoomY(), 
+                                request.getTileX(), 
+                                request.getTileY(), 
+                                currentRoom
+                            );
+                        } else {
+                            // Otherwise get entity in front of player
+                            targetEntity = entityInteractionService.getEntityInFrontOfPlayer(player, currentRoom);
+                        }
+                        
+                        if (targetEntity != null) {
+                            // Try harvesting harvestable entities (trees, rocks, bushes)
+                            entityInteractionService.harvestEntity(targetEntity, player);
+                            
+                            // Try gathering resources (apples, berries, wood, stone)
+                            entityInteractionService.gatherResource(targetEntity, player, currentRoom);
+                            
+                            // Try hunting wildlife (bears, deer, chickens)
+                            if (targetEntity instanceof LivingEntity) {
+                                LivingEntity livingEntity = (LivingEntity) targetEntity;
+                                // Deal 50 damage per gather action (might need multiple clicks to kill)
+                                entityInteractionService.huntEntity(livingEntity, player, currentRoom, 50.0);
+                            }
+                        }
                     }
                 }
                 break;
@@ -86,6 +139,43 @@ public class PlayerController {
                     playerService.setPlacing(player, request.getPlacing());
                     if (request.getPlacing()) {
                         playerService.setTickLastPlaced(player, currentTick);
+                        
+                        // Get selected item from inventory
+                        String itemName = player.getInventory().getSelectedInventorySlot().getItemName();
+                        if (itemName != null && !itemName.isEmpty()) {
+                            // Get target tile coordinates
+                            Integer targetTileX = request.getTileX();
+                            Integer targetTileY = request.getTileY();
+                            
+                            if (targetTileX != null && targetTileY != null) {
+                                // Get current room
+                                GameState gameState = gameService.getSession(sessionId);
+                                Room currentRoom = worldGenerationService.getOrGenerateRoom(
+                                    gameState.getWorld(), 
+                                    player.getRoomX(), 
+                                    player.getRoomY(), 
+                                    currentTick
+                                );
+                                
+                                // Check if tile is empty (no solid entity)
+                                String targetLocationId = player.getRoomX() + "," + player.getRoomY() + "," + 
+                                                         targetTileX + "," + targetTileY;
+                                boolean occupied = currentRoom.getEntitiesList().stream()
+                                    .anyMatch(e -> e.isSolid() && targetLocationId.equals(e.getLocationId()));
+                                
+                                if (!occupied) {
+                                    // Create entity based on item name and place it
+                                    Entity placedEntity = createEntityFromItemName(itemName);
+                                    if (placedEntity != null) {
+                                        placedEntity.setLocationId(targetLocationId);
+                                        currentRoom.addEntity(placedEntity);
+                                        
+                                        // Remove item from inventory
+                                        player.getInventory().removeByItemName(itemName);
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 break;
@@ -112,6 +202,31 @@ public class PlayerController {
 
         PlayerDTO playerDTO = mappingService.toPlayerDTO(player);
         return ResponseEntity.ok(playerDTO);
+    }
+
+    /**
+     * Create an entity from an item name for placing.
+     * 
+     * @param itemName the item name
+     * @return the created entity, or null if item cannot be placed
+     */
+    private Entity createEntityFromItemName(String itemName) {
+        switch (itemName) {
+            case "Grass":
+                // Grass is a tile type, not a placeable entity
+                return null;
+            case "Wood":
+                return new Wood();
+            case "Stone":
+                return new Stone();
+            case "Apple":
+                return new Apple();
+            case "Berry":
+                return new Berry();
+            // Trees, rocks, and bushes are not directly placeable from inventory
+            default:
+                return null;
+        }
     }
 
     /**

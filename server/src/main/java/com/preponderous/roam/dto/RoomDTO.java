@@ -13,6 +13,7 @@ public class RoomDTO {
     private int width;
     private int height;
     private List<TileDTO> tiles;
+    private List<EntityDTO> entities;
 
     public RoomDTO() {
     }
@@ -55,5 +56,13 @@ public class RoomDTO {
 
     public void setTiles(List<TileDTO> tiles) {
         this.tiles = tiles;
+    }
+
+    public List<EntityDTO> getEntities() {
+        return entities;
+    }
+
+    public void setEntities(List<EntityDTO> entities) {
+        this.entities = entities;
     }
 }
