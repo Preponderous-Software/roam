@@ -18,6 +18,15 @@ public class Apple extends Entity {
         this.energyValue = ENERGY_VALUE;
         this.setSolid(false);
     }
+    
+    /**
+     * Constructor for persistence - creates apple with specific ID.
+     */
+    public Apple(String id) {
+        super(id, "Apple", "assets/images/apple.png");
+        this.energyValue = ENERGY_VALUE;
+        this.setSolid(false);
+    }
 
     public double getEnergyValue() {
         return energyValue;

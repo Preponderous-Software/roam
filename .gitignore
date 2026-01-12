@@ -35,3 +35,13 @@ buildNumber.properties
 *.swp
 *.swo
 *~
+
+# Database files
+data/
+*.mv.db
+*.trace.db
+server/scripts/backup/*.sql
+server/scripts/backup/*.sql.gz
+
+# Client session persistence
+saves/*/session_id.txt

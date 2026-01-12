@@ -20,6 +20,16 @@ public class Tree extends Entity {
         this.maxHarvestCount = MAX_HARVEST_COUNT;
         this.setSolid(true);
     }
+    
+    /**
+     * Constructor for persistence - creates tree with specific ID.
+     */
+    public Tree(String id) {
+        super(id, "Tree", "assets/images/tree.png");
+        this.harvestCount = 0;
+        this.maxHarvestCount = MAX_HARVEST_COUNT;
+        this.setSolid(true);
+    }
 
     public int getHarvestCount() {
         return harvestCount;

@@ -1,6 +1,29 @@
 # Docker Compose configuration for Roam
 
 services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: roam-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-roam}
+      POSTGRES_USER: ${POSTGRES_USER:-roam}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-roamdev}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./server/scripts/backup:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U roam -d roam"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - roam-network
+
   # Spring Boot Server
   roam-server:
     build:
@@ -14,6 +37,14 @@ services:
       ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5000,http://host.docker.internal:*"
       # JVM options
       JAVA_OPTS: "-Xmx512m -Xms256m"
+      # Database configuration
+      SPRING_PROFILES_ACTIVE: postgresql
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-roam}
+      DATABASE_USERNAME: ${POSTGRES_USER:-roam}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-roamdev}
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
       interval: 30s
@@ -45,6 +76,11 @@ services:
   #   # networks:
   #   #   - roam-network
 
+volumes:
+  postgres-data:
+    driver: local
+
 networks:
   roam-network:
     driver: bridge
+

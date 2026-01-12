@@ -14,8 +14,22 @@ public abstract class Entity {
     private String locationId;
     private boolean solid;
 
+    /**
+     * Creates a new entity with a generated UUID.
+     */
     public Entity(String name, String imagePath) {
-        this.id = UUID.randomUUID().toString();
+        this(UUID.randomUUID().toString(), name, imagePath);
+    }
+    
+    /**
+     * Creates an entity with a specific ID (used for persistence).
+     * 
+     * @param id The entity ID
+     * @param name The entity name
+     * @param imagePath The image path
+     */
+    protected Entity(String id, String name, String imagePath) {
+        this.id = id;
         this.name = name;
         this.imagePath = imagePath;
         this.locationId = null;

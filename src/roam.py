@@ -83,18 +83,56 @@ class Roam:
             )
 
     def initializeWorldScreen(self):
-        """Initialize world screen and start server session."""
+        """Initialize world screen and start/resume server session."""
         logger.info("=" * 60)
-        logger.info("Initializing world screen - starting server session")
+        logger.info("Initializing world screen - starting/resuming server session")
         logger.info("=" * 60)
         
         try:
-            # Start server session
-            logger.debug("Calling API: init_session()")
-            session_data = self.api_client.init_session()
-            self.session_id = session_data['sessionId']
-            logger.info(f"Session initialized successfully: {self.session_id}")
-            logger.debug(f"Session data: currentTick={session_data.get('currentTick', 0)}")
+            # Try to resume existing session or create new one
+            session_file = f"{self.config.pathToSaveDirectory}/session_id.txt"
+            existing_session_id = None
+            
+            # Check for saved session ID
+            try:
+                import os
+                if os.path.exists(session_file):
+                    with open(session_file, 'r') as f:
+                        existing_session_id = f.read().strip()
+                    logger.info(f"Found existing session ID: {existing_session_id}")
+            except Exception as e:
+                logger.warning(f"Could not read session file: {e}")
+            
+            # Try to load existing session
+            session_data = None
+            if existing_session_id:
+                try:
+                    logger.debug(f"Attempting to load session: {existing_session_id}")
+                    session_data = self.api_client.load_session(existing_session_id)
+                    self.session_id = existing_session_id
+                    logger.info(f"✓ Successfully loaded existing session: {self.session_id}")
+                    logger.info(f"  Session data: currentTick={session_data.get('currentTick', 0)}")
+                except Exception as e:
+                    logger.warning(f"Could not load existing session: {e}")
+                    logger.info("Will create new session instead")
+            
+            # Create new session if loading failed or no saved session
+            if not session_data:
+                logger.debug("Calling API: init_session()")
+                session_data = self.api_client.init_session()
+                self.session_id = session_data['sessionId']
+                logger.info(f"✓ New session created: {self.session_id}")
+                logger.debug(f"  Session data: currentTick={session_data.get('currentTick', 0)}")
+                
+                # Save the new session ID for future use
+                try:
+                    import os
+                    os.makedirs(os.path.dirname(session_file), exist_ok=True)
+                    with open(session_file, 'w') as f:
+                        f.write(self.session_id)
+                    logger.debug(f"Saved session ID to {session_file}")
+                except Exception as e:
+                    logger.warning(f"Could not save session ID: {e}")
             
             # Create player from server data
             player_data = session_data['player']
@@ -188,17 +226,17 @@ class Roam:
                 logger.debug("Switching to config screen")
                 self.currentScreen = self.configScreen
             elif result == ScreenType.NONE:
-                # Clean up session before quitting
-                logger.info("Quit requested - cleaning up session")
+                # Save session before quitting to persist game state
+                logger.info("Quit requested - saving session")
                 try:
                     if self.session_id:
-                        logger.debug(f"Deleting session: {self.session_id}")
-                        self.api_client.delete_session()
-                        logger.info("Session ended successfully")
-                        print("Session ended")
+                        logger.debug(f"Saving session: {self.session_id}")
+                        self.api_client.save_session()
+                        logger.info("Session saved successfully")
+                        print("Session saved")
                 except Exception as e:
-                    logger.error(f"Error ending session: {e}")
-                    print(f"Error ending session: {e}")
+                    logger.error(f"Error saving session: {e}")
+                    print(f"Error saving session: {e}")
                 self.quitApplication()
             else:
                 logger.error(f"Unrecognized screen type: {result}")
@@ -253,17 +291,17 @@ while True:
     if result != "restart":
         logger.info("Game loop ended without restart")
         break
-    # Clean up session before restarting
-    logger.info("Restart requested - cleaning up previous session")
+    # Save session before restarting to persist game state
+    logger.info("Restart requested - saving previous session")
     try:
         if getattr(roam, "session_id", None):
-            logger.debug(f"Cleaning up session before restart: {roam.session_id}")
-            roam.api_client.delete_session()
-            logger.info("Previous session cleaned up")
-            print("Session ended")
+            logger.debug(f"Saving session before restart: {roam.session_id}")
+            roam.api_client.save_session()
+            logger.info("Previous session saved")
+            print("Session saved")
     except Exception as e:
-        logger.error(f"Error ending session during restart: {e}")
-        print(f"Error ending session: {e}")
+        logger.error(f"Error saving session during restart: {e}")
+        print(f"Error saving session: {e}")
     logger.info("Creating new Roam instance for restart")
     roam = Roam(config, server_url)
 

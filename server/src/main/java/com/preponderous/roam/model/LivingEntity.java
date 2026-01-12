@@ -18,8 +18,23 @@ public abstract class LivingEntity extends Entity {
     private Long tickLastReproduced;
     private final List<Class<? extends Entity>> edibleEntityTypes;
 
+    /**
+     * Creates a new living entity with a generated UUID.
+     */
     public LivingEntity(String name, String imagePath, double energy, long tickCreated) {
         super(name, imagePath);
+        this.energy = energy;
+        this.targetEnergy = energy;
+        this.tickCreated = tickCreated;
+        this.tickLastReproduced = null;
+        this.edibleEntityTypes = new ArrayList<>();
+    }
+    
+    /**
+     * Creates a living entity with a specific ID (used for persistence).
+     */
+    protected LivingEntity(String id, String name, String imagePath, double energy, long tickCreated) {
+        super(id, name, imagePath);
         this.energy = energy;
         this.targetEnergy = energy;
         this.tickCreated = tickCreated;
