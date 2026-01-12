@@ -42,6 +42,13 @@ roam:
   persistence:
     auto-save: false  # Set to true to enable automatic saves every 100 ticks
 
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:default-secret-key-for-jwt-token-signing-must-be-at-least-256-bits-long-for-HS256-algorithm}
+  expiration:
+    access: 3600000  # 1 hour in milliseconds
+    refresh: 86400000  # 24 hours in milliseconds
+
 ---
 # H2 Profile (default for development and testing)
 spring:
