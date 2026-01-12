@@ -106,6 +106,38 @@ class RoamAPIClient:
         
         return self._make_request("POST", f"/api/v1/session/{sid}/tick")
     
+    def save_session(self, session_id: Optional[str] = None) -> Dict[str, str]:
+        """
+        Save the current game session to the database.
+        
+        Args:
+            session_id: Session ID (uses stored session_id if not provided)
+            
+        Returns:
+            Response with success message
+        """
+        sid = session_id or self.session_id
+        if not sid:
+            raise ValueError("No session ID provided")
+        
+        return self._make_request("POST", f"/api/v1/session/{sid}/save")
+    
+    def load_session(self, session_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Load a game session from the database.
+        
+        Args:
+            session_id: Session ID (uses stored session_id if not provided)
+            
+        Returns:
+            Session data
+        """
+        sid = session_id or self.session_id
+        if not sid:
+            raise ValueError("No session ID provided")
+        
+        return self._make_request("POST", f"/api/v1/session/{sid}/load")
+    
     # Player Management
     
     def get_player(self, session_id: Optional[str] = None) -> Dict[str, Any]:
