@@ -110,7 +110,7 @@ class InventoryScreen:
 
             if inventorySlot.isEmpty():
                 self.graphik.drawRectangle(
-                    itemX, itemY, itemWidth, itemHeight, (255, 255, 255)
+                    itemX, itemY, itemWidth, itemHeight, (128, 128, 128)
                 )
                 if (
                     row * itemsPerRow + column

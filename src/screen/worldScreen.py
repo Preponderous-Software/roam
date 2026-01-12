@@ -838,13 +838,13 @@ class WorldScreen:
         for i in range(len(firstTenInventorySlots)):
             inventorySlot = firstTenInventorySlots[i]
             if inventorySlot.isEmpty():
-                # draw white square if item slot is empty
+                # draw gray square if item slot is empty
                 self.graphik.drawRectangle(
                     itemPreviewXPos,
                     itemPreviewYPos,
                     itemPreviewWidth,
                     itemPreviewHeight,
-                    (255, 255, 255),
+                    (128, 128, 128),
                 )
                 if i == self.player.getInventory().getSelectedInventorySlotIndex():
                     # draw yellow square in the middle of the selected inventory slot
