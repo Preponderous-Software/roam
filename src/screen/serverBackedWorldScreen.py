@@ -104,7 +104,8 @@ class ServerBackedWorldScreen:
             'Berry': "assets/images/banana.png",  # Using banana as berry placeholder
             'Wood': "assets/images/jungleWood.png",
             'Stone': "assets/images/coalOre.png",
-            'Grass': "assets/images/grass.png"
+            'Grass': "assets/images/grass.png",
+            'Leaves': "assets/images/leaves.png"
         }
         
         for entity_type, path in entity_sprite_paths.items():

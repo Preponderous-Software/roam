@@ -33,9 +33,14 @@ class EntityManagerTest {
         boolean hasTree = room.getEntitiesList().stream().anyMatch(e -> e instanceof Tree);
         boolean hasRock = room.getEntitiesList().stream().anyMatch(e -> e instanceof Rock);
         boolean hasBush = room.getEntitiesList().stream().anyMatch(e -> e instanceof Bush);
+        boolean hasGrass = room.getEntitiesList().stream().anyMatch(e -> e instanceof Grass);
+        boolean hasLeaves = room.getEntitiesList().stream().anyMatch(e -> e instanceof Leaves);
         
         // At least one type of harvestable should exist (probabilistic but very likely)
         assertTrue(hasTree || hasRock || hasBush, "Room should have at least one harvestable entity");
+        
+        // Grass and leaves should be present (high spawn rates make this very likely)
+        assertTrue(hasGrass || hasLeaves, "Room should have grass or leaves");
     }
 
     @Test
@@ -104,5 +109,22 @@ class EntityManagerTest {
         tree.harvest();
         assertFalse(tree.canHarvest(), "Tree should be depleted after max harvests");
         assertTrue(tree.isDepleted(), "Tree should be marked as depleted");
+    }
+    
+    @Test
+    void testGrassAndLeavesEntities() {
+        // Test Grass entity
+        Grass grass = new Grass();
+        assertEquals("Grass", grass.getName(), "Grass name should be 'Grass'");
+        assertFalse(grass.isSolid(), "Grass should not be solid");
+        assertEquals(1, grass.getQuantity(), "Grass quantity should be 1");
+        assertEquals("assets/images/grass.png", grass.getImagePath(), "Grass image path should match");
+        
+        // Test Leaves entity
+        Leaves leaves = new Leaves();
+        assertEquals("Leaves", leaves.getName(), "Leaves name should be 'Leaves'");
+        assertFalse(leaves.isSolid(), "Leaves should not be solid");
+        assertEquals(1, leaves.getQuantity(), "Leaves quantity should be 1");
+        assertEquals("assets/images/leaves.png", leaves.getImagePath(), "Leaves image path should match");
     }
 }
