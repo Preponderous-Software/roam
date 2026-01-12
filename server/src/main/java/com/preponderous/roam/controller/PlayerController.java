@@ -213,8 +213,9 @@ public class PlayerController {
     private Entity createEntityFromItemName(String itemName) {
         switch (itemName) {
             case "Grass":
-                // Grass is a tile type, not a placeable entity
-                return null;
+                return new Grass();
+            case "Leaves":
+                return new Leaves();
             case "Wood":
                 return new Wood();
             case "Stone":

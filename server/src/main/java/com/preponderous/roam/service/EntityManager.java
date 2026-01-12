@@ -29,6 +29,8 @@ public class EntityManager {
     public static final double BEAR_SPAWN_RATE = 0.01;
     public static final double DEER_SPAWN_RATE = 0.02;
     public static final double CHICKEN_SPAWN_RATE = 0.03;
+    public static final double GRASS_SPAWN_RATE = 0.08;
+    public static final double LEAVES_SPAWN_RATE = 0.06;
     
     /**
      * Spawn initial entities in a room based on the world seed and room coordinates.
@@ -108,6 +110,28 @@ public class EntityManager {
             int y = random.nextInt(height);
             chicken.setLocationId(room.getRoomX() + "," + room.getRoomY() + "," + x + "," + y);
             room.addEntity(chicken);
+        }
+        
+        // Spawn grass
+        int expectedGrass = (int) (totalTiles * GRASS_SPAWN_RATE);
+        logger.debug("Spawning {} grass in room ({}, {})", expectedGrass, room.getRoomX(), room.getRoomY());
+        for (int i = 0; i < expectedGrass; i++) {
+            Grass grass = new Grass();
+            int x = random.nextInt(width);
+            int y = random.nextInt(height);
+            grass.setLocationId(room.getRoomX() + "," + room.getRoomY() + "," + x + "," + y);
+            room.addEntity(grass);
+        }
+        
+        // Spawn leaves
+        int expectedLeaves = (int) (totalTiles * LEAVES_SPAWN_RATE);
+        logger.debug("Spawning {} leaves in room ({}, {})", expectedLeaves, room.getRoomX(), room.getRoomY());
+        for (int i = 0; i < expectedLeaves; i++) {
+            Leaves leaves = new Leaves();
+            int x = random.nextInt(width);
+            int y = random.nextInt(height);
+            leaves.setLocationId(room.getRoomX() + "," + room.getRoomY() + "," + x + "," + y);
+            room.addEntity(leaves);
         }
     }
     

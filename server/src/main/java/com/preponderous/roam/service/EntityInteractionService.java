@@ -52,7 +52,7 @@ public class EntityInteractionService {
     }
     
     /**
-     * Attempt to gather a resource entity (Apple, Berry, Wood, Stone).
+     * Attempt to gather a resource entity (Apple, Berry, Wood, Stone, Grass, Leaves).
      * 
      * @param entity the entity to gather
      * @param player the player doing the gathering
@@ -80,6 +80,18 @@ public class EntityInteractionService {
             }
         } else if (entity instanceof Stone) {
             boolean added = player.getInventory().placeIntoFirstAvailableInventorySlot("Stone");
+            if (added) {
+                room.removeEntity(entity.getId());
+                return true;
+            }
+        } else if (entity instanceof Grass) {
+            boolean added = player.getInventory().placeIntoFirstAvailableInventorySlot("Grass");
+            if (added) {
+                room.removeEntity(entity.getId());
+                return true;
+            }
+        } else if (entity instanceof Leaves) {
+            boolean added = player.getInventory().placeIntoFirstAvailableInventorySlot("Leaves");
             if (added) {
                 room.removeEntity(entity.getId());
                 return true;
