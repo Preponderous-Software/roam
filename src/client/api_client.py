@@ -21,6 +21,8 @@ class RoamAPIClient:
         """
         self.base_url = base_url
         self.session_id: Optional[str] = None
+        self.access_token: Optional[str] = None
+        self.refresh_token: Optional[str] = None
     
     def _make_request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
         """
@@ -38,13 +40,147 @@ class RoamAPIClient:
             requests.exceptions.RequestException: If request fails
         """
         url = f"{self.base_url}{endpoint}"
+        
+        # Add authentication header if we have an access token
+        # and this is not an auth endpoint
+        if self.access_token and not endpoint.startswith("/api/v1/auth"):
+            headers = kwargs.get("headers", {})
+            headers["Authorization"] = f"Bearer {self.access_token}"
+            kwargs["headers"] = headers
+        
         response = requests.request(method, url, **kwargs)
+        
+        # If we get a 401 and have a refresh token, try to refresh
+        if response.status_code == 401 and self.refresh_token and not endpoint.startswith("/api/v1/auth"):
+            try:
+                self._refresh_access_token()
+                # Retry the request with new token
+                headers = kwargs.get("headers", {})
+                headers["Authorization"] = f"Bearer {self.access_token}"
+                kwargs["headers"] = headers
+                response = requests.request(method, url, **kwargs)
+            except Exception:
+                pass  # Let the original error be raised
+        
         response.raise_for_status()
         
         if response.status_code == 204:  # No content
             return {}
         
         return response.json()
+    
+    # Authentication Management
+    
+    def register(self, username: str, password: str, email: str) -> Dict[str, Any]:
+        """
+        Register a new user account.
+        
+        Args:
+            username: Username for the new account (3-50 characters)
+            password: Password for the new account (minimum 6 characters)
+            email: Email address for the new account
+            
+        Returns:
+            Authentication response with tokens and user info
+            
+        Raises:
+            requests.exceptions.HTTPError: If registration fails
+        """
+        response = self._make_request(
+            "POST",
+            "/api/v1/auth/register",
+            json={
+                "username": username,
+                "password": password,
+                "email": email
+            }
+        )
+        
+        # Store tokens for future requests
+        self.access_token = response.get("accessToken")
+        self.refresh_token = response.get("refreshToken")
+        
+        return response
+    
+    def login(self, username: str, password: str) -> Dict[str, Any]:
+        """
+        Login with existing user credentials.
+        
+        Args:
+            username: Username
+            password: Password
+            
+        Returns:
+            Authentication response with tokens and user info
+            
+        Raises:
+            requests.exceptions.HTTPError: If login fails
+        """
+        response = self._make_request(
+            "POST",
+            "/api/v1/auth/login",
+            json={
+                "username": username,
+                "password": password
+            }
+        )
+        
+        # Store tokens for future requests
+        self.access_token = response.get("accessToken")
+        self.refresh_token = response.get("refreshToken")
+        
+        return response
+    
+    def _refresh_access_token(self) -> Dict[str, Any]:
+        """
+        Refresh the access token using the refresh token.
+        
+        Returns:
+            Authentication response with new tokens
+            
+        Raises:
+            requests.exceptions.HTTPError: If refresh fails
+        """
+        if not self.refresh_token:
+            raise ValueError("No refresh token available")
+        
+        response = self._make_request(
+            "POST",
+            "/api/v1/auth/refresh",
+            json={
+                "refreshToken": self.refresh_token
+            }
+        )
+        
+        # Update tokens
+        self.access_token = response.get("accessToken")
+        self.refresh_token = response.get("refreshToken")
+        
+        return response
+    
+    def logout(self) -> None:
+        """
+        Logout and revoke the current access token.
+        
+        Raises:
+            requests.exceptions.HTTPError: If logout fails
+        """
+        if self.access_token:
+            try:
+                self._make_request("POST", "/api/v1/auth/logout")
+            finally:
+                # Clear tokens even if logout fails
+                self.access_token = None
+                self.refresh_token = None
+    
+    def is_authenticated(self) -> bool:
+        """
+        Check if the client is currently authenticated.
+        
+        Returns:
+            True if authenticated, False otherwise
+        """
+        return self.access_token is not None
     
     # Session Management
     

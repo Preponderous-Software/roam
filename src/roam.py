@@ -7,6 +7,7 @@ from player.player import Player
 from lib.graphik.src.graphik import Graphik
 from screen.configScreen import ConfigScreen
 from screen.inventoryScreen import InventoryScreen
+from screen.loginScreen import LoginScreen
 from screen.mainMenuScreen import MainMenuScreen
 from screen.optionsScreen import OptionsScreen
 from screen.screenType import ScreenType
@@ -59,6 +60,7 @@ class Roam:
         
         self.worldScreen = None  # Will be initialized after session starts
         logger.debug("Initializing UI screens")
+        self.loginScreen = LoginScreen(self.graphik, self.config, self.status, self.api_client)
         self.optionsScreen = OptionsScreen(self.graphik, self.config, self.status)
         self.mainMenuScreen = MainMenuScreen(
             self.graphik, self.config, self.initializeWorldScreen
@@ -68,7 +70,15 @@ class Roam:
         )
         self.inventoryScreen = None  # Will be initialized after player is created
         self.configScreen = ConfigScreen(self.graphik, self.config, self.status)
-        self.currentScreen = self.mainMenuScreen
+        
+        # Start with login screen if not authenticated, otherwise main menu
+        if not self.api_client.is_authenticated():
+            self.currentScreen = self.loginScreen
+            logger.info("Starting with login screen (not authenticated)")
+        else:
+            self.currentScreen = self.mainMenuScreen
+            logger.info("Starting with main menu (already authenticated)")
+        
         logger.info("Roam client initialization complete")
 
     def initializeGameDisplay(self):
@@ -198,14 +208,29 @@ class Roam:
             result = self.currentScreen.run()
             logger.debug(f"Screen returned: {result}")
             
-            if result == ScreenType.MAIN_MENU_SCREEN:
+            if result == ScreenType.LOGIN_SCREEN:
+                logger.debug("Switching to login screen")
+                self.currentScreen = self.loginScreen
+            elif result == ScreenType.MAIN_MENU_SCREEN:
                 logger.info("Restart requested")
                 return "restart"
-            if result == ScreenType.WORLD_SCREEN:
-                if self.worldScreen is None:
-                    logger.debug("World screen not initialized, showing status")
-                    self.status.set("Initializing...")
+            elif result == ScreenType.WORLD_SCREEN:
+                # Initialize world screen if needed and authenticated
+                if not self.api_client.is_authenticated():
+                    logger.warning("Cannot access world screen - not authenticated")
+                    self.status.set("Please login first")
+                    self.currentScreen = self.loginScreen
                     continue
+                
+                if self.worldScreen is None:
+                    logger.debug("Initializing world screen")
+                    self.status.set("Initializing...")
+                    self.initializeWorldScreen()
+                    if self.worldScreen is None:
+                        # Initialization failed, return to login
+                        self.currentScreen = self.loginScreen
+                        continue
+                
                 logger.debug("Switching to world screen")
                 self.currentScreen = self.worldScreen
             elif result == ScreenType.OPTIONS_SCREEN:
