@@ -1,6 +1,6 @@
 # JWT Authentication and Authorization
 
-This document describes the JWT-based authentication and authorization system implemented for the Roam game server.
+This document describes the JWT-based authentication and authorization system implemented for the Roam game server and Python client.
 
 ## Overview
 
@@ -11,6 +11,94 @@ The authentication system provides:
 - Refresh token mechanism
 - Token revocation/blacklisting
 - Secure password hashing with BCrypt
+- Automatic token management in Python client
+
+## Python Client Usage
+
+### Quick Start
+
+```python
+from client.api_client import RoamAPIClient
+
+# Create client
+client = RoamAPIClient("http://localhost:8080")
+
+# Register new user
+response = client.register("myusername", "mypassword", "me@example.com")
+print(f"Logged in as {response['username']}")
+
+# Now you can make authenticated API calls
+session = client.init_session()
+player = client.get_player()
+
+# Logout when done
+client.logout()
+```
+
+### Registration
+
+```python
+client = RoamAPIClient("http://localhost:8080")
+
+try:
+    response = client.register(
+        username="player1",
+        password="securePassword123",
+        email="player1@example.com"
+    )
+    print(f"Welcome, {response['username']}!")
+    print(f"Roles: {response['roles']}")
+    print(f"Token expires in: {response['expiresIn']} seconds")
+except Exception as e:
+    print(f"Registration failed: {e}")
+```
+
+### Login
+
+```python
+client = RoamAPIClient("http://localhost:8080")
+
+try:
+    response = client.login(
+        username="player1",
+        password="securePassword123"
+    )
+    print(f"Welcome back, {response['username']}!")
+    # Client now has authentication tokens stored
+except Exception as e:
+    print(f"Login failed: {e}")
+```
+
+### Using Protected Endpoints
+
+Once authenticated, all API calls automatically include the JWT token:
+
+```python
+# No need to manually add authentication headers!
+session = client.init_session()
+player = client.get_player()
+inventory = client.get_inventory()
+```
+
+The client automatically:
+- Adds `Authorization: Bearer <token>` header to requests
+- Refreshes expired tokens using the refresh token
+- Handles authentication errors
+
+### Logout
+
+```python
+client.logout()  # Revokes tokens and clears client state
+```
+
+### Check Authentication Status
+
+```python
+if client.is_authenticated():
+    print("User is logged in")
+else:
+    print("User is not authenticated")
+```
 
 ## Authentication Flow
 
@@ -234,6 +322,57 @@ mvn test
 5. **Password Policy**: Enforce strong password requirements on the client side.
 6. **Rate Limiting**: Consider implementing rate limiting on authentication endpoints to prevent brute-force attacks.
 
+## GUI Client (Roam Game)
+
+The Roam game client includes a graphical login screen that appears on startup.
+
+### Login Screen Features
+
+- **Interactive Form**: Enter username and password with keyboard input
+- **Toggle Mode**: Press 'R' to switch between Login and Registration
+- **Navigation**: 
+  - TAB: Switch between input fields
+  - ENTER: Submit form
+  - ESC: Cancel or return to previous screen
+- **Visual Feedback**: Active field is highlighted, error messages displayed
+- **Auto-Authentication**: Once logged in, the client stores tokens for API calls
+
+### First Time Setup
+
+1. Start the Roam client
+2. Press 'R' to switch to Registration mode
+3. Enter username, press TAB
+4. Enter password, press TAB  
+5. Enter email, press ENTER
+6. On success, you'll be logged in and taken to the main menu
+
+### Subsequent Sessions
+
+The client will show the login screen on startup:
+1. Enter your username
+2. Press TAB and enter your password
+3. Press ENTER to login
+
+## Demo Script
+
+Run the included demo script to see authentication in action:
+
+```bash
+# Start the server first
+cd server
+mvn spring-boot:run
+
+# In another terminal, run the demo
+cd ..
+python3 demo_api.py
+```
+
+The demo script demonstrates:
+- User registration
+- Automatic token management
+- Authenticated API calls (session, player, inventory, etc.)
+- Logout and token revocation
+
 ## Security Summary
 
 The implemented authentication system provides:
@@ -246,6 +385,8 @@ The implemented authentication system provides:
 - ✅ Protection against CSRF attacks (via JWT in headers)
 - ✅ Session isolation between users
 - ✅ Proper error handling and security headers
+- ✅ Python client with automatic token management
+- ✅ GUI login screen for game client
 
 ### Known Considerations
 
