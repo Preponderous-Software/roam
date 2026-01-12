@@ -1,25 +1,32 @@
 import datetime
 import os
+import logging
 from config.config import Config
 from inventory.inventory import Inventory
 from inventory.inventorySlot import InventorySlot
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
 from ui.status import Status
+from client.api_client import RoamAPIClient
 import pygame
+
+logger = logging.getLogger(__name__)
 
 # @author Daniel McCoy Stephenson
 class InventoryScreen:
     def __init__(
-        self, graphik: Graphik, config: Config, status: Status, inventory: Inventory
+        self, graphik: Graphik, config: Config, status: Status, inventory: Inventory, api_client: RoamAPIClient = None, session_id: str = None
     ):
         self.graphik = graphik
         self.config = config
         self.status = status
-        self.inventory = inventory
+        self.inventory = inventory  # Keep for backward compatibility
+        self.api_client = api_client
+        self.session_id = session_id
         self.nextScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = False
         self.cursorSlot = InventorySlot()
+        self.server_inventory_data = None  # Cache server inventory data
 
     # @source https://stackoverflow.com/questions/63342477/how-to-take-screenshot-of-entire-display-pygame
     def captureScreen(self, name, pos, size):  # (pygame Surface, String, tuple, tuple)
@@ -82,12 +89,30 @@ class InventoryScreen:
     def switchToWorldScreen(self):
         self.nextScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = True
+    
+    def fetchInventoryFromServer(self):
+        """Fetch current inventory data from server."""
+        if self.api_client and self.session_id:
+            try:
+                player_data = self.api_client.get_player(self.session_id)
+                self.server_inventory_data = player_data.get('inventory', {})
+                logger.debug(f"Fetched inventory from server: {self.server_inventory_data.get('numItems', 0)} items")
+            except Exception as e:
+                logger.error(f"Failed to fetch inventory from server: {e}")
+                self.server_inventory_data = None
+        else:
+            logger.debug("No API client available, using local inventory")
+            self.server_inventory_data = None
 
     def quitApplication(self):
         pygame.quit()
         quit()
 
     def drawPlayerInventory(self):
+        # Fetch latest inventory from server if available
+        if self.api_client and self.session_id:
+            self.fetchInventoryFromServer()
+        
         # draw inventory background that is 50% size of screen and centered
         backgroundX = self.graphik.getGameDisplay().get_width() / 4
         backgroundY = self.graphik.getGameDisplay().get_height() / 4
@@ -102,21 +127,114 @@ class InventoryScreen:
         row = 0
         column = 0
         margin = 5
-        for inventorySlot in self.inventory.getInventorySlots():
-            itemX = backgroundX + column * backgroundWidth / itemsPerRow + margin
-            itemY = backgroundY + row * backgroundHeight / itemsPerRow + margin
-            itemWidth = backgroundWidth / itemsPerRow - 2 * margin
-            itemHeight = backgroundHeight / itemsPerRow - 2 * margin
+        
+        # Use server inventory data if available, otherwise fall back to local inventory
+        if self.server_inventory_data:
+            slots = self.server_inventory_data.get('slots', [])
+            selected_index = self.server_inventory_data.get('selectedSlotIndex', 0)
+            
+            for i, slot in enumerate(slots):
+                itemX = backgroundX + column * backgroundWidth / itemsPerRow + margin
+                itemY = backgroundY + row * backgroundHeight / itemsPerRow + margin
+                itemWidth = backgroundWidth / itemsPerRow - 2 * margin
+                itemHeight = backgroundHeight / itemsPerRow - 2 * margin
 
-            if inventorySlot.isEmpty():
-                self.graphik.drawRectangle(
-                    itemX, itemY, itemWidth, itemHeight, (255, 255, 255)
-                )
+                is_empty = slot.get('empty', True)
+                
+                if is_empty:
+                    self.graphik.drawRectangle(
+                        itemX, itemY, itemWidth, itemHeight, (255, 255, 255)
+                    )
+                    if i == selected_index:
+                        # draw yellow square in the middle of the selected inventory slot
+                        self.graphik.drawRectangle(
+                            itemX + itemWidth / 2 - 5,
+                            itemY + itemHeight / 2 - 5,
+                            10,
+                            10,
+                            (255, 255, 0),
+                        )
+                else:
+                    # Draw white rectangle background
+                    self.graphik.drawRectangle(
+                        itemX, itemY, itemWidth, itemHeight, (255, 255, 255)
+                    )
+                    
+                    # Draw item name as text
+                    item_name = slot.get('itemName', '')
+                    if item_name:
+                        self.graphik.drawText(
+                            item_name,
+                            itemX + 5,
+                            itemY + itemHeight / 2 - 10,
+                            16,
+                            (0, 0, 0),
+                        )
+
+                    if i == selected_index:
+                        # draw yellow square in the middle of the selected inventory slot
+                        self.graphik.drawRectangle(
+                            itemX + itemWidth / 2 - 5,
+                            itemY + itemHeight / 2 - 5,
+                            10,
+                            10,
+                            (255, 255, 0),
+                        )
+
+                    # draw item count in bottom right corner of inventory slot
+                    num_items = slot.get('numItems', 0)
+                    self.graphik.drawText(
+                        str(num_items),
+                        itemX + itemWidth - 20,
+                        itemY + itemHeight - 20,
+                        20,
+                        (0, 0, 0),
+                    )
+
+                column += 1
+                if column == itemsPerRow:
+                    column = 0
+                    row += 1
+        else:
+            # Fall back to local inventory (original code)
+            for inventorySlot in self.inventory.getInventorySlots():
+                itemX = backgroundX + column * backgroundWidth / itemsPerRow + margin
+                itemY = backgroundY + row * backgroundHeight / itemsPerRow + margin
+                itemWidth = backgroundWidth / itemsPerRow - 2 * margin
+                itemHeight = backgroundHeight / itemsPerRow - 2 * margin
+
+                if inventorySlot.isEmpty():
+                    self.graphik.drawRectangle(
+                        itemX, itemY, itemWidth, itemHeight, (255, 255, 255)
+                    )
+                    if (
+                        row * itemsPerRow + column
+                        == self.inventory.getSelectedInventorySlotIndex()
+                    ):
+                        # draw yellow square in the middle of the selected inventory slot (may be on any row)
+                        self.graphik.drawRectangle(
+                            itemX + itemWidth / 2 - 5,
+                            itemY + itemHeight / 2 - 5,
+                            10,
+                            10,
+                            (255, 255, 0),
+                        )
+                    column += 1
+                    if column == itemsPerRow:
+                        column = 0
+                        row += 1
+                    continue
+
+                item = inventorySlot.getContents()[0]
+                image = item.getImage()
+                scaledImage = pygame.transform.scale(image, (itemWidth, itemHeight))
+                self.graphik.gameDisplay.blit(scaledImage, (itemX, itemY))
+
                 if (
                     row * itemsPerRow + column
                     == self.inventory.getSelectedInventorySlotIndex()
                 ):
-                    # draw yellow square in the middle of the selected inventory slot (may be on any row)
+                    # draw yellow square in the middle of the selected inventory slot
                     self.graphik.drawRectangle(
                         itemX + itemWidth / 2 - 5,
                         itemY + itemHeight / 2 - 5,
@@ -124,43 +242,20 @@ class InventoryScreen:
                         10,
                         (255, 255, 0),
                     )
+
+                # draw item amount in bottom right corner of inventory slot
+                self.graphik.drawText(
+                    str(inventorySlot.getNumItems()),
+                    itemX + itemWidth - 20,
+                    itemY + itemHeight - 20,
+                    20,
+                    (255, 255, 255),
+                )
+
                 column += 1
                 if column == itemsPerRow:
                     column = 0
                     row += 1
-                continue
-
-            item = inventorySlot.getContents()[0]
-            image = item.getImage()
-            scaledImage = pygame.transform.scale(image, (itemWidth, itemHeight))
-            self.graphik.gameDisplay.blit(scaledImage, (itemX, itemY))
-
-            if (
-                row * itemsPerRow + column
-                == self.inventory.getSelectedInventorySlotIndex()
-            ):
-                # draw yellow square in the middle of the selected inventory slot
-                self.graphik.drawRectangle(
-                    itemX + itemWidth / 2 - 5,
-                    itemY + itemHeight / 2 - 5,
-                    10,
-                    10,
-                    (255, 255, 0),
-                )
-
-            # draw item amount in bottom right corner of inventory slot
-            self.graphik.drawText(
-                str(inventorySlot.getNumItems()),
-                itemX + itemWidth - 20,
-                itemY + itemHeight - 20,
-                20,
-                (255, 255, 255),
-            )
-
-            column += 1
-            if column == itemsPerRow:
-                column = 0
-                row += 1
 
         # draw '(press I to close)' text below inventory
         self.graphik.drawText(

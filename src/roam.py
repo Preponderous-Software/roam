@@ -144,7 +144,8 @@ class Roam:
             # Initialize screens that need player
             logger.debug("Initializing inventory screen")
             self.inventoryScreen = InventoryScreen(
-                self.graphik, self.config, self.status, self.player.getInventory()
+                self.graphik, self.config, self.status, self.player.getInventory(),
+                api_client=self.api_client, session_id=self.session_id
             )
             
             # Initialize world screen with API client
@@ -221,6 +222,9 @@ class Roam:
                     continue
                 logger.debug("Switching to inventory screen")
                 self.currentScreen = self.inventoryScreen
+                # Update api_client and session_id in case they changed
+                self.inventoryScreen.api_client = self.api_client
+                self.inventoryScreen.session_id = self.session_id
                 self.inventoryScreen.setInventory(self.player.getInventory())
             elif result == ScreenType.CONFIG_SCREEN:
                 logger.debug("Switching to config screen")
