@@ -29,7 +29,7 @@ CREATE TABLE players (
     direction INTEGER NOT NULL,
     last_direction INTEGER NOT NULL,
     gathering BOOLEAN NOT NULL,
-    placing BOOLEAN NOT NULL,
+    is_placing BOOLEAN NOT NULL,
     crouching BOOLEAN NOT NULL,
     tick_last_moved BIGINT NOT NULL,
     tick_last_gathered BIGINT NOT NULL,
