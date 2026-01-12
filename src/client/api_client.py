@@ -127,15 +127,20 @@ class RoamAPIClient:
         Load a game session from the database.
         
         Args:
-            session_id: Session ID (uses stored session_id if not provided)
+            session_id: Session ID to load (uses stored session_id if not provided)
             
         Returns:
             Session data
+            
+        Raises:
+            requests.exceptions.HTTPError: If session doesn't exist (404)
         """
         sid = session_id or self.session_id
         if not sid:
             raise ValueError("No session ID provided")
         
+        # Store the session ID for future requests
+        self.session_id = sid
         return self._make_request("POST", f"/api/v1/session/{sid}/load")
     
     # Player Management
