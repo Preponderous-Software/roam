@@ -102,7 +102,8 @@ class InventoryScreen:
             try:
                 player_data = self.api_client.get_player(self.session_id)
                 self.server_inventory_data = player_data.get('inventory', {})
-                logger.debug(f"Fetched inventory from server: {self.server_inventory_data.get('numItems', 0)} items")
+                num_slots = len(self.server_inventory_data.get('slots', []))
+                logger.debug(f"Fetched inventory from server: {num_slots} slots")
             except Exception as e:
                 logger.error(f"Failed to fetch inventory from server: {e}")
                 self.server_inventory_data = None
@@ -162,7 +163,8 @@ class InventoryScreen:
                         itemX, itemY, itemWidth, itemHeight, (255, 255, 255)
                     )
                     
-                    # Draw item name as text
+                    # Draw item name as text (server data doesn't include image assets)
+                    # TODO: Map item names to local image assets for consistent rendering
                     item_name = slot.get('itemName', '')
                     if item_name:
                         self.graphik.drawText(
