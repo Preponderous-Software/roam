@@ -37,6 +37,12 @@ class InventoryScreen:
         pygame.image.save(image, name)  # Save the image to the disk**
 
     def swapCursorSlotWithInventorySlotByIndex(self, index):
+        # When using server inventory, this operation is not supported
+        if self.server_inventory_data:
+            logger.warning("Inventory swap not supported with server inventory")
+            self.status.set("Inventory interaction disabled (server mode)")
+            return
+            
         if self.cursorSlot.isEmpty():
             self.cursorSlot.setContents(
                 self.inventory.getInventorySlots()[index].getContents()
@@ -109,10 +115,6 @@ class InventoryScreen:
         quit()
 
     def drawPlayerInventory(self):
-        # Fetch latest inventory from server if available
-        if self.api_client and self.session_id:
-            self.fetchInventoryFromServer()
-        
         # draw inventory background that is 50% size of screen and centered
         backgroundX = self.graphik.getGameDisplay().get_width() / 4
         backgroundY = self.graphik.getGameDisplay().get_height() / 4
@@ -285,6 +287,12 @@ class InventoryScreen:
         )
 
     def handleMouseClickEvent(self, pos):
+        # When using server inventory, mouse interactions are not supported
+        if self.server_inventory_data:
+            logger.warning("Mouse inventory interaction not supported with server inventory")
+            self.status.set("Inventory interaction disabled (server mode)")
+            return
+            
         # get inventory slot that was clicked
         backgroundX = self.graphik.getGameDisplay().get_width() / 4
         backgroundY = self.graphik.getGameDisplay().get_height() / 4
@@ -335,6 +343,10 @@ class InventoryScreen:
         self.graphik.gameDisplay.blit(scaledImage, pygame.mouse.get_pos())
 
     def run(self):
+        # Fetch inventory from server once when opening the screen
+        if self.api_client and self.session_id:
+            self.fetchInventoryFromServer()
+            
         while not self.changeScreen:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
