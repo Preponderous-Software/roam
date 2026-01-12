@@ -27,7 +27,9 @@ public class JwtUtils {
     
     private static final Logger logger = LoggerFactory.getLogger(JwtUtils.class);
     
-    @Value("${jwt.secret:default-secret-key-for-jwt-token-signing-must-be-at-least-256-bits-long-for-HS256}")
+    private static final String DEFAULT_SECRET = "default-secret-key-for-jwt-token-signing-must-be-at-least-256-bits-long-for-HS256";
+    
+    @Value("${jwt.secret:" + DEFAULT_SECRET + "}")
     private String jwtSecret;
     
     @Value("${jwt.expiration.access:3600000}")
@@ -37,6 +39,10 @@ public class JwtUtils {
     private long jwtRefreshExpirationMs;
     
     private SecretKey getSigningKey() {
+        // Log warning if using default secret
+        if (jwtSecret.equals(DEFAULT_SECRET)) {
+            logger.warn("WARNING: Using default JWT secret. This is insecure! Set JWT_SECRET environment variable in production.");
+        }
         byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }

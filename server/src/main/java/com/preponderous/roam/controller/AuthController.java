@@ -34,7 +34,8 @@ public class AuthController {
             AuthResponse response = authService.register(request);
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (RuntimeException e) {
-            throw new RuntimeException("Registration failed: " + e.getMessage());
+            // Prevent leaking internal error details
+            throw new RuntimeException("Registration failed. Please check your input and try again.");
         }
     }
     
@@ -44,7 +45,8 @@ public class AuthController {
             AuthResponse response = authService.login(request);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
-            throw new RuntimeException("Login failed: " + e.getMessage());
+            // Generic error message for security
+            throw new RuntimeException("Invalid username or password");
         }
     }
     
@@ -54,7 +56,8 @@ public class AuthController {
             AuthResponse response = authService.refreshToken(request);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
-            throw new RuntimeException("Token refresh failed: " + e.getMessage());
+            // Generic error message to not leak token validation details
+            throw new RuntimeException("Invalid or expired refresh token");
         }
     }
     
