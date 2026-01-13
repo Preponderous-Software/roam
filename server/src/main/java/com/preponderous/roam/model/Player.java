@@ -11,6 +11,7 @@ public class Player extends LivingEntity {
     public static final int DEFAULT_PLACE_SPEED = 30;
     public static final double DEFAULT_PLAYER_ENERGY = 100.0;
     
+    private String userId; // Username of the player
     private int direction; // -1 when not moving
     private int lastDirection;
     private Inventory inventory;
@@ -30,8 +31,9 @@ public class Player extends LivingEntity {
     private int tileX;
     private int tileY;
 
-    public Player(long tickCreated) {
+    public Player(String userId, long tickCreated) {
         super("Player", "assets/images/player_down.png", DEFAULT_PLAYER_ENERGY, tickCreated);
+        this.userId = userId;
         this.direction = -1;
         this.lastDirection = -1;
         this.inventory = new Inventory();
@@ -51,6 +53,14 @@ public class Player extends LivingEntity {
         this.roomY = 0;
         this.tileX = 0;
         this.tileY = 0;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     public int getDirection() {

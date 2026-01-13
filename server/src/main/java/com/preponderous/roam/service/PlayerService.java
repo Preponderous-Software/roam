@@ -114,6 +114,20 @@ public class PlayerService {
      * @return true if movement was successful, false if blocked
      */
     public boolean movePlayer(Player player, World world, long currentTick) {
+        return movePlayer(player, world, currentTick, null);
+    }
+    
+    /**
+     * Move player in a direction, handling room transitions and collisions including other players.
+     * Direction: 0=up, 1=left, 2=down, 3=right
+     * 
+     * @param player the player to move
+     * @param world the world containing rooms
+     * @param currentTick current game tick for room generation
+     * @param allPlayers map of all players in the session (for player-to-player collision detection)
+     * @return true if movement was successful, false if blocked
+     */
+    public boolean movePlayer(Player player, World world, long currentTick, java.util.Map<String, Player> allPlayers) {
         int direction = player.getDirection();
         if (direction == -1) {
             return false; // Not moving
@@ -152,21 +166,21 @@ public class PlayerService {
         if (newTileX < 0) {
             newRoomX--;
             newTileX = worldGenerationService.getOrGenerateRoom(world, newRoomX, newRoomY, currentTick).getWidth() - 1;
-            logger.info("Player transitioning to room ({}, {}) from west", newRoomX, newRoomY);
+            logger.info("Player {} transitioning to room ({}, {}) from west", player.getUserId(), newRoomX, newRoomY);
         } else if (newTileX >= currentRoom.getWidth()) {
             newRoomX++;
             newTileX = 0;
-            logger.info("Player transitioning to room ({}, {}) from east", newRoomX, newRoomY);
+            logger.info("Player {} transitioning to room ({}, {}) from east", player.getUserId(), newRoomX, newRoomY);
         }
 
         if (newTileY < 0) {
             newRoomY--;
             newTileY = worldGenerationService.getOrGenerateRoom(world, newRoomX, newRoomY, currentTick).getHeight() - 1;
-            logger.info("Player transitioning to room ({}, {}) from north", newRoomX, newRoomY);
+            logger.info("Player {} transitioning to room ({}, {}) from north", player.getUserId(), newRoomX, newRoomY);
         } else if (newTileY >= currentRoom.getHeight()) {
             newRoomY++;
             newTileY = 0;
-            logger.info("Player transitioning to room ({}, {}) from south", newRoomX, newRoomY);
+            logger.info("Player {} transitioning to room ({}, {}) from south", player.getUserId(), newRoomX, newRoomY);
         }
 
         // Get the destination room
@@ -179,13 +193,29 @@ public class PlayerService {
                      destinationLocationId.equals(entity.getLocationId()));
 
         if (blocked) {
-            logger.debug("Player movement blocked by solid entity at ({}, {}, {}, {})", newRoomX, newRoomY, newTileX, newTileY);
+            logger.debug("Player {} movement blocked by solid entity at ({}, {}, {}, {})", 
+                player.getUserId(), newRoomX, newRoomY, newTileX, newTileY);
             return false; // Movement blocked by solid entity
+        }
+        
+        // Check for collisions with other players
+        if (allPlayers != null) {
+            for (Player otherPlayer : allPlayers.values()) {
+                if (!otherPlayer.getId().equals(player.getId()) &&
+                    otherPlayer.getRoomX() == newRoomX &&
+                    otherPlayer.getRoomY() == newRoomY &&
+                    otherPlayer.getTileX() == newTileX &&
+                    otherPlayer.getTileY() == newTileY) {
+                    logger.debug("Player {} movement blocked by player {} at ({}, {}, {}, {})", 
+                        player.getUserId(), otherPlayer.getUserId(), newRoomX, newRoomY, newTileX, newTileY);
+                    return false; // Movement blocked by another player
+                }
+            }
         }
 
         // Update player position
-        logger.debug("Player moved from ({}, {}, {}, {}) to ({}, {}, {}, {})", 
-                    currentRoomX, currentRoomY, currentTileX, currentTileY,
+        logger.debug("Player {} moved from ({}, {}, {}, {}) to ({}, {}, {}, {})", 
+                    player.getUserId(), currentRoomX, currentRoomY, currentTileX, currentTileY,
                     newRoomX, newRoomY, newTileX, newTileY);
         player.setRoomX(newRoomX);
         player.setRoomY(newRoomY);

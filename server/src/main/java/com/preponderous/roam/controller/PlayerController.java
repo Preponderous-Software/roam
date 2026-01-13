@@ -63,7 +63,7 @@ public class PlayerController {
         if (gameState == null) {
             throw new SessionNotFoundException(sessionId);
         }
-        Player player = gameState.getPlayer();
+        Player player = gameState.getPlayer(username);
         PlayerDTO playerDTO = mappingService.toPlayerDTO(player);
         return ResponseEntity.ok(playerDTO);
     }
@@ -82,7 +82,7 @@ public class PlayerController {
             throw new SessionNotFoundException(sessionId);
         }
         
-        Player player = gameState.getPlayer();
+        Player player = gameState.getPlayer(username);
 
         String action = request.getAction();
         if (action == null || action.trim().isEmpty()) {
@@ -257,7 +257,7 @@ public class PlayerController {
             throw new SessionNotFoundException(sessionId);
         }
         
-        Player player = gameState.getPlayer();
+        Player player = gameState.getPlayer(username);
 
         if ("add".equals(operation)) {
             playerService.addEnergy(player, amount);

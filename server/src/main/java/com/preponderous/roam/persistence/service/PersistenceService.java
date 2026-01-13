@@ -85,8 +85,11 @@ public class PersistenceService implements GameStateStorage {
             // Save session first
             sessionEntity = sessionRepository.save(sessionEntity);
             
-            // Save player
-            savePlayer(gameState.getPlayer(), sessionEntity);
+            // Save owner's player (for now, full multiplayer persistence is a future enhancement)
+            Player ownerPlayer = gameState.getPlayer(gameState.getOwnerId());
+            if (ownerPlayer != null) {
+                savePlayer(ownerPlayer, sessionEntity);
+            }
             
             // Save rooms
             saveRooms(gameState.getWorld(), sessionEntity);
@@ -140,9 +143,9 @@ public class PersistenceService implements GameStateStorage {
             // Load player
             Optional<PlayerEntityData> playerEntityOpt = playerRepository.findBySessionId(sessionId);
             if (playerEntityOpt.isPresent()) {
-                Player player = convertToPlayer(playerEntityOpt.get());
+                Player player = convertToPlayer(playerEntityOpt.get(), sessionEntity.getUserId());
                 // Replace the default player with loaded player
-                copyPlayerData(player, gameState.getPlayer());
+                copyPlayerData(player, gameState.getPlayer(sessionEntity.getUserId()));
             }
             
             logger.info("Game state loaded successfully for session: {}", sessionId);
@@ -506,8 +509,8 @@ public class PersistenceService implements GameStateStorage {
         }
     }
     
-    private Player convertToPlayer(PlayerEntityData playerEntity) {
-        Player player = new Player(playerEntity.getTickCreated());
+    private Player convertToPlayer(PlayerEntityData playerEntity, String userId) {
+        Player player = new Player(userId, playerEntity.getTickCreated());
         player.setEnergy(playerEntity.getEnergy());
         player.setTargetEnergy(playerEntity.getTargetEnergy());
         player.setDirection(playerEntity.getDirection());
