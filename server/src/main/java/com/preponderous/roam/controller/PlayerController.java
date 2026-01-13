@@ -16,6 +16,8 @@ import com.preponderous.roam.service.PlayerService;
 import com.preponderous.roam.service.WorldGenerationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -42,16 +44,26 @@ public class PlayerController {
     
     @Autowired
     private WorldGenerationService worldGenerationService;
+    
+    /**
+     * Get the username of the currently authenticated user.
+     */
+    private String getCurrentUsername() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication.getName();
+    }
 
     /**
      * Get player state.
      */
     @GetMapping
     public ResponseEntity<PlayerDTO> getPlayer(@PathVariable String sessionId) {
-        Player player = gameService.getPlayer(sessionId);
-        if (player == null) {
+        String username = getCurrentUsername();
+        GameState gameState = gameService.getSession(sessionId, username);
+        if (gameState == null) {
             throw new SessionNotFoundException(sessionId);
         }
+        Player player = gameState.getPlayer();
         PlayerDTO playerDTO = mappingService.toPlayerDTO(player);
         return ResponseEntity.ok(playerDTO);
     }
@@ -64,10 +76,13 @@ public class PlayerController {
             @PathVariable String sessionId,
             @RequestBody PlayerActionRequest request) {
         
-        Player player = gameService.getPlayer(sessionId);
-        if (player == null) {
+        String username = getCurrentUsername();
+        GameState gameState = gameService.getSession(sessionId, username);
+        if (gameState == null) {
             throw new SessionNotFoundException(sessionId);
         }
+        
+        Player player = gameState.getPlayer();
 
         String action = request.getAction();
         if (action == null || action.trim().isEmpty()) {
@@ -93,7 +108,6 @@ public class PlayerController {
                         playerService.setTickLastGathered(player, currentTick);
                         
                         // Get current game state and room
-                        GameState gameState = gameService.getSession(sessionId);
                         Room currentRoom = worldGenerationService.getOrGenerateRoom(
                             gameState.getWorld(), 
                             player.getRoomX(), 
@@ -149,7 +163,6 @@ public class PlayerController {
                             
                             if (targetTileX != null && targetTileY != null) {
                                 // Get current room
-                                GameState gameState = gameService.getSession(sessionId);
                                 Room currentRoom = worldGenerationService.getOrGenerateRoom(
                                     gameState.getWorld(), 
                                     player.getRoomX(), 
@@ -238,10 +251,13 @@ public class PlayerController {
             @RequestParam double amount,
             @RequestParam(defaultValue = "add") String operation) {
         
-        Player player = gameService.getPlayer(sessionId);
-        if (player == null) {
+        String username = getCurrentUsername();
+        GameState gameState = gameService.getSession(sessionId, username);
+        if (gameState == null) {
             throw new SessionNotFoundException(sessionId);
         }
+        
+        Player player = gameState.getPlayer();
 
         if ("add".equals(operation)) {
             playerService.addEnergy(player, amount);

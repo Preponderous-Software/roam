@@ -30,7 +30,7 @@ public class EntityIdPersistenceTest {
         String sessionId = "test-id-preservation-static";
         WorldConfig worldConfig = new WorldConfig(99999L, 20, 20, 0.1, 0.0);
         World world = new World(worldConfig);
-        GameState gameState = new GameState(sessionId, 0L, world);
+        GameState gameState = new GameState(sessionId, "testuser", 0L, world);
         
         Room room = new Room(0, 0, worldConfig.getRoomWidth(), worldConfig.getRoomHeight());
         world.addRoom(room);
@@ -94,7 +94,7 @@ public class EntityIdPersistenceTest {
         String sessionId = "test-id-preservation-living";
         WorldConfig worldConfig = new WorldConfig(88888L, 20, 20, 0.1, 0.0);
         World world = new World(worldConfig);
-        GameState gameState = new GameState(sessionId, 0L, world);
+        GameState gameState = new GameState(sessionId, "testuser", 0L, world);
         
         Room room = new Room(0, 0, worldConfig.getRoomWidth(), worldConfig.getRoomHeight());
         world.addRoom(room);
@@ -162,7 +162,7 @@ public class EntityIdPersistenceTest {
         String sessionId = "test-multi-save-id-preservation";
         WorldConfig worldConfig = new WorldConfig(77777L, 20, 20, 0.1, 0.0);
         World world = new World(worldConfig);
-        GameState gameState = new GameState(sessionId, 0L, world);
+        GameState gameState = new GameState(sessionId, "testuser", 0L, world);
         
         Room room = new Room(0, 0, worldConfig.getRoomWidth(), worldConfig.getRoomHeight());
         world.addRoom(room);

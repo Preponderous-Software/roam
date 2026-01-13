@@ -26,6 +26,7 @@ class SessionControllerWorldTest {
     private GameService gameService;
     
     private String authToken;
+    private String username;
 
     private String getBaseUrl() {
         return "http://localhost:" + port + "/api/v1/session";
@@ -34,8 +35,9 @@ class SessionControllerWorldTest {
     @BeforeEach
     void setUp() {
         // Register and login to get auth token
+        username = "testuser" + System.currentTimeMillis();
         RegisterRequest registerRequest = new RegisterRequest(
-                "testuser" + System.currentTimeMillis(),
+                username,
                 "password123",
                 "test" + System.currentTimeMillis() + "@example.com"
         );
@@ -58,7 +60,7 @@ class SessionControllerWorldTest {
     @Test
     void testGetWorld() {
         // Create a session
-        GameState gameState = gameService.createSession();
+        GameState gameState = gameService.createSession(username);
         String sessionId = gameState.getSessionId();
 
         // Get the world
@@ -91,7 +93,7 @@ class SessionControllerWorldTest {
     @Test
     void testGetRoom() {
         // Create a session
-        GameState gameState = gameService.createSession();
+        GameState gameState = gameService.createSession(username);
         String sessionId = gameState.getSessionId();
 
         // Get a specific room
@@ -115,7 +117,7 @@ class SessionControllerWorldTest {
     @Test
     void testGetRoom_GenerateNewRoom() {
         // Create a session
-        GameState gameState = gameService.createSession();
+        GameState gameState = gameService.createSession(username);
         String sessionId = gameState.getSessionId();
 
         // Get a room that hasn't been generated yet
@@ -144,7 +146,7 @@ class SessionControllerWorldTest {
     @Test
     void testGetRoom_NegativeCoordinates() {
         // Create a session
-        GameState gameState = gameService.createSession();
+        GameState gameState = gameService.createSession(username);
         String sessionId = gameState.getSessionId();
 
         // Test negative coordinates
