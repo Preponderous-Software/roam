@@ -17,6 +17,17 @@ from ui.status import Status
 from screen.serverBackedWorldScreen import ServerBackedWorldScreen
 from world.tickCounter import TickCounter
 
+# Import item classes for inventory restoration
+from entity.apple import Apple
+from entity.banana import Banana
+from entity.stone import Stone
+from entity.coalOre import CoalOre
+from entity.ironOre import IronOre
+from entity.oakWood import OakWood
+from entity.jungleWood import JungleWood
+from entity.grass import Grass
+from entity.leaves import Leaves
+
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
@@ -226,13 +237,37 @@ class Roam:
                     if not slot.get('empty', True):
                         item_name = slot.get('itemName')
                         num_items = slot.get('numItems', 1)
-                        # Add items to inventory
+                        # Create item objects and add to inventory
                         for _ in range(num_items):
-                            self.player.getInventory().placeIntoFirstAvailableInventorySlot(item_name)
+                            item = self._createItemFromName(item_name)
+                            if item:
+                                self.player.getInventory().placeIntoFirstAvailableInventorySlot(item)
+                            else:
+                                logger.warning(f"Unknown item type: {item_name}")
                 
                 # Set selected slot index
                 selected_index = inventory_data.get('selectedInventorySlotIndex', 0)
                 self.player.getInventory().setSelectedInventorySlotIndex(selected_index)
+    
+    def _createItemFromName(self, item_name):
+        """Create an item object from its name string."""
+        # Map item names to their classes
+        item_classes = {
+            'Apple': Apple,
+            'Banana': Banana,
+            'Stone': Stone,
+            'CoalOre': CoalOre,
+            'IronOre': IronOre,
+            'OakWood': OakWood,
+            'JungleWood': JungleWood,
+            'Grass': Grass,
+            'Leaves': Leaves,
+        }
+        
+        item_class = item_classes.get(item_name)
+        if item_class:
+            return item_class()
+        return None
     
     def _extract_username_from_token(self):
         """Extract username from JWT access token."""
