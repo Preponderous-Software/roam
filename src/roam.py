@@ -206,16 +206,12 @@ class Roam:
                 logger.debug(f"Updating player direction: {direction}")
                 self.player.setDirection(direction)
             
-            # Update position
+            # Log position (position is tracked server-side, not on local player object)
             room_x = player_data.get('roomX', 0)
             room_y = player_data.get('roomY', 0)
             tile_x = player_data.get('tileX', 0)
             tile_y = player_data.get('tileY', 0)
-            logger.debug(f"Updating player position: Room({room_x}, {room_y}), Tile({tile_x}, {tile_y})")
-            self.player.setRoomX(room_x)
-            self.player.setRoomY(room_y)
-            self.player.setTileX(tile_x)
-            self.player.setTileY(tile_y)
+            logger.debug(f"Player position from server: Room({room_x}, {room_y}), Tile({tile_x}, {tile_y})")
             
             # Update inventory
             inventory_data = player_data.get('inventory', {})

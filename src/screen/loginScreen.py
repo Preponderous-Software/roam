@@ -23,6 +23,7 @@ class LoginScreen:
         self.email_input = ""
         self.active_field = "username"  # username, password, or email
         self.show_registration = False  # Toggle between login and registration
+        self.show_password = False  # Toggle password visibility
         self.error_message = ""
         self.success_message = ""
         
@@ -135,47 +136,55 @@ class LoginScreen:
         field_width = x / 3
         field_height = 50
         field_x = x / 2 - field_width / 2
+        label_x = field_x - 15  # Position labels to the left of fields
         start_y = y / 3
-        spacing = 70
+        spacing = 80  # Increased spacing to prevent overlap
         
         # Username field
         username_y = start_y
         username_color = (255, 255, 100) if self.active_field == "username" else (200, 200, 200)
+        # Draw label above field to avoid overlap
+        self.graphik.drawText("Username:", field_x + field_width / 2, username_y - 20, 18, (200, 200, 200))
         pygame.draw.rect(
             self.graphik.getGameDisplay(),
             username_color,
             (field_x, username_y, field_width, field_height),
             2
         )
-        self.graphik.drawText("Username:", field_x - 10, username_y + 25, 20, (255, 255, 255), align="right")
-        self.graphik.drawText(self.username_input or " ", field_x + 10, username_y + 25, 20, (255, 255, 255), align="left")
+        self.graphik.drawText(self.username_input or "", field_x + 10, username_y + 25, 20, (255, 255, 255), align="left")
         
         # Password field
         password_y = username_y + spacing
         password_color = (255, 255, 100) if self.active_field == "password" else (200, 200, 200)
+        # Draw label above field to avoid overlap
+        password_label = "Password: (Press P to show)" if not self.show_password else "Password: (Press P to hide)"
+        self.graphik.drawText(password_label, field_x + field_width / 2, password_y - 20, 18, (200, 200, 200))
         pygame.draw.rect(
             self.graphik.getGameDisplay(),
             password_color,
             (field_x, password_y, field_width, field_height),
             2
         )
-        self.graphik.drawText("Password:", field_x - 10, password_y + 25, 20, (255, 255, 255), align="right")
-        # Show asterisks for password
-        masked_password = "*" * len(self.password_input) if self.password_input else " "
-        self.graphik.drawText(masked_password, field_x + 10, password_y + 25, 20, (255, 255, 255), align="left")
+        # Show password or asterisks based on toggle
+        if self.show_password:
+            display_password = self.password_input or ""
+        else:
+            display_password = "*" * len(self.password_input) if self.password_input else ""
+        self.graphik.drawText(display_password, field_x + 10, password_y + 25, 20, (255, 255, 255), align="left")
         
         # Email field (only for registration)
         if self.show_registration:
             email_y = password_y + spacing
             email_color = (255, 255, 100) if self.active_field == "email" else (200, 200, 200)
+            # Draw label above field to avoid overlap
+            self.graphik.drawText("Email:", field_x + field_width / 2, email_y - 20, 18, (200, 200, 200))
             pygame.draw.rect(
                 self.graphik.getGameDisplay(),
                 email_color,
                 (field_x, email_y, field_width, field_height),
                 2
             )
-            self.graphik.drawText("Email:", field_x - 10, email_y + 25, 20, (255, 255, 255), align="right")
-            self.graphik.drawText(self.email_input or " ", field_x + 10, email_y + 25, 20, (255, 255, 255), align="left")
+            self.graphik.drawText(self.email_input or "", field_x + 10, email_y + 25, 20, (255, 255, 255), align="left")
         
         # Messages
         message_y = y * 2 / 3
@@ -204,6 +213,11 @@ class LoginScreen:
                 self.show_registration = not self.show_registration
                 self.error_message = ""
                 self.email_input = ""
+                pygame.time.wait(200)  # Debounce
+            
+            # Check for 'P' key to toggle password visibility
+            if keys[pygame.K_p]:
+                self.show_password = not self.show_password
                 pygame.time.wait(200)  # Debounce
             
             # Draw
