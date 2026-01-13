@@ -65,6 +65,7 @@ public class PersistenceService implements GameStateStorage {
             } else {
                 sessionEntity = new GameSessionEntity();
                 sessionEntity.setSessionId(sessionId);
+                sessionEntity.setUserId(gameState.getUserId());
                 sessionEntity.setCreatedAt(LocalDateTime.now());
                 logger.debug("Creating new session: {}", sessionId);
             }
@@ -134,7 +135,7 @@ public class PersistenceService implements GameStateStorage {
             }
             
             // Create game state
-            GameState gameState = new GameState(sessionId, sessionEntity.getCurrentTick(), world);
+            GameState gameState = new GameState(sessionId, sessionEntity.getUserId(), sessionEntity.getCurrentTick(), world);
             
             // Load player
             Optional<PlayerEntityData> playerEntityOpt = playerRepository.findBySessionId(sessionId);

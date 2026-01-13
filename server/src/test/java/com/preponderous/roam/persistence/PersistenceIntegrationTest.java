@@ -33,7 +33,7 @@ public class PersistenceIntegrationTest {
         String sessionId = "test-session-123";
         WorldConfig worldConfig = new WorldConfig(12345L, 20, 20, 0.1, 0.0);
         World world = new World(worldConfig);
-        GameState gameState = new GameState(sessionId, 0L, world);
+        GameState gameState = new GameState(sessionId, "testuser", 0L, world);
         
         // Modify player state
         Player player = gameState.getPlayer();
@@ -78,7 +78,7 @@ public class PersistenceIntegrationTest {
         String sessionId = "test-session-456";
         WorldConfig worldConfig = WorldConfig.getDefault();
         World world = new World(worldConfig);
-        GameState gameState = new GameState(sessionId, 0L, world);
+        GameState gameState = new GameState(sessionId, "testuser", 0L, world);
         persistenceService.saveGameState(gameState);
         
         // When: Modify and save again
@@ -99,7 +99,7 @@ public class PersistenceIntegrationTest {
         String sessionId = "test-session-789";
         WorldConfig worldConfig = WorldConfig.getDefault();
         World world = new World(worldConfig);
-        GameState gameState = new GameState(sessionId, 0L, world);
+        GameState gameState = new GameState(sessionId, "testuser", 0L, world);
         persistenceService.saveGameState(gameState);
         
         // Verify it exists
@@ -125,7 +125,7 @@ public class PersistenceIntegrationTest {
         // When: Save a session
         WorldConfig worldConfig = WorldConfig.getDefault();
         World world = new World(worldConfig);
-        GameState gameState = new GameState(sessionId, 0L, world);
+        GameState gameState = new GameState(sessionId, "testuser", 0L, world);
         persistenceService.saveGameState(gameState);
         
         // Then: Should exist

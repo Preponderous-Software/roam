@@ -28,8 +28,37 @@ def main():
     print("   ✓ Client initialized")
     print()
     
+    # Register or login
+    print("2. Authenticating with server...")
+    import time
+    username = f"demo_user_{int(time.time())}"
+    password = "demo_password_123"
+    email = f"demo_{int(time.time())}@example.com"
+    
+    try:
+        # Try to register a new user
+        print(f"   • Registering new user: {username}")
+        auth_response = client.register(username, password, email)
+        print(f"   ✓ Registration successful!")
+        print(f"   ✓ Username: {auth_response['username']}")
+        print(f"   ✓ Roles: {', '.join(auth_response['roles'])}")
+        print(f"   ✓ Access token expires in: {auth_response['expiresIn']} seconds")
+    except Exception as e:
+        print(f"   ✗ Registration failed: {e}")
+        print(f"   • Trying to login instead...")
+        try:
+            # If registration fails, try to login
+            auth_response = client.login(username, password)
+            print(f"   ✓ Login successful!")
+            print(f"   ✓ Username: {auth_response['username']}")
+        except Exception as login_error:
+            print(f"   ✗ Login also failed: {login_error}")
+            print("   Please ensure the server is running and accessible")
+            return
+    print()
+    
     # Create a new game session
-    print("2. Creating new game session...")
+    print("3. Creating new game session...")
     try:
         session = client.init_session()
         print(f"   ✓ Session created: {session['sessionId']}")
@@ -42,7 +71,7 @@ def main():
     print()
     
     # Get player state
-    print("3. Fetching player state...")
+    print("4. Fetching player state...")
     try:
         player = client.get_player()
         print(f"   ✓ Player name: {player['name']}")
@@ -55,7 +84,7 @@ def main():
     print()
     
     # Add items to inventory
-    print("4. Adding items to inventory...")
+    print("5. Adding items to inventory...")
     try:
         # Add apple
         inv = client.add_item_to_inventory("apple")
@@ -77,7 +106,7 @@ def main():
     print()
     
     # Perform player actions
-    print("5. Performing player actions...")
+    print("6. Performing player actions...")
     try:
         # Move up
         player = client.perform_player_action("move", direction=0)
@@ -100,7 +129,7 @@ def main():
     print()
     
     # Update energy
-    print("6. Managing player energy...")
+    print("7. Managing player energy...")
     try:
         # Remove energy
         player = client.update_player_energy(10, "remove")
@@ -115,7 +144,7 @@ def main():
     print()
     
     # Get inventory
-    print("7. Viewing inventory...")
+    print("8. Viewing inventory...")
     try:
         inventory = client.get_inventory()
         print(f"   ✓ Total items: {inventory['numItems']}")
@@ -131,7 +160,7 @@ def main():
     print()
     
     # Update tick
-    print("8. Advancing game tick...")
+    print("9. Advancing game tick...")
     try:
         session = client.update_tick()
         print(f"   ✓ Tick advanced to: {session['currentTick']}")
@@ -141,7 +170,7 @@ def main():
     print()
     
     # Get session state
-    print("9. Fetching complete session state...")
+    print("10. Fetching complete session state...")
     try:
         session = client.get_session()
         print(f"   ✓ Session ID: {session['sessionId']}")
@@ -153,11 +182,22 @@ def main():
         return
     print()
     
+    # Logout
+    print("11. Logging out...")
+    try:
+        client.logout()
+        print("   ✓ Logged out successfully")
+        print("   ✓ Tokens revoked")
+    except Exception as e:
+        print(f"   ✗ Failed to logout: {e}")
+    print()
+    
     print("=" * 60)
     print("Demo completed successfully!")
     print("=" * 60)
     print()
     print("Summary:")
+    print("- User authentication with JWT tokens")
     print("- Spring Boot server manages all game state")
     print("- Python client communicates via REST API")
     print("- All business logic is server-side")

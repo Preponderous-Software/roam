@@ -19,6 +19,9 @@ public class GameSessionEntity {
     @Column(name = "session_id", length = 36, nullable = false)
     private String sessionId;
     
+    @Column(name = "user_id", length = 50, nullable = false)
+    private String userId;  // Username of the session owner
+    
     @Column(name = "current_tick", nullable = false)
     private long currentTick;
     
@@ -54,11 +57,12 @@ public class GameSessionEntity {
         this.updatedAt = LocalDateTime.now();
     }
     
-    public GameSessionEntity(String sessionId, long currentTick, long worldSeed, 
+    public GameSessionEntity(String sessionId, String userId, long currentTick, long worldSeed, 
                            int worldRoomWidth, int worldRoomHeight, 
                            double worldResourceDensity, double worldHazardDensity) {
         this();
         this.sessionId = sessionId;
+        this.userId = userId;
         this.currentTick = currentTick;
         this.worldSeed = worldSeed;
         this.worldRoomWidth = worldRoomWidth;
@@ -80,6 +84,14 @@ public class GameSessionEntity {
     
     public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
+    }
+    
+    public String getUserId() {
+        return userId;
+    }
+    
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
     
     public long getCurrentTick() {

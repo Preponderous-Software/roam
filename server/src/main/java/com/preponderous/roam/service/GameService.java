@@ -44,9 +44,9 @@ public class GameService {
     private boolean autoSaveEnabled;
 
     /**
-     * Create a new game session.
+     * Create a new game session for a user.
      */
-    public GameState createSession() {
+    public GameState createSession(String userId) {
         String sessionId = UUID.randomUUID().toString();
         long initialTick = 0;
         
@@ -57,7 +57,7 @@ public class GameService {
         // Generate the starting room (0, 0)
         Room startingRoom = worldGenerationService.getOrGenerateRoom(world, 0, 0, initialTick);
         
-        GameState gameState = new GameState(sessionId, initialTick, world);
+        GameState gameState = new GameState(sessionId, userId, initialTick, world);
         
         // Initialize player at center of starting room
         Player player = gameState.getPlayer();
@@ -66,13 +66,41 @@ public class GameService {
         playerService.setPlayerPosition(player, 0, 0, centerX, centerY);
         
         sessions.put(sessionId, gameState);
+        logger.info("Created session {} for user {}", sessionId, userId);
         return gameState;
     }
 
     /**
-     * Get an existing game session.
+     * Get an existing game session and verify ownership.
      * Attempts to load from memory first, then from database if not in memory.
      */
+    public GameState getSession(String sessionId, String userId) {
+        GameState gameState = sessions.get(sessionId);
+        if (gameState == null) {
+            // Try to load from database
+            Optional<GameState> loadedState = gameStateStorage.loadGameState(sessionId);
+            if (loadedState.isPresent()) {
+                gameState = loadedState.get();
+                sessions.put(sessionId, gameState);
+                logger.info("Loaded session from database: {}", sessionId);
+            }
+        }
+        
+        // Verify ownership
+        if (gameState != null && !gameState.getUserId().equals(userId)) {
+            logger.warn("User {} attempted to access session {} owned by {}", 
+                userId, sessionId, gameState.getUserId());
+            return null;  // Return null if user doesn't own the session
+        }
+        
+        return gameState;
+    }
+
+    /**
+     * Get an existing game session without ownership check (for internal use).
+     * @deprecated Use getSession(String sessionId, String userId) for user-facing operations
+     */
+    @Deprecated
     public GameState getSession(String sessionId) {
         GameState gameState = sessions.get(sessionId);
         if (gameState == null) {

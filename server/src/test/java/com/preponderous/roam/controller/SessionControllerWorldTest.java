@@ -1,17 +1,15 @@
 package com.preponderous.roam.controller;
 
-import com.preponderous.roam.dto.RoomDTO;
-import com.preponderous.roam.dto.SessionDTO;
-import com.preponderous.roam.dto.WorldDTO;
+import com.preponderous.roam.dto.*;
 import com.preponderous.roam.model.GameState;
 import com.preponderous.roam.service.GameService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -26,20 +24,49 @@ class SessionControllerWorldTest {
 
     @Autowired
     private GameService gameService;
+    
+    private String authToken;
+    private String username;
 
     private String getBaseUrl() {
         return "http://localhost:" + port + "/api/v1/session";
+    }
+    
+    @BeforeEach
+    void setUp() {
+        // Register and login to get auth token
+        username = "testuser" + System.currentTimeMillis();
+        RegisterRequest registerRequest = new RegisterRequest(
+                username,
+                "password123",
+                "test" + System.currentTimeMillis() + "@example.com"
+        );
+        
+        ResponseEntity<AuthResponse> authResponse = restTemplate.postForEntity(
+                "http://localhost:" + port + "/api/v1/auth/register",
+                registerRequest,
+                AuthResponse.class
+        );
+        
+        authToken = authResponse.getBody().getAccessToken();
+    }
+    
+    private HttpHeaders getAuthHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(authToken);
+        return headers;
     }
 
     @Test
     void testGetWorld() {
         // Create a session
-        GameState gameState = gameService.createSession();
+        GameState gameState = gameService.createSession(username);
         String sessionId = gameState.getSessionId();
 
         // Get the world
         String url = getBaseUrl() + "/" + sessionId + "/world";
-        ResponseEntity<WorldDTO> response = restTemplate.getForEntity(url, WorldDTO.class);
+        HttpEntity<Void> request = new HttpEntity<>(getAuthHeaders());
+        ResponseEntity<WorldDTO> response = restTemplate.exchange(url, HttpMethod.GET, request, WorldDTO.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -57,7 +84,8 @@ class SessionControllerWorldTest {
     @Test
     void testGetWorld_InvalidSession() {
         String url = getBaseUrl() + "/invalid-session-id/world";
-        ResponseEntity<WorldDTO> response = restTemplate.getForEntity(url, WorldDTO.class);
+        HttpEntity<Void> request = new HttpEntity<>(getAuthHeaders());
+        ResponseEntity<WorldDTO> response = restTemplate.exchange(url, HttpMethod.GET, request, WorldDTO.class);
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
@@ -65,12 +93,13 @@ class SessionControllerWorldTest {
     @Test
     void testGetRoom() {
         // Create a session
-        GameState gameState = gameService.createSession();
+        GameState gameState = gameService.createSession(username);
         String sessionId = gameState.getSessionId();
 
         // Get a specific room
         String url = getBaseUrl() + "/" + sessionId + "/room/0/0";
-        ResponseEntity<RoomDTO> response = restTemplate.getForEntity(url, RoomDTO.class);
+        HttpEntity<Void> request = new HttpEntity<>(getAuthHeaders());
+        ResponseEntity<RoomDTO> response = restTemplate.exchange(url, HttpMethod.GET, request, RoomDTO.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -88,12 +117,13 @@ class SessionControllerWorldTest {
     @Test
     void testGetRoom_GenerateNewRoom() {
         // Create a session
-        GameState gameState = gameService.createSession();
+        GameState gameState = gameService.createSession(username);
         String sessionId = gameState.getSessionId();
 
         // Get a room that hasn't been generated yet
         String url = getBaseUrl() + "/" + sessionId + "/room/5/5";
-        ResponseEntity<RoomDTO> response = restTemplate.getForEntity(url, RoomDTO.class);
+        HttpEntity<Void> request = new HttpEntity<>(getAuthHeaders());
+        ResponseEntity<RoomDTO> response = restTemplate.exchange(url, HttpMethod.GET, request, RoomDTO.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -107,7 +137,8 @@ class SessionControllerWorldTest {
     @Test
     void testGetRoom_InvalidSession() {
         String url = getBaseUrl() + "/invalid-session-id/room/0/0";
-        ResponseEntity<RoomDTO> response = restTemplate.getForEntity(url, RoomDTO.class);
+        HttpEntity<Void> request = new HttpEntity<>(getAuthHeaders());
+        ResponseEntity<RoomDTO> response = restTemplate.exchange(url, HttpMethod.GET, request, RoomDTO.class);
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
@@ -115,12 +146,13 @@ class SessionControllerWorldTest {
     @Test
     void testGetRoom_NegativeCoordinates() {
         // Create a session
-        GameState gameState = gameService.createSession();
+        GameState gameState = gameService.createSession(username);
         String sessionId = gameState.getSessionId();
 
         // Test negative coordinates
         String url = getBaseUrl() + "/" + sessionId + "/room/-1/-1";
-        ResponseEntity<RoomDTO> response = restTemplate.getForEntity(url, RoomDTO.class);
+        HttpEntity<Void> request = new HttpEntity<>(getAuthHeaders());
+        ResponseEntity<RoomDTO> response = restTemplate.exchange(url, HttpMethod.GET, request, RoomDTO.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());

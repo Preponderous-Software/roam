@@ -11,6 +11,8 @@ import com.preponderous.roam.service.WorldGenerationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -36,13 +38,22 @@ public class SessionController {
 
     @Autowired
     private WorldGenerationService worldGenerationService;
+    
+    /**
+     * Get the username of the currently authenticated user.
+     */
+    private String getCurrentUsername() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication.getName();
+    }
 
     /**
      * Initialize a new game session.
      */
     @PostMapping("/init")
     public ResponseEntity<SessionDTO> initSession(@RequestBody(required = false) InitSessionRequest request) {
-        GameState gameState = gameService.createSession();
+        String username = getCurrentUsername();
+        GameState gameState = gameService.createSession(username);
         SessionDTO sessionDTO = mappingService.toSessionDTO(gameState);
         return new ResponseEntity<>(sessionDTO, HttpStatus.CREATED);
     }
@@ -52,7 +63,8 @@ public class SessionController {
      */
     @GetMapping("/{sessionId}")
     public ResponseEntity<SessionDTO> getSession(@PathVariable String sessionId) {
-        GameState gameState = gameService.getSession(sessionId);
+        String username = getCurrentUsername();
+        GameState gameState = gameService.getSession(sessionId, username);
         if (gameState == null) {
             throw new SessionNotFoundException(sessionId);
         }
@@ -65,7 +77,9 @@ public class SessionController {
      */
     @DeleteMapping("/{sessionId}")
     public ResponseEntity<Void> deleteSession(@PathVariable String sessionId) {
-        if (!gameService.sessionExists(sessionId)) {
+        String username = getCurrentUsername();
+        GameState gameState = gameService.getSession(sessionId, username);
+        if (gameState == null) {
             throw new SessionNotFoundException(sessionId);
         }
         gameService.deleteSession(sessionId);
@@ -77,11 +91,13 @@ public class SessionController {
      */
     @PostMapping("/{sessionId}/tick")
     public ResponseEntity<SessionDTO> updateTick(@PathVariable String sessionId) {
-        if (!gameService.sessionExists(sessionId)) {
+        String username = getCurrentUsername();
+        GameState gameState = gameService.getSession(sessionId, username);
+        if (gameState == null) {
             throw new SessionNotFoundException(sessionId);
         }
         gameService.updateTick(sessionId);
-        GameState gameState = gameService.getSession(sessionId);
+        gameState = gameService.getSession(sessionId, username);
         SessionDTO sessionDTO = mappingService.toSessionDTO(gameState);
         return ResponseEntity.ok(sessionDTO);
     }
@@ -91,7 +107,9 @@ public class SessionController {
      */
     @PostMapping("/{sessionId}/save")
     public ResponseEntity<Map<String, String>> saveSession(@PathVariable String sessionId) {
-        if (!gameService.sessionExists(sessionId)) {
+        String username = getCurrentUsername();
+        GameState gameState = gameService.getSession(sessionId, username);
+        if (gameState == null) {
             throw new SessionNotFoundException(sessionId);
         }
         gameService.saveSession(sessionId);
@@ -106,8 +124,9 @@ public class SessionController {
      */
     @PostMapping("/{sessionId}/load")
     public ResponseEntity<SessionDTO> loadSession(@PathVariable String sessionId) {
+        String username = getCurrentUsername();
         GameState gameState = gameService.loadSession(sessionId);
-        if (gameState == null) {
+        if (gameState == null || !gameState.getUserId().equals(username)) {
             throw new SessionNotFoundException(sessionId);
         }
         SessionDTO sessionDTO = mappingService.toSessionDTO(gameState);
@@ -119,7 +138,8 @@ public class SessionController {
      */
     @GetMapping("/{sessionId}/world")
     public ResponseEntity<WorldDTO> getWorld(@PathVariable String sessionId) {
-        GameState gameState = gameService.getSession(sessionId);
+        String username = getCurrentUsername();
+        GameState gameState = gameService.getSession(sessionId, username);
         if (gameState == null) {
             throw new SessionNotFoundException(sessionId);
         }
@@ -135,7 +155,8 @@ public class SessionController {
             @PathVariable String sessionId,
             @PathVariable int x,
             @PathVariable int y) {
-        GameState gameState = gameService.getSession(sessionId);
+        String username = getCurrentUsername();
+        GameState gameState = gameService.getSession(sessionId, username);
         if (gameState == null) {
             throw new SessionNotFoundException(sessionId);
         }
@@ -152,7 +173,8 @@ public class SessionController {
      */
     @GetMapping("/{sessionId}/entities")
     public ResponseEntity<List<EntityDTO>> getEntities(@PathVariable String sessionId) {
-        GameState gameState = gameService.getSession(sessionId);
+        String username = getCurrentUsername();
+        GameState gameState = gameService.getSession(sessionId, username);
         if (gameState == null) {
             throw new SessionNotFoundException(sessionId);
         }

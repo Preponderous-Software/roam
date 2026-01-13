@@ -7,6 +7,7 @@ from player.player import Player
 from lib.graphik.src.graphik import Graphik
 from screen.configScreen import ConfigScreen
 from screen.inventoryScreen import InventoryScreen
+from screen.loginScreen import LoginScreen
 from screen.mainMenuScreen import MainMenuScreen
 from screen.optionsScreen import OptionsScreen
 from screen.screenType import ScreenType
@@ -15,6 +16,17 @@ from stats.stats import Stats
 from ui.status import Status
 from screen.serverBackedWorldScreen import ServerBackedWorldScreen
 from world.tickCounter import TickCounter
+
+# Import item classes for inventory restoration
+from entity.apple import Apple
+from entity.banana import Banana
+from entity.stone import Stone
+from entity.coalOre import CoalOre
+from entity.ironOre import IronOre
+from entity.oakWood import OakWood
+from entity.jungleWood import JungleWood
+from entity.grass import Grass
+from entity.leaves import Leaves
 
 # Configure logging
 logging.basicConfig(
@@ -59,6 +71,7 @@ class Roam:
         
         self.worldScreen = None  # Will be initialized after session starts
         logger.debug("Initializing UI screens")
+        self.loginScreen = LoginScreen(self.graphik, self.config, self.status, self.api_client)
         self.optionsScreen = OptionsScreen(self.graphik, self.config, self.status)
         self.mainMenuScreen = MainMenuScreen(
             self.graphik, self.config, self.initializeWorldScreen
@@ -68,7 +81,15 @@ class Roam:
         )
         self.inventoryScreen = None  # Will be initialized after player is created
         self.configScreen = ConfigScreen(self.graphik, self.config, self.status)
-        self.currentScreen = self.mainMenuScreen
+        
+        # Start with login screen if not authenticated, otherwise main menu
+        if not self.api_client.is_authenticated():
+            self.currentScreen = self.loginScreen
+            logger.info("Starting with login screen (not authenticated)")
+        else:
+            self.currentScreen = self.mainMenuScreen
+            logger.info("Starting with main menu (already authenticated)")
+        
         logger.info("Roam client initialization complete")
 
     def initializeGameDisplay(self):
@@ -89,8 +110,15 @@ class Roam:
         logger.info("=" * 60)
         
         try:
+            # Get current authenticated username
+            username = self.api_client.access_token and self._extract_username_from_token()
+            if not username:
+                # Fallback - create new session
+                username = "unknown"
+                logger.warning("Could not extract username from token")
+            
             # Try to resume existing session or create new one
-            session_file = f"{self.config.pathToSaveDirectory}/session_id.txt"
+            session_file = f"{self.config.pathToSaveDirectory}/session_{username}.txt"
             existing_session_id = None
             
             # Check for saved session ID
@@ -99,7 +127,7 @@ class Roam:
                 if os.path.exists(session_file):
                     with open(session_file, 'r') as f:
                         existing_session_id = f.read().strip()
-                    logger.info(f"Found existing session ID: {existing_session_id}")
+                    logger.info(f"Found existing session ID for {username}: {existing_session_id}")
             except Exception as e:
                 logger.warning(f"Could not read session file: {e}")
             
@@ -178,14 +206,108 @@ class Roam:
     def _updatePlayerFromServerData(self, player_data):
         """Update local player object from server data."""
         if player_data:
+            # Update energy
             energy = player_data.get('energy', 100.0)
             logger.debug(f"Updating player energy: {energy}")
             self.player.setEnergy(energy)
             
+            # Update direction
             direction = player_data.get('direction', -1)
             if direction >= 0:
                 logger.debug(f"Updating player direction: {direction}")
                 self.player.setDirection(direction)
+            
+            # Log position (position is tracked server-side, not on local player object)
+            room_x = player_data.get('roomX', 0)
+            room_y = player_data.get('roomY', 0)
+            tile_x = player_data.get('tileX', 0)
+            tile_y = player_data.get('tileY', 0)
+            logger.debug(f"Player position from server: Room({room_x}, {room_y}), Tile({tile_x}, {tile_y})")
+            
+            # Update inventory
+            inventory_data = player_data.get('inventory', {})
+            if inventory_data:
+                logger.debug(f"Updating player inventory: {inventory_data.get('numItems', 0)} items")
+                # Clear current inventory
+                self.player.getInventory().clear()
+                
+                # Restore items from server
+                slots = inventory_data.get('slots', [])
+                for slot in slots:
+                    if not slot.get('empty', True):
+                        item_name = slot.get('itemName')
+                        num_items = slot.get('numItems', 1)
+                        # Create item objects and add to inventory
+                        for _ in range(num_items):
+                            item = self._createItemFromName(item_name)
+                            if item:
+                                self.player.getInventory().placeIntoFirstAvailableInventorySlot(item)
+                            else:
+                                logger.warning(f"Unknown item type: {item_name}")
+                
+                # Set selected slot index
+                selected_index = inventory_data.get('selectedInventorySlotIndex', 0)
+                self.player.getInventory().setSelectedInventorySlotIndex(selected_index)
+    
+    def _createItemFromName(self, item_name):
+        """Create an item object from its name string."""
+        # Map item names to their classes
+        item_classes = {
+            'Apple': Apple,
+            'Banana': Banana,
+            'Stone': Stone,
+            'CoalOre': CoalOre,
+            'IronOre': IronOre,
+            'OakWood': OakWood,
+            'JungleWood': JungleWood,
+            'Grass': Grass,
+            'Leaves': Leaves,
+        }
+        
+        item_class = item_classes.get(item_name)
+        if item_class:
+            return item_class()
+        return None
+    
+    def _extract_username_from_token(self):
+        """Extract username from JWT access token."""
+        try:
+            if not self.api_client.access_token:
+                return None
+            
+            # JWT tokens are in format: header.payload.signature
+            # Payload is base64 encoded JSON
+            import base64
+            import json
+            
+            parts = self.api_client.access_token.split('.')
+            if len(parts) != 3:
+                return None
+            
+            # Decode payload (add padding if needed)
+            payload = parts[1]
+            padding = 4 - len(payload) % 4
+            if padding != 4:
+                payload += '=' * padding
+            
+            decoded = base64.b64decode(payload)
+            data = json.loads(decoded)
+            
+            # JWT subject contains the username
+            return data.get('sub')
+        except Exception as e:
+            logger.warning(f"Could not extract username from token: {e}")
+            return None
+    
+    def _saveCurrentSession(self):
+        """Save the current session to the database."""
+        if self.session_id and self.api_client.is_authenticated():
+            try:
+                logger.info(f"Saving session: {self.session_id}")
+                self.api_client.save_session(self.session_id)
+                logger.info("Session saved successfully")
+            except Exception as e:
+                logger.error(f"Error saving session: {e}")
 
     def quitApplication(self):
         logger.info("Quitting application")
@@ -198,14 +320,33 @@ class Roam:
             result = self.currentScreen.run()
             logger.debug(f"Screen returned: {result}")
             
-            if result == ScreenType.MAIN_MENU_SCREEN:
-                logger.info("Restart requested")
+            if result == ScreenType.LOGIN_SCREEN:
+                logger.debug("Switching to login screen")
+                # Save session before logging out
+                self._saveCurrentSession()
+                self.currentScreen = self.loginScreen
+            elif result == ScreenType.MAIN_MENU_SCREEN:
+                logger.info("Main menu requested - saving session")
+                # Save session before returning to main menu
+                self._saveCurrentSession()
                 return "restart"
-            if result == ScreenType.WORLD_SCREEN:
-                if self.worldScreen is None:
-                    logger.debug("World screen not initialized, showing status")
-                    self.status.set("Initializing...")
+            elif result == ScreenType.WORLD_SCREEN:
+                # Initialize world screen if needed and authenticated
+                if not self.api_client.is_authenticated():
+                    logger.warning("Cannot access world screen - not authenticated")
+                    self.status.set("Please login first")
+                    self.currentScreen = self.loginScreen
                     continue
+                
+                if self.worldScreen is None:
+                    logger.debug("Initializing world screen")
+                    self.status.set("Initializing...")
+                    self.initializeWorldScreen()
+                    if self.worldScreen is None:
+                        # Initialization failed, return to login
+                        self.currentScreen = self.loginScreen
+                        continue
+                
                 logger.debug("Switching to world screen")
                 self.currentScreen = self.worldScreen
             elif result == ScreenType.OPTIONS_SCREEN:
@@ -228,15 +369,7 @@ class Roam:
             elif result == ScreenType.NONE:
                 # Save session before quitting to persist game state
                 logger.info("Quit requested - saving session")
-                try:
-                    if self.session_id:
-                        logger.debug(f"Saving session: {self.session_id}")
-                        self.api_client.save_session()
-                        logger.info("Session saved successfully")
-                        print("Session saved")
-                except Exception as e:
-                    logger.error(f"Error saving session: {e}")
-                    print(f"Error saving session: {e}")
+                self._saveCurrentSession()
                 self.quitApplication()
             else:
                 logger.error(f"Unrecognized screen type: {result}")

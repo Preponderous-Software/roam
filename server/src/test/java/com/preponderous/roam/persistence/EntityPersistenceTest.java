@@ -31,7 +31,7 @@ public class EntityPersistenceTest {
         String sessionId = "test-tree-session";
         WorldConfig worldConfig = new WorldConfig(12345L, 20, 20, 0.1, 0.0);
         World world = new World(worldConfig);
-        GameState gameState = new GameState(sessionId, 0L, world);
+        GameState gameState = new GameState(sessionId, "testuser", 0L, world);
         
         // Add a tree to the starting room
         Room room = new Room(0, 0, worldConfig.getRoomWidth(), worldConfig.getRoomHeight());
@@ -67,7 +67,7 @@ public class EntityPersistenceTest {
         String sessionId = "test-animal-session";
         WorldConfig worldConfig = new WorldConfig(54321L, 20, 20, 0.1, 0.0);
         World world = new World(worldConfig);
-        GameState gameState = new GameState(sessionId, 0L, world);
+        GameState gameState = new GameState(sessionId, "testuser", 0L, world);
         
         Room room = new Room(0, 0, worldConfig.getRoomWidth(), worldConfig.getRoomHeight());
         world.addRoom(room);
@@ -125,7 +125,7 @@ public class EntityPersistenceTest {
         String sessionId = "test-consumable-session";
         WorldConfig worldConfig = new WorldConfig(99999L, 20, 20, 0.1, 0.0);
         World world = new World(worldConfig);
-        GameState gameState = new GameState(sessionId, 0L, world);
+        GameState gameState = new GameState(sessionId, "testuser", 0L, world);
         
         Room room = new Room(0, 0, worldConfig.getRoomWidth(), worldConfig.getRoomHeight());
         world.addRoom(room);
@@ -196,7 +196,7 @@ public class EntityPersistenceTest {
         String sessionId = "test-multi-room-session";
         WorldConfig worldConfig = new WorldConfig(11111L, 20, 20, 0.1, 0.0);
         World world = new World(worldConfig);
-        GameState gameState = new GameState(sessionId, 0L, world);
+        GameState gameState = new GameState(sessionId, "testuser", 0L, world);
         
         // Room 0,0 - Trees and rocks
         Room room1 = new Room(0, 0, worldConfig.getRoomWidth(), worldConfig.getRoomHeight());
