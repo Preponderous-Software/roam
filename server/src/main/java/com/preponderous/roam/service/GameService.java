@@ -231,31 +231,29 @@ public class GameService {
             return false;
         }
         
+        // Check if player already exists before attempting to add
+        boolean playerExistedBefore = gameState.hasPlayer(userId);
+        
         boolean added = gameState.addPlayer(userId, gameState.getCurrentTick());
-        if (added && !gameState.hasPlayer(userId)) {
-            // This should not happen, but defensive check
+        if (!added) {
             logger.error("Failed to add player {} to session {}", userId, sessionId);
             return false;
         }
         
-        // Initialize the new player at the starting position only if they were just added
-        if (added && gameState.hasPlayer(userId)) {
+        // Initialize the new player at the starting position only if they were just created
+        if (!playerExistedBefore) {
             Player newPlayer = gameState.getPlayer(userId);
-            // Only initialize position if player was just created (check if at default position)
-            if (newPlayer.getRoomX() == 0 && newPlayer.getRoomY() == 0 && 
-                newPlayer.getTileX() == 0 && newPlayer.getTileY() == 0) {
-                Room startingRoom = worldGenerationService.getOrGenerateRoom(
-                    gameState.getWorld(), 0, 0, gameState.getCurrentTick());
-                int centerX = startingRoom.getWidth() / 2;
-                int centerY = startingRoom.getHeight() / 2;
-                playerService.setPlayerPosition(newPlayer, 0, 0, centerX, centerY);
-                logger.info("User {} joined session {}", userId, sessionId);
-            } else {
-                logger.info("User {} already in session {}", userId, sessionId);
-            }
+            Room startingRoom = worldGenerationService.getOrGenerateRoom(
+                gameState.getWorld(), 0, 0, gameState.getCurrentTick());
+            int centerX = startingRoom.getWidth() / 2;
+            int centerY = startingRoom.getHeight() / 2;
+            playerService.setPlayerPosition(newPlayer, 0, 0, centerX, centerY);
+            logger.info("User {} joined session {}", userId, sessionId);
+        } else {
+            logger.info("User {} already in session {}", userId, sessionId);
         }
         
-        return added;
+        return true;
     }
     
     /**
