@@ -173,7 +173,7 @@ class MultiplayerGameServiceTest {
         
         assertFalse(gameState.isFull());
         assertEquals(1, gameState.getPlayerCount());
-        assertEquals(GameState.MAX_PLAYERS_PER_SESSION, GameState.MAX_PLAYERS_PER_SESSION);
+        assertEquals(10, GameState.MAX_PLAYERS_PER_SESSION);  // Verify the constant value
         
         // Add players until almost full
         for (int i = 0; i < GameState.MAX_PLAYERS_PER_SESSION - 2; i++) {

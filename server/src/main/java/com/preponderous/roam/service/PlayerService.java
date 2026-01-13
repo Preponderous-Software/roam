@@ -201,7 +201,7 @@ public class PlayerService {
         // Check for collisions with other players
         if (allPlayers != null) {
             for (Player otherPlayer : allPlayers.values()) {
-                if (!otherPlayer.getId().equals(player.getId()) &&
+                if (!otherPlayer.getUserId().equals(player.getUserId()) &&
                     otherPlayer.getRoomX() == newRoomX &&
                     otherPlayer.getRoomY() == newRoomY &&
                     otherPlayer.getTileX() == newTileX &&

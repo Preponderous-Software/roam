@@ -70,14 +70,17 @@ public class GameState {
     
     /**
      * Add a player to the session.
-     * @return true if player was added, false if session is full or player already exists
+     * @param userId the userId of the player to add
+     * @param currentTick the current game tick
+     * @return true if player was added successfully, false if session is full or player already exists
+     * Note: Returns false (not an error) when player already exists, as the desired state is achieved
      */
     public boolean addPlayer(String userId, long currentTick) {
         if (players.size() >= MAX_PLAYERS_PER_SESSION) {
             return false;
         }
         if (players.containsKey(userId)) {
-            return false;
+            return false; // Player already in session - not an error, but operation is idempotent
         }
         Player player = new Player(userId, currentTick);
         players.put(userId, player);
