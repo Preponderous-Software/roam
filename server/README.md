@@ -16,6 +16,10 @@ The Roam server is the authoritative source for all game data and business logic
 - Docker Compose support
 - Automatic and manual save functionality
 - Backup and restore capabilities
+- **Multiplayer support**: Multiple players can join the same game session
+- **Player-to-player collision detection**: Players cannot occupy the same tile
+- **Session capacity management**: Up to 10 players per session
+- **Player discovery**: API to list all players in a session
 
 ## Requirements
 
@@ -105,8 +109,15 @@ Content-Type: application/json
 Response:
 {
   "sessionId": "uuid",
+  "ownerId": "username",
   "currentTick": 0,
-  "player": { ... }
+  "player": { ... },  // Deprecated: use players map instead
+  "players": {
+    "username": { ... }  // Map of userId -> PlayerDTO
+  },
+  "playerCount": 1,
+  "maxPlayers": 10,
+  "full": false
 }
 ```
 
@@ -117,10 +128,73 @@ GET /api/v1/session/{sessionId}
 Response:
 {
   "sessionId": "uuid",
+  "ownerId": "username",
   "currentTick": 123,
-  "player": { ... }
+  "player": { ... },  // Deprecated: use players map instead
+  "players": {
+    "username1": { ... },
+    "username2": { ... }
+  },
+  "playerCount": 2,
+  "maxPlayers": 10,
+  "full": false
 }
 ```
+
+#### Join Session
+```
+POST /api/v1/session/{sessionId}/join
+
+Response: Updated session data (same as GET /api/v1/session/{sessionId})
+
+Status Codes:
+- 200 OK: Successfully joined session
+- 404 NOT FOUND: Session does not exist
+- 409 CONFLICT: Session is full
+```
+
+Adds the authenticated user as a new player to an existing game session.
+
+#### Leave Session
+```
+POST /api/v1/session/{sessionId}/leave
+
+Response:
+{
+  "message": "Successfully left session",
+  "sessionId": "uuid"
+}
+
+Status Codes:
+- 200 OK: Successfully left session
+- 403 FORBIDDEN: Session owner cannot leave
+- 404 NOT FOUND: Session does not exist
+```
+
+Removes the authenticated user from the game session. Session owners cannot leave.
+
+#### Get All Players
+```
+GET /api/v1/session/{sessionId}/players
+
+Response:
+{
+  "username1": {
+    "id": "uuid",
+    "userId": "username1",
+    "name": "Player",
+    "energy": 100.0,
+    "roomX": 0,
+    "roomY": 0,
+    "tileX": 5,
+    "tileY": 5,
+    ...
+  },
+  "username2": { ... }
+}
+```
+
+Returns all players currently in the session.
 
 #### Update Tick
 ```
@@ -128,6 +202,8 @@ POST /api/v1/session/{sessionId}/tick
 
 Response: Updated session data
 ```
+
+Updates all players' positions and game state by one tick.
 
 #### Delete Session
 ```
@@ -148,6 +224,7 @@ Response:
 ```
 
 Manually saves the game session to the database for persistence across server restarts.
+Note: Currently only saves the session owner's player state.
 
 #### Load Session
 ```
@@ -167,6 +244,7 @@ GET /api/v1/session/{sessionId}/player
 Response:
 {
   "id": "uuid",
+  "userId": "username",
   "name": "Player",
   "energy": 100.0,
   "targetEnergy": 100.0,
@@ -183,9 +261,15 @@ Response:
   "movementSpeed": 30,
   "gatherSpeed": 30,
   "placeSpeed": 30,
+  "roomX": 0,
+  "roomY": 0,
+  "tileX": 10,
+  "tileY": 10,
   "inventory": { ... }
 }
 ```
+
+Gets the authenticated user's player state in the session.
 
 #### Perform Player Action
 ```
@@ -205,6 +289,8 @@ Actions: move, stop, gather, place, crouch, consume
 
 Response: Updated player data
 ```
+
+Note: Movement now includes player-to-player collision detection. Players cannot move into tiles occupied by other players.
 
 #### Update Player Energy
 ```
@@ -279,12 +365,67 @@ All errors return a standardized JSON response:
 }
 ```
 
+## Multiplayer Features
+
+The Roam server supports multiple players in the same game session, enabling collaborative gameplay.
+
+### Session Management
+
+- **Session Capacity**: Each session can host up to 10 players (configurable via `GameState.MAX_PLAYERS_PER_SESSION`)
+- **Session Owner**: The user who creates the session is the owner and cannot leave
+- **Other Players**: Can join and leave sessions freely via the join/leave endpoints
+
+### Player Discovery
+
+- Use `GET /api/v1/session/{sessionId}/players` to list all players in a session
+- Each player has a unique `userId` and position in the world
+- The session DTO includes a `players` map with all player states
+
+### Collision Detection
+
+- **Player-to-Player Collisions**: Players cannot move into tiles occupied by other players
+- **Entity Collisions**: Players also cannot move into tiles with solid entities (trees, rocks, etc.)
+- Collision detection is performed server-side during the `tick` update
+
+### Position Synchronization
+
+- All player positions are synchronized on each tick update
+- Use `POST /api/v1/session/{sessionId}/tick` to update all players' positions
+- Players can be in different rooms and at different positions
+
+### Access Control
+
+- Only players who are part of a session can access its data
+- Non-participants receive a 404 error when trying to access a session
+- Session owner and participants have equal access to session data
+
+### Limitations
+
+- **Persistence**: Currently, only the session owner's player state is persisted to the database
+- **Full multiplayer persistence** (saving all players) is planned for a future enhancement
+
+### Typical Multiplayer Flow
+
+1. Player 1 creates a session: `POST /api/v1/session/init`
+2. Player 2 joins the session: `POST /api/v1/session/{sessionId}/join`
+3. Both players can now:
+   - Get session state: `GET /api/v1/session/{sessionId}`
+   - Perform actions: `POST /api/v1/session/{sessionId}/player/action`
+   - View all players: `GET /api/v1/session/{sessionId}/players`
+4. Game ticks update all players: `POST /api/v1/session/{sessionId}/tick`
+5. Player 2 can leave: `POST /api/v1/session/{sessionId}/leave`
+
 ## Testing
 
 ```bash
 cd server
 mvn test
 ```
+
+The test suite includes comprehensive multiplayer tests:
+- `MultiplayerGameServiceTest`: Tests for session management and player join/leave
+- `PlayerCollisionTest`: Tests for player-to-player collision detection
+- `MultiplayerSessionControllerTest`: Integration tests for multiplayer API endpoints
 
 ## Architecture
 
