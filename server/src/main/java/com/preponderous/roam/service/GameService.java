@@ -157,8 +157,12 @@ public class GameService {
         if (gameState != null) {
             gameState.incrementTick();
             
+            // Create a snapshot of players to avoid ConcurrentModificationException
+            // if players join/leave during iteration
+            java.util.List<Player> playerSnapshot = new java.util.ArrayList<>(gameState.getPlayers().values());
+            
             // Update all players' movement with player-to-player collision detection
-            for (Player player : gameState.getPlayers().values()) {
+            for (Player player : playerSnapshot) {
                 if (player.isMoving()) {
                     playerService.movePlayer(player, gameState.getWorld(), 
                         gameState.getCurrentTick(), gameState.getPlayers());
@@ -213,7 +217,7 @@ public class GameService {
     
     /**
      * Add a player to an existing session.
-     * @return true if player was added successfully, false otherwise
+     * @return true if player was added successfully or already in session, false if session is full
      */
     public boolean joinSession(String sessionId, String userId) {
         GameState gameState = getSession(sessionId);
@@ -222,26 +226,33 @@ public class GameService {
             return false;
         }
         
-        if (gameState.isFull()) {
+        if (gameState.isFull() && !gameState.hasPlayer(userId)) {
             logger.warn("Cannot join session {}: session is full", sessionId);
             return false;
         }
         
-        if (gameState.hasPlayer(userId)) {
-            logger.info("User {} already in session {}", userId, sessionId);
-            return true; // Already in session
+        boolean added = gameState.addPlayer(userId, gameState.getCurrentTick());
+        if (added && !gameState.hasPlayer(userId)) {
+            // This should not happen, but defensive check
+            logger.error("Failed to add player {} to session {}", userId, sessionId);
+            return false;
         }
         
-        boolean added = gameState.addPlayer(userId, gameState.getCurrentTick());
-        if (added) {
-            // Initialize the new player at the starting position
+        // Initialize the new player at the starting position only if they were just added
+        if (added && gameState.hasPlayer(userId)) {
             Player newPlayer = gameState.getPlayer(userId);
-            Room startingRoom = worldGenerationService.getOrGenerateRoom(
-                gameState.getWorld(), 0, 0, gameState.getCurrentTick());
-            int centerX = startingRoom.getWidth() / 2;
-            int centerY = startingRoom.getHeight() / 2;
-            playerService.setPlayerPosition(newPlayer, 0, 0, centerX, centerY);
-            logger.info("User {} joined session {}", userId, sessionId);
+            // Only initialize position if player was just created (check if at default position)
+            if (newPlayer.getRoomX() == 0 && newPlayer.getRoomY() == 0 && 
+                newPlayer.getTileX() == 0 && newPlayer.getTileY() == 0) {
+                Room startingRoom = worldGenerationService.getOrGenerateRoom(
+                    gameState.getWorld(), 0, 0, gameState.getCurrentTick());
+                int centerX = startingRoom.getWidth() / 2;
+                int centerY = startingRoom.getHeight() / 2;
+                playerService.setPlayerPosition(newPlayer, 0, 0, centerX, centerY);
+                logger.info("User {} joined session {}", userId, sessionId);
+            } else {
+                logger.info("User {} already in session {}", userId, sessionId);
+            }
         }
         
         return added;

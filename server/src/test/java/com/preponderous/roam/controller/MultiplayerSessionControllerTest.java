@@ -137,7 +137,8 @@ class MultiplayerSessionControllerTest {
         HttpEntity<Void> request = new HttpEntity<>(getAuthHeaders(authToken2));
         ResponseEntity<SessionDTO> response = restTemplate.exchange(url, HttpMethod.POST, request, SessionDTO.class);
 
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        // Returns CONFLICT instead of NOT_FOUND to avoid leaking session existence
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
     }
 
     @Test

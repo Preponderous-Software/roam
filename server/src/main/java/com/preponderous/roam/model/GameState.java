@@ -63,24 +63,25 @@ public class GameState {
     
     /**
      * Get all players in the session.
+     * Returns an unmodifiable view to protect internal state.
      */
     public Map<String, Player> getPlayers() {
-        return players;
+        return java.util.Collections.unmodifiableMap(players);
     }
     
     /**
      * Add a player to the session.
      * @param userId the userId of the player to add
      * @param currentTick the current game tick
-     * @return true if player was added successfully, false if session is full or player already exists
-     * Note: Returns false (not an error) when player already exists, as the desired state is achieved
+     * @return true if player was added successfully, false if session is full
+     * Note: Returns true if player already exists (idempotent operation)
      */
     public boolean addPlayer(String userId, long currentTick) {
         if (players.size() >= MAX_PLAYERS_PER_SESSION) {
             return false;
         }
         if (players.containsKey(userId)) {
-            return false; // Player already in session - not an error, but operation is idempotent
+            return true; // Player already in session - operation is idempotent
         }
         Player player = new Player(userId, currentTick);
         players.put(userId, player);

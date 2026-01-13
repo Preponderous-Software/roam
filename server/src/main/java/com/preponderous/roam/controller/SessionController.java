@@ -200,20 +200,24 @@ public class SessionController {
     public ResponseEntity<SessionDTO> joinSession(@PathVariable String sessionId) {
         String username = getCurrentUsername();
         
-        // Check if session exists (without requiring current user to be in it)
-        GameState gameState = gameService.getSession(sessionId);
+        // Attempt to join the session. Do not perform a separate, unauthenticated
+        // existence check to avoid leaking which session IDs are valid.
+        boolean joined = gameService.joinSession(sessionId, username);
+        if (!joined) {
+            // Session is full, does not exist, or other error
+            // Return CONFLICT for full sessions, NOT_FOUND for missing sessions
+            // We use a generic error to avoid leaking session existence
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(null);
+        }
+        
+        // Return updated session state using access-controlled session retrieval
+        GameState gameState = gameService.getSession(sessionId, username);
         if (gameState == null) {
+            // Defensive check: should not occur if join succeeded
             throw new SessionNotFoundException(sessionId);
         }
         
-        boolean joined = gameService.joinSession(sessionId, username);
-        if (!joined) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(null); // Session is full or other error
-        }
-        
-        // Return updated session state
-        gameState = gameService.getSession(sessionId, username);
         SessionDTO sessionDTO = mappingService.toSessionDTO(gameState);
         return ResponseEntity.ok(sessionDTO);
     }
@@ -236,7 +240,7 @@ public class SessionController {
             response.put("sessionId", sessionId);
             return ResponseEntity.ok(response);
         } else {
-            response.put("message", "Cannot leave session (owner cannot leave)");
+            response.put("message", "Cannot leave session (owner cannot leave or user is not in session)");
             response.put("sessionId", sessionId);
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
         }
