@@ -99,8 +99,15 @@ class Roam:
         logger.info("=" * 60)
         
         try:
+            # Get current authenticated username
+            username = self.api_client.access_token and self._extract_username_from_token()
+            if not username:
+                # Fallback - create new session
+                username = "unknown"
+                logger.warning("Could not extract username from token")
+            
             # Try to resume existing session or create new one
-            session_file = f"{self.config.pathToSaveDirectory}/session_id.txt"
+            session_file = f"{self.config.pathToSaveDirectory}/session_{username}.txt"
             existing_session_id = None
             
             # Check for saved session ID
@@ -109,7 +116,7 @@ class Roam:
                 if os.path.exists(session_file):
                     with open(session_file, 'r') as f:
                         existing_session_id = f.read().strip()
-                    logger.info(f"Found existing session ID: {existing_session_id}")
+                    logger.info(f"Found existing session ID for {username}: {existing_session_id}")
             except Exception as e:
                 logger.warning(f"Could not read session file: {e}")
             
@@ -188,14 +195,88 @@ class Roam:
     def _updatePlayerFromServerData(self, player_data):
         """Update local player object from server data."""
         if player_data:
+            # Update energy
             energy = player_data.get('energy', 100.0)
             logger.debug(f"Updating player energy: {energy}")
             self.player.setEnergy(energy)
             
+            # Update direction
             direction = player_data.get('direction', -1)
             if direction >= 0:
                 logger.debug(f"Updating player direction: {direction}")
                 self.player.setDirection(direction)
+            
+            # Update position
+            room_x = player_data.get('roomX', 0)
+            room_y = player_data.get('roomY', 0)
+            tile_x = player_data.get('tileX', 0)
+            tile_y = player_data.get('tileY', 0)
+            logger.debug(f"Updating player position: Room({room_x}, {room_y}), Tile({tile_x}, {tile_y})")
+            self.player.setRoomX(room_x)
+            self.player.setRoomY(room_y)
+            self.player.setTileX(tile_x)
+            self.player.setTileY(tile_y)
+            
+            # Update inventory
+            inventory_data = player_data.get('inventory', {})
+            if inventory_data:
+                logger.debug(f"Updating player inventory: {inventory_data.get('numItems', 0)} items")
+                # Clear current inventory
+                self.player.getInventory().clear()
+                
+                # Restore items from server
+                slots = inventory_data.get('slots', [])
+                for slot in slots:
+                    if not slot.get('empty', True):
+                        item_name = slot.get('itemName')
+                        num_items = slot.get('numItems', 1)
+                        # Add items to inventory
+                        for _ in range(num_items):
+                            self.player.getInventory().placeIntoFirstAvailableInventorySlot(item_name)
+                
+                # Set selected slot index
+                selected_index = inventory_data.get('selectedInventorySlotIndex', 0)
+                self.player.getInventory().setSelectedInventorySlotIndex(selected_index)
+    
+    def _extract_username_from_token(self):
+        """Extract username from JWT access token."""
+        try:
+            if not self.api_client.access_token:
+                return None
+            
+            # JWT tokens are in format: header.payload.signature
+            # Payload is base64 encoded JSON
+            import base64
+            import json
+            
+            parts = self.api_client.access_token.split('.')
+            if len(parts) != 3:
+                return None
+            
+            # Decode payload (add padding if needed)
+            payload = parts[1]
+            padding = 4 - len(payload) % 4
+            if padding != 4:
+                payload += '=' * padding
+            
+            decoded = base64.b64decode(payload)
+            data = json.loads(decoded)
+            
+            # JWT subject contains the username
+            return data.get('sub')
+        except Exception as e:
+            logger.warning(f"Could not extract username from token: {e}")
+            return None
+    
+    def _saveCurrentSession(self):
+        """Save the current session to the database."""
+        if self.session_id and self.api_client.is_authenticated():
+            try:
+                logger.info(f"Saving session: {self.session_id}")
+                self.api_client.save_session(self.session_id)
+                logger.info("Session saved successfully")
+            except Exception as e:
+                logger.error(f"Error saving session: {e}")
 
     def quitApplication(self):
         logger.info("Quitting application")
@@ -210,9 +291,13 @@ class Roam:
             
             if result == ScreenType.LOGIN_SCREEN:
                 logger.debug("Switching to login screen")
+                # Save session before logging out
+                self._saveCurrentSession()
                 self.currentScreen = self.loginScreen
             elif result == ScreenType.MAIN_MENU_SCREEN:
-                logger.info("Restart requested")
+                logger.info("Main menu requested - saving session")
+                # Save session before returning to main menu
+                self._saveCurrentSession()
                 return "restart"
             elif result == ScreenType.WORLD_SCREEN:
                 # Initialize world screen if needed and authenticated
@@ -253,15 +338,7 @@ class Roam:
             elif result == ScreenType.NONE:
                 # Save session before quitting to persist game state
                 logger.info("Quit requested - saving session")
-                try:
-                    if self.session_id:
-                        logger.debug(f"Saving session: {self.session_id}")
-                        self.api_client.save_session()
-                        logger.info("Session saved successfully")
-                        print("Session saved")
-                except Exception as e:
-                    logger.error(f"Error saving session: {e}")
-                    print(f"Error saving session: {e}")
+                self._saveCurrentSession()
                 self.quitApplication()
             else:
                 logger.error(f"Unrecognized screen type: {result}")
