@@ -151,7 +151,7 @@ class LoginScreen:
             (field_x, username_y, field_width, field_height),
             2
         )
-        self.graphik.drawText(self.username_input or "", field_x + 10, username_y + 25, 20, (255, 255, 255), align="left")
+        self.graphik.drawText(self.username_input or "", field_x + 10, username_y + 25, 20, (255, 255, 255))
         
         # Password field
         password_y = username_y + spacing
@@ -170,7 +170,7 @@ class LoginScreen:
             display_password = self.password_input or ""
         else:
             display_password = "*" * len(self.password_input) if self.password_input else ""
-        self.graphik.drawText(display_password, field_x + 10, password_y + 25, 20, (255, 255, 255), align="left")
+        self.graphik.drawText(display_password, field_x + 10, password_y + 25, 20, (255, 255, 255))
         
         # Email field (only for registration)
         if self.show_registration:
@@ -184,7 +184,7 @@ class LoginScreen:
                 (field_x, email_y, field_width, field_height),
                 2
             )
-            self.graphik.drawText(self.email_input or "", field_x + 10, email_y + 25, 20, (255, 255, 255), align="left")
+            self.graphik.drawText(self.email_input or "", field_x + 10, email_y + 25, 20, (255, 255, 255))
         
         # Messages
         message_y = y * 2 / 3
