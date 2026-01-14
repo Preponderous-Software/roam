@@ -855,6 +855,9 @@ class ServerBackedWorldScreen:
         # Draw status bar
         self.status.draw()
         
+        # Draw session info overlay (top-right corner)
+        self._drawSessionInfo()
+        
         # Draw debug info if enabled
         if self.config.debug:
             self._drawDebugInfo()
@@ -977,6 +980,67 @@ class ServerBackedWorldScreen:
             surface = font.render(text, True, (255, 255, 0))
             self.graphik.getGameDisplay().blit(surface, (x, y))
             y += 20
+    
+    def _drawSessionInfo(self):
+        """Draw multiplayer session information overlay."""
+        try:
+            # Get player list from server
+            players = self.api_client.get_players(self.session_id)
+            player_count = len(players)
+            
+            display_width = self.graphik.getGameDisplay().get_width()
+            
+            # Draw semi-transparent background
+            overlay_width = 200
+            overlay_height = 30 + (player_count * 25)
+            overlay_x = display_width - overlay_width - 10
+            overlay_y = 10
+            
+            overlay_surface = pygame.Surface((overlay_width, overlay_height))
+            overlay_surface.set_alpha(180)
+            overlay_surface.fill((40, 40, 60))
+            self.graphik.getGameDisplay().blit(overlay_surface, (overlay_x, overlay_y))
+            
+            # Draw border
+            pygame.draw.rect(
+                self.graphik.getGameDisplay(),
+                (100, 150, 200),
+                (overlay_x, overlay_y, overlay_width, overlay_height),
+                2
+            )
+            
+            # Draw player count
+            font = pygame.font.Font(None, 24)
+            count_text = f"Players: {player_count}/10"
+            count_surface = font.render(count_text, True, (200, 255, 200))
+            self.graphik.getGameDisplay().blit(count_surface, (overlay_x + 10, overlay_y + 5))
+            
+            # Draw player list
+            small_font = pygame.font.Font(None, 20)
+            y_offset = overlay_y + 30
+            
+            for player in players[:8]:  # Show max 8 players to avoid overflow
+                username = player.get('username', 'Unknown')
+                is_owner = player.get('owner', False)
+                
+                # Add owner indicator
+                prefix = "★ " if is_owner else "  "
+                player_text = f"{prefix}{username}"
+                color = (255, 255, 100) if is_owner else (200, 200, 200)
+                
+                player_surface = small_font.render(player_text, True, color)
+                self.graphik.getGameDisplay().blit(player_surface, (overlay_x + 10, y_offset))
+                y_offset += 25
+            
+            # Show "and X more" if there are more than 8 players
+            if player_count > 8:
+                more_text = f"  and {player_count - 8} more..."
+                more_surface = small_font.render(more_text, True, (150, 150, 150))
+                self.graphik.getGameDisplay().blit(more_surface, (overlay_x + 10, y_offset))
+        
+        except Exception as e:
+            # Don't crash if we can't fetch player list - just log it
+            logger.debug(f"Could not fetch player list: {e}")
     
     def run(self):
         """Main game loop."""

@@ -395,6 +395,9 @@ class Roam:
                 self.currentScreen = self.worldScreen
             elif result == ScreenType.OPTIONS_SCREEN:
                 logger.debug("Switching to options screen")
+                # Update session info in options screen
+                if self.session_id:
+                    self.optionsScreen.setSessionInfo(self.api_client, self.session_id)
                 self.currentScreen = self.optionsScreen
             elif result == ScreenType.STATS_SCREEN:
                 logger.debug("Switching to stats screen")
