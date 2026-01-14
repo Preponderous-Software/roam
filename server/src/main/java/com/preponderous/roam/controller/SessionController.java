@@ -3,6 +3,7 @@ package com.preponderous.roam.controller;
 import com.preponderous.roam.dto.*;
 import com.preponderous.roam.exception.SessionNotFoundException;
 import com.preponderous.roam.model.GameState;
+import com.preponderous.roam.model.Player;
 import com.preponderous.roam.model.Room;
 import com.preponderous.roam.model.World;
 import com.preponderous.roam.service.GameService;
@@ -190,5 +191,77 @@ public class SessionController {
         }
         
         return ResponseEntity.ok(allEntities);
+    }
+    
+    /**
+     * Join an existing game session as a new player.
+     */
+    @PostMapping("/{sessionId}/join")
+    public ResponseEntity<SessionDTO> joinSession(@PathVariable String sessionId) {
+        String username = getCurrentUsername();
+        
+        // Attempt to join the session. Do not perform a separate, unauthenticated
+        // existence check to avoid leaking which session IDs are valid.
+        boolean joined = gameService.joinSession(sessionId, username);
+        if (!joined) {
+            // Session is full, does not exist, or other error
+            // Return CONFLICT for full sessions, NOT_FOUND for missing sessions
+            // We use a generic error to avoid leaking session existence
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(null);
+        }
+        
+        // Return updated session state using access-controlled session retrieval
+        GameState gameState = gameService.getSession(sessionId, username);
+        if (gameState == null) {
+            // Defensive check: should not occur if join succeeded
+            throw new SessionNotFoundException(sessionId);
+        }
+        
+        SessionDTO sessionDTO = mappingService.toSessionDTO(gameState);
+        return ResponseEntity.ok(sessionDTO);
+    }
+    
+    /**
+     * Leave a game session.
+     */
+    @PostMapping("/{sessionId}/leave")
+    public ResponseEntity<Map<String, String>> leaveSession(@PathVariable String sessionId) {
+        String username = getCurrentUsername();
+        GameState gameState = gameService.getSession(sessionId, username);
+        if (gameState == null) {
+            throw new SessionNotFoundException(sessionId);
+        }
+        
+        boolean left = gameService.leaveSession(sessionId, username);
+        Map<String, String> response = new HashMap<>();
+        if (left) {
+            response.put("message", "Successfully left session");
+            response.put("sessionId", sessionId);
+            return ResponseEntity.ok(response);
+        } else {
+            response.put("message", "Cannot leave session (owner cannot leave or user is not in session)");
+            response.put("sessionId", sessionId);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+        }
+    }
+    
+    /**
+     * Get all players in a session.
+     */
+    @GetMapping("/{sessionId}/players")
+    public ResponseEntity<Map<String, PlayerDTO>> getPlayers(@PathVariable String sessionId) {
+        String username = getCurrentUsername();
+        GameState gameState = gameService.getSession(sessionId, username);
+        if (gameState == null) {
+            throw new SessionNotFoundException(sessionId);
+        }
+        
+        Map<String, PlayerDTO> playerDTOs = new HashMap<>();
+        for (Map.Entry<String, Player> entry : gameState.getPlayers().entrySet()) {
+            playerDTOs.put(entry.getKey(), mappingService.toPlayerDTO(entry.getValue()));
+        }
+        
+        return ResponseEntity.ok(playerDTOs);
     }
 }

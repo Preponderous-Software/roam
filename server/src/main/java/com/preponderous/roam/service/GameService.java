@@ -86,11 +86,11 @@ public class GameService {
             }
         }
         
-        // Verify ownership
-        if (gameState != null && !gameState.getUserId().equals(userId)) {
-            logger.warn("User {} attempted to access session {} owned by {}", 
-                userId, sessionId, gameState.getUserId());
-            return null;  // Return null if user doesn't own the session
+        // Verify player is in the session (owner or participant)
+        if (gameState != null && !gameState.hasPlayer(userId)) {
+            logger.warn("User {} attempted to access session {} but is not a participant", 
+                userId, sessionId);
+            return null;  // Return null if user is not in the session
         }
         
         return gameState;
@@ -132,8 +132,18 @@ public class GameService {
     }
 
     /**
-     * Get the player from a session.
+     * Get the player from a session for a specific user.
      */
+    public Player getPlayer(String sessionId, String userId) {
+        GameState gameState = getSession(sessionId);
+        return gameState != null ? gameState.getPlayer(userId) : null;
+    }
+    
+    /**
+     * Get the player from a session.
+     * @deprecated Use getPlayer(String sessionId, String userId) instead
+     */
+    @Deprecated
     public Player getPlayer(String sessionId) {
         GameState gameState = getSession(sessionId);
         return gameState != null ? gameState.getPlayer() : null;
@@ -147,10 +157,17 @@ public class GameService {
         if (gameState != null) {
             gameState.incrementTick();
             
-            // Update player movement
-            Player player = gameState.getPlayer();
-            if (player.isMoving()) {
-                playerService.movePlayer(player, gameState.getWorld(), gameState.getCurrentTick());
+            // Create a snapshot of players to avoid ConcurrentModificationException
+            // if players join/leave during iteration. Also use this snapshot for
+            // collision detection to ensure consistency during the tick update.
+            java.util.Map<String, Player> playersSnapshot = new java.util.HashMap<>(gameState.getPlayers());
+            
+            // Update all players' movement with player-to-player collision detection
+            for (Player player : playersSnapshot.values()) {
+                if (player.isMoving()) {
+                    playerService.movePlayer(player, gameState.getWorld(), 
+                        gameState.getCurrentTick(), playersSnapshot);
+                }
             }
             
             // Update entities in all loaded rooms
@@ -197,5 +214,68 @@ public class GameService {
     public long getCurrentTick(String sessionId) {
         GameState gameState = getSession(sessionId);
         return gameState != null ? gameState.getCurrentTick() : 0;
+    }
+    
+    /**
+     * Add a player to an existing session.
+     * @return true if player was added successfully or already in session, false if session is full
+     */
+    public boolean joinSession(String sessionId, String userId) {
+        GameState gameState = getSession(sessionId);
+        if (gameState == null) {
+            logger.warn("Cannot join session {}: session not found", sessionId);
+            return false;
+        }
+        
+        if (gameState.isFull() && !gameState.hasPlayer(userId)) {
+            logger.warn("Cannot join session {}: session is full", sessionId);
+            return false;
+        }
+        
+        // Check if player already exists before attempting to add
+        boolean playerExistedBefore = gameState.hasPlayer(userId);
+        
+        boolean added = gameState.addPlayer(userId, gameState.getCurrentTick());
+        if (!added) {
+            logger.error("Failed to add player {} to session {}", userId, sessionId);
+            return false;
+        }
+        
+        // Initialize the new player at the starting position only if they were just created
+        if (!playerExistedBefore) {
+            Player newPlayer = gameState.getPlayer(userId);
+            Room startingRoom = worldGenerationService.getOrGenerateRoom(
+                gameState.getWorld(), 0, 0, gameState.getCurrentTick());
+            int centerX = startingRoom.getWidth() / 2;
+            int centerY = startingRoom.getHeight() / 2;
+            playerService.setPlayerPosition(newPlayer, 0, 0, centerX, centerY);
+            logger.info("User {} joined session {}", userId, sessionId);
+        } else {
+            logger.info("User {} already in session {}", userId, sessionId);
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Remove a player from a session.
+     * @return true if player was removed successfully, false otherwise
+     */
+    public boolean leaveSession(String sessionId, String userId) {
+        GameState gameState = getSession(sessionId);
+        if (gameState == null) {
+            logger.warn("Cannot leave session {}: session not found", sessionId);
+            return false;
+        }
+        
+        boolean removed = gameState.removePlayer(userId);
+        if (removed) {
+            logger.info("User {} left session {}", userId, sessionId);
+        } else {
+            logger.warn("Cannot remove user {} from session {}: is owner or not in session", 
+                userId, sessionId);
+        }
+        
+        return removed;
     }
 }

@@ -6,7 +6,9 @@ import com.preponderous.roam.model.entity.*;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -20,14 +22,31 @@ public class MappingService {
     public SessionDTO toSessionDTO(GameState gameState) {
         SessionDTO dto = new SessionDTO();
         dto.setSessionId(gameState.getSessionId());
+        dto.setOwnerId(gameState.getOwnerId());
         dto.setCurrentTick(gameState.getCurrentTick());
-        dto.setPlayer(toPlayerDTO(gameState.getPlayer()));
+        
+        // Map all players
+        Map<String, PlayerDTO> playerDTOs = new HashMap<>();
+        for (Map.Entry<String, Player> entry : gameState.getPlayers().entrySet()) {
+            playerDTOs.put(entry.getKey(), toPlayerDTO(entry.getValue()));
+        }
+        dto.setPlayers(playerDTOs);
+        
+        // Set the owner's player for backward compatibility
+        dto.setPlayer(playerDTOs.get(gameState.getOwnerId()));
+        
+        // Set multiplayer metadata
+        dto.setPlayerCount(gameState.getPlayerCount());
+        dto.setMaxPlayers(GameState.MAX_PLAYERS_PER_SESSION);
+        dto.setFull(gameState.isFull());
+        
         return dto;
     }
 
     public PlayerDTO toPlayerDTO(Player player) {
         PlayerDTO dto = new PlayerDTO();
         dto.setId(player.getId());
+        dto.setUserId(player.getUserId());
         dto.setName(player.getName());
         dto.setEnergy(player.getEnergy());
         dto.setTargetEnergy(player.getTargetEnergy());

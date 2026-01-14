@@ -7,6 +7,7 @@ package com.preponderous.roam.dto;
  */
 public class PlayerDTO {
     private String id;
+    private String userId;  // Username of the player
     private String name;
     private double energy;
     private double targetEnergy;
@@ -41,6 +42,14 @@ public class PlayerDTO {
 
     public void setId(String id) {
         this.id = id;
+    }
+    
+    public String getUserId() {
+        return userId;
+    }
+    
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     public String getName() {
