@@ -369,11 +369,23 @@ All errors return a standardized JSON response:
 
 The Roam server supports multiple players in the same game session, enabling collaborative gameplay.
 
+### How to Join Another Player's Session
+
+To join another player's session, you need:
+1. **Authentication**: Be registered and logged in
+2. **Session ID**: Obtain the session ID from the session owner
+3. **API Call**: Use `POST /api/v1/session/{sessionId}/join`
+
+**Important**: There is no public session discovery/listing API. The session owner must share their session ID directly with players who want to join. This design choice prevents unauthorized users from discovering and attempting to join private sessions.
+
+See the [Typical Multiplayer Flow](#typical-multiplayer-flow) section below for detailed step-by-step instructions with example API calls.
+
 ### Session Management
 
 - **Session Capacity**: Each session can host up to 10 players (configurable via `GameState.MAX_PLAYERS_PER_SESSION`)
 - **Session Owner**: The user who creates the session is the owner and cannot leave
 - **Other Players**: Can join and leave sessions freely via the join/leave endpoints
+- **Session ID Sharing**: Session owners must manually share the session ID with players who want to join
 
 ### Player Discovery
 
@@ -406,14 +418,128 @@ The Roam server supports multiple players in the same game session, enabling col
 
 ### Typical Multiplayer Flow
 
-1. Player 1 creates a session: `POST /api/v1/session/init`
-2. Player 2 joins the session: `POST /api/v1/session/{sessionId}/join`
-3. Both players can now:
-   - Get session state: `GET /api/v1/session/{sessionId}`
-   - Perform actions: `POST /api/v1/session/{sessionId}/player/action`
-   - View all players: `GET /api/v1/session/{sessionId}/players`
-4. Game ticks update all players: `POST /api/v1/session/{sessionId}/tick`
-5. Player 2 can leave: `POST /api/v1/session/{sessionId}/leave`
+#### Step-by-Step: Joining Another Player's Session
+
+**Prerequisites:**
+- Both players must be registered and authenticated
+- Player 1 (host) must have already created a session
+
+**Step 1: Player 1 creates a session**
+```bash
+curl -X POST http://localhost:8080/api/v1/session/init \
+  -H "Authorization: Bearer <player1-token>" \
+  -H "Content-Type: application/json"
+```
+
+Response:
+```json
+{
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "ownerId": "player1",
+  "currentTick": 0,
+  "playerCount": 1,
+  "maxPlayers": 10,
+  "full": false,
+  "players": {
+    "player1": { "userId": "player1", "roomX": 0, "roomY": 0, ... }
+  }
+}
+```
+
+**Step 2: Player 1 shares the sessionId with Player 2**
+- Player 1 shares the `sessionId` (e.g., "550e8400-e29b-41d4-a716-446655440000") with Player 2
+- This can be done via any external communication method (chat, email, in-game lobby, etc.)
+- **Important**: The sessionId is required to join - there is no session discovery API to prevent information leakage
+
+**Step 3: Player 2 joins the session using the sessionId**
+```bash
+curl -X POST http://localhost:8080/api/v1/session/550e8400-e29b-41d4-a716-446655440000/join \
+  -H "Authorization: Bearer <player2-token>" \
+  -H "Content-Type: application/json"
+```
+
+Response (200 OK):
+```json
+{
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "ownerId": "player1",
+  "currentTick": 15,
+  "playerCount": 2,
+  "maxPlayers": 10,
+  "full": false,
+  "players": {
+    "player1": { "userId": "player1", "roomX": 0, "roomY": 0, ... },
+    "player2": { "userId": "player2", "roomX": 0, "roomY": 0, ... }
+  }
+}
+```
+
+Possible error (409 CONFLICT):
+```json
+null
+```
+This occurs if the session is full, doesn't exist, or is otherwise unavailable. The generic error prevents leaking which session IDs are valid.
+
+**Step 4: Both players interact with the session**
+
+Get current session state:
+```bash
+curl -X GET http://localhost:8080/api/v1/session/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer <player-token>"
+```
+
+Move player:
+```bash
+curl -X POST http://localhost:8080/api/v1/session/550e8400-e29b-41d4-a716-446655440000/player/action \
+  -H "Authorization: Bearer <player-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "move", "direction": 2}'
+```
+
+View all players in session:
+```bash
+curl -X GET http://localhost:8080/api/v1/session/550e8400-e29b-41d4-a716-446655440000/players \
+  -H "Authorization: Bearer <player-token>"
+```
+
+Update game tick (advances game state for all players):
+```bash
+curl -X POST http://localhost:8080/api/v1/session/550e8400-e29b-41d4-a716-446655440000/tick \
+  -H "Authorization: Bearer <player-token>"
+```
+
+**Step 5: Player 2 leaves the session (optional)**
+```bash
+curl -X POST http://localhost:8080/api/v1/session/550e8400-e29b-41d4-a716-446655440000/leave \
+  -H "Authorization: Bearer <player2-token>" \
+  -H "Content-Type: application/json"
+```
+
+Response:
+```json
+{
+  "message": "Successfully left session",
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Notes:**
+- Session owners (Player 1 in this example) cannot leave their own session
+- All players in a session have equal access to session data and operations
+- Player-to-player collision detection prevents players from occupying the same tile
+- Maximum 10 players per session
+
+#### Quick Reference Flow
+
+1. **Player 1**: `POST /api/v1/session/init` → Get `sessionId`
+2. **Player 1**: Share `sessionId` with Player 2 (external to API)
+3. **Player 2**: `POST /api/v1/session/{sessionId}/join` → Join session
+4. **Both players**: 
+   - `GET /api/v1/session/{sessionId}` → Get session state
+   - `POST /api/v1/session/{sessionId}/player/action` → Perform actions
+   - `GET /api/v1/session/{sessionId}/players` → View all players
+   - `POST /api/v1/session/{sessionId}/tick` → Update game state
+5. **Player 2**: `POST /api/v1/session/{sessionId}/leave` → Leave session
 
 ## Testing
 
