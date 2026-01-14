@@ -4,6 +4,9 @@ from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
 from ui.status import Status
 
+# Constants
+MAX_PLAYERS_PER_SESSION = 10
+
 # @author Daniel McCoy Stephenson
 class JoinSessionScreen:
     """Screen to join an existing game session by entering session ID."""
@@ -77,7 +80,7 @@ class JoinSessionScreen:
             if "404" in error_str:
                 self.error_message = "Session not found"
             elif "403" in error_str or "full" in error_str.lower():
-                self.error_message = "Session is full (max 10 players)"
+                self.error_message = f"Session is full (max {MAX_PLAYERS_PER_SESSION} players)"
             elif "400" in error_str or "invalid" in error_str.lower():
                 self.error_message = "Invalid session ID format"
             else:

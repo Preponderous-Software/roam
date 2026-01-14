@@ -21,6 +21,9 @@ from client.api_client import RoamAPIClient
 # Configure logging for this module
 logger = logging.getLogger(__name__)
 
+# Constants
+MAX_PLAYERS_PER_SESSION = 10
+
 
 class ServerBackedWorldScreen:
     """Simplified world screen that uses server for all game logic."""
@@ -1020,7 +1023,7 @@ class ServerBackedWorldScreen:
             
             # Draw player count
             font = pygame.font.Font(None, 24)
-            count_text = f"Players: {player_count}/10"
+            count_text = f"Players: {player_count}/{MAX_PLAYERS_PER_SESSION}"
             count_surface = font.render(count_text, True, (200, 255, 200))
             self.graphik.getGameDisplay().blit(count_surface, (overlay_x + 10, overlay_y + 5))
             
