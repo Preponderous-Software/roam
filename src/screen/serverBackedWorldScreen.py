@@ -54,6 +54,11 @@ class ServerBackedWorldScreen:
         self.player_data = None
         self.server_tick = 0
         
+        # Multiplayer session state - cache player list
+        self.cached_players = []
+        self.player_list_cache_frames = 0
+        self.player_list_refresh_interval = 180  # Refresh every 3 seconds at 60 FPS
+        
         # World rendering
         self.current_room = None
         self.current_room_x = 0
@@ -984,15 +989,19 @@ class ServerBackedWorldScreen:
     def _drawSessionInfo(self):
         """Draw multiplayer session information overlay."""
         try:
-            # Get player list from server
-            players = self.api_client.get_players(self.session_id)
-            player_count = len(players)
+            # Refresh player list periodically, not every frame
+            self.player_list_cache_frames += 1
+            if self.player_list_cache_frames >= self.player_list_refresh_interval or not self.cached_players:
+                self.cached_players = self.api_client.get_players(self.session_id)
+                self.player_list_cache_frames = 0
+            
+            player_count = len(self.cached_players)
             
             display_width = self.graphik.getGameDisplay().get_width()
             
             # Draw semi-transparent background
             overlay_width = 200
-            overlay_height = 30 + (player_count * 25)
+            overlay_height = 30 + (min(player_count, 8) * 25) + (10 if player_count > 8 else 0)
             overlay_x = display_width - overlay_width - 10
             overlay_y = 10
             
@@ -1019,7 +1028,7 @@ class ServerBackedWorldScreen:
             small_font = pygame.font.Font(None, 20)
             y_offset = overlay_y + 30
             
-            for player in players[:8]:  # Show max 8 players to avoid overflow
+            for player in self.cached_players[:8]:  # Show max 8 players to avoid overflow
                 username = player.get('username', 'Unknown')
                 is_owner = player.get('owner', False)
                 

@@ -65,7 +65,7 @@ class JoinSessionScreen:
         try:
             # Join the session
             session_data = self.api_client.join_session(self.session_id_input.strip())
-            self.joined_session_id = session_data.get('sessionId')
+            self.joined_session_id = session_data.get('sessionId', self.session_id_input.strip())
             self.status.set(f"Joined session: {self.joined_session_id}")
             
             # Proceed to world screen

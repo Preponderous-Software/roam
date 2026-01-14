@@ -117,7 +117,7 @@ class Roam:
         try:
             # Check if we're joining an existing session from the join screen
             if self.api_client.session_id and self.api_client.session_id != self.session_id:
-                # User joined a session via join screen
+                # User joined a session via join screen - session data already returned by join_session
                 logger.info(f"Joining existing session: {self.api_client.session_id}")
                 session_data = self.api_client.get_session(self.api_client.session_id)
                 self.session_id = self.api_client.session_id

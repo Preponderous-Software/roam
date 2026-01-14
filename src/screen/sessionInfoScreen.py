@@ -50,7 +50,10 @@ class SessionInfoScreen:
         
         # Session ID in a box
         session_id_y = y / 3 + 60
-        box_width = len(self.session_id) * 13
+        # Use font metrics for proper width calculation
+        font = pygame.font.Font(None, 20)
+        session_text_width = font.size(self.session_id)[0]
+        box_width = session_text_width + 20  # Add padding
         box_height = 60
         box_x = x / 2 - box_width / 2
         
