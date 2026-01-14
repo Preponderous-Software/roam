@@ -7,4 +7,6 @@ class ScreenType:
     STATS_SCREEN = "stats_screen"
     INVENTORY_SCREEN = "inventory_screen"
     CONFIG_SCREEN = "config_screen"
+    JOIN_SESSION_SCREEN = "join_session_screen"
+    SESSION_INFO_SCREEN = "session_info_screen"
     NONE = "none_screen"

@@ -545,3 +545,56 @@ class RoamAPIClient:
             raise ValueError("No session ID provided")
         
         return self._make_request("GET", f"/api/v1/session/{sid}/entities")
+    
+    # Multiplayer Management
+    
+    def join_session(self, session_id: str) -> Dict[str, Any]:
+        """
+        Join an existing game session.
+        
+        Args:
+            session_id: Session ID to join
+            
+        Returns:
+            Session data including sessionId, currentTick, and player
+            
+        Raises:
+            requests.exceptions.HTTPError: If session is full (403) or doesn't exist (404)
+        """
+        data = self._make_request("POST", f"/api/v1/session/{session_id}/join", json={})
+        self.session_id = session_id
+        return data
+    
+    def leave_session(self, session_id: Optional[str] = None) -> None:
+        """
+        Leave a game session.
+        
+        Args:
+            session_id: Session ID (uses stored session_id if not provided)
+            
+        Raises:
+            requests.exceptions.HTTPError: If session owner tries to leave (403)
+        """
+        sid = session_id or self.session_id
+        if not sid:
+            raise ValueError("No session ID provided")
+        
+        self._make_request("POST", f"/api/v1/session/{sid}/leave", json={})
+        if sid == self.session_id:
+            self.session_id = None
+    
+    def get_players(self, session_id: Optional[str] = None) -> list:
+        """
+        Get all players in a session.
+        
+        Args:
+            session_id: Session ID (uses stored session_id if not provided)
+            
+        Returns:
+            List of player data (username and other player information)
+        """
+        sid = session_id or self.session_id
+        if not sid:
+            raise ValueError("No session ID provided")
+        
+        return self._make_request("GET", f"/api/v1/session/{sid}/players")

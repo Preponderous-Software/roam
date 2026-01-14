@@ -19,6 +19,10 @@ class MainMenuScreen:
         self.nextScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = True
 
+    def switchToJoinSessionScreen(self):
+        self.nextScreen = ScreenType.JOIN_SESSION_SCREEN
+        self.changeScreen = True
+
     def switchToConfigScreen(self):
         self.nextScreen = ScreenType.CONFIG_SCREEN
         self.changeScreen = True
@@ -55,6 +59,18 @@ class MainMenuScreen:
             30,
             "play",
             self.switchToWorldScreen,
+        )
+        ypos = ypos + height + margin
+        self.graphik.drawButton(
+            xpos,
+            ypos,
+            width,
+            height,
+            backgroundColor,
+            (0, 0, 0),
+            30,
+            "join session",
+            self.switchToJoinSessionScreen,
         )
         ypos = ypos + height + margin
         self.graphik.drawButton(

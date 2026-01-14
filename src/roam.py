@@ -7,10 +7,12 @@ from player.player import Player
 from lib.graphik.src.graphik import Graphik
 from screen.configScreen import ConfigScreen
 from screen.inventoryScreen import InventoryScreen
+from screen.joinSessionScreen import JoinSessionScreen
 from screen.loginScreen import LoginScreen
 from screen.mainMenuScreen import MainMenuScreen
 from screen.optionsScreen import OptionsScreen
 from screen.screenType import ScreenType
+from screen.sessionInfoScreen import SessionInfoScreen
 from screen.statsScreen import StatsScreen
 from stats.stats import Stats
 from ui.status import Status
@@ -56,6 +58,7 @@ class Roam:
         logger.debug("Creating RoamAPIClient instance")
         self.api_client = RoamAPIClient(server_url)
         self.session_id = None
+        self.show_session_info = False  # Flag to show session info screen after creation
         logger.info("API client initialized successfully")
         
         pygame.display.set_caption("Roam (Server-Backed)" + " (" + config.pathToSaveDirectory + ")")
@@ -72,6 +75,8 @@ class Roam:
         self.worldScreen = None  # Will be initialized after session starts
         logger.debug("Initializing UI screens")
         self.loginScreen = LoginScreen(self.graphik, self.config, self.status, self.api_client)
+        self.joinSessionScreen = JoinSessionScreen(self.graphik, self.config, self.status, self.api_client)
+        self.sessionInfoScreen = None  # Will be initialized when session is created
         self.optionsScreen = OptionsScreen(self.graphik, self.config, self.status)
         self.mainMenuScreen = MainMenuScreen(
             self.graphik, self.config, self.initializeWorldScreen
@@ -110,57 +115,68 @@ class Roam:
         logger.info("=" * 60)
         
         try:
-            # Get current authenticated username
-            username = self.api_client.access_token and self._extract_username_from_token()
-            if not username:
-                # Fallback - create new session
-                username = "unknown"
-                logger.warning("Could not extract username from token")
-            
-            # Try to resume existing session or create new one
-            session_file = f"{self.config.pathToSaveDirectory}/session_{username}.txt"
-            existing_session_id = None
-            
-            # Check for saved session ID
-            try:
-                import os
-                if os.path.exists(session_file):
-                    with open(session_file, 'r') as f:
-                        existing_session_id = f.read().strip()
-                    logger.info(f"Found existing session ID for {username}: {existing_session_id}")
-            except Exception as e:
-                logger.warning(f"Could not read session file: {e}")
-            
-            # Try to load existing session
-            session_data = None
-            if existing_session_id:
-                try:
-                    logger.debug(f"Attempting to load session: {existing_session_id}")
-                    session_data = self.api_client.load_session(existing_session_id)
-                    self.session_id = existing_session_id
-                    logger.info(f"✓ Successfully loaded existing session: {self.session_id}")
-                    logger.info(f"  Session data: currentTick={session_data.get('currentTick', 0)}")
-                except Exception as e:
-                    logger.warning(f"Could not load existing session: {e}")
-                    logger.info("Will create new session instead")
-            
-            # Create new session if loading failed or no saved session
-            if not session_data:
-                logger.debug("Calling API: init_session()")
-                session_data = self.api_client.init_session()
-                self.session_id = session_data['sessionId']
-                logger.info(f"✓ New session created: {self.session_id}")
-                logger.debug(f"  Session data: currentTick={session_data.get('currentTick', 0)}")
+            # Check if we're joining an existing session from the join screen
+            if self.api_client.session_id and self.api_client.session_id != self.session_id:
+                # User joined a session via join screen
+                logger.info(f"Joining existing session: {self.api_client.session_id}")
+                session_data = self.api_client.get_session(self.api_client.session_id)
+                self.session_id = self.api_client.session_id
+                logger.info(f"✓ Successfully joined session: {self.session_id}")
+            else:
+                # Get current authenticated username
+                username = self.api_client.access_token and self._extract_username_from_token()
+                if not username:
+                    # Fallback - create new session
+                    username = "unknown"
+                    logger.warning("Could not extract username from token")
                 
-                # Save the new session ID for future use
+                # Try to resume existing session or create new one
+                session_file = f"{self.config.pathToSaveDirectory}/session_{username}.txt"
+                existing_session_id = None
+                
+                # Check for saved session ID
                 try:
                     import os
-                    os.makedirs(os.path.dirname(session_file), exist_ok=True)
-                    with open(session_file, 'w') as f:
-                        f.write(self.session_id)
-                    logger.debug(f"Saved session ID to {session_file}")
+                    if os.path.exists(session_file):
+                        with open(session_file, 'r') as f:
+                            existing_session_id = f.read().strip()
+                        logger.info(f"Found existing session ID for {username}: {existing_session_id}")
                 except Exception as e:
-                    logger.warning(f"Could not save session ID: {e}")
+                    logger.warning(f"Could not read session file: {e}")
+                
+                # Try to load existing session
+                session_data = None
+                if existing_session_id:
+                    try:
+                        logger.debug(f"Attempting to load session: {existing_session_id}")
+                        session_data = self.api_client.load_session(existing_session_id)
+                        self.session_id = existing_session_id
+                        logger.info(f"✓ Successfully loaded existing session: {self.session_id}")
+                        logger.info(f"  Session data: currentTick={session_data.get('currentTick', 0)}")
+                    except Exception as e:
+                        logger.warning(f"Could not load existing session: {e}")
+                        logger.info("Will create new session instead")
+                
+                # Create new session if loading failed or no saved session
+                if not session_data:
+                    logger.debug("Calling API: init_session()")
+                    session_data = self.api_client.init_session()
+                    self.session_id = session_data['sessionId']
+                    logger.info(f"✓ New session created: {self.session_id}")
+                    logger.debug(f"  Session data: currentTick={session_data.get('currentTick', 0)}")
+                    
+                    # Show session info screen for new sessions
+                    self.show_session_info = True
+                    
+                    # Save the new session ID for future use
+                    try:
+                        import os
+                        os.makedirs(os.path.dirname(session_file), exist_ok=True)
+                        with open(session_file, 'w') as f:
+                            f.write(self.session_id)
+                        logger.debug(f"Saved session ID to {session_file}")
+                    except Exception as e:
+                        logger.warning(f"Could not save session ID: {e}")
             
             # Create player from server data
             player_data = session_data['player']
@@ -330,6 +346,24 @@ class Roam:
                 # Save session before returning to main menu
                 self._saveCurrentSession()
                 return "restart"
+            elif result == ScreenType.JOIN_SESSION_SCREEN:
+                logger.debug("Switching to join session screen")
+                if not self.api_client.is_authenticated():
+                    logger.warning("Cannot join session - not authenticated")
+                    self.status.set("Please login first")
+                    self.currentScreen = self.loginScreen
+                    continue
+                self.currentScreen = self.joinSessionScreen
+            elif result == ScreenType.SESSION_INFO_SCREEN:
+                logger.debug("Showing session info screen")
+                if self.session_id:
+                    self.sessionInfoScreen = SessionInfoScreen(
+                        self.graphik, self.config, self.status, self.session_id
+                    )
+                    self.currentScreen = self.sessionInfoScreen
+                else:
+                    # No session to show, go to world screen
+                    self.currentScreen = self.worldScreen
             elif result == ScreenType.WORLD_SCREEN:
                 # Initialize world screen if needed and authenticated
                 if not self.api_client.is_authenticated():
@@ -345,6 +379,16 @@ class Roam:
                     if self.worldScreen is None:
                         # Initialization failed, return to login
                         self.currentScreen = self.loginScreen
+                        continue
+                    
+                    # Check if we should show session info screen first
+                    if self.show_session_info and self.session_id:
+                        logger.debug("Showing session info screen for new session")
+                        self.sessionInfoScreen = SessionInfoScreen(
+                            self.graphik, self.config, self.status, self.session_id
+                        )
+                        self.currentScreen = self.sessionInfoScreen
+                        self.show_session_info = False  # Reset flag
                         continue
                 
                 logger.debug("Switching to world screen")
