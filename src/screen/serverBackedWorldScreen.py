@@ -8,21 +8,19 @@ No local world generation or entity management.
 
 import pygame
 import logging
+from client.api_client import RoamAPIClient
 from config.config import Config
-from stats.stats import Stats
-from ui.energyBar import EnergyBar
+from constants import MAX_PLAYERS_PER_SESSION
 from lib.graphik.src.graphik import Graphik
 from player.player import Player
+from screen.screenType import ScreenType
+from stats.stats import Stats
+from ui.energyBar import EnergyBar
 from ui.status import Status
 from world.tickCounter import TickCounter
-from screen.screenType import ScreenType
-from client.api_client import RoamAPIClient
 
 # Configure logging for this module
 logger = logging.getLogger(__name__)
-
-# Constants
-MAX_PLAYERS_PER_SESSION = 10
 
 
 class ServerBackedWorldScreen:

@@ -1,11 +1,9 @@
 import pygame
 from config.config import Config
+from constants import MAX_PLAYERS_PER_SESSION
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
 from ui.status import Status
-
-# Constants
-MAX_PLAYERS_PER_SESSION = 10
 
 # @author Daniel McCoy Stephenson
 class JoinSessionScreen:
@@ -70,6 +68,9 @@ class JoinSessionScreen:
             session_data = self.api_client.join_session(self.session_id_input.strip())
             self.joined_session_id = session_data.get('sessionId', self.session_id_input.strip())
             self.status.set(f"Joined session: {self.joined_session_id}")
+            
+            # Reset loading flag for consistency
+            self.is_loading = False
             
             # Proceed to world screen
             self.nextScreen = ScreenType.WORLD_SCREEN
