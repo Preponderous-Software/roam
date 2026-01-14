@@ -71,17 +71,18 @@ public class GameState {
     
     /**
      * Add a player to the session.
+     * Thread-safe operation using atomic check-and-put.
      * @param userId the userId of the player to add
      * @param currentTick the current game tick
      * @return true if player was added successfully, false if session is full
      * Note: Returns true if player already exists (idempotent operation)
      */
-    public boolean addPlayer(String userId, long currentTick) {
-        if (players.size() >= MAX_PLAYERS_PER_SESSION) {
-            return false;
-        }
+    public synchronized boolean addPlayer(String userId, long currentTick) {
         if (players.containsKey(userId)) {
             return true; // Player already in session - operation is idempotent
+        }
+        if (players.size() >= MAX_PLAYERS_PER_SESSION) {
+            return false; // Session is full
         }
         Player player = new Player(userId, currentTick);
         players.put(userId, player);
@@ -90,9 +91,10 @@ public class GameState {
     
     /**
      * Remove a player from the session.
+     * Thread-safe operation.
      * @return true if player was removed, false if player didn't exist or is the owner
      */
-    public boolean removePlayer(String userId) {
+    public synchronized boolean removePlayer(String userId) {
         if (userId.equals(ownerId)) {
             return false; // Cannot remove owner
         }

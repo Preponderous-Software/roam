@@ -158,14 +158,15 @@ public class GameService {
             gameState.incrementTick();
             
             // Create a snapshot of players to avoid ConcurrentModificationException
-            // if players join/leave during iteration
-            java.util.List<Player> playerSnapshot = new java.util.ArrayList<>(gameState.getPlayers().values());
+            // if players join/leave during iteration. Also use this snapshot for
+            // collision detection to ensure consistency during the tick update.
+            java.util.Map<String, Player> playersSnapshot = new java.util.HashMap<>(gameState.getPlayers());
             
             // Update all players' movement with player-to-player collision detection
-            for (Player player : playerSnapshot) {
+            for (Player player : playersSnapshot.values()) {
                 if (player.isMoving()) {
                     playerService.movePlayer(player, gameState.getWorld(), 
-                        gameState.getCurrentTick(), gameState.getPlayers());
+                        gameState.getCurrentTick(), playersSnapshot);
                 }
             }
             

@@ -149,11 +149,11 @@ Response: Updated session data (same as GET /api/v1/session/{sessionId})
 
 Status Codes:
 - 200 OK: Successfully joined session
-- 404 NOT FOUND: Session does not exist
-- 409 CONFLICT: Session is full
+- 409 CONFLICT: Failed to join session (session does not exist, is full, or is otherwise unavailable)
 ```
 
 Adds the authenticated user as a new player to an existing game session.
+Note: Returns 409 CONFLICT for all failure cases to avoid leaking which session IDs are valid.
 
 #### Leave Session
 ```
