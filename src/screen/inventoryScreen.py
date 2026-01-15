@@ -8,6 +8,19 @@ from screen.screenType import ScreenType
 from ui.status import Status
 import pygame
 
+# Import item classes for inventory reconstruction
+from entity.apple import Apple
+from entity.banana import Banana
+from entity.berry import Berry
+from entity.stone import Stone
+from entity.coalOre import CoalOre
+from entity.ironOre import IronOre
+from entity.wood import Wood
+from entity.oakWood import OakWood
+from entity.jungleWood import JungleWood
+from entity.grass import Grass
+from entity.leaves import Leaves
+
 # @author Daniel McCoy Stephenson
 class InventoryScreen:
     def __init__(
@@ -25,6 +38,68 @@ class InventoryScreen:
         # Virtual slot index for cursor (outside normal inventory)
         self.cursor_slot_index = self.inventory.getNumInventorySlots()
         self.from_slot_index = None  # Track which slot we picked up from
+        
+        # Sync inventory from server on initialization if API client is available
+        if self.api_client and self.session_id:
+            self._syncInventoryFromServer()
+    
+    def _syncInventoryFromServer(self):
+        """Fetch inventory from server and update local display state."""
+        if not self.api_client or not self.session_id:
+            return
+        
+        try:
+            # Fetch authoritative inventory from server
+            inventory_data = self.api_client.get_inventory(self.session_id)
+            
+            # Map server item names to client item classes
+            item_name_to_class = {
+                'Apple': Apple,
+                'Banana': Banana,
+                'Berry': Berry,
+                'Stone': Stone,
+                'CoalOre': CoalOre,
+                'IronOre': IronOre,
+                'Wood': Wood,
+                'OakWood': OakWood,
+                'JungleWood': JungleWood,
+                'Grass': Grass,
+                'Leaves': Leaves,
+            }
+            
+            # Clear current inventory
+            self.inventory.clear()
+            
+            # Restore each slot from server data
+            slots_data = inventory_data.get('slots', [])
+            for slot_index, slot_data in enumerate(slots_data):
+                if slot_data.get('empty', True):
+                    continue
+                    
+                item_name = slot_data.get('itemName')
+                num_items = slot_data.get('numItems', 0)
+                
+                if not item_name or num_items <= 0:
+                    continue
+                
+                # Get the item class
+                item_class = item_name_to_class.get(item_name)
+                if not item_class:
+                    print(f"Warning: Unknown item type from server: {item_name}")
+                    continue
+                
+                # Add items to this slot
+                inventory_slot = self.inventory.getInventorySlots()[slot_index]
+                for _ in range(num_items):
+                    item = item_class()
+                    inventory_slot.add(item)
+            
+            # Set selected slot
+            selected_slot = inventory_data.get('selectedSlotIndex', 0)
+            self.inventory.setSelectedInventorySlotIndex(selected_slot)
+            
+        except Exception as e:
+            print(f"Warning: Failed to sync inventory from server: {e}")
 
     # @source https://stackoverflow.com/questions/63342477/how-to-take-screenshot-of-entire-display-pygame
     def captureScreen(self, name, pos, size):  # (pygame Surface, String, tuple, tuple)
@@ -35,18 +110,39 @@ class InventoryScreen:
         pygame.image.save(image, name)  # Save the image to the disk**
 
     def swapCursorSlotWithInventorySlotByIndex(self, index):
-        # Swap locally first for immediate visual feedback
+        """Swap cursor slot with inventory slot - used by number key shortcuts."""
         if self.cursorSlot.isEmpty():
+            # Picking up from slot - just update locally, no server call yet
+            self.from_slot_index = index
             self.cursorSlot.setContents(
                 self.inventory.getInventorySlots()[index].getContents()
             )
             self.inventory.getInventorySlots()[index].setContents([])
         else:
-            temp = self.inventory.getInventorySlots()[index].getContents()
-            self.inventory.getInventorySlots()[index].setContents(
-                self.cursorSlot.getContents()
-            )
-            self.cursorSlot.setContents(temp)
+            # Placing into slot - call server to make it authoritative
+            if self.api_client and self.session_id and self.from_slot_index is not None:
+                try:
+                    # Call server to swap the slots
+                    self.api_client.swap_inventory_slots(self.from_slot_index, index, self.session_id)
+                    
+                    # Sync from server to get authoritative state
+                    self._syncInventoryFromServer()
+                    
+                    # Clear cursor
+                    self.cursorSlot.setContents([])
+                    self.from_slot_index = None
+                    
+                except Exception as e:
+                    # On error, revert local state
+                    print(f"Error: Failed to swap slots: {e}")
+                    # Keep cursor state for retry
+            else:
+                # No API client - fall back to local swap
+                temp = self.inventory.getInventorySlots()[index].getContents()
+                self.inventory.getInventorySlots()[index].setContents(
+                    self.cursorSlot.getContents()
+                )
+                self.cursorSlot.setContents(temp)
 
     def handleKeyDownEvent(self, key):
         if key == pygame.K_i or key == pygame.K_ESCAPE:
@@ -227,29 +323,42 @@ class InventoryScreen:
 
                 # Handle left click - swap with cursor slot
                 if self.cursorSlot.isEmpty():
-                    # Picking up from this slot
+                    # Picking up from this slot - update locally for immediate feedback
                     self.from_slot_index = index
                     inventorySlotContents = inventorySlot.getContents()
                     self.cursorSlot.setContents(inventorySlotContents)
                     inventorySlot.setContents([])
                 else:
-                    # Placing into this slot
-                    inventorySlotContents = inventorySlot.getContents()
-                    cursorSlotContents = self.cursorSlot.getContents()
-                    inventorySlot.setContents(cursorSlotContents)
-                    self.cursorSlot.setContents(inventorySlotContents)
-                    
-                    # Call server API to persist the swap if we have an API client
+                    # Placing into this slot - call server first to make it authoritative
                     if self.api_client and self.session_id and self.from_slot_index is not None:
                         try:
-                            self.api_client.swap_inventory_slots(self.from_slot_index, index, self.session_id)
+                            # Call server API to perform the swap
+                            response = self.api_client.swap_inventory_slots(self.from_slot_index, index, self.session_id)
+                            
+                            # Update local state from authoritative server response
+                            self._syncInventoryFromServer()
+                            
+                            # Clear cursor since swap completed successfully
+                            self.cursorSlot.setContents([])
+                            
+                            # Reset from_slot if cursor is now empty
+                            if self.cursorSlot.isEmpty():
+                                self.from_slot_index = None
+                                
                         except Exception as e:
-                            # Log error but don't fail - local state is already updated
-                            print(f"Warning: Failed to sync inventory swap with server: {e}")
-                    
-                    # Reset from_slot if cursor is now empty
-                    if self.cursorSlot.isEmpty():
-                        self.from_slot_index = None
+                            # On error, show message but keep cursor state for retry
+                            print(f"Error: Failed to swap inventory slots: {e}")
+                            self.status.set(f"Failed to swap items: {e}")
+                    else:
+                        # No API client - fall back to local swap for backwards compatibility
+                        inventorySlotContents = inventorySlot.getContents()
+                        cursorSlotContents = self.cursorSlot.getContents()
+                        inventorySlot.setContents(cursorSlotContents)
+                        self.cursorSlot.setContents(inventorySlotContents)
+                        
+                        # Reset from_slot if cursor is now empty
+                        if self.cursorSlot.isEmpty():
+                            self.from_slot_index = None
 
             column += 1
             if column == itemsPerRow:
