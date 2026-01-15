@@ -30,7 +30,6 @@ public class PlayerService {
      */
     public void setDirection(Player player, int direction) {
         player.setDirection(direction);
-        broadcastPlayerPosition(null, player, null);
     }
 
     /**
@@ -38,7 +37,6 @@ public class PlayerService {
      */
     public void setGathering(Player player, boolean gathering) {
         player.setGathering(gathering);
-        broadcastPlayerPosition(null, player, null);
     }
 
     /**
@@ -46,7 +44,6 @@ public class PlayerService {
      */
     public void setPlacing(Player player, boolean placing) {
         player.setPlacing(placing);
-        broadcastPlayerPosition(null, player, null);
     }
 
     /**
@@ -54,7 +51,6 @@ public class PlayerService {
      */
     public void setCrouching(Player player, boolean crouching) {
         player.setCrouching(crouching);
-        broadcastPlayerPosition(null, player, null);
     }
 
     /**
@@ -221,7 +217,6 @@ public class PlayerService {
         player.setRoomY(roomY);
         player.setTileX(tileX);
         player.setTileY(tileY);
-        broadcastPlayerPosition(null, player, null);
     }
 
     /**

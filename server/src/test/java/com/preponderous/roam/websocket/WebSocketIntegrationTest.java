@@ -59,7 +59,10 @@ public class WebSocketIntegrationTest {
 
             @Override
             public void handleFrame(StompHeaders headers, Object payload) {
-                messages.offer((HeartbeatMessage) payload);
+                boolean offered = messages.offer((HeartbeatMessage) payload);
+                if (!offered) {
+                    fail("Failed to enqueue heartbeat message in test queue");
+                }
             }
         });
         
@@ -99,12 +102,13 @@ public class WebSocketIntegrationTest {
 
             @Override
             public void handleFrame(StompHeaders headers, Object payload) {
-                messages.offer((PlayerPositionUpdate) payload);
+                boolean offered = messages.offer((PlayerPositionUpdate) payload);
+                assertTrue(offered, "Failed to enqueue PlayerPositionUpdate");
             }
         });
         
-        // Wait a bit to ensure subscription is registered
-        Thread.sleep(500);
+        // Small delay to ensure subscription is registered
+        TimeUnit.MILLISECONDS.sleep(100);
         
         // Verify subscription was successful (no errors thrown)
         assertTrue(session.isConnected());
@@ -135,12 +139,13 @@ public class WebSocketIntegrationTest {
 
             @Override
             public void handleFrame(StompHeaders headers, Object payload) {
-                messages.offer((EntityStateUpdate) payload);
+                boolean offered = messages.offer((EntityStateUpdate) payload);
+                assertTrue(offered, "Failed to enqueue EntityStateUpdate");
             }
         });
         
-        // Wait a bit to ensure subscription is registered
-        Thread.sleep(500);
+        // Small delay to ensure subscription is registered
+        TimeUnit.MILLISECONDS.sleep(100);
         
         // Verify subscription was successful
         assertTrue(session.isConnected());
@@ -171,12 +176,13 @@ public class WebSocketIntegrationTest {
 
             @Override
             public void handleFrame(StompHeaders headers, Object payload) {
-                messages.offer((TickUpdate) payload);
+                boolean offered = messages.offer((TickUpdate) payload);
+                assertTrue(offered, "Failed to enqueue TickUpdate");
             }
         });
         
-        // Wait a bit to ensure subscription is registered
-        Thread.sleep(500);
+        // Small delay to ensure subscription is registered
+        TimeUnit.MILLISECONDS.sleep(100);
         
         // Verify subscription was successful
         assertTrue(session.isConnected());

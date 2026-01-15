@@ -9,7 +9,7 @@ import com.preponderous.roam.dto.EntityDTO;
  */
 public class EntityStateUpdate extends WebSocketMessage {
     private EntityDTO entity;
-    private String action; // "added", "removed", "updated"
+    private EntityAction action;
 
     public EntityStateUpdate() {
         super();
@@ -23,11 +23,11 @@ public class EntityStateUpdate extends WebSocketMessage {
         this.entity = entity;
     }
 
-    public String getAction() {
+    public EntityAction getAction() {
         return action;
     }
 
-    public void setAction(String action) {
+    public void setAction(EntityAction action) {
         this.action = action;
     }
 }

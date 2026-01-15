@@ -1,6 +1,7 @@
 package com.preponderous.roam.service;
 
 import com.preponderous.roam.dto.EntityDTO;
+import com.preponderous.roam.dto.websocket.EntityAction;
 import com.preponderous.roam.dto.websocket.EntityStateUpdate;
 import com.preponderous.roam.model.Entity;
 import com.preponderous.roam.model.LivingEntity;
@@ -242,10 +243,10 @@ public class EntityInteractionService {
      * Broadcast entity removed event via WebSocket.
      */
     private void broadcastEntityRemoved(String sessionId, Entity entity) {
-        if (webSocketMessageService != null && sessionId != null && mappingService != null) {
+        if (webSocketMessageService != null && sessionId != null) {
             EntityStateUpdate update = new EntityStateUpdate();
             update.setEntity(mappingService.toEntityDTO(entity));
-            update.setAction("removed");
+            update.setAction(EntityAction.REMOVED);
             webSocketMessageService.broadcastEntityState(sessionId, update);
         }
     }
@@ -254,10 +255,10 @@ public class EntityInteractionService {
      * Broadcast entity updated event via WebSocket.
      */
     private void broadcastEntityUpdated(String sessionId, Entity entity) {
-        if (webSocketMessageService != null && sessionId != null && mappingService != null) {
+        if (webSocketMessageService != null && sessionId != null) {
             EntityStateUpdate update = new EntityStateUpdate();
             update.setEntity(mappingService.toEntityDTO(entity));
-            update.setAction("updated");
+            update.setAction(EntityAction.UPDATED);
             webSocketMessageService.broadcastEntityState(sessionId, update);
         }
     }
@@ -266,10 +267,10 @@ public class EntityInteractionService {
      * Broadcast entity added event via WebSocket.
      */
     public void broadcastEntityAdded(String sessionId, Entity entity) {
-        if (webSocketMessageService != null && sessionId != null && mappingService != null) {
+        if (webSocketMessageService != null && sessionId != null) {
             EntityStateUpdate update = new EntityStateUpdate();
             update.setEntity(mappingService.toEntityDTO(entity));
-            update.setAction("added");
+            update.setAction(EntityAction.ADDED);
             webSocketMessageService.broadcastEntityState(sessionId, update);
         }
     }
