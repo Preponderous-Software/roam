@@ -48,11 +48,4 @@ public class WebSocketMessageService {
         update.setSessionId(sessionId);
         messagingTemplate.convertAndSend("/topic/session/" + sessionId + "/tick", update);
     }
-
-    /**
-     * Send a heartbeat response to a specific user.
-     */
-    public void sendHeartbeat(String username, HeartbeatMessage heartbeat) {
-        messagingTemplate.convertAndSendToUser(username, "/queue/heartbeat", heartbeat);
-    }
 }

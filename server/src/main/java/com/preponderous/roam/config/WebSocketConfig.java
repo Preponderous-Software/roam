@@ -31,7 +31,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // Register WebSocket endpoint at /ws
         // Clients will connect to ws://host:port/ws
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")  // Allow all origins for development
+                .setAllowedOriginPatterns("http://localhost:*", "http://127.0.0.1:*")  // Restrict origins for production
                 .withSockJS();  // Enable SockJS fallback for browsers that don't support WebSocket
     }
 }
