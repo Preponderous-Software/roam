@@ -17,14 +17,12 @@ from ui.status import Status
 from screen.serverBackedWorldScreen import ServerBackedWorldScreen
 from world.tickCounter import TickCounter
 
-# Import item classes for inventory restoration
+# Import item classes for inventory restoration (used in serverBackedWorldScreen)
 from entity.apple import Apple
 from entity.banana import Banana
-from entity.berry import Berry
 from entity.stone import Stone
 from entity.coalOre import CoalOre
 from entity.ironOre import IronOre
-from entity.wood import Wood
 from entity.oakWood import OakWood
 from entity.jungleWood import JungleWood
 from entity.grass import Grass

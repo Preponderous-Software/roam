@@ -18,6 +18,19 @@ from world.tickCounter import TickCounter
 from screen.screenType import ScreenType
 from client.api_client import RoamAPIClient
 
+# Import item classes for inventory restoration
+from entity.apple import Apple
+from entity.banana import Banana
+from entity.berry import Berry
+from entity.stone import Stone
+from entity.coalOre import CoalOre
+from entity.ironOre import IronOre
+from entity.wood import Wood
+from entity.oakWood import OakWood
+from entity.jungleWood import JungleWood
+from entity.grass import Grass
+from entity.leaves import Leaves
+
 # Configure logging for this module
 logger = logging.getLogger(__name__)
 
@@ -210,19 +223,6 @@ class ServerBackedWorldScreen:
         selected_slot = inventory_data.get('selectedSlotIndex', 0)
         
         logger.info(f"Syncing inventory: {len(slots_data)} slots, {inventory_data.get('numItems', 0)} total items")
-        
-        # Import item classes for inventory restoration
-        from entity.apple import Apple
-        from entity.banana import Banana
-        from entity.berry import Berry
-        from entity.stone import Stone
-        from entity.coalOre import CoalOre
-        from entity.ironOre import IronOre
-        from entity.wood import Wood
-        from entity.oakWood import OakWood
-        from entity.jungleWood import JungleWood
-        from entity.grass import Grass
-        from entity.leaves import Leaves
         
         # Map server item names to client item classes
         item_name_to_class = {
