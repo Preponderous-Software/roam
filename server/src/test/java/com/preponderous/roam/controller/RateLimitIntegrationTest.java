@@ -4,7 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.preponderous.roam.dto.AuthResponse;
 import com.preponderous.roam.dto.PlayerActionRequest;
 import com.preponderous.roam.dto.RegisterRequest;
-import com.preponderous.roam.dto.SessionInitRequest;
+import com.preponderous.roam.model.GameState;
+import com.preponderous.roam.service.GameService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,13 +36,17 @@ class RateLimitIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
     
+    @Autowired
+    private GameService gameService;
+    
     private String accessToken;
     private String sessionId;
+    private String username;
     
     @BeforeEach
     void setUp() throws Exception {
         // Register a unique user for each test
-        String username = "ratelimituser" + System.currentTimeMillis();
+        username = "ratelimituser" + System.currentTimeMillis();
         RegisterRequest registerRequest = new RegisterRequest(
                 username,
                 "password123",
@@ -60,19 +65,9 @@ class RateLimitIntegrationTest {
         );
         accessToken = authResponse.getAccessToken();
         
-        // Initialize a session
-        SessionInitRequest sessionInitRequest = new SessionInitRequest();
-        sessionInitRequest.setSeed(12345L);
-        
-        MvcResult sessionResult = mockMvc.perform(post("/api/v1/session/init")
-                .header("Authorization", "Bearer " + accessToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(sessionInitRequest)))
-                .andExpect(status().isOk())
-                .andReturn();
-        
-        String sessionResponse = sessionResult.getResponse().getContentAsString();
-        sessionId = objectMapper.readTree(sessionResponse).get("sessionId").asText();
+        // Create a session directly using the service
+        GameState gameState = gameService.createSession(username);
+        sessionId = gameState.getSessionId();
     }
     
     @Test
