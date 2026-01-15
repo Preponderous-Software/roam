@@ -16,6 +16,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -96,8 +97,8 @@ class RateLimitIntegrationTest {
         }
         
         // At least one request should be rate limited
-        assert rateLimitCount > 0 : "Expected at least one request to be rate limited";
-        assert successCount <= 10 : "Expected at most 10 successful requests";
+        assertTrue(rateLimitCount > 0, "Expected at least one request to be rate limited");
+        assertTrue(successCount <= 10, "Expected at most 10 successful requests");
     }
     
     @Test
@@ -169,6 +170,8 @@ class RateLimitIntegrationTest {
                 .andExpect(status().isTooManyRequests());
         
         // Wait for bucket to refill (1.5 seconds to ensure refill)
+        // Note: Thread.sleep() is appropriate here as we're specifically testing
+        // time-based rate limiter recovery behavior
         Thread.sleep(1500);
         
         // Request should now succeed
