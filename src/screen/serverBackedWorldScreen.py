@@ -197,21 +197,78 @@ class ServerBackedWorldScreen:
     
     def _updateInventoryFromServerData(self, inventory_data):
         """Update player inventory from server data.
-
-        NOTE: The server inventory structure is currently different from the local
-        representation, and full synchronization logic has not yet been defined.
-        To avoid accidentally wiping the client's inventory without being able to
-        faithfully reconstruct it, this method is intentionally a no-op until the
-        inventory model between client and server is finalized.
+        
+        Synchronizes the client's inventory with the authoritative server state.
+        Creates item objects from server item names and restores inventory slots.
         """
         if not inventory_data:
             logger.debug("No inventory data to sync")
             return
         
-        logger.debug(f"Inventory sync skipped (intentional no-op): {inventory_data.get('numItems', 0)} items on server")
-        # TODO: Implement non-destructive inventory synchronization once the server's
-        #       inventory/item model is stable and the local inventory API is aligned.
-        #       For now, we avoid clearing or modifying the existing inventory.
+        slots_data = inventory_data.get('slots', [])
+        selected_slot = inventory_data.get('selectedSlotIndex', 0)
+        
+        logger.info(f"Syncing inventory: {len(slots_data)} slots, {inventory_data.get('numItems', 0)} total items")
+        
+        # Import item classes for inventory restoration
+        from entity.apple import Apple
+        from entity.banana import Banana
+        from entity.berry import Berry
+        from entity.stone import Stone
+        from entity.coalOre import CoalOre
+        from entity.ironOre import IronOre
+        from entity.wood import Wood
+        from entity.oakWood import OakWood
+        from entity.jungleWood import JungleWood
+        from entity.grass import Grass
+        from entity.leaves import Leaves
+        
+        # Map server item names to client item classes
+        item_name_to_class = {
+            'Apple': Apple,
+            'Banana': Banana,
+            'Berry': Berry,
+            'Stone': Stone,
+            'CoalOre': CoalOre,
+            'IronOre': IronOre,
+            'Wood': Wood,
+            'OakWood': OakWood,
+            'JungleWood': JungleWood,
+            'Grass': Grass,
+            'Leaves': Leaves,
+        }
+        
+        # Clear current inventory
+        self.player.getInventory().clear()
+        
+        # Restore each slot from server data
+        for slot_index, slot_data in enumerate(slots_data):
+            if slot_data.get('empty', True):
+                continue
+                
+            item_name = slot_data.get('itemName')
+            num_items = slot_data.get('numItems', 0)
+            
+            if not item_name or num_items <= 0:
+                continue
+            
+            # Get the item class
+            item_class = item_name_to_class.get(item_name)
+            if not item_class:
+                logger.warning(f"Unknown item type from server: {item_name}")
+                continue
+            
+            # Add items to this slot
+            inventory_slot = self.player.getInventory().getInventorySlots()[slot_index]
+            for _ in range(num_items):
+                item = item_class()
+                inventory_slot.add(item)
+            
+            logger.debug(f"Restored slot {slot_index}: {num_items}x {item_name}")
+        
+        # Set selected slot
+        self.player.getInventory().setSelectedInventorySlotIndex(selected_slot)
+        logger.info(f"Inventory sync complete: {self.player.getInventory().getNumItems()} items restored")
     
     def movePlayer(self, direction: int):
         """Send move action to server."""
