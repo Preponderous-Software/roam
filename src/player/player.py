@@ -1,6 +1,5 @@
 from entity.apple import Apple
 from entity.banana import Banana
-from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
 from inventory.inventory import Inventory
 
@@ -14,7 +13,7 @@ class Player(LivingEntity):
             "Player",
             "assets/images/player_down.png",
             100,
-            [Apple, Banana, Chicken],
+            [Apple, Banana],
             tickCreated,
         )
         self.direction = -1  # -1 when not moving
