@@ -151,4 +151,35 @@ public class InventoryController {
         InventoryDTO inventoryDTO = mappingService.toInventoryDTO(inventory);
         return ResponseEntity.ok(inventoryDTO);
     }
+
+    /**
+     * Swap two inventory slots.
+     */
+    @PostMapping("/swap")
+    public ResponseEntity<InventoryDTO> swapSlots(
+            @PathVariable String sessionId,
+            @RequestParam int fromSlot,
+            @RequestParam int toSlot) {
+        
+        String username = getCurrentUsername();
+        GameState gameState = gameService.getSession(sessionId, username);
+        if (gameState == null) {
+            throw new SessionNotFoundException(sessionId);
+        }
+        
+        Player player = gameState.getPlayer();
+        Inventory inventory = player.getInventory();
+        
+        // Validate slot indices
+        if (fromSlot < 0 || fromSlot >= inventory.getNumInventorySlots() ||
+            toSlot < 0 || toSlot >= inventory.getNumInventorySlots()) {
+            throw new IllegalArgumentException("Slot indices out of bounds: fromSlot=" + fromSlot + ", toSlot=" + toSlot);
+        }
+        
+        // Swap slots
+        inventory.swapSlots(fromSlot, toSlot);
+
+        InventoryDTO inventoryDTO = mappingService.toInventoryDTO(inventory);
+        return ResponseEntity.ok(inventoryDTO);
+    }
 }

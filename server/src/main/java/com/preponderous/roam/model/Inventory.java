@@ -148,4 +148,24 @@ public class Inventory {
         
         return false;
     }
+    
+    /**
+     * Swap two inventory slots.
+     * @param fromSlot The index of the first slot
+     * @param toSlot The index of the second slot
+     * @throws IndexOutOfBoundsException if either slot index is out of bounds
+     */
+    public void swapSlots(int fromSlot, int toSlot) {
+        if (fromSlot < 0 || fromSlot >= inventorySlots.size()) {
+            throw new IndexOutOfBoundsException("fromSlot index out of bounds: " + fromSlot);
+        }
+        if (toSlot < 0 || toSlot >= inventorySlots.size()) {
+            throw new IndexOutOfBoundsException("toSlot index out of bounds: " + toSlot);
+        }
+        
+        // Swap the slots
+        InventorySlot temp = inventorySlots.get(fromSlot);
+        inventorySlots.set(fromSlot, inventorySlots.get(toSlot));
+        inventorySlots.set(toSlot, temp);
+    }
 }

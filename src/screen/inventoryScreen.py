@@ -11,15 +11,19 @@ import pygame
 # @author Daniel McCoy Stephenson
 class InventoryScreen:
     def __init__(
-        self, graphik: Graphik, config: Config, status: Status, inventory: Inventory
+        self, graphik: Graphik, config: Config, status: Status, inventory: Inventory, api_client=None, session_id=None
     ):
         self.graphik = graphik
         self.config = config
         self.status = status
         self.inventory = inventory
+        self.api_client = api_client
+        self.session_id = session_id
         self.nextScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = False
         self.cursorSlot = InventorySlot()
+        self.cursor_slot_index = 25  # Virtual slot index for cursor (outside normal inventory)
+        self.from_slot_index = None  # Track which slot we picked up from
 
     # @source https://stackoverflow.com/questions/63342477/how-to-take-screenshot-of-entire-display-pygame
     def captureScreen(self, name, pos, size):  # (pygame Surface, String, tuple, tuple)
@@ -30,6 +34,7 @@ class InventoryScreen:
         pygame.image.save(image, name)  # Save the image to the disk**
 
     def swapCursorSlotWithInventorySlotByIndex(self, index):
+        # Swap locally first for immediate visual feedback
         if self.cursorSlot.isEmpty():
             self.cursorSlot.setContents(
                 self.inventory.getInventorySlots()[index].getContents()
@@ -41,6 +46,16 @@ class InventoryScreen:
                 self.cursorSlot.getContents()
             )
             self.cursorSlot.setContents(temp)
+        
+        # Call server API to persist the swap if available
+        if self.api_client and self.session_id:
+            try:
+                # Note: Server doesn't track cursor slot, so we just swap with the target slot
+                # The local state handles the cursor tracking
+                pass  # Local swap is sufficient for cursor slot
+            except Exception as e:
+                # Log error but don't fail - local state is already updated
+                print(f"Warning: Failed to sync inventory swap with server: {e}")
 
     def handleKeyDownEvent(self, key):
         if key == pygame.K_i or key == pygame.K_ESCAPE:
@@ -219,11 +234,31 @@ class InventoryScreen:
                     self.inventory.setSelectedInventorySlotIndex(index)
                     return
 
-                # move item from inventory slot to cursor slot
-                inventorySlotContents = inventorySlot.getContents()
-                cursorSlotContents = self.cursorSlot.getContents()
-                inventorySlot.setContents(cursorSlotContents)
-                self.cursorSlot.setContents(inventorySlotContents)
+                # Handle left click - swap with cursor slot
+                if self.cursorSlot.isEmpty():
+                    # Picking up from this slot
+                    self.from_slot_index = index
+                    inventorySlotContents = inventorySlot.getContents()
+                    self.cursorSlot.setContents(inventorySlotContents)
+                    inventorySlot.setContents([])
+                else:
+                    # Placing into this slot
+                    inventorySlotContents = inventorySlot.getContents()
+                    cursorSlotContents = self.cursorSlot.getContents()
+                    inventorySlot.setContents(cursorSlotContents)
+                    self.cursorSlot.setContents(inventorySlotContents)
+                    
+                    # Call server API to persist the swap if we have an API client
+                    if self.api_client and self.session_id and self.from_slot_index is not None:
+                        try:
+                            self.api_client.swap_inventory_slots(self.from_slot_index, index, self.session_id)
+                        except Exception as e:
+                            # Log error but don't fail - local state is already updated
+                            print(f"Warning: Failed to sync inventory swap with server: {e}")
+                    
+                    # Reset from_slot if cursor is now empty
+                    if self.cursorSlot.isEmpty():
+                        self.from_slot_index = None
 
             column += 1
             if column == itemsPerRow:

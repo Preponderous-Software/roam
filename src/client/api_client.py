@@ -488,6 +488,33 @@ class RoamAPIClient:
         
         return self._make_request("DELETE", f"/api/v1/session/{sid}/inventory")
     
+    def swap_inventory_slots(
+        self,
+        from_slot: int,
+        to_slot: int,
+        session_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Swap two inventory slots.
+        
+        Args:
+            from_slot: Index of the first slot
+            to_slot: Index of the second slot
+            session_id: Session ID (uses stored session_id if not provided)
+            
+        Returns:
+            Updated inventory data
+        """
+        sid = session_id or self.session_id
+        if not sid:
+            raise ValueError("No session ID provided")
+        
+        return self._make_request(
+            "POST",
+            f"/api/v1/session/{sid}/inventory/swap",
+            params={"fromSlot": from_slot, "toSlot": to_slot}
+        )
+    
     # World Management
     
     def get_world(self, session_id: Optional[str] = None) -> Dict[str, Any]:
