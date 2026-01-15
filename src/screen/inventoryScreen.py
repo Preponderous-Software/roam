@@ -53,6 +53,7 @@ class InventoryScreen:
             inventory_data = self.api_client.get_inventory(self.session_id)
             
             # Map server item names to client item classes
+            # TODO: Extract this mapping to a shared utility to avoid duplication with ServerBackedWorldScreen
             item_name_to_class = {
                 'Apple': Apple,
                 'Banana': Banana,
@@ -333,7 +334,7 @@ class InventoryScreen:
                     if self.api_client and self.session_id and self.from_slot_index is not None:
                         try:
                             # Call server API to perform the swap
-                            response = self.api_client.swap_inventory_slots(self.from_slot_index, index, self.session_id)
+                            self.api_client.swap_inventory_slots(self.from_slot_index, index, self.session_id)
                             
                             # Update local state from authoritative server response
                             self._syncInventoryFromServer()

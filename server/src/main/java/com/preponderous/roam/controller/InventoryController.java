@@ -170,14 +170,12 @@ public class InventoryController {
         Player player = gameState.getPlayer();
         Inventory inventory = player.getInventory();
         
-        // Validate slot indices
-        if (fromSlot < 0 || fromSlot >= inventory.getNumInventorySlots() ||
-            toSlot < 0 || toSlot >= inventory.getNumInventorySlots()) {
-            throw new IllegalArgumentException("Slot indices out of bounds: fromSlot=" + fromSlot + ", toSlot=" + toSlot);
+        // Swap slots - validation handled by Inventory.swapSlots()
+        try {
+            inventory.swapSlots(fromSlot, toSlot);
+        } catch (IndexOutOfBoundsException e) {
+            throw new IllegalArgumentException(e.getMessage());
         }
-        
-        // Swap slots
-        inventory.swapSlots(fromSlot, toSlot);
 
         InventoryDTO inventoryDTO = mappingService.toInventoryDTO(inventory);
         return ResponseEntity.ok(inventoryDTO);

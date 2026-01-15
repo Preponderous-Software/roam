@@ -163,6 +163,11 @@ public class Inventory {
             throw new IndexOutOfBoundsException("toSlot index out of bounds: " + toSlot);
         }
         
+        // Early return if swapping slot with itself
+        if (fromSlot == toSlot) {
+            return;
+        }
+        
         // Swap the slots
         InventorySlot temp = inventorySlots.get(fromSlot);
         inventorySlots.set(fromSlot, inventorySlots.get(toSlot));
