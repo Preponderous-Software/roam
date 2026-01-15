@@ -138,13 +138,13 @@ public class PlayerController {
                             entityInteractionService.harvestEntity(targetEntity, player);
                             
                             // Try gathering resources (apples, berries, wood, stone)
-                            entityInteractionService.gatherResource(targetEntity, player, currentRoom);
+                            entityInteractionService.gatherResource(targetEntity, player, currentRoom, sessionId);
                             
                             // Try hunting wildlife (bears, deer, chickens)
                             if (targetEntity instanceof LivingEntity) {
                                 LivingEntity livingEntity = (LivingEntity) targetEntity;
                                 // Deal 50 damage per gather action (might need multiple clicks to kill)
-                                entityInteractionService.huntEntity(livingEntity, player, currentRoom, 50.0);
+                                entityInteractionService.huntEntity(livingEntity, player, currentRoom, 50.0, sessionId);
                             }
                         }
                     }
@@ -184,6 +184,9 @@ public class PlayerController {
                                     if (placedEntity != null) {
                                         placedEntity.setLocationId(targetLocationId);
                                         currentRoom.addEntity(placedEntity);
+                                        
+                                        // Broadcast entity added via WebSocket
+                                        entityInteractionService.broadcastEntityAdded(sessionId, placedEntity);
                                         
                                         // Remove item from inventory
                                         player.getInventory().removeByItemName(itemName);
