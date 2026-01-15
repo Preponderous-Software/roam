@@ -22,7 +22,8 @@ class InventoryScreen:
         self.nextScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = False
         self.cursorSlot = InventorySlot()
-        self.cursor_slot_index = 25  # Virtual slot index for cursor (outside normal inventory)
+        # Virtual slot index for cursor (outside normal inventory)
+        self.cursor_slot_index = self.inventory.getNumInventorySlots()
         self.from_slot_index = None  # Track which slot we picked up from
 
     # @source https://stackoverflow.com/questions/63342477/how-to-take-screenshot-of-entire-display-pygame
@@ -46,16 +47,6 @@ class InventoryScreen:
                 self.cursorSlot.getContents()
             )
             self.cursorSlot.setContents(temp)
-        
-        # Call server API to persist the swap if available
-        if self.api_client and self.session_id:
-            try:
-                # Note: Server doesn't track cursor slot, so we just swap with the target slot
-                # The local state handles the cursor tracking
-                pass  # Local swap is sufficient for cursor slot
-            except Exception as e:
-                # Log error but don't fail - local state is already updated
-                print(f"Warning: Failed to sync inventory swap with server: {e}")
 
     def handleKeyDownEvent(self, key):
         if key == pygame.K_i or key == pygame.K_ESCAPE:
