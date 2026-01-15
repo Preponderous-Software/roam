@@ -1,11 +1,14 @@
 package com.preponderous.roam.service;
 
+import com.preponderous.roam.dto.websocket.PlayerPositionUpdate;
+import com.preponderous.roam.dto.websocket.TickUpdate;
 import com.preponderous.roam.model.GameState;
 import com.preponderous.roam.model.Player;
 import com.preponderous.roam.model.Room;
 import com.preponderous.roam.model.World;
 import com.preponderous.roam.model.WorldConfig;
 import com.preponderous.roam.persistence.service.GameStateStorage;
+import com.preponderous.roam.websocket.WebSocketMessageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +42,9 @@ public class GameService {
     
     @Autowired
     private GameStateStorage gameStateStorage;
+    
+    @Autowired(required = false)
+    private WebSocketMessageService webSocketMessageService;
     
     @Value("${roam.persistence.auto-save:false}")
     private boolean autoSaveEnabled;
@@ -150,13 +156,24 @@ public class GameService {
             // Update player movement
             Player player = gameState.getPlayer();
             if (player.isMoving()) {
-                playerService.movePlayer(player, gameState.getWorld(), gameState.getCurrentTick());
+                boolean moved = playerService.movePlayer(player, gameState.getWorld(), gameState.getCurrentTick());
+                if (moved && webSocketMessageService != null) {
+                    // Broadcast player position update
+                    playerService.broadcastPlayerPosition(sessionId, player, gameState.getUserId());
+                }
             }
             
             // Update entities in all loaded rooms
             World world = gameState.getWorld();
             for (Room room : world.getRooms().values()) {
                 entityManager.updateEntities(room, gameState.getCurrentTick());
+            }
+            
+            // Broadcast tick update via WebSocket
+            if (webSocketMessageService != null) {
+                TickUpdate tickUpdate = new TickUpdate();
+                tickUpdate.setCurrentTick(gameState.getCurrentTick());
+                webSocketMessageService.broadcastTickUpdate(sessionId, tickUpdate);
             }
             
             // Auto-save if enabled (every 100 ticks to avoid too frequent saves)

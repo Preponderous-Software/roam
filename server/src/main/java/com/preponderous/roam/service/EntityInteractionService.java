@@ -1,10 +1,15 @@
 package com.preponderous.roam.service;
 
+import com.preponderous.roam.dto.EntityDTO;
+import com.preponderous.roam.dto.websocket.EntityAction;
+import com.preponderous.roam.dto.websocket.EntityStateUpdate;
 import com.preponderous.roam.model.Entity;
 import com.preponderous.roam.model.LivingEntity;
 import com.preponderous.roam.model.Player;
 import com.preponderous.roam.model.Room;
 import com.preponderous.roam.model.entity.*;
+import com.preponderous.roam.websocket.WebSocketMessageService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -14,6 +19,12 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class EntityInteractionService {
+    
+    @Autowired(required = false)
+    private WebSocketMessageService webSocketMessageService;
+    
+    @Autowired
+    private MappingService mappingService;
     
     /**
      * Attempt to harvest a resource from a harvestable entity (Tree, Rock, Bush).
@@ -60,28 +71,45 @@ public class EntityInteractionService {
      * @return true if gathering was successful
      */
     public boolean gatherResource(Entity entity, Player player, Room room) {
+        return gatherResource(entity, player, room, null);
+    }
+    
+    /**
+     * Attempt to gather a resource entity with WebSocket broadcasting.
+     * 
+     * @param entity the entity to gather
+     * @param player the player doing the gathering
+     * @param room the room containing the entity
+     * @param sessionId the session ID for WebSocket broadcasting (null to skip broadcasting)
+     * @return true if gathering was successful
+     */
+    public boolean gatherResource(Entity entity, Player player, Room room, String sessionId) {
         if (entity instanceof Apple) {
             boolean added = player.getInventory().placeIntoFirstAvailableInventorySlot("Apple");
             if (added) {
                 room.removeEntity(entity.getId());
+                broadcastEntityRemoved(sessionId, entity);
                 return true;
             }
         } else if (entity instanceof Berry) {
             boolean added = player.getInventory().placeIntoFirstAvailableInventorySlot("Berry");
             if (added) {
                 room.removeEntity(entity.getId());
+                broadcastEntityRemoved(sessionId, entity);
                 return true;
             }
         } else if (entity instanceof Wood) {
             boolean added = player.getInventory().placeIntoFirstAvailableInventorySlot("Wood");
             if (added) {
                 room.removeEntity(entity.getId());
+                broadcastEntityRemoved(sessionId, entity);
                 return true;
             }
         } else if (entity instanceof Stone) {
             boolean added = player.getInventory().placeIntoFirstAvailableInventorySlot("Stone");
             if (added) {
                 room.removeEntity(entity.getId());
+                broadcastEntityRemoved(sessionId, entity);
                 return true;
             }
         }
@@ -98,6 +126,20 @@ public class EntityInteractionService {
      * @return true if the entity was killed
      */
     public boolean huntEntity(LivingEntity entity, Player player, Room room, double damage) {
+        return huntEntity(entity, player, room, damage, null);
+    }
+    
+    /**
+     * Attempt to hunt/attack a living entity with WebSocket broadcasting.
+     * 
+     * @param entity the entity to hunt
+     * @param player the player doing the hunting
+     * @param room the room containing the entity
+     * @param damage the damage to deal
+     * @param sessionId the session ID for WebSocket broadcasting (null to skip broadcasting)
+     * @return true if the entity was killed
+     */
+    public boolean huntEntity(LivingEntity entity, Player player, Room room, double damage, String sessionId) {
         entity.removeEnergy(damage);
         
         if (entity.getEnergy() <= 0) {
@@ -115,7 +157,11 @@ public class EntityInteractionService {
             
             // Remove entity from room
             room.removeEntity(entity.getId());
+            broadcastEntityRemoved(sessionId, entity);
             return true;
+        } else {
+            // Entity was damaged but not killed - broadcast update
+            broadcastEntityUpdated(sessionId, entity);
         }
         
         return false;
@@ -191,5 +237,41 @@ public class EntityInteractionService {
             .filter(entity -> targetLocationId.equals(entity.getLocationId()))
             .findFirst()
             .orElse(null);
+    }
+    
+    /**
+     * Broadcast entity removed event via WebSocket.
+     */
+    private void broadcastEntityRemoved(String sessionId, Entity entity) {
+        if (webSocketMessageService != null && sessionId != null) {
+            EntityStateUpdate update = new EntityStateUpdate();
+            update.setEntity(mappingService.toEntityDTO(entity));
+            update.setAction(EntityAction.REMOVED);
+            webSocketMessageService.broadcastEntityState(sessionId, update);
+        }
+    }
+    
+    /**
+     * Broadcast entity updated event via WebSocket.
+     */
+    private void broadcastEntityUpdated(String sessionId, Entity entity) {
+        if (webSocketMessageService != null && sessionId != null) {
+            EntityStateUpdate update = new EntityStateUpdate();
+            update.setEntity(mappingService.toEntityDTO(entity));
+            update.setAction(EntityAction.UPDATED);
+            webSocketMessageService.broadcastEntityState(sessionId, update);
+        }
+    }
+    
+    /**
+     * Broadcast entity added event via WebSocket.
+     */
+    public void broadcastEntityAdded(String sessionId, Entity entity) {
+        if (webSocketMessageService != null && sessionId != null) {
+            EntityStateUpdate update = new EntityStateUpdate();
+            update.setEntity(mappingService.toEntityDTO(entity));
+            update.setAction(EntityAction.ADDED);
+            webSocketMessageService.broadcastEntityState(sessionId, update);
+        }
     }
 }
