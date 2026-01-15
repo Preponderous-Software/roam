@@ -97,6 +97,7 @@ class ServerBackedWorldScreen:
         entity_sprite_paths = {
             'Bear': "assets/images/bear.png",
             'Chicken': "assets/images/chicken.png",
+            'Deer': "assets/images/bear.png",  # Using bear as deer placeholder (no deer sprite yet)
             'Tree': "assets/images/oakWood.png",
             'Rock': "assets/images/stone.png",
             'Bush': "assets/images/leaves.png",
@@ -740,6 +741,10 @@ class ServerBackedWorldScreen:
                         (screen_x, screen_y)
                     )
                 else:
+                    # Log unknown entity types explicitly
+                    if entity_type not in ['', 'Unknown']:
+                        logger.warning(f"Unknown entity type encountered: '{entity_type}' (name: '{entity_name}'). Using colored square fallback. Consider adding sprite mapping.")
+                    
                     # Fall back to colored square
                     entity_color = self._get_entity_color(entity_type)
                     
