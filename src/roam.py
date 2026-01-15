@@ -17,7 +17,7 @@ from ui.status import Status
 from screen.serverBackedWorldScreen import ServerBackedWorldScreen
 from world.tickCounter import TickCounter
 
-# Import item classes for inventory restoration
+# Import item classes for inventory restoration (used in serverBackedWorldScreen)
 from entity.apple import Apple
 from entity.banana import Banana
 from entity.stone import Stone
