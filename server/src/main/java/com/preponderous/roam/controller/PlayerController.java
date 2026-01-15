@@ -13,6 +13,7 @@ import com.preponderous.roam.service.EntityInteractionService;
 import com.preponderous.roam.service.GameService;
 import com.preponderous.roam.service.MappingService;
 import com.preponderous.roam.service.PlayerService;
+import com.preponderous.roam.service.RateLimitService;
 import com.preponderous.roam.service.WorldGenerationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +45,9 @@ public class PlayerController {
     
     @Autowired
     private WorldGenerationService worldGenerationService;
+    
+    @Autowired
+    private RateLimitService rateLimitService;
     
     /**
      * Get the username of the currently authenticated user.
@@ -77,6 +81,10 @@ public class PlayerController {
             @RequestBody PlayerActionRequest request) {
         
         String username = getCurrentUsername();
+        
+        // Apply rate limiting
+        rateLimitService.checkPlayerActionLimit(username);
+        
         GameState gameState = gameService.getSession(sessionId, username);
         if (gameState == null) {
             throw new SessionNotFoundException(sessionId);
@@ -257,6 +265,10 @@ public class PlayerController {
             @RequestParam(defaultValue = "add") String operation) {
         
         String username = getCurrentUsername();
+        
+        // Apply rate limiting
+        rateLimitService.checkPlayerActionLimit(username);
+        
         GameState gameState = gameService.getSession(sessionId, username);
         if (gameState == null) {
             throw new SessionNotFoundException(sessionId);

@@ -191,6 +191,7 @@ Response:
 ```
 POST /api/v1/session/{sessionId}/player/action
 Content-Type: application/json
+Authorization: Bearer {token}
 
 {
   "action": "move",
@@ -204,13 +205,20 @@ Content-Type: application/json
 Actions: move, stop, gather, place, crouch, consume
 
 Response: Updated player data
+
+Rate Limit: 10 requests per second per user
+Error: 429 Too Many Requests if limit exceeded
 ```
 
 #### Update Player Energy
 ```
 PUT /api/v1/session/{sessionId}/player/energy?amount=10&operation=add
+Authorization: Bearer {token}
 
 Response: Updated player data
+
+Rate Limit: 10 requests per second per user
+Error: 429 Too Many Requests if limit exceeded
 ```
 
 ### Inventory Management
@@ -264,6 +272,52 @@ DELETE /api/v1/session/{sessionId}/inventory
 
 Response: Updated inventory data
 ```
+
+## Rate Limiting
+
+The server implements rate limiting to prevent abuse and ensure fair resource usage. Rate limits are enforced per user.
+
+### Player Action Endpoints
+
+The following endpoints are rate limited to **10 requests per second per user**:
+- `POST /api/v1/session/{sessionId}/player/action`
+- `PUT /api/v1/session/{sessionId}/player/energy`
+
+When the rate limit is exceeded, the server returns:
+
+```json
+{
+  "timestamp": "2024-01-10T12:00:00",
+  "status": 429,
+  "error": "Too Many Requests",
+  "message": "Rate limit exceeded for player actions. Maximum 10 actions per second.",
+  "path": "/api/v1/session/{sessionId}/player/action"
+}
+```
+
+### WebSocket Messages
+
+WebSocket messages (e.g., heartbeat) are rate limited to **100 messages per second per user**.
+
+When the rate limit is exceeded for WebSocket messages:
+
+```json
+{
+  "timestamp": "2024-01-10T12:00:00",
+  "status": 429,
+  "error": "Too Many Requests",
+  "message": "Rate limit exceeded for WebSocket messages. Maximum 100 messages per second.",
+  "path": "/app/heartbeat"
+}
+```
+
+### Implementation
+
+Rate limiting is implemented using [Bucket4j](https://github.com/bucket4j/bucket4j) with a token bucket algorithm. Each user has separate buckets for:
+- Player actions (10 tokens, refilled at 10 tokens/second)
+- WebSocket messages (100 tokens, refilled at 100 tokens/second)
+
+Buckets refill continuously, allowing burst traffic up to the configured limit.
 
 ## Error Handling
 
