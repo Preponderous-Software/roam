@@ -29,8 +29,13 @@ public class WebSocketController {
     @SendToUser("/queue/heartbeat")
     public HeartbeatMessage handleHeartbeat(HeartbeatMessage heartbeat, Principal principal) {
         // Apply rate limiting for WebSocket messages
+        // Use username if authenticated, otherwise this will be handled by connection-level throttling
         if (principal != null) {
             rateLimitService.checkWebSocketMessageLimit(principal.getName());
+        } else {
+            // For unauthenticated connections, apply a stricter shared rate limit
+            // This prevents anonymous spam while allowing legitimate unauthenticated heartbeats
+            rateLimitService.checkWebSocketMessageLimit("__anonymous__");
         }
         
         HeartbeatMessage response = new HeartbeatMessage();

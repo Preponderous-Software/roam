@@ -1,5 +1,7 @@
 package com.preponderous.roam.config;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Refill;
@@ -7,12 +9,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Configuration for rate limiting using Bucket4j.
  * Provides per-user rate limiting for player actions and WebSocket messages.
+ * Uses Caffeine cache with automatic eviction to prevent memory leaks.
  * 
  * @author Daniel McCoy Stephenson
  */
@@ -22,19 +23,27 @@ public class RateLimitConfig {
     /**
      * Bean for storing per-user rate limit buckets for player actions.
      * Limits users to 10 actions per second.
+     * Buckets are automatically evicted after 1 hour of inactivity.
      */
     @Bean
-    public Map<String, Bucket> playerActionBuckets() {
-        return new ConcurrentHashMap<>();
+    public Cache<String, Bucket> playerActionBuckets() {
+        return Caffeine.newBuilder()
+                .expireAfterAccess(Duration.ofHours(1))
+                .maximumSize(10000)
+                .build();
     }
     
     /**
      * Bean for storing per-user rate limit buckets for WebSocket messages.
      * Limits users to 100 messages per second.
+     * Buckets are automatically evicted after 1 hour of inactivity.
      */
     @Bean
-    public Map<String, Bucket> webSocketMessageBuckets() {
-        return new ConcurrentHashMap<>();
+    public Cache<String, Bucket> webSocketMessageBuckets() {
+        return Caffeine.newBuilder()
+                .expireAfterAccess(Duration.ofHours(1))
+                .maximumSize(10000)
+                .build();
     }
     
     /**

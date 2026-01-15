@@ -109,6 +109,12 @@
             <version>8.7.0</version>
         </dependency>
 
+        <!-- Caffeine cache for rate limiter bucket storage -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
         <!-- Spring Boot Starter Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

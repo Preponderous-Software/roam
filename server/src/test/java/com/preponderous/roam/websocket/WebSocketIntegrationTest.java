@@ -189,6 +189,68 @@ public class WebSocketIntegrationTest {
         
         session.disconnect();
     }
+    
+    /**
+     * Test WebSocket rate limiting for heartbeat messages.
+     * Verifies that rate limiting is enforced at 100 messages per second.
+     */
+    @Test
+    public void testWebSocketRateLimiting() throws Exception {
+        BlockingQueue<HeartbeatMessage> messages = new LinkedBlockingQueue<>();
+        BlockingQueue<Throwable> errors = new LinkedBlockingQueue<>();
+        
+        WebSocketStompClient stompClient = createStompClient();
+        StompSession session = stompClient.connectAsync(
+            getWebSocketUrl(), 
+            new StompSessionHandlerAdapter() {
+                @Override
+                public void handleException(StompSession session, StompCommand command, 
+                                           StompHeaders headers, byte[] payload, Throwable exception) {
+                    errors.offer(exception);
+                }
+            }
+        ).get(10, TimeUnit.SECONDS);
+        
+        assertNotNull(session);
+        assertTrue(session.isConnected());
+        
+        // Subscribe to heartbeat queue
+        session.subscribe("/user/queue/heartbeat", new StompFrameHandler() {
+            @Override
+            public Type getPayloadType(StompHeaders headers) {
+                return HeartbeatMessage.class;
+            }
+
+            @Override
+            public void handleFrame(StompHeaders headers, Object payload) {
+                messages.offer((HeartbeatMessage) payload);
+            }
+        });
+        
+        // Send 105 heartbeat messages rapidly (limit is 100 per second)
+        int successCount = 0;
+        for (int i = 0; i < 105; i++) {
+            try {
+                HeartbeatMessage heartbeat = new HeartbeatMessage();
+                heartbeat.setMessage("ping");
+                session.send("/app/heartbeat", heartbeat);
+                successCount++;
+            } catch (Exception e) {
+                // Rate limit exception expected
+            }
+        }
+        
+        // Wait for responses (with timeout)
+        TimeUnit.MILLISECONDS.sleep(500);
+        
+        // Should receive at most 100 successful responses due to rate limiting
+        // Note: The exact count may vary due to async processing, but should be around 100
+        int responseCount = messages.size();
+        assertTrue(responseCount <= 100, 
+                "Expected at most 100 responses due to rate limiting, got: " + responseCount);
+        
+        session.disconnect();
+    }
 
     /**
      * Helper method to create a WebSocket STOMP client.

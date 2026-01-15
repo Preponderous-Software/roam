@@ -1,12 +1,11 @@
 package com.preponderous.roam.service;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import com.preponderous.roam.config.RateLimitConfig;
 import com.preponderous.roam.exception.RateLimitExceededException;
 import io.github.bucket4j.Bucket;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.Map;
 
 /**
  * Service for managing rate limiting using Bucket4j.
@@ -17,10 +16,10 @@ import java.util.Map;
 public class RateLimitService {
     
     @Autowired
-    private Map<String, Bucket> playerActionBuckets;
+    private Cache<String, Bucket> playerActionBuckets;
     
     @Autowired
-    private Map<String, Bucket> webSocketMessageBuckets;
+    private Cache<String, Bucket> webSocketMessageBuckets;
     
     /**
      * Check if a player action is allowed under rate limiting.
@@ -30,10 +29,7 @@ public class RateLimitService {
      * @throws RateLimitExceededException if rate limit is exceeded
      */
     public void checkPlayerActionLimit(String username) {
-        Bucket bucket = playerActionBuckets.computeIfAbsent(
-                username, 
-                k -> RateLimitConfig.createPlayerActionBucket()
-        );
+        Bucket bucket = playerActionBuckets.get(username, k -> RateLimitConfig.createPlayerActionBucket());
         
         if (!bucket.tryConsume(1)) {
             throw new RateLimitExceededException(
@@ -50,10 +46,7 @@ public class RateLimitService {
      * @throws RateLimitExceededException if rate limit is exceeded
      */
     public void checkWebSocketMessageLimit(String username) {
-        Bucket bucket = webSocketMessageBuckets.computeIfAbsent(
-                username, 
-                k -> RateLimitConfig.createWebSocketMessageBucket()
-        );
+        Bucket bucket = webSocketMessageBuckets.get(username, k -> RateLimitConfig.createWebSocketMessageBucket());
         
         if (!bucket.tryConsume(1)) {
             throw new RateLimitExceededException(
