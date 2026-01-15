@@ -6,6 +6,28 @@ This document describes the WebSocket implementation for real-time multiplayer u
 
 The Roam server uses WebSocket with STOMP protocol to provide real-time updates for multiplayer gameplay. This eliminates polling overhead and provides instant updates for smooth multiplayer experience.
 
+## Value Proposition
+
+WebSockets provide significant advantages over REST API polling:
+
+**Real-Time Gameplay Updates:**
+- **Player Movements**: Instantly broadcast when players move, stop, crouch, or change states - essential for multiplayer coordination
+- **Entity Interactions**: Immediate notifications when entities are gathered, placed, or destroyed - prevents race conditions where multiple players interact with the same entity
+- **Game Tick Sync**: All clients stay synchronized with server game state without constant polling
+- **Combat Updates**: Real-time damage updates for wildlife hunting (bears, deer, chickens)
+
+**Performance Benefits:**
+- **Reduced Server Load**: Eliminates constant REST polling (potentially hundreds of requests per second per client)
+- **Lower Latency**: Sub-100ms update delivery vs 1-5 second polling intervals
+- **Bandwidth Efficiency**: Only sends updates when state changes occur, not empty responses
+- **Scalability**: Single persistent connection per client vs multiple HTTP connections
+
+**Use Cases:**
+1. **Multiplayer Coordination**: Players see each other's movements and actions in real-time
+2. **Resource Competition**: Multiple players gathering resources get instant feedback when items are taken
+3. **Combat Awareness**: Players see when wildlife is damaged or killed by others
+4. **World Changes**: Room generation and environment updates broadcast to all players
+
 ## Connection
 
 ### WebSocket Endpoint
@@ -60,7 +82,7 @@ Broadcasts when entities are added, removed, or updated in the world.
   "type": "ENTITY_STATE",
   "sessionId": "uuid",
   "timestamp": 1234567890,
-  "action": "added|removed|updated",
+  "action": "ADDED|REMOVED|UPDATED",
   "entity": {
     "id": "uuid",
     "name": "Tree",
