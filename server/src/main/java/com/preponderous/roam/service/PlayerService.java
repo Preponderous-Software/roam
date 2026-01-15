@@ -1,8 +1,10 @@
 package com.preponderous.roam.service;
 
+import com.preponderous.roam.dto.websocket.PlayerPositionUpdate;
 import com.preponderous.roam.model.Player;
 import com.preponderous.roam.model.Room;
 import com.preponderous.roam.model.World;
+import com.preponderous.roam.websocket.WebSocketMessageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,12 +21,16 @@ public class PlayerService {
     
     @Autowired
     private WorldGenerationService worldGenerationService;
+    
+    @Autowired(required = false)
+    private WebSocketMessageService webSocketMessageService;
 
     /**
      * Update player direction.
      */
     public void setDirection(Player player, int direction) {
         player.setDirection(direction);
+        broadcastPlayerPosition(null, player, null);
     }
 
     /**
@@ -32,6 +38,7 @@ public class PlayerService {
      */
     public void setGathering(Player player, boolean gathering) {
         player.setGathering(gathering);
+        broadcastPlayerPosition(null, player, null);
     }
 
     /**
@@ -39,6 +46,7 @@ public class PlayerService {
      */
     public void setPlacing(Player player, boolean placing) {
         player.setPlacing(placing);
+        broadcastPlayerPosition(null, player, null);
     }
 
     /**
@@ -46,6 +54,7 @@ public class PlayerService {
      */
     public void setCrouching(Player player, boolean crouching) {
         player.setCrouching(crouching);
+        broadcastPlayerPosition(null, player, null);
     }
 
     /**
@@ -191,6 +200,9 @@ public class PlayerService {
         player.setRoomY(newRoomY);
         player.setTileX(newTileX);
         player.setTileY(newTileY);
+        
+        // Broadcast position update via WebSocket (sessionId provided by caller)
+        // Will be called from GameService with proper sessionId
 
         return true;
     }
@@ -209,5 +221,30 @@ public class PlayerService {
         player.setRoomY(roomY);
         player.setTileX(tileX);
         player.setTileY(tileY);
+        broadcastPlayerPosition(null, player, null);
+    }
+
+    /**
+     * Broadcast player position update via WebSocket.
+     * 
+     * @param sessionId the session ID (null if not available)
+     * @param player the player
+     * @param username the username (null if not available)
+     */
+    public void broadcastPlayerPosition(String sessionId, Player player, String username) {
+        if (webSocketMessageService != null && sessionId != null) {
+            PlayerPositionUpdate update = new PlayerPositionUpdate();
+            update.setUsername(username);
+            update.setRoomX(player.getRoomX());
+            update.setRoomY(player.getRoomY());
+            update.setTileX(player.getTileX());
+            update.setTileY(player.getTileY());
+            update.setDirection(player.getDirection());
+            update.setGathering(player.isGathering());
+            update.setPlacing(player.isPlacing());
+            update.setCrouching(player.isCrouching());
+            
+            webSocketMessageService.broadcastPlayerPosition(sessionId, update);
+        }
     }
 }

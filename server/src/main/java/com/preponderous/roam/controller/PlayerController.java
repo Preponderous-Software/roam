@@ -96,10 +96,12 @@ public class PlayerController {
                 if (request.getDirection() != null) {
                     playerService.setDirection(player, request.getDirection());
                     playerService.setTickLastMoved(player, currentTick);
+                    playerService.broadcastPlayerPosition(sessionId, player, username);
                 }
                 break;
             case "stop":
                 playerService.setDirection(player, -1);
+                playerService.broadcastPlayerPosition(sessionId, player, username);
                 break;
             case "gather":
                 if (request.getGathering() != null) {
