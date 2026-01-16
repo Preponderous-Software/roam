@@ -349,6 +349,12 @@ class ServerBackedWorldScreen:
         logger.debug(f"Key down event: {key}")
         if key == pygame.K_ESCAPE:
             logger.info("ESC pressed - opening options menu")
+            # Save session before navigating to menu
+            try:
+                self.api_client.save_session(self.session_id)
+                logger.info("Session saved before menu navigation")
+            except Exception as e:
+                logger.warning(f"Failed to save session before menu navigation: {e}")
             self.nextScreen = ScreenType.OPTIONS_SCREEN
             self.changeScreen = True
         # Regular arrow key movement

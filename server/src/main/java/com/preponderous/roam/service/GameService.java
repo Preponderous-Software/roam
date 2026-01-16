@@ -215,4 +215,12 @@ public class GameService {
         GameState gameState = getSession(sessionId);
         return gameState != null ? gameState.getCurrentTick() : 0;
     }
+    
+    /**
+     * Get all active sessions in memory.
+     * Used for auto-save operations.
+     */
+    public Map<String, GameState> getActiveSessions() {
+        return new ConcurrentHashMap<>(sessions);
+    }
 }
