@@ -427,8 +427,20 @@ class ServerBackedWorldScreen:
         try:
             logger.debug(f"Selecting inventory slot {slot_index}")
             self.player_data = self.api_client.select_inventory_slot(slot_index)
-            self._updatePlayerFromServerData(self.player_data)
-            self.status.set(f"Selected slot {slot_index + 1}")
+            
+            # Only update the selected slot index without rebuilding inventory
+            # This prevents the hotbar from flickering when switching slots
+            if self.player_data and 'inventory' in self.player_data:
+                selected_index = self.player_data['inventory'].get('selectedSlotIndex', slot_index)
+                self.player.getInventory().setSelectedInventorySlotIndex(selected_index)
+            
+            # Show item name in status, or "Empty slot" if no item
+            inventory_slot = self.player.getInventory().getInventorySlots()[slot_index]
+            if not inventory_slot.isEmpty():
+                item_name = inventory_slot.getContents()[0].getName()
+                self.status.set(f"Selected {item_name}")
+            else:
+                self.status.set(f"Selected empty slot")
         except Exception as e:
             logger.error(f"Failed to select slot {slot_index}: {e}", exc_info=True)
             self.status.set(f"Slot selection failed")
