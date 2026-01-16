@@ -433,8 +433,13 @@ class ServerBackedWorldScreen:
             
             # Update only the inventory portion of player_data to preserve position data
             # This prevents the player from teleporting when switching slots
-            if self.player_data and inventory_response:
-                self.player_data['inventory'] = inventory_response
+            if inventory_response:
+                if not self.player_data:
+                    # If player_data is None, initialize it with just inventory
+                    self.player_data = {'inventory': inventory_response}
+                else:
+                    # Update only the inventory portion to preserve other fields
+                    self.player_data['inventory'] = inventory_response
             
             # Only update the selected slot index without rebuilding inventory
             # This prevents the hotbar from flickering when switching slots
