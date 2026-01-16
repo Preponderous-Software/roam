@@ -24,10 +24,8 @@ class StatsScreen:
         self.changeScreen = False
         
         # Stats data from server
-        self.score = 0
         self.rooms_explored = 0
         self.food_eaten = 0
-        self.number_of_deaths = 0
 
     # @source https://stackoverflow.com/questions/63342477/how-to-take-screenshot-of-entire-display-pygame
     def captureScreen(self, name, pos, size):  # (pygame Surface, String, tuple, tuple)
@@ -69,11 +67,9 @@ class StatsScreen:
             
             try:
                 player_data = self.api_client.get_player(self.api_client.session_id)
-                self.score = player_data.get('score', 0)
                 self.rooms_explored = player_data.get('roomsExplored', 0)
                 self.food_eaten = player_data.get('foodEaten', 0)
-                self.number_of_deaths = player_data.get('numberOfDeaths', 0)
-                logger.debug(f"Successfully fetched stats from server: score={self.score}, rooms_explored={self.rooms_explored}, food_eaten={self.food_eaten}, deaths={self.number_of_deaths}")
+                logger.debug(f"Successfully fetched stats from server: rooms_explored={self.rooms_explored}, food_eaten={self.food_eaten}")
             except Exception as e:
                 logger.error(f"Failed to fetch player stats from server (session={self.api_client.session_id}): {e}", exc_info=True)
                 # Fall back to local stats
@@ -85,10 +81,8 @@ class StatsScreen:
     
     def _loadLocalStats(self):
         """Load stats from local Stats object."""
-        self.score = self.stats.getScore()
         self.rooms_explored = self.stats.getRoomsExplored()
         self.food_eaten = self.stats.getFoodEaten()
-        self.number_of_deaths = self.stats.getNumberOfDeaths()
 
     def quitApplication(self):
         pygame.quit()
@@ -103,27 +97,15 @@ class StatsScreen:
         xpos = x / 2
         ypos = 0 + height / 2
 
-        # draw score
-        text = "score: " + str(self.score)
+        # draw rooms explored
+        text = "rooms explored: " + str(self.rooms_explored)
         self.graphik.drawText(text, xpos, ypos, 30, (255, 255, 255))
 
-        # draw rooms explored
+        # draw food eaten
         self.xpos = xpos
         self.ypos = ypos + height
-        text = "rooms explored: " + str(self.rooms_explored)
-        self.graphik.drawText(text, xpos, ypos + height, 30, (255, 255, 255))
-
-        # draw apples eaten
-        self.xpos = xpos
-        self.ypos = ypos + height * 2
         text = "food eaten: " + str(self.food_eaten)
-        self.graphik.drawText(text, xpos, ypos + height * 2, 30, (255, 255, 255))
-
-        # draw number of deaths
-        self.xpos = xpos
-        self.ypos = ypos + height * 3
-        text = "number of deaths: " + str(self.number_of_deaths)
-        self.graphik.drawText(text, xpos, ypos + height * 3, 30, (255, 255, 255))
+        self.graphik.drawText(text, xpos, ypos + height, 30, (255, 255, 255))
 
     def drawBackButton(self):
         x, y = self.graphik.getGameDisplay().get_size()
