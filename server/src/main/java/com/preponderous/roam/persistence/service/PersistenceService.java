@@ -572,5 +572,10 @@ public class PersistenceService implements GameStateStorage {
         target.setTileX(source.getTileX());
         target.setTileY(source.getTileY());
         target.setInventory(source.getInventory());
+        // Copy stats
+        target.setScore(source.getScore());
+        target.setRoomsExplored(source.getRoomsExplored());
+        target.setFoodEaten(source.getFoodEaten());
+        target.setNumberOfDeaths(source.getNumberOfDeaths());
     }
 }
