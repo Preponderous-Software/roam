@@ -26,3 +26,7 @@ class Config:
         self.autoEatFoodInInventory = True
         self.removeDeadEntities = True
         self.showMiniMap = True
+        
+        # client-side prediction (WI-005)
+        self.enable_prediction = True
+        self.prediction_snap_threshold = 2  # tiles difference before snapping

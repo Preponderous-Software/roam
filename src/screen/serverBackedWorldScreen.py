@@ -8,6 +8,7 @@ No local world generation or entity management.
 
 import pygame
 import logging
+import threading
 from config.config import Config
 from stats.stats import Stats
 from ui.energyBar import EnergyBar
@@ -72,6 +73,10 @@ class ServerBackedWorldScreen:
         # Server state
         self.player_data = None
         self.server_tick = 0
+        
+        # Client-side prediction state (WI-005)
+        self.predicted_position = None  # (tile_x, tile_y) or None
+        self.pending_move_request = False  # Flag to track if move request is in flight
         
         # World rendering
         self.current_room = None
@@ -215,6 +220,68 @@ class ServerBackedWorldScreen:
         inventory_data = player_data.get('inventory', {})
         self._updateInventoryFromServerData(inventory_data)
     
+    def _predictPosition(self, direction: int):
+        """
+        Predict the next position based on current position and direction.
+        Uses client-side collision detection with last known room state.
+        
+        Args:
+            direction: Movement direction (0=up, 1=left, 2=down, 3=right)
+            
+        Returns:
+            Tuple of (tile_x, tile_y) representing predicted position
+        """
+        if not self.player_data:
+            logger.warning("Cannot predict position - no player data")
+            return None
+        
+        # Get current position
+        current_tile_x = self.player_data.get('tileX', 0)
+        current_tile_y = self.player_data.get('tileY', 0)
+        current_room_x = self.player_data.get('roomX', 0)
+        current_room_y = self.player_data.get('roomY', 0)
+        
+        # Calculate predicted position based on direction
+        predicted_tile_x = current_tile_x
+        predicted_tile_y = current_tile_y
+        
+        if direction == 0:  # up
+            predicted_tile_y -= 1
+        elif direction == 1:  # left
+            predicted_tile_x -= 1
+        elif direction == 2:  # down
+            predicted_tile_y += 1
+        elif direction == 3:  # right
+            predicted_tile_x += 1
+        
+        # Client-side collision prediction using last known room state
+        if self.current_room and current_room_x == self.current_room_x and current_room_y == self.current_room_y:
+            width = self.current_room.get('width', 20)
+            height = self.current_room.get('height', 20)
+            
+            # Check bounds
+            if predicted_tile_x < 0 or predicted_tile_x >= width or predicted_tile_y < 0 or predicted_tile_y >= height:
+                logger.debug(f"Prediction blocked - out of bounds: ({predicted_tile_x}, {predicted_tile_y})")
+                return (current_tile_x, current_tile_y)
+            
+            # Check for solid entities at predicted position
+            entities = self.current_room.get('entities', [])
+            for entity in entities:
+                location_id = entity.get('locationId', '')
+                if location_id:
+                    parts = location_id.split(',')
+                    if len(parts) >= 4:
+                        entity_tile_x = int(parts[2])
+                        entity_tile_y = int(parts[3])
+                        
+                        if entity_tile_x == predicted_tile_x and entity_tile_y == predicted_tile_y:
+                            if entity.get('solid', False):
+                                logger.debug(f"Prediction blocked - solid entity at ({predicted_tile_x}, {predicted_tile_y})")
+                                return (current_tile_x, current_tile_y)
+        
+        logger.debug(f"Predicted position: ({predicted_tile_x}, {predicted_tile_y})")
+        return (predicted_tile_x, predicted_tile_y)
+    
     def _updateInventoryFromServerData(self, inventory_data):
         """Update player inventory from server data.
         
@@ -284,7 +351,7 @@ class ServerBackedWorldScreen:
         logger.info(f"Inventory sync complete: {self.player.getInventory().getNumItems()} items restored")
     
     def movePlayer(self, direction: int):
-        """Send move action to server."""
+        """Send move action to server with optional client-side prediction."""
         direction_names = ["up", "left", "down", "right"]
         logger.debug(f"movePlayer called: direction={direction} ({direction_names[direction]})")
         
@@ -292,20 +359,87 @@ class ServerBackedWorldScreen:
             logger.debug("Movement blocked - player is crouching")
             return
         
+        # Client-side prediction (WI-005)
+        if self.config.enable_prediction and not self.pending_move_request:
+            predicted_pos = self._predictPosition(direction)
+            if predicted_pos:
+                # Update display immediately
+                self.predicted_position = predicted_pos
+                self.player.setDirection(direction)
+                logger.debug(f"Prediction enabled: predicted position {predicted_pos}")
+            
+            # Send request to server asynchronously
+            self.pending_move_request = True
+            threading.Thread(target=self._sendMoveRequest, args=(direction,), daemon=True).start()
+        else:
+            # Original synchronous behavior (no prediction)
+            try:
+                logger.debug(f"Sending move action to server: direction={direction}")
+                self.player_data = self.api_client.perform_player_action(
+                    "move",
+                    direction=direction
+                )
+                logger.info(f"Move successful: new position from server, moving={self.player_data.get('moving')}")
+                self._updatePlayerFromServerData(self.player_data)
+                
+                self.status.set(f"Moving {direction_names[direction]}")
+            except Exception as e:
+                logger.error(f"Failed to move player: {e}", exc_info=True)
+                print(f"Failed to move: {e}")
+                self.status.set(f"Move failed: {e}")
+    
+    def _sendMoveRequest(self, direction: int):
+        """
+        Send move request to server asynchronously and reconcile with prediction.
+        This method runs in a background thread when prediction is enabled.
+        
+        Args:
+            direction: Movement direction (0=up, 1=left, 2=down, 3=right)
+        """
+        direction_names = ["up", "left", "down", "right"]
         try:
-            logger.debug(f"Sending move action to server: direction={direction}")
-            self.player_data = self.api_client.perform_player_action(
+            logger.debug(f"Async move request: direction={direction}")
+            player_data = self.api_client.perform_player_action(
                 "move",
                 direction=direction
             )
-            logger.info(f"Move successful: new position from server, moving={self.player_data.get('moving')}")
-            self._updatePlayerFromServerData(self.player_data)
             
+            # Reconcile with server
+            server_tile_x = player_data.get('tileX')
+            server_tile_y = player_data.get('tileY')
+            server_position = (server_tile_x, server_tile_y)
+            
+            if self.predicted_position and self.predicted_position != server_position:
+                # Prediction error - calculate distance
+                pred_x, pred_y = self.predicted_position
+                distance = abs(pred_x - server_tile_x) + abs(pred_y - server_tile_y)
+                
+                logger.warning(
+                    f"Prediction error: predicted {self.predicted_position}, "
+                    f"server {server_position}, distance={distance} tiles"
+                )
+                
+                # Check if error exceeds snap threshold
+                if distance >= self.config.prediction_snap_threshold:
+                    logger.info(f"Snapping to server position (distance {distance} >= threshold {self.config.prediction_snap_threshold})")
+                    # Snap to server position
+                    self.predicted_position = None
+            else:
+                # Prediction was correct or close enough
+                logger.debug(f"Prediction accurate: {server_position}")
+                self.predicted_position = None
+            
+            # Always update player data from server response
+            self._updatePlayerFromServerData(player_data)
             self.status.set(f"Moving {direction_names[direction]}")
+            
         except Exception as e:
-            logger.error(f"Failed to move player: {e}", exc_info=True)
-            print(f"Failed to move: {e}")
+            logger.error(f"Async move request failed: {e}", exc_info=True)
+            # Revert prediction on error
+            self.predicted_position = None
             self.status.set(f"Move failed: {e}")
+        finally:
+            self.pending_move_request = False
     
     def stopPlayer(self):
         """Stop player movement."""
@@ -782,6 +916,11 @@ class ServerBackedWorldScreen:
             player_room_y = self.player_data.get('roomY', 0)
             player_tile_x = self.player_data.get('tileX', 0)
             player_tile_y = self.player_data.get('tileY', 0)
+            
+            # Use predicted position if available (client-side prediction)
+            if self.predicted_position:
+                player_tile_x, player_tile_y = self.predicted_position
+                logger.debug(f"Rendering predicted position: ({player_tile_x}, {player_tile_y})")
             
             # Only draw if player is in the current room
             if player_room_x == self.current_room_x and player_room_y == self.current_room_y:
