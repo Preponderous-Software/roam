@@ -30,6 +30,12 @@ public class PlayerDTO {
     private int roomY;
     private int tileX;
     private int tileY;
+    
+    // Stats
+    private int score;
+    private int roomsExplored;
+    private int foodEaten;
+    private int numberOfDeaths;
 
     public PlayerDTO() {
     }
@@ -209,5 +215,37 @@ public class PlayerDTO {
 
     public void setTileY(int tileY) {
         this.tileY = tileY;
+    }
+
+    public int getScore() {
+        return score;
+    }
+
+    public void setScore(int score) {
+        this.score = score;
+    }
+
+    public int getRoomsExplored() {
+        return roomsExplored;
+    }
+
+    public void setRoomsExplored(int roomsExplored) {
+        this.roomsExplored = roomsExplored;
+    }
+
+    public int getFoodEaten() {
+        return foodEaten;
+    }
+
+    public void setFoodEaten(int foodEaten) {
+        this.foodEaten = foodEaten;
+    }
+
+    public int getNumberOfDeaths() {
+        return numberOfDeaths;
+    }
+
+    public void setNumberOfDeaths(int numberOfDeaths) {
+        this.numberOfDeaths = numberOfDeaths;
     }
 }

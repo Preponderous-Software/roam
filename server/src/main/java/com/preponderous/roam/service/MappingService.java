@@ -49,6 +49,10 @@ public class MappingService {
         dto.setRoomY(player.getRoomY());
         dto.setTileX(player.getTileX());
         dto.setTileY(player.getTileY());
+        dto.setScore(player.getScore());
+        dto.setRoomsExplored(player.getRoomsExplored());
+        dto.setFoodEaten(player.getFoodEaten());
+        dto.setNumberOfDeaths(player.getNumberOfDeaths());
         return dto;
     }
 

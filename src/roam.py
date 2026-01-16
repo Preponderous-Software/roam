@@ -77,7 +77,7 @@ class Roam:
             self.graphik, self.config, self.initializeWorldScreen
         )
         self.statsScreen = StatsScreen(
-            self.graphik, self.config, self.status, self.stats
+            self.graphik, self.config, self.status, self.stats, self.api_client
         )
         self.inventoryScreen = None  # Will be initialized after player is created
         self.configScreen = ConfigScreen(self.graphik, self.config, self.status)

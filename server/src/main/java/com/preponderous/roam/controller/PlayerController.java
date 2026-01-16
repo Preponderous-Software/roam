@@ -217,6 +217,8 @@ public class PlayerController {
                     if (removed) {
                         // In future, different food types could restore different amounts
                         playerService.addEnergy(player, DEFAULT_FOOD_ENERGY_RESTORE);
+                        // Increment food eaten stat
+                        player.incrementFoodEaten();
                     } else {
                         throw new IllegalArgumentException("Item not found in inventory: " + request.getItemName());
                     }

@@ -81,6 +81,18 @@ public class PlayerEntityData {
     @Column(name = "tile_y", nullable = false)
     private int tileY;
     
+    @Column(name = "score", nullable = false)
+    private int score;
+    
+    @Column(name = "rooms_explored", nullable = false)
+    private int roomsExplored;
+    
+    @Column(name = "food_eaten", nullable = false)
+    private int foodEaten;
+    
+    @Column(name = "number_of_deaths", nullable = false)
+    private int numberOfDeaths;
+    
     @Column(name = "selected_inventory_slot_index", nullable = false)
     private int selectedInventorySlotIndex;
     
@@ -267,6 +279,38 @@ public class PlayerEntityData {
     
     public void setTileY(int tileY) {
         this.tileY = tileY;
+    }
+    
+    public int getScore() {
+        return score;
+    }
+    
+    public void setScore(int score) {
+        this.score = score;
+    }
+    
+    public int getRoomsExplored() {
+        return roomsExplored;
+    }
+    
+    public void setRoomsExplored(int roomsExplored) {
+        this.roomsExplored = roomsExplored;
+    }
+    
+    public int getFoodEaten() {
+        return foodEaten;
+    }
+    
+    public void setFoodEaten(int foodEaten) {
+        this.foodEaten = foodEaten;
+    }
+    
+    public int getNumberOfDeaths() {
+        return numberOfDeaths;
+    }
+    
+    public void setNumberOfDeaths(int numberOfDeaths) {
+        this.numberOfDeaths = numberOfDeaths;
     }
     
     public int getSelectedInventorySlotIndex() {

@@ -244,6 +244,10 @@ public class PersistenceService implements GameStateStorage {
         playerEntity.setRoomY(player.getRoomY());
         playerEntity.setTileX(player.getTileX());
         playerEntity.setTileY(player.getTileY());
+        playerEntity.setScore(player.getScore());
+        playerEntity.setRoomsExplored(player.getRoomsExplored());
+        playerEntity.setFoodEaten(player.getFoodEaten());
+        playerEntity.setNumberOfDeaths(player.getNumberOfDeaths());
         playerEntity.setSelectedInventorySlotIndex(player.getInventory().getSelectedInventorySlotIndex());
         
         playerEntity = playerRepository.save(playerEntity);
@@ -524,6 +528,10 @@ public class PersistenceService implements GameStateStorage {
         player.setRoomY(playerEntity.getRoomY());
         player.setTileX(playerEntity.getTileX());
         player.setTileY(playerEntity.getTileY());
+        player.setScore(playerEntity.getScore());
+        player.setRoomsExplored(playerEntity.getRoomsExplored());
+        player.setFoodEaten(playerEntity.getFoodEaten());
+        player.setNumberOfDeaths(playerEntity.getNumberOfDeaths());
         
         // Load inventory
         Inventory inventory = new Inventory();

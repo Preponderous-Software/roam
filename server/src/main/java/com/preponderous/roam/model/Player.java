@@ -29,6 +29,12 @@ public class Player extends LivingEntity {
     private int roomY;
     private int tileX;
     private int tileY;
+    
+    // Stats tracking
+    private int score;
+    private int roomsExplored;
+    private int foodEaten;
+    private int numberOfDeaths;
 
     public Player(long tickCreated) {
         super("Player", "assets/images/player_down.png", DEFAULT_PLAYER_ENERGY, tickCreated);
@@ -51,6 +57,12 @@ public class Player extends LivingEntity {
         this.roomY = 0;
         this.tileX = 0;
         this.tileY = 0;
+        
+        // Initialize stats
+        this.score = 0;
+        this.roomsExplored = 0;
+        this.foodEaten = 0;
+        this.numberOfDeaths = 0;
     }
 
     public int getDirection() {
@@ -199,5 +211,53 @@ public class Player extends LivingEntity {
 
     public void setTileY(int tileY) {
         this.tileY = tileY;
+    }
+
+    public int getScore() {
+        return score;
+    }
+
+    public void setScore(int score) {
+        this.score = score;
+    }
+
+    public void incrementScore() {
+        this.score++;
+    }
+
+    public int getRoomsExplored() {
+        return roomsExplored;
+    }
+
+    public void setRoomsExplored(int roomsExplored) {
+        this.roomsExplored = roomsExplored;
+    }
+
+    public void incrementRoomsExplored() {
+        this.roomsExplored++;
+    }
+
+    public int getFoodEaten() {
+        return foodEaten;
+    }
+
+    public void setFoodEaten(int foodEaten) {
+        this.foodEaten = foodEaten;
+    }
+
+    public void incrementFoodEaten() {
+        this.foodEaten++;
+    }
+
+    public int getNumberOfDeaths() {
+        return numberOfDeaths;
+    }
+
+    public void setNumberOfDeaths(int numberOfDeaths) {
+        this.numberOfDeaths = numberOfDeaths;
+    }
+
+    public void incrementNumberOfDeaths() {
+        this.numberOfDeaths++;
     }
 }

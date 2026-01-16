@@ -1,5 +1,6 @@
 import datetime
 import os
+from client.api_client import RoamAPIClient
 from config.config import Config
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
@@ -9,13 +10,20 @@ import pygame
 
 # @author Daniel McCoy Stephenson
 class StatsScreen:
-    def __init__(self, graphik: Graphik, config: Config, status: Status, stats: Stats):
+    def __init__(self, graphik: Graphik, config: Config, status: Status, stats: Stats, api_client: RoamAPIClient = None):
         self.graphik = graphik
         self.config = config
         self.status = status
-        self.stats = stats
+        self.stats = stats  # Keep for backward compatibility
+        self.api_client = api_client
         self.nextScreen = ScreenType.OPTIONS_SCREEN
         self.changeScreen = False
+        
+        # Stats data from server
+        self.score = 0
+        self.rooms_explored = 0
+        self.food_eaten = 0
+        self.number_of_deaths = 0
 
     # @source https://stackoverflow.com/questions/63342477/how-to-take-screenshot-of-entire-display-pygame
     def captureScreen(self, name, pos, size):  # (pygame Surface, String, tuple, tuple)
@@ -45,6 +53,29 @@ class StatsScreen:
     def switchToOptionsScreen(self):
         self.nextScreen = ScreenType.OPTIONS_SCREEN
         self.changeScreen = True
+    
+    def fetchStatsFromServer(self):
+        """Fetch stats from server if API client and session ID are available."""
+        if self.api_client and self.api_client.session_id:
+            try:
+                player_data = self.api_client.get_player(self.api_client.session_id)
+                self.score = player_data.get('score', 0)
+                self.rooms_explored = player_data.get('roomsExplored', 0)
+                self.food_eaten = player_data.get('foodEaten', 0)
+                self.number_of_deaths = player_data.get('numberOfDeaths', 0)
+            except Exception as e:
+                print(f"Failed to fetch stats from server: {e}")
+                # Fall back to local stats
+                self.score = self.stats.getScore()
+                self.rooms_explored = self.stats.getRoomsExplored()
+                self.food_eaten = self.stats.getFoodEaten()
+                self.number_of_deaths = self.stats.getNumberOfDeaths()
+        else:
+            # Use local stats if no API client
+            self.score = self.stats.getScore()
+            self.rooms_explored = self.stats.getRoomsExplored()
+            self.food_eaten = self.stats.getFoodEaten()
+            self.number_of_deaths = self.stats.getNumberOfDeaths()
 
     def quitApplication(self):
         pygame.quit()
@@ -60,25 +91,25 @@ class StatsScreen:
         ypos = 0 + height / 2
 
         # draw score
-        text = "score: " + str(self.stats.getScore())
+        text = "score: " + str(self.score)
         self.graphik.drawText(text, xpos, ypos, 30, (255, 255, 255))
 
         # draw rooms explored
         self.xpos = xpos
         self.ypos = ypos + height
-        text = "rooms explored: " + str(self.stats.getRoomsExplored())
+        text = "rooms explored: " + str(self.rooms_explored)
         self.graphik.drawText(text, xpos, ypos + height, 30, (255, 255, 255))
 
         # draw apples eaten
         self.xpos = xpos
         self.ypos = ypos + height * 2
-        text = "food eaten: " + str(self.stats.getFoodEaten())
+        text = "food eaten: " + str(self.food_eaten)
         self.graphik.drawText(text, xpos, ypos + height * 2, 30, (255, 255, 255))
 
         # draw number of deaths
         self.xpos = xpos
         self.ypos = ypos + height * 3
-        text = "number of deaths: " + str(self.stats.getNumberOfDeaths())
+        text = "number of deaths: " + str(self.number_of_deaths)
         self.graphik.drawText(text, xpos, ypos + height * 3, 30, (255, 255, 255))
 
     def drawBackButton(self):
@@ -100,6 +131,9 @@ class StatsScreen:
         )
 
     def run(self):
+        # Fetch stats from server when screen is opened
+        self.fetchStatsFromServer()
+        
         while not self.changeScreen:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
