@@ -116,15 +116,18 @@ class ServerBackedWorldScreen:
         entity_sprite_paths = {
             'Bear': "assets/images/bear.png",
             'Chicken': "assets/images/chicken.png",
-            'Deer': "assets/images/bear.png",  # Using bear as deer placeholder (no deer sprite yet)
+            'Deer': "assets/images/deer.png",  # NEW: dedicated deer sprite
             'Tree': "assets/images/oakWood.png",
             'Rock': "assets/images/stone.png",
             'Bush': "assets/images/leaves.png",
             'Apple': "assets/images/apple.png",
-            'Berry': "assets/images/banana.png",  # Using banana as berry placeholder
+            'Berry': "assets/images/berry.png",  # NEW: dedicated berry sprite
             'Wood': "assets/images/jungleWood.png",
-            'Stone': "assets/images/coalOre.png",
-            'Grass': "assets/images/grass.png"
+            'Stone': "assets/images/stone_item.png",  # NEW: dedicated stone item sprite
+            'Grass': "assets/images/grass.png",
+            'Chicken Meat': "assets/images/chickenMeat.png",  # NEW: chicken meat sprite
+            'Bear Meat': "assets/images/bearMeat.png",  # NEW: bear meat sprite
+            'Deer Meat': "assets/images/deerMeat.png"  # NEW: deer meat sprite
         }
         
         for entity_type, path in entity_sprite_paths.items():
