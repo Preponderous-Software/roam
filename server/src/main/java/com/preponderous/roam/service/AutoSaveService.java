@@ -63,17 +63,9 @@ public class AutoSaveService {
                 logger.error("Auto-save failed for session {}: {}", 
                     session.getSessionId(), e.getMessage());
                 
-                // Retry once on failure
-                try {
-                    Thread.sleep(1000); // Wait 1 second before retry
-                    persistenceService.saveGameState(session);
-                    successCount.incrementAndGet();
-                    failureCount.decrementAndGet();
-                    logger.info("Auto-save retry succeeded for session: {}", session.getSessionId());
-                } catch (Exception retryException) {
-                    logger.error("Auto-save retry failed for session {}: {}", 
-                        session.getSessionId(), retryException.getMessage());
-                }
+                // Log failure - retry will be handled in next scheduled run
+                logger.warn("Auto-save failed for session {}. Will retry on next scheduled auto-save.", 
+                    session.getSessionId());
             }
         });
         
