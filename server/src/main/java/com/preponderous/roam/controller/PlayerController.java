@@ -249,6 +249,12 @@ public class PlayerController {
                 return new Apple();
             case "Berry":
                 return new Berry();
+            case "Chicken Meat":
+                return new ChickenMeat();
+            case "Bear Meat":
+                return new BearMeat();
+            case "Deer Meat":
+                return new DeerMeat();
             // Trees, rocks, and bushes are not directly placeable from inventory
             default:
                 return null;

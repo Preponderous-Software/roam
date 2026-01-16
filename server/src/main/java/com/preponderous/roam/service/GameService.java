@@ -44,11 +44,20 @@ public class GameService {
     @Autowired
     private GameStateStorage gameStateStorage;
     
+    @Autowired
+    private FoodConsumptionService foodConsumptionService;
+    
     @Autowired(required = false)
     private WebSocketMessageService webSocketMessageService;
     
     @Value("${roam.persistence.auto-save:false}")
     private boolean autoSaveEnabled;
+    
+    @Value("${roam.gameplay.energy-depletion-rate:0.1}")
+    private double energyDepletionRate;
+    
+    @Value("${roam.gameplay.auto-eat-from-inventory:true}")
+    private boolean autoEatFromInventory;
 
     /**
      * Create a new game session for a user.
@@ -154,18 +163,32 @@ public class GameService {
         if (gameState != null) {
             gameState.incrementTick();
             
-            // Update player movement
             Player player = gameState.getPlayer();
+            World world = gameState.getWorld();
+            
+            // Apply passive energy depletion
+            player.removeEnergy(energyDepletionRate);
+            
+            // Update player movement
             if (player.isMoving()) {
                 boolean moved = playerService.movePlayer(player, gameState.getWorld(), gameState.getCurrentTick());
                 if (moved && webSocketMessageService != null) {
                     // Broadcast player position update
                     playerService.broadcastPlayerPosition(sessionId, player, gameState.getUserId());
+                    
+                    // Try to eat food from location after moving
+                    Room currentRoom = worldGenerationService.getOrGenerateRoom(
+                        world, player.getRoomX(), player.getRoomY(), gameState.getCurrentTick());
+                    foodConsumptionService.tryEatFromLocation(player, currentRoom);
                 }
             }
             
+            // Try to automatically eat from inventory if energy is low
+            if (autoEatFromInventory && player.needsEnergy()) {
+                foodConsumptionService.tryEatFromInventory(player);
+            }
+            
             // Update entities in all loaded rooms
-            World world = gameState.getWorld();
             for (Room room : world.getRooms().values()) {
                 entityManager.updateEntities(room, gameState.getCurrentTick());
             }

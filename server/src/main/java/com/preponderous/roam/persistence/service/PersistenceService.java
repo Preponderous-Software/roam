@@ -455,6 +455,21 @@ public class PersistenceService implements GameStateStorage {
                     if (data.getEnergyValue() != null) berry.setEnergyValue(data.getEnergyValue());
                     return berry;
                     
+                case "Chicken Meat":
+                    ChickenMeat chickenMeat = new ChickenMeat(id);
+                    if (data.getEnergyValue() != null) chickenMeat.setEnergyValue(data.getEnergyValue());
+                    return chickenMeat;
+                    
+                case "Bear Meat":
+                    BearMeat bearMeat = new BearMeat(id);
+                    if (data.getEnergyValue() != null) bearMeat.setEnergyValue(data.getEnergyValue());
+                    return bearMeat;
+                    
+                case "Deer Meat":
+                    DeerMeat deerMeat = new DeerMeat(id);
+                    if (data.getEnergyValue() != null) deerMeat.setEnergyValue(data.getEnergyValue());
+                    return deerMeat;
+                    
                 case "Wood":
                     Wood wood = new Wood(id);
                     if (data.getQuantity() != null) wood.setQuantity(data.getQuantity());

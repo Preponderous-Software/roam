@@ -24,6 +24,9 @@ public class PlayerService {
     
     @Autowired(required = false)
     private WebSocketMessageService webSocketMessageService;
+    
+    @org.springframework.beans.factory.annotation.Value("${roam.gameplay.movement-energy-cost:1.0}")
+    private double movementEnergyCost;
 
     /**
      * Update player direction.
@@ -196,6 +199,9 @@ public class PlayerService {
         player.setRoomY(newRoomY);
         player.setTileX(newTileX);
         player.setTileY(newTileY);
+        
+        // Apply movement energy cost
+        player.removeEnergy(movementEnergyCost);
         
         // Broadcast position update via WebSocket (sessionId provided by caller)
         // Will be called from GameService with proper sessionId
