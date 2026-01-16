@@ -5,15 +5,6 @@ Tests the server-backed client functionality without requiring pygame UI.
 
 import pytest
 from unittest.mock import MagicMock, patch, call
-import sys
-import os
-
-# Mock pygame BEFORE any imports that might need it
-sys.modules['pygame'] = MagicMock()
-sys.modules['pygame.font'] = MagicMock()
-
-# Add src to path explicitly
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src')))
 
 from screen.serverBackedWorldScreen import ServerBackedWorldScreen
 from screen.screenType import ScreenType
@@ -409,3 +400,254 @@ def test_integration_session_flow(mock_dependencies):
     assert mock_dependencies['api_client'].perform_player_action.called
     assert mock_dependencies['api_client'].add_item_to_inventory.called
     assert mock_dependencies['api_client'].update_tick.called
+
+
+class TestClientSidePrediction:
+    """Test client-side movement prediction (WI-005)."""
+    
+    def test_predict_position_up(self, world_screen):
+        """Test position prediction for upward movement."""
+        world_screen.player_data = {
+            'tileX': 5, 'tileY': 5, 'roomX': 0, 'roomY': 0
+        }
+        world_screen.current_room = {
+            'width': 20, 'height': 20, 'entities': []
+        }
+        world_screen.current_room_x = 0
+        world_screen.current_room_y = 0
+        
+        predicted = world_screen._predictPosition(0)  # up
+        assert predicted == (5, 4)
+    
+    def test_predict_position_left(self, world_screen):
+        """Test position prediction for left movement."""
+        world_screen.player_data = {
+            'tileX': 5, 'tileY': 5, 'roomX': 0, 'roomY': 0
+        }
+        world_screen.current_room = {
+            'width': 20, 'height': 20, 'entities': []
+        }
+        world_screen.current_room_x = 0
+        world_screen.current_room_y = 0
+        
+        predicted = world_screen._predictPosition(1)  # left
+        assert predicted == (4, 5)
+    
+    def test_predict_position_down(self, world_screen):
+        """Test position prediction for downward movement."""
+        world_screen.player_data = {
+            'tileX': 5, 'tileY': 5, 'roomX': 0, 'roomY': 0
+        }
+        world_screen.current_room = {
+            'width': 20, 'height': 20, 'entities': []
+        }
+        world_screen.current_room_x = 0
+        world_screen.current_room_y = 0
+        
+        predicted = world_screen._predictPosition(2)  # down
+        assert predicted == (5, 6)
+    
+    def test_predict_position_right(self, world_screen):
+        """Test position prediction for right movement."""
+        world_screen.player_data = {
+            'tileX': 5, 'tileY': 5, 'roomX': 0, 'roomY': 0
+        }
+        world_screen.current_room = {
+            'width': 20, 'height': 20, 'entities': []
+        }
+        world_screen.current_room_x = 0
+        world_screen.current_room_y = 0
+        
+        predicted = world_screen._predictPosition(3)  # right
+        assert predicted == (6, 5)
+    
+    def test_predict_position_blocked_by_bounds(self, world_screen):
+        """Test that prediction detects out-of-bounds movement."""
+        world_screen.player_data = {
+            'tileX': 0, 'tileY': 0, 'roomX': 0, 'roomY': 0
+        }
+        world_screen.current_room = {
+            'width': 20, 'height': 20, 'entities': []
+        }
+        world_screen.current_room_x = 0
+        world_screen.current_room_y = 0
+        
+        # Try to move up from top edge
+        predicted = world_screen._predictPosition(0)
+        assert predicted == (0, 0)  # Should stay in place
+        
+        # Try to move left from left edge
+        predicted = world_screen._predictPosition(1)
+        assert predicted == (0, 0)  # Should stay in place
+    
+    def test_predict_position_blocked_by_solid_entity(self, world_screen):
+        """Test that prediction detects collision with solid entities."""
+        world_screen.player_data = {
+            'tileX': 5, 'tileY': 5, 'roomX': 0, 'roomY': 0
+        }
+        world_screen.current_room = {
+            'width': 20,
+            'height': 20,
+            'entities': [
+                {
+                    'locationId': '0,0,6,5',  # Solid entity at (6, 5)
+                    'solid': True,
+                    'type': 'Rock'
+                }
+            ]
+        }
+        world_screen.current_room_x = 0
+        world_screen.current_room_y = 0
+        
+        # Try to move right into solid entity
+        predicted = world_screen._predictPosition(3)
+        assert predicted == (5, 5)  # Should stay in place
+    
+    def test_predict_position_not_blocked_by_non_solid_entity(self, world_screen):
+        """Test that prediction allows movement through non-solid entities."""
+        world_screen.player_data = {
+            'tileX': 5, 'tileY': 5, 'roomX': 0, 'roomY': 0
+        }
+        world_screen.current_room = {
+            'width': 20,
+            'height': 20,
+            'entities': [
+                {
+                    'locationId': '0,0,6,5',  # Non-solid entity at (6, 5)
+                    'solid': False,
+                    'type': 'Berry'
+                }
+            ]
+        }
+        world_screen.current_room_x = 0
+        world_screen.current_room_y = 0
+        
+        # Try to move right into non-solid entity
+        predicted = world_screen._predictPosition(3)
+        assert predicted == (6, 5)  # Should allow movement
+    
+    def test_predict_position_without_player_data(self, world_screen):
+        """Test that prediction handles missing player data gracefully."""
+        world_screen.player_data = None
+        predicted = world_screen._predictPosition(0)
+        assert predicted is None
+    
+    def test_move_player_with_prediction_enabled(self, world_screen, mock_dependencies):
+        """Test that movePlayer uses prediction when enabled."""
+        mock_dependencies['config'].enable_prediction = True
+        world_screen.player_data = {
+            'tileX': 5, 'tileY': 5, 'roomX': 0, 'roomY': 0
+        }
+        world_screen.current_room = {
+            'width': 20, 'height': 20, 'entities': []
+        }
+        world_screen.current_room_x = 0
+        world_screen.current_room_y = 0
+        
+        # Mock the threading to run synchronously for testing
+        with patch('threading.Thread') as mock_thread:
+            world_screen.movePlayer(0)  # Move up
+            
+            # Verify prediction was set
+            assert world_screen.predicted_position == (5, 4)
+            
+            # Verify thread was started for async request
+            mock_thread.assert_called_once()
+            assert world_screen.pending_move_request is True
+    
+    def test_move_player_without_prediction(self, world_screen, mock_dependencies):
+        """Test that movePlayer works without prediction (synchronous mode)."""
+        mock_dependencies['config'].enable_prediction = False
+        player_data = {'tileX': 5, 'tileY': 4, 'direction': 0, 'moving': True}
+        mock_dependencies['api_client'].perform_player_action.return_value = player_data
+        
+        world_screen.movePlayer(0)
+        
+        # Should call API synchronously
+        mock_dependencies['api_client'].perform_player_action.assert_called_once_with(
+            "move", direction=0
+        )
+        # No prediction should be set
+        assert world_screen.predicted_position is None
+    
+    def test_send_move_request_successful_prediction(self, world_screen, mock_dependencies):
+        """Test reconciliation when prediction is accurate."""
+        world_screen.predicted_position = (5, 4)
+        mock_dependencies['config'].prediction_snap_threshold = 2
+        
+        player_data = {'tileX': 5, 'tileY': 4, 'direction': 0}
+        mock_dependencies['api_client'].perform_player_action.return_value = player_data
+        
+        world_screen._sendMoveRequest(0)
+        
+        # Prediction should be cleared (was accurate)
+        assert world_screen.predicted_position is None
+        assert world_screen.pending_move_request is False
+    
+    def test_send_move_request_prediction_error_within_threshold(self, world_screen, mock_dependencies):
+        """Test reconciliation when prediction error is within threshold."""
+        world_screen.predicted_position = (5, 4)
+        mock_dependencies['config'].prediction_snap_threshold = 2
+        
+        # Server returns slightly different position
+        player_data = {'tileX': 5, 'tileY': 5, 'direction': 0}
+        mock_dependencies['api_client'].perform_player_action.return_value = player_data
+        
+        world_screen._sendMoveRequest(0)
+        
+        # Prediction should be cleared (within threshold)
+        assert world_screen.predicted_position is None
+        assert world_screen.pending_move_request is False
+    
+    def test_send_move_request_prediction_error_exceeds_threshold(self, world_screen, mock_dependencies):
+        """Test reconciliation when prediction error exceeds threshold (snap back)."""
+        world_screen.predicted_position = (5, 4)
+        mock_dependencies['config'].prediction_snap_threshold = 2
+        
+        # Server returns significantly different position
+        player_data = {'tileX': 5, 'tileY': 8, 'direction': 0}
+        mock_dependencies['api_client'].perform_player_action.return_value = player_data
+        
+        world_screen._sendMoveRequest(0)
+        
+        # Prediction should be cleared (snapped to server)
+        assert world_screen.predicted_position is None
+        assert world_screen.pending_move_request is False
+    
+    def test_send_move_request_handles_error(self, world_screen, mock_dependencies):
+        """Test that async move request handles server errors."""
+        world_screen.predicted_position = (5, 4)
+        mock_dependencies['api_client'].perform_player_action.side_effect = Exception("Network error")
+        
+        world_screen._sendMoveRequest(0)
+        
+        # Prediction should be reverted on error
+        assert world_screen.predicted_position is None
+        assert world_screen.pending_move_request is False
+        mock_dependencies['status'].set.assert_called_with("Move failed: Network error")
+    
+    def test_render_world_uses_predicted_position(self, world_screen):
+        """Test that render_world uses predicted position when available."""
+        world_screen.player_data = {
+            'tileX': 5, 'tileY': 5, 'roomX': 0, 'roomY': 0,
+            'direction': 0
+        }
+        world_screen.current_room = {
+            'width': 20, 'height': 20, 'tiles': [], 'entities': []
+        }
+        world_screen.current_room_x = 0
+        world_screen.current_room_y = 0
+        world_screen.predicted_position = (5, 4)
+        
+        # Just ensure render_world doesn't crash with predicted position
+        # Full rendering test would require pygame mocking
+        world_screen.render_world()
+        
+        # Test passes if no exception is raised
+    
+    def test_initialization_sets_prediction_state(self, world_screen):
+        """Test that initialization sets up prediction state variables."""
+        assert hasattr(world_screen, 'predicted_position')
+        assert hasattr(world_screen, 'pending_move_request')
+        assert world_screen.predicted_position is None
+        assert world_screen.pending_move_request is False
