@@ -116,15 +116,18 @@ class ServerBackedWorldScreen:
         entity_sprite_paths = {
             'Bear': "assets/images/bear.png",
             'Chicken': "assets/images/chicken.png",
-            'Deer': "assets/images/bear.png",  # Using bear as deer placeholder (no deer sprite yet)
+            'Deer': "assets/images/deer.png",  # NEW: dedicated sprite
             'Tree': "assets/images/oakWood.png",
             'Rock': "assets/images/stone.png",
             'Bush': "assets/images/leaves.png",
             'Apple': "assets/images/apple.png",
-            'Berry': "assets/images/banana.png",  # Using banana as berry placeholder
+            'Berry': "assets/images/berry.png",  # NEW: dedicated sprite
             'Wood': "assets/images/jungleWood.png",
-            'Stone': "assets/images/coalOre.png",
-            'Grass': "assets/images/grass.png"
+            'Stone': "assets/images/stone_item.png",  # NEW: dedicated sprite
+            'Grass': "assets/images/grass.png",
+            'Chicken Meat': "assets/images/chickenMeat.png",  # NEW: meat sprite
+            'Bear Meat': "assets/images/bearMeat.png",  # NEW: meat sprite
+            'Deer Meat': "assets/images/deerMeat.png"  # NEW: meat sprite
         }
         
         for entity_type, path in entity_sprite_paths.items():
@@ -877,6 +880,13 @@ class ServerBackedWorldScreen:
             return (160, 82, 45)  # Sienna
         elif entity_type == 'Stone':
             return (169, 169, 169)  # Dark gray
+        # Meat items - shades of red/pink
+        elif entity_type == 'Chicken Meat':
+            return (255, 182, 193)  # Light pink
+        elif entity_type == 'Bear Meat':
+            return (178, 34, 34)  # Firebrick
+        elif entity_type == 'Deer Meat':
+            return (220, 20, 60)  # Crimson
         # Default
         return (200, 200, 200)
     
