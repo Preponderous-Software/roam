@@ -5,6 +5,7 @@ from config.config import Config
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
 
+
 # @author Daniel McCoy Stephenson
 class MainMenuScreen:
     def __init__(self, graphik: Graphik, config: Config, initializeWorldScreen):

@@ -21,25 +21,25 @@ def test_client_api():
     print("Testing Roam Client API Communication")
     print("=" * 60)
     print()
-    
+
     # Initialize client
     print("1. Initializing API client...")
     client = RoamAPIClient("http://localhost:8080")
     print("   ✓ Client initialized")
     print()
-    
+
     # Start session
     print("2. Starting session...")
     try:
         session = client.init_session()
-        session_id = session['sessionId']
+        session_id = session["sessionId"]
         print(f"   ✓ Session started: {session_id}")
         print(f"   ✓ Player energy: {session['player']['energy']}")
     except Exception as e:
         print(f"   ✗ Failed: {e}")
         return False
     print()
-    
+
     # Get player state
     print("3. Getting player state...")
     try:
@@ -51,7 +51,7 @@ def test_client_api():
         print(f"   ✗ Failed: {e}")
         return False
     print()
-    
+
     # Move player
     print("4. Moving player...")
     try:
@@ -62,7 +62,7 @@ def test_client_api():
         print(f"   ✗ Failed: {e}")
         return False
     print()
-    
+
     # Add items
     print("5. Adding items to inventory...")
     try:
@@ -74,25 +74,25 @@ def test_client_api():
         print(f"   ✗ Failed: {e}")
         return False
     print()
-    
+
     # Consume food
     print("6. Consuming food...")
     try:
         # Remove some energy first
         player = client.update_player_energy(20, "remove")
-        energy_before = player['energy']
+        energy_before = player["energy"]
         print(f"   ✓ Energy before consumption: {energy_before}")
-        
+
         # Consume apple
         player = client.perform_player_action("consume", item_name="apple")
-        energy_after = player['energy']
+        energy_after = player["energy"]
         print(f"   ✓ Energy after consumption: {energy_after}")
         print(f"   ✓ Energy restored: {energy_after - energy_before}")
     except Exception as e:
         print(f"   ✗ Failed: {e}")
         return False
     print()
-    
+
     # Delete session
     print("7. Ending session...")
     try:
@@ -102,7 +102,7 @@ def test_client_api():
         print(f"   ✗ Failed: {e}")
         return False
     print()
-    
+
     print("=" * 60)
     print("All tests passed! ✓")
     print("=" * 60)

@@ -27,10 +27,17 @@ from entity.chickenMeat import ChickenMeat
 from entity.bearMeat import BearMeat
 from entity.deerMeat import DeerMeat
 
+
 # @author Daniel McCoy Stephenson
 class InventoryScreen:
     def __init__(
-        self, graphik: Graphik, config: Config, status: Status, inventory: Inventory, api_client=None, session_id=None
+        self,
+        graphik: Graphik,
+        config: Config,
+        status: Status,
+        inventory: Inventory,
+        api_client=None,
+        session_id=None,
     ):
         self.graphik = graphik
         self.config = config
@@ -42,81 +49,89 @@ class InventoryScreen:
         self.changeScreen = False
         self.cursorSlot = InventorySlot()
         self.from_slot_index = None  # Track which slot we picked up from
-        
+
         # Sync inventory from server on initialization if API client is available
         if self.api_client and self.session_id:
             self._syncInventoryFromServer()
-    
+
     def _syncInventoryFromServer(self):
         """Fetch inventory from server and update local display state."""
         if not self.api_client or not self.session_id:
             return
-        
+
         try:
             # Fetch authoritative inventory from server
             inventory_data = self.api_client.get_inventory(self.session_id)
-            
-            print(f"DEBUG: Syncing inventory from server. Got {len(inventory_data.get('slots', []))} slots")
-            
+
+            print(
+                f"DEBUG: Syncing inventory from server. Got {len(inventory_data.get('slots', []))} slots"
+            )
+
             # Map server item names to client item classes
             # TODO: Extract this mapping to a shared utility to avoid duplication with ServerBackedWorldScreen
             item_name_to_class = {
-                'Apple': Apple,
-                'Banana': Banana,
-                'Berry': Berry,
-                'Stone': Stone,
-                'CoalOre': CoalOre,
-                'IronOre': IronOre,
-                'Wood': Wood,
-                'OakWood': OakWood,
-                'JungleWood': JungleWood,
-                'Grass': Grass,
-                'Leaves': Leaves,
-                'Chicken': Chicken,
-                'Bear': Bear,
-                'Deer': Deer,
-                'Chicken Meat': ChickenMeat,
-                'Bear Meat': BearMeat,
-                'Deer Meat': DeerMeat,
+                "Apple": Apple,
+                "Banana": Banana,
+                "Berry": Berry,
+                "Stone": Stone,
+                "CoalOre": CoalOre,
+                "IronOre": IronOre,
+                "Wood": Wood,
+                "OakWood": OakWood,
+                "JungleWood": JungleWood,
+                "Grass": Grass,
+                "Leaves": Leaves,
+                "Chicken": Chicken,
+                "Bear": Bear,
+                "Deer": Deer,
+                "Chicken Meat": ChickenMeat,
+                "Bear Meat": BearMeat,
+                "Deer Meat": DeerMeat,
             }
-            
+
             # Clear current inventory
             self.inventory.clear()
-            
+
             # Restore each slot from server data
-            slots_data = inventory_data.get('slots', [])
+            slots_data = inventory_data.get("slots", [])
             for slot_index, slot_data in enumerate(slots_data):
-                if slot_data.get('empty', True):
+                if slot_data.get("empty", True):
                     continue
-                    
-                item_name = slot_data.get('itemName')
-                num_items = slot_data.get('numItems', 0)
-                
-                print(f"DEBUG: Slot {slot_index}: itemName={item_name}, numItems={num_items}, empty={slot_data.get('empty')}")
-                
+
+                item_name = slot_data.get("itemName")
+                num_items = slot_data.get("numItems", 0)
+
+                print(
+                    f"DEBUG: Slot {slot_index}: itemName={item_name}, numItems={num_items}, empty={slot_data.get('empty')}"
+                )
+
                 if not item_name or num_items <= 0:
                     continue
-                
+
                 # Get the item class
                 item_class = item_name_to_class.get(item_name)
                 if not item_class:
                     print(f"Warning: Unknown item type from server: {item_name}")
                     continue
-                
+
                 # Add items to this slot
                 inventory_slot = self.inventory.getInventorySlots()[slot_index]
                 for _ in range(num_items):
                     item = item_class()
                     inventory_slot.add(item)
-                
-                print(f"DEBUG: Added {num_items} {item_name}(s) to slot {slot_index}. Slot now has {inventory_slot.getNumItems()} items")
-            
+
+                print(
+                    f"DEBUG: Added {num_items} {item_name}(s) to slot {slot_index}. Slot now has {inventory_slot.getNumItems()} items"
+                )
+
             # Set selected slot
-            selected_slot = inventory_data.get('selectedSlotIndex', 0)
+            selected_slot = inventory_data.get("selectedSlotIndex", 0)
             self.inventory.setSelectedInventorySlotIndex(selected_slot)
-            
-            print(f"DEBUG: Inventory sync complete. Total items in inventory: {self.inventory.getNumItems()}")
-            
+
+            print(
+                f"DEBUG: Inventory sync complete. Total items in inventory: {self.inventory.getNumItems()}"
+            )
+
         except Exception as e:
             print(f"Warning: Failed to sync inventory from server: {e}")
 
@@ -142,15 +157,17 @@ class InventoryScreen:
             if self.api_client and self.session_id and self.from_slot_index is not None:
                 try:
                     # Call server to swap the slots
-                    self.api_client.swap_inventory_slots(self.from_slot_index, index, self.session_id)
-                    
+                    self.api_client.swap_inventory_slots(
+                        self.from_slot_index, index, self.session_id
+                    )
+
                     # Sync from server to get authoritative state
                     self._syncInventoryFromServer()
-                    
+
                     # Clear cursor
                     self.cursorSlot.setContents([])
                     self.from_slot_index = None
-                    
+
                 except Exception as e:
                     # On error, inform the user and keep cursor state for retry
                     print(f"Error: Failed to swap slots: {e}")
@@ -349,20 +366,26 @@ class InventoryScreen:
                     inventorySlot.setContents([])
                 else:
                     # Placing into this slot - call server first to make it authoritative
-                    if self.api_client and self.session_id and self.from_slot_index is not None:
+                    if (
+                        self.api_client
+                        and self.session_id
+                        and self.from_slot_index is not None
+                    ):
                         try:
                             # Call server API to perform the swap
-                            self.api_client.swap_inventory_slots(self.from_slot_index, index, self.session_id)
-                            
+                            self.api_client.swap_inventory_slots(
+                                self.from_slot_index, index, self.session_id
+                            )
+
                             # Update local state from authoritative server response
                             self._syncInventoryFromServer()
-                            
+
                             # Clear cursor since swap completed successfully
                             self.cursorSlot.setContents([])
-                            
+
                             # Reset from_slot after successful swap
                             self.from_slot_index = None
-                                
+
                         except Exception as e:
                             # On error, show message but keep cursor state for retry
                             print(f"Error: Failed to swap inventory slots: {e}")
@@ -373,7 +396,7 @@ class InventoryScreen:
                         cursorSlotContents = self.cursorSlot.getContents()
                         inventorySlot.setContents(cursorSlotContents)
                         self.cursorSlot.setContents(inventorySlotContents)
-                        
+
                         # Reset from_slot if cursor is now empty
                         if self.cursorSlot.isEmpty():
                             self.from_slot_index = None
@@ -396,7 +419,7 @@ class InventoryScreen:
         # Sync inventory from server when opening the screen
         if self.api_client and self.session_id:
             self._syncInventoryFromServer()
-        
+
         while not self.changeScreen:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:

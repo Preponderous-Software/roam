@@ -7,6 +7,7 @@ from stats.stats import Stats
 from ui.status import Status
 import pygame
 
+
 # @author Daniel McCoy Stephenson
 class StatsScreen:
     def __init__(self, graphik: Graphik, config: Config, status: Status, stats: Stats):

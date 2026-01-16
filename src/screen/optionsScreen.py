@@ -4,6 +4,7 @@ from screen.screenType import ScreenType
 from ui.status import Status
 import pygame
 
+
 # @author Daniel McCoy Stephenson
 class OptionsScreen:
     def __init__(self, graphik: Graphik, config: Config, status: Status):

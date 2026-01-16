@@ -2,6 +2,7 @@ from math import ceil
 from lib.graphik.src.graphik import Graphik
 from player.player import Player
 
+
 # @author Daniel McCoy Stephenson
 # @since August 16th, 2022
 class EnergyBar:

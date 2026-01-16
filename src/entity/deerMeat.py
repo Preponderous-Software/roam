@@ -7,7 +7,9 @@ import random
 class DeerMeat(Food):
     def __init__(self):
         # Using chicken.png as placeholder since deer.png doesn't exist
-        Food.__init__(self, "Deer Meat", "assets/images/chicken.png", random.randrange(5, 11))
+        Food.__init__(
+            self, "Deer Meat", "assets/images/chicken.png", random.randrange(5, 11)
+        )
         self.solid = False
 
     def isSolid(self):
