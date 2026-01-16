@@ -474,7 +474,7 @@ class ServerBackedWorldScreen:
                     logger.info(
                         f"Snapping to server position (distance {distance} >= threshold {self.config.prediction_snap_threshold})"
                     )
-            
+
             # Always clear predicted position after reconciliation
             self.predicted_position = None
 
