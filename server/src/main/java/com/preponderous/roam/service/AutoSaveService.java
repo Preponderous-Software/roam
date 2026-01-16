@@ -60,12 +60,8 @@ public class AutoSaveService {
                 logger.debug("Auto-saved session: {}", session.getSessionId());
             } catch (Exception e) {
                 failureCount.incrementAndGet();
-                logger.error("Auto-save failed for session {}: {}", 
+                logger.error("Auto-save failed for session {}: {}. Will retry on next scheduled auto-save.", 
                     session.getSessionId(), e.getMessage());
-                
-                // Log failure - retry will be handled in next scheduled run
-                logger.warn("Auto-save failed for session {}. Will retry on next scheduled auto-save.", 
-                    session.getSessionId());
             }
         });
         
