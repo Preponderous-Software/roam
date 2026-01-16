@@ -30,6 +30,9 @@ from entity.oakWood import OakWood
 from entity.jungleWood import JungleWood
 from entity.grass import Grass
 from entity.leaves import Leaves
+from entity.chicken import Chicken
+from entity.bear import Bear
+from entity.deer import Deer
 
 # Configure logging for this module
 logger = logging.getLogger(__name__)
@@ -237,6 +240,9 @@ class ServerBackedWorldScreen:
             'JungleWood': JungleWood,
             'Grass': Grass,
             'Leaves': Leaves,
+            'Chicken': Chicken,
+            'Bear': Bear,
+            'Deer': Deer,
         }
         
         # Clear current inventory
