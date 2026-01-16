@@ -172,7 +172,8 @@ class Roam:
             # Initialize screens that need player
             logger.debug("Initializing inventory screen")
             self.inventoryScreen = InventoryScreen(
-                self.graphik, self.config, self.status, self.player.getInventory()
+                self.graphik, self.config, self.status, self.player.getInventory(),
+                self.api_client, self.session_id
             )
             
             # Initialize world screen with API client
