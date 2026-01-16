@@ -94,7 +94,7 @@ public class PlayerEntityData {
     private int numberOfDeaths;
     
     @Column(name = "visited_rooms", columnDefinition = "TEXT")
-    private String visitedRooms; // Stored as comma-separated list of "x,y" coordinates
+    private String visitedRooms; // Stored as semicolon-separated list of "x,y" coordinates
     
     @Column(name = "selected_inventory_slot_index", nullable = false)
     private int selectedInventorySlotIndex;

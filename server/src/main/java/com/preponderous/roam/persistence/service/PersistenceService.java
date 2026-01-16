@@ -252,7 +252,7 @@ public class PersistenceService implements GameStateStorage {
         playerEntity.setFoodEaten(player.getFoodEaten());
         playerEntity.setNumberOfDeaths(player.getNumberOfDeaths());
         
-        // Save visited rooms as comma-separated string
+        // Save visited rooms as semicolon-separated string
         String visitedRoomsStr = String.join(";", player.getVisitedRooms());
         playerEntity.setVisitedRooms(visitedRoomsStr);
         
@@ -541,7 +541,7 @@ public class PersistenceService implements GameStateStorage {
         player.setFoodEaten(playerEntity.getFoodEaten());
         player.setNumberOfDeaths(playerEntity.getNumberOfDeaths());
         
-        // Load visited rooms from comma-separated string
+        // Load visited rooms from semicolon-separated string
         String visitedRoomsStr = playerEntity.getVisitedRooms();
         if (visitedRoomsStr != null && !visitedRoomsStr.isEmpty()) {
             Set<String> visitedRooms = new HashSet<>(Arrays.asList(visitedRoomsStr.split(";")));
