@@ -1,6 +1,8 @@
 """
 Unit tests for ServerBackedWorldScreen.
 Tests the server-backed client functionality without requiring pygame UI.
+
+Note: pygame mocking is handled by tests/conftest.py globally.
 """
 
 import pytest

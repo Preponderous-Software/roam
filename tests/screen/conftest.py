@@ -1,7 +1,6 @@
 """Pytest configuration for screen tests."""
 import sys
 import os
-import pytest
 
 
 def pytest_configure(config):

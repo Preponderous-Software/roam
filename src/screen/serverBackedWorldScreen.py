@@ -430,6 +430,7 @@ class ServerBackedWorldScreen:
                 self.predicted_position = None
             
             # Always update player data from server response
+            self.player_data = player_data
             self._updatePlayerFromServerData(player_data)
             self.status.set(f"Moving {direction_names[direction]}")
             
