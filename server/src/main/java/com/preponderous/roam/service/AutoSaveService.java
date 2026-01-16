@@ -2,6 +2,7 @@ package com.preponderous.roam.service;
 
 import com.preponderous.roam.model.GameState;
 import com.preponderous.roam.persistence.service.PersistenceService;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -76,10 +77,12 @@ public class AutoSaveService {
     
     /**
      * Save all active sessions immediately.
-     * Used for graceful shutdown.
+     * Invoked during graceful shutdown via Spring's lifecycle management.
+     * This method is called when the ApplicationContext is closed.
      * 
      * @return Number of sessions successfully saved
      */
+    @PreDestroy
     public int saveAllSessionsNow() {
         Map<String, GameState> activeSessions = gameService.getActiveSessions();
         

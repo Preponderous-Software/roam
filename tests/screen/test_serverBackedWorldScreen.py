@@ -363,6 +363,65 @@ class TestServerBackedArchitecture:
         # Test passes if no exception is raised
 
 
+class TestKeyboardHandling:
+    """Test keyboard event handling."""
+    
+    def test_esc_key_saves_session_before_menu(self, world_screen, mock_dependencies):
+        """Test that ESC key saves session before navigating to menu."""
+        import pygame
+        
+        world_screen.handleKeyDownEvent(pygame.K_ESCAPE)
+        
+        # Verify save_session was called
+        mock_dependencies['api_client'].save_session.assert_called_once_with(
+            mock_dependencies['session_id']
+        )
+        # Verify screen change is triggered
+        assert world_screen.changeScreen is True
+        assert world_screen.nextScreen == ScreenType.OPTIONS_SCREEN
+    
+    def test_esc_key_handles_save_failure_gracefully(self, world_screen, mock_dependencies):
+        """Test that ESC key handles save failures gracefully."""
+        import pygame
+        
+        # Simulate save failure
+        mock_dependencies['api_client'].save_session.side_effect = Exception("Connection error")
+        
+        world_screen.handleKeyDownEvent(pygame.K_ESCAPE)
+        
+        # Save should have been attempted
+        mock_dependencies['api_client'].save_session.assert_called_once()
+        # Screen should still change even if save fails
+        assert world_screen.changeScreen is True
+        assert world_screen.nextScreen == ScreenType.OPTIONS_SCREEN
+    
+    def test_esc_key_logs_save_success(self, world_screen, mock_dependencies):
+        """Test that ESC key logs successful save operation."""
+        import pygame
+        
+        with patch('screen.serverBackedWorldScreen.logger') as mock_logger:
+            world_screen.handleKeyDownEvent(pygame.K_ESCAPE)
+            
+            # Verify logging calls
+            mock_logger.info.assert_any_call("ESC pressed - opening options menu")
+            mock_logger.info.assert_any_call("Session saved before menu navigation")
+    
+    def test_esc_key_logs_save_failure(self, world_screen, mock_dependencies):
+        """Test that ESC key logs save failures."""
+        import pygame
+        
+        mock_dependencies['api_client'].save_session.side_effect = Exception("Network error")
+        
+        with patch('screen.serverBackedWorldScreen.logger') as mock_logger:
+            world_screen.handleKeyDownEvent(pygame.K_ESCAPE)
+            
+            # Verify error is logged
+            mock_logger.warning.assert_called_once()
+            warning_call = mock_logger.warning.call_args[0][0]
+            assert "Failed to save session" in warning_call
+
+
+
 def test_integration_session_flow(mock_dependencies):
     """Integration test for a complete session flow."""
     world_screen = ServerBackedWorldScreen(

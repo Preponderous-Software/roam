@@ -40,7 +40,7 @@ logging:
 # Roam-specific configuration
 roam:
   persistence:
-    auto-save: false  # Set to true to enable periodic automatic saves
+    auto-save: false  # Disabled by default to avoid unexpected background writes; set to true to enable periodic automatic saves and reduce risk of data loss on crashes
     auto-save-interval: 30000  # Auto-save interval in milliseconds (default: 30 seconds)
 
 # JWT Configuration
