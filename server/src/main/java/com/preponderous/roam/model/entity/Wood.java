@@ -14,7 +14,7 @@ public class Wood extends Entity {
     public Wood() {
         super("Wood", "assets/images/wood.png");
         this.quantity = 1;
-        this.setSolid(false);
+        this.setSolid(true);
     }
     
     /**
@@ -23,7 +23,7 @@ public class Wood extends Entity {
     public Wood(String id) {
         super(id, "Wood", "assets/images/wood.png");
         this.quantity = 1;
-        this.setSolid(false);
+        this.setSolid(true);
     }
 
     public int getQuantity() {

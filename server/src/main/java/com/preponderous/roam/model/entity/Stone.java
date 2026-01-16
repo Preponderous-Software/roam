@@ -14,7 +14,7 @@ public class Stone extends Entity {
     public Stone() {
         super("Stone", "assets/images/stone.png");
         this.quantity = 1;
-        this.setSolid(false);
+        this.setSolid(true);
     }
     
     /**
@@ -23,7 +23,7 @@ public class Stone extends Entity {
     public Stone(String id) {
         super(id, "Stone", "assets/images/stone.png");
         this.quantity = 1;
-        this.setSolid(false);
+        this.setSolid(true);
     }
 
     public int getQuantity() {
