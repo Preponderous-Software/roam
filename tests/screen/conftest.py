@@ -1,4 +1,8 @@
-"""Pytest configuration for screen tests."""
+"""Pytest configuration for screen tests.
+
+Note: pygame mocking is handled by tests/conftest.py globally.
+This file only handles path configuration for imports.
+"""
 
 import sys
 import os

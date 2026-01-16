@@ -406,28 +406,38 @@ class ServerBackedWorldScreen:
                 self.player.setDirection(direction)
                 logger.debug(f"Prediction enabled: predicted position {predicted_pos}")
 
-            # Send request to server asynchronously
-            self.pending_move_request = True
-            threading.Thread(
-                target=self._sendMoveRequest, args=(direction,), daemon=True
-            ).start()
+                # Send request to server asynchronously
+                self.pending_move_request = True
+                threading.Thread(
+                    target=self._sendMoveRequest, args=(direction,), daemon=True
+                ).start()
+            else:
+                # Prediction failed, fall back to synchronous move
+                logger.debug(
+                    "Prediction failed or returned invalid position; falling back to synchronous move"
+                )
+                self._performSynchronousMove(direction, direction_names)
         else:
-            # Original synchronous behavior (no prediction)
-            try:
-                logger.debug(f"Sending move action to server: direction={direction}")
-                self.player_data = self.api_client.perform_player_action(
-                    "move", direction=direction
-                )
-                logger.info(
-                    f"Move successful: new position from server, moving={self.player_data.get('moving')}"
-                )
-                self._updatePlayerFromServerData(self.player_data)
+            # Original synchronous behavior (no prediction or prediction disabled)
+            self._performSynchronousMove(direction, direction_names)
 
-                self.status.set(f"Moving {direction_names[direction]}")
-            except Exception as e:
-                logger.error(f"Failed to move player: {e}", exc_info=True)
-                print(f"Failed to move: {e}")
-                self.status.set(f"Move failed: {e}")
+    def _performSynchronousMove(self, direction: int, direction_names):
+        """Perform a synchronous move request to the server."""
+        try:
+            logger.debug(f"Sending move action to server: direction={direction}")
+            self.player_data = self.api_client.perform_player_action(
+                "move", direction=direction
+            )
+            logger.info(
+                f"Move successful: new position from server, moving={self.player_data.get('moving')}"
+            )
+            self._updatePlayerFromServerData(self.player_data)
+
+            self.status.set(f"Moving {direction_names[direction]}")
+        except Exception as e:
+            logger.error(f"Failed to move player: {e}", exc_info=True)
+            print(f"Failed to move: {e}")
+            self.status.set(f"Move failed: {e}")
 
     def _sendMoveRequest(self, direction: int):
         """
@@ -464,12 +474,9 @@ class ServerBackedWorldScreen:
                     logger.info(
                         f"Snapping to server position (distance {distance} >= threshold {self.config.prediction_snap_threshold})"
                     )
-                    # Snap to server position
-                    self.predicted_position = None
-            else:
-                # Prediction was correct or close enough
-                logger.debug(f"Prediction accurate: {server_position}")
-                self.predicted_position = None
+            
+            # Always clear predicted position after reconciliation
+            self.predicted_position = None
 
             # Always update player data from server response
             self.player_data = player_data
@@ -978,8 +985,12 @@ class ServerBackedWorldScreen:
             player_tile_x = self.player_data.get("tileX", 0)
             player_tile_y = self.player_data.get("tileY", 0)
 
-            # Use predicted position if available (client-side prediction)
-            if self.predicted_position:
+            # Use predicted position if available and valid for current room (client-side prediction)
+            if (
+                self.predicted_position
+                and player_room_x == self.current_room_x
+                and player_room_y == self.current_room_y
+            ):
                 player_tile_x, player_tile_y = self.predicted_position
                 logger.debug(
                     f"Rendering predicted position: ({player_tile_x}, {player_tile_y})"

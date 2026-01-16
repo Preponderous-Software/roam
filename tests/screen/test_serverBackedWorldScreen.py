@@ -531,6 +531,10 @@ class TestClientSidePrediction:
         world_screen.current_room = {"width": 20, "height": 20, "entities": []}
         world_screen.current_room_x = 0
         world_screen.current_room_y = 0
+        
+        # Mock server response
+        server_response = {"tileX": 5, "tileY": 4, "direction": 0, "moving": True}
+        mock_dependencies["api_client"].perform_player_action.return_value = server_response
 
         # Mock the threading to run synchronously for testing
         with patch("threading.Thread") as mock_thread:
@@ -542,6 +546,19 @@ class TestClientSidePrediction:
             # Verify thread was started for async request
             mock_thread.assert_called_once()
             assert world_screen.pending_move_request is True
+            
+            # Execute the async function directly to test full flow
+            thread_args = mock_thread.call_args
+            target_func = thread_args[1]["target"]
+            func_args = thread_args[1]["args"]
+            target_func(*func_args)
+            
+            # Verify reconciliation completed
+            assert world_screen.predicted_position is None
+            assert world_screen.pending_move_request is False
+            mock_dependencies["api_client"].perform_player_action.assert_called_once_with(
+                "move", direction=0
+            )
 
     def test_move_player_without_prediction(self, world_screen, mock_dependencies):
         """Test that movePlayer works without prediction (synchronous mode)."""
@@ -556,6 +573,26 @@ class TestClientSidePrediction:
             "move", direction=0
         )
         # No prediction should be set
+        assert world_screen.predicted_position is None
+    
+    def test_move_player_prediction_fails_fallback_to_sync(self, world_screen, mock_dependencies):
+        """Test that movePlayer falls back to synchronous mode when prediction fails."""
+        mock_dependencies["config"].enable_prediction = True
+        world_screen.player_data = None  # No player data, prediction will fail
+        
+        player_data = {"tileX": 5, "tileY": 4, "direction": 0, "moving": True}
+        mock_dependencies["api_client"].perform_player_action.return_value = player_data
+        
+        world_screen.movePlayer(0)
+        
+        # Should call API synchronously (fallback)
+        mock_dependencies["api_client"].perform_player_action.assert_called_once_with(
+            "move", direction=0
+        )
+        # No prediction should be set
+        assert world_screen.predicted_position is None
+        # No pending request flag
+        assert world_screen.pending_move_request is False
         assert world_screen.predicted_position is None
 
     def test_send_move_request_successful_prediction(
@@ -623,7 +660,7 @@ class TestClientSidePrediction:
         mock_dependencies["status"].set.assert_called_with("Move failed: Network error")
 
     def test_render_world_uses_predicted_position(self, world_screen):
-        """Test that render_world uses predicted position when available."""
+        """Test that render_world uses predicted position when available and in same room."""
         world_screen.player_data = {
             "tileX": 5,
             "tileY": 5,
@@ -641,6 +678,35 @@ class TestClientSidePrediction:
         world_screen.current_room_y = 0
         world_screen.predicted_position = (5, 4)
 
+        # Just ensure render_world doesn't crash with predicted position
+        # Full rendering test would require pygame mocking
+        world_screen.render_world()
+
+        # Test passes if no exception is raised
+    
+    def test_render_world_ignores_predicted_position_different_room(self, world_screen):
+        """Test that render_world ignores predicted position when player is in different room."""
+        world_screen.player_data = {
+            "tileX": 5,
+            "tileY": 5,
+            "roomX": 1,  # Different room
+            "roomY": 1,
+            "direction": 0,
+        }
+        world_screen.current_room = {
+            "width": 20,
+            "height": 20,
+            "tiles": [],
+            "entities": [],
+        }
+        world_screen.current_room_x = 0
+        world_screen.current_room_y = 0
+        world_screen.predicted_position = (5, 4)  # Should be ignored
+
+        # Render should not use predicted position since player is in different room
+        world_screen.render_world()
+
+        # Test passes if no exception is raised
         # Just ensure render_world doesn't crash with predicted position
         # Full rendering test would require pygame mocking
         world_screen.render_world()
