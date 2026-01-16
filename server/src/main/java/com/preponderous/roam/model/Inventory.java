@@ -169,6 +169,9 @@ public class Inventory {
         }
         
         // Swap the slots
+        // Note: This method directly accesses the private inventorySlots field to allow mutation,
+        // while getInventorySlots() returns an unmodifiable view for external callers.
+        // This design ensures inventory can only be modified through controlled methods.
         InventorySlot temp = inventorySlots.get(fromSlot);
         inventorySlots.set(fromSlot, inventorySlots.get(toSlot));
         inventorySlots.set(toSlot, temp);

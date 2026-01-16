@@ -35,8 +35,6 @@ class InventoryScreen:
         self.nextScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = False
         self.cursorSlot = InventorySlot()
-        # Virtual slot index for cursor (outside normal inventory)
-        self.cursor_slot_index = self.inventory.getNumInventorySlots()
         self.from_slot_index = None  # Track which slot we picked up from
         
         # Sync inventory from server on initialization if API client is available
@@ -134,9 +132,9 @@ class InventoryScreen:
                     self.from_slot_index = None
                     
                 except Exception as e:
-                    # On error, revert local state
+                    # On error, inform the user and keep cursor state for retry
                     print(f"Error: Failed to swap slots: {e}")
-                    # Keep cursor state for retry
+                    self.status.set("Failed to swap inventory slots. Please try again.")
             else:
                 # No API client - fall back to local swap
                 temp = self.inventory.getInventorySlots()[index].getContents()
@@ -342,9 +340,8 @@ class InventoryScreen:
                             # Clear cursor since swap completed successfully
                             self.cursorSlot.setContents([])
                             
-                            # Reset from_slot if cursor is now empty
-                            if self.cursorSlot.isEmpty():
-                                self.from_slot_index = None
+                            # Reset from_slot after successful swap
+                            self.from_slot_index = None
                                 
                         except Exception as e:
                             # On error, show message but keep cursor state for retry
