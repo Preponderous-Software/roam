@@ -9,6 +9,12 @@ output.txt
 tests/stats/*.json
 cov.xml
 tests/*/*.json
+
+# Python virtual environment
+venv/
+env/
+ENV/
+
 # Java specific
 *.class
 *.jar
