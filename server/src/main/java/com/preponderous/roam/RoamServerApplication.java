@@ -2,6 +2,7 @@ package com.preponderous.roam;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Main Spring Boot application class for Roam server.
@@ -9,6 +10,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @author Daniel McCoy Stephenson
  */
 @SpringBootApplication
+@EnableScheduling
 public class RoamServerApplication {
 
     public static void main(String[] args) {

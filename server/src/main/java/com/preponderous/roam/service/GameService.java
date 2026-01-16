@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -214,5 +215,14 @@ public class GameService {
     public long getCurrentTick(String sessionId) {
         GameState gameState = getSession(sessionId);
         return gameState != null ? gameState.getCurrentTick() : 0;
+    }
+    
+    /**
+     * Get all active sessions in memory.
+     * Used for auto-save operations.
+     * Returns an unmodifiable view of the sessions map.
+     */
+    public Map<String, GameState> getActiveSessions() {
+        return Collections.unmodifiableMap(sessions);
     }
 }
