@@ -1,4 +1,5 @@
 import datetime
+import logging
 import os
 from client.api_client import RoamAPIClient
 from config.config import Config
@@ -7,6 +8,9 @@ from screen.screenType import ScreenType
 from stats.stats import Stats
 from ui.status import Status
 import pygame
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 # @author Daniel McCoy Stephenson
 class StatsScreen:
@@ -57,25 +61,34 @@ class StatsScreen:
     def fetchStatsFromServer(self):
         """Fetch stats from server if API client and session ID are available."""
         if self.api_client and self.api_client.session_id:
+            # Validate session ID
+            if not isinstance(self.api_client.session_id, str) or not self.api_client.session_id.strip():
+                logger.warning("Invalid session ID, falling back to local stats")
+                self._loadLocalStats()
+                return
+            
             try:
                 player_data = self.api_client.get_player(self.api_client.session_id)
                 self.score = player_data.get('score', 0)
                 self.rooms_explored = player_data.get('roomsExplored', 0)
                 self.food_eaten = player_data.get('foodEaten', 0)
                 self.number_of_deaths = player_data.get('numberOfDeaths', 0)
+                logger.debug(f"Successfully fetched stats from server: score={self.score}, rooms_explored={self.rooms_explored}, food_eaten={self.food_eaten}, deaths={self.number_of_deaths}")
             except Exception as e:
-                print(f"Failed to fetch stats from server: {e}")
+                logger.error(f"Failed to fetch player stats from server (session={self.api_client.session_id}): {e}", exc_info=True)
                 # Fall back to local stats
-                self.score = self.stats.getScore()
-                self.rooms_explored = self.stats.getRoomsExplored()
-                self.food_eaten = self.stats.getFoodEaten()
-                self.number_of_deaths = self.stats.getNumberOfDeaths()
+                self._loadLocalStats()
         else:
-            # Use local stats if no API client
-            self.score = self.stats.getScore()
-            self.rooms_explored = self.stats.getRoomsExplored()
-            self.food_eaten = self.stats.getFoodEaten()
-            self.number_of_deaths = self.stats.getNumberOfDeaths()
+            # Use local stats if no API client or session
+            logger.debug("No API client or session ID available, using local stats")
+            self._loadLocalStats()
+    
+    def _loadLocalStats(self):
+        """Load stats from local Stats object."""
+        self.score = self.stats.getScore()
+        self.rooms_explored = self.stats.getRoomsExplored()
+        self.food_eaten = self.stats.getFoodEaten()
+        self.number_of_deaths = self.stats.getNumberOfDeaths()
 
     def quitApplication(self):
         pygame.quit()
