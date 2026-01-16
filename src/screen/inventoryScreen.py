@@ -53,6 +53,8 @@ class InventoryScreen:
             # Fetch authoritative inventory from server
             inventory_data = self.api_client.get_inventory(self.session_id)
             
+            print(f"DEBUG: Syncing inventory from server. Got {len(inventory_data.get('slots', []))} slots")
+            
             # Map server item names to client item classes
             # TODO: Extract this mapping to a shared utility to avoid duplication with ServerBackedWorldScreen
             item_name_to_class = {
@@ -84,6 +86,8 @@ class InventoryScreen:
                 item_name = slot_data.get('itemName')
                 num_items = slot_data.get('numItems', 0)
                 
+                print(f"DEBUG: Slot {slot_index}: itemName={item_name}, numItems={num_items}, empty={slot_data.get('empty')}")
+                
                 if not item_name or num_items <= 0:
                     continue
                 
@@ -98,10 +102,14 @@ class InventoryScreen:
                 for _ in range(num_items):
                     item = item_class()
                     inventory_slot.add(item)
+                
+                print(f"DEBUG: Added {num_items} {item_name}(s) to slot {slot_index}. Slot now has {inventory_slot.getNumItems()} items")
             
             # Set selected slot
             selected_slot = inventory_data.get('selectedSlotIndex', 0)
             self.inventory.setSelectedInventorySlotIndex(selected_slot)
+            
+            print(f"DEBUG: Inventory sync complete. Total items in inventory: {self.inventory.getNumItems()}")
             
         except Exception as e:
             print(f"Warning: Failed to sync inventory from server: {e}")
@@ -379,6 +387,10 @@ class InventoryScreen:
         self.graphik.gameDisplay.blit(scaledImage, pygame.mouse.get_pos())
 
     def run(self):
+        # Sync inventory from server when opening the screen
+        if self.api_client and self.session_id:
+            self._syncInventoryFromServer()
+        
         while not self.changeScreen:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
