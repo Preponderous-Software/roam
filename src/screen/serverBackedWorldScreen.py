@@ -33,6 +33,9 @@ from entity.leaves import Leaves
 from entity.chicken import Chicken
 from entity.bear import Bear
 from entity.deer import Deer
+from entity.chickenMeat import ChickenMeat
+from entity.bearMeat import BearMeat
+from entity.deerMeat import DeerMeat
 
 # Configure logging for this module
 logger = logging.getLogger(__name__)
@@ -243,6 +246,9 @@ class ServerBackedWorldScreen:
             'Chicken': Chicken,
             'Bear': Bear,
             'Deer': Deer,
+            'Chicken Meat': ChickenMeat,
+            'Bear Meat': BearMeat,
+            'Deer Meat': DeerMeat,
         }
         
         # Clear current inventory
