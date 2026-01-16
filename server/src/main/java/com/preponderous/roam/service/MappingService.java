@@ -226,6 +226,21 @@ public class MappingService {
             dto.setEnergyValue(berry.getEnergyValue());
         }
         
+        if (entity instanceof ChickenMeat) {
+            ChickenMeat chickenMeat = (ChickenMeat) entity;
+            dto.setEnergyValue(chickenMeat.getEnergyValue());
+        }
+        
+        if (entity instanceof BearMeat) {
+            BearMeat bearMeat = (BearMeat) entity;
+            dto.setEnergyValue(bearMeat.getEnergyValue());
+        }
+        
+        if (entity instanceof DeerMeat) {
+            DeerMeat deerMeat = (DeerMeat) entity;
+            dto.setEnergyValue(deerMeat.getEnergyValue());
+        }
+        
         if (entity instanceof Wood) {
             Wood wood = (Wood) entity;
             dto.setQuantity(wood.getQuantity());
