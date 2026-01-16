@@ -93,6 +93,9 @@ public class PlayerEntityData {
     @Column(name = "number_of_deaths", nullable = false)
     private int numberOfDeaths;
     
+    @Column(name = "visited_rooms", columnDefinition = "TEXT")
+    private String visitedRooms; // Stored as comma-separated list of "x,y" coordinates
+    
     @Column(name = "selected_inventory_slot_index", nullable = false)
     private int selectedInventorySlotIndex;
     
@@ -311,6 +314,14 @@ public class PlayerEntityData {
     
     public void setNumberOfDeaths(int numberOfDeaths) {
         this.numberOfDeaths = numberOfDeaths;
+    }
+    
+    public String getVisitedRooms() {
+        return visitedRooms;
+    }
+    
+    public void setVisitedRooms(String visitedRooms) {
+        this.visitedRooms = visitedRooms;
     }
     
     public int getSelectedInventorySlotIndex() {

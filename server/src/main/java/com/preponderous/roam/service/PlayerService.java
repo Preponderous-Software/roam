@@ -197,6 +197,15 @@ public class PlayerService {
         player.setTileX(newTileX);
         player.setTileY(newTileY);
         
+        // Track room exploration for stats
+        if (newRoomX != currentRoomX || newRoomY != currentRoomY) {
+            boolean isNewRoom = player.visitRoom(newRoomX, newRoomY);
+            if (isNewRoom) {
+                logger.info("Player explored new room ({}, {}). Total rooms explored: {}", 
+                           newRoomX, newRoomY, player.getRoomsExplored());
+            }
+        }
+        
         // Broadcast position update via WebSocket (sessionId provided by caller)
         // Will be called from GameService with proper sessionId
 

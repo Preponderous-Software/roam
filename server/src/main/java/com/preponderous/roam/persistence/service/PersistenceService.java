@@ -13,8 +13,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * JPA/Hibernate implementation of game state storage.
@@ -248,6 +251,11 @@ public class PersistenceService implements GameStateStorage {
         playerEntity.setRoomsExplored(player.getRoomsExplored());
         playerEntity.setFoodEaten(player.getFoodEaten());
         playerEntity.setNumberOfDeaths(player.getNumberOfDeaths());
+        
+        // Save visited rooms as comma-separated string
+        String visitedRoomsStr = String.join(";", player.getVisitedRooms());
+        playerEntity.setVisitedRooms(visitedRoomsStr);
+        
         playerEntity.setSelectedInventorySlotIndex(player.getInventory().getSelectedInventorySlotIndex());
         
         playerEntity = playerRepository.save(playerEntity);
@@ -533,6 +541,13 @@ public class PersistenceService implements GameStateStorage {
         player.setFoodEaten(playerEntity.getFoodEaten());
         player.setNumberOfDeaths(playerEntity.getNumberOfDeaths());
         
+        // Load visited rooms from comma-separated string
+        String visitedRoomsStr = playerEntity.getVisitedRooms();
+        if (visitedRoomsStr != null && !visitedRoomsStr.isEmpty()) {
+            Set<String> visitedRooms = new HashSet<>(Arrays.asList(visitedRoomsStr.split(";")));
+            player.setVisitedRooms(visitedRooms);
+        }
+        
         // Load inventory
         Inventory inventory = new Inventory();
         List<InventorySlotEntity> slotEntities = playerEntity.getInventorySlots();
@@ -577,5 +592,6 @@ public class PersistenceService implements GameStateStorage {
         target.setRoomsExplored(source.getRoomsExplored());
         target.setFoodEaten(source.getFoodEaten());
         target.setNumberOfDeaths(source.getNumberOfDeaths());
+        target.setVisitedRooms(new HashSet<>(source.getVisitedRooms()));
     }
 }

@@ -1,5 +1,8 @@
 package com.preponderous.roam.model;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Represents a player in the game.
  * 
@@ -35,6 +38,9 @@ public class Player extends LivingEntity {
     private int roomsExplored;
     private int foodEaten;
     private int numberOfDeaths;
+    
+    // Track visited rooms for stats
+    private Set<String> visitedRooms;
 
     public Player(long tickCreated) {
         super("Player", "assets/images/player_down.png", DEFAULT_PLAYER_ENERGY, tickCreated);
@@ -60,9 +66,13 @@ public class Player extends LivingEntity {
         
         // Initialize stats
         this.score = 0;
-        this.roomsExplored = 0;
+        this.roomsExplored = 1; // Start with 1 since player starts in room (0,0)
         this.foodEaten = 0;
         this.numberOfDeaths = 0;
+        
+        // Initialize visited rooms set with starting room
+        this.visitedRooms = new HashSet<>();
+        this.visitedRooms.add("0,0");
     }
 
     public int getDirection() {
@@ -259,5 +269,29 @@ public class Player extends LivingEntity {
 
     public void incrementNumberOfDeaths() {
         this.numberOfDeaths++;
+    }
+    
+    public Set<String> getVisitedRooms() {
+        return visitedRooms;
+    }
+    
+    public void setVisitedRooms(Set<String> visitedRooms) {
+        this.visitedRooms = visitedRooms;
+    }
+    
+    /**
+     * Mark a room as visited. If it's a new room, increments roomsExplored.
+     * 
+     * @param roomX the room X coordinate
+     * @param roomY the room Y coordinate
+     * @return true if this is a newly visited room, false if already visited
+     */
+    public boolean visitRoom(int roomX, int roomY) {
+        String roomKey = roomX + "," + roomY;
+        boolean isNewRoom = visitedRooms.add(roomKey);
+        if (isNewRoom) {
+            incrementRoomsExplored();
+        }
+        return isNewRoom;
     }
 }
