@@ -429,12 +429,22 @@ class ServerBackedWorldScreen:
         """Select an inventory slot."""
         try:
             logger.debug(f"Selecting inventory slot {slot_index}")
-            self.player_data = self.api_client.select_inventory_slot(slot_index)
+            inventory_response = self.api_client.select_inventory_slot(slot_index)
+            
+            # Update only the inventory portion of player_data to preserve position data
+            # This prevents the player from teleporting when switching slots
+            if inventory_response:
+                if not self.player_data:
+                    # If player_data is None, initialize it with just inventory
+                    self.player_data = {'inventory': inventory_response}
+                else:
+                    # Update only the inventory portion to preserve other fields
+                    self.player_data['inventory'] = inventory_response
             
             # Only update the selected slot index without rebuilding inventory
             # This prevents the hotbar from flickering when switching slots
-            if self.player_data and 'inventory' in self.player_data:
-                selected_index = self.player_data['inventory'].get('selectedSlotIndex', slot_index)
+            if inventory_response:
+                selected_index = inventory_response.get('selectedSlotIndex', slot_index)
                 self.player.getInventory().setSelectedInventorySlotIndex(selected_index)
             
             # Show item name in status, or "Empty slot" if no item
