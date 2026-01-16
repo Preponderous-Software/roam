@@ -946,18 +946,15 @@ class ServerBackedWorldScreen:
         display_width = self.graphik.getGameDisplay().get_width()
         display_height = self.graphik.getGameDisplay().get_height()
         
-        # Get inventory data from server
-        if not self.player_data:
-            return
-        
-        inventory_data = self.player_data.get('inventory', {})
-        slots = inventory_data.get('slots', [])[:10]  # First 10 slots
-        
         # Position at bottom center - larger slots for better visibility
         # Moved up to avoid overlapping with energy bar (which is at display_height - ~15)
         slot_size = 60
         spacing = 5
-        total_width = len(slots) * (slot_size + spacing)
+        
+        # Get actual inventory slots from player inventory (first 10 for hotbar)
+        inventory_slots = self.player.getInventory().getInventorySlots()[:10]
+        
+        total_width = len(inventory_slots) * (slot_size + spacing)
         start_x = display_width // 2 - total_width // 2
         start_y = display_height - 100  # Moved from -80 to -100 to avoid energy bar overlap
         
@@ -973,16 +970,33 @@ class ServerBackedWorldScreen:
         # Draw slots
         small_font = pygame.font.Font(None, 18)
         large_font = pygame.font.Font(None, 32)
-        for i, slot in enumerate(slots):
+        for i, inventory_slot in enumerate(inventory_slots):
             x = start_x + i * (slot_size + spacing)
             
             # Draw slot background
-            color = (80, 80, 80) if slot.get('empty', True) else (120, 120, 120)
-            pygame.draw.rect(
-                self.graphik.getGameDisplay(),
-                color,
-                (x, start_y, slot_size, slot_size)
-            )
+            if inventory_slot.isEmpty():
+                color = (80, 80, 80)
+                pygame.draw.rect(
+                    self.graphik.getGameDisplay(),
+                    color,
+                    (x, start_y, slot_size, slot_size)
+                )
+            else:
+                # Draw item texture as background
+                item = inventory_slot.getContents()[0]
+                try:
+                    image = item.getImage()
+                    scaled_image = pygame.transform.scale(image, (slot_size, slot_size))
+                    self.graphik.getGameDisplay().blit(scaled_image, (x, start_y))
+                except (pygame.error, FileNotFoundError, AttributeError) as e:
+                    # Fallback to grey background if texture can't be loaded
+                    logger.warning(f"Failed to load item texture for hotbar slot {i}: {e}")
+                    color = (120, 120, 120)
+                    pygame.draw.rect(
+                        self.graphik.getGameDisplay(),
+                        color,
+                        (x, start_y, slot_size, slot_size)
+                    )
             
             # Draw border
             pygame.draw.rect(
@@ -992,21 +1006,36 @@ class ServerBackedWorldScreen:
                 2
             )
             
-            # Draw item info if not empty
-            if not slot.get('empty', True):
-                num_items = slot.get('numItems', 0)
+            # Draw item count in bottom right corner if not empty
+            if not inventory_slot.isEmpty():
+                num_items = inventory_slot.getNumItems()
                 
-                # Draw count prominently (like original)
-                count_surface = large_font.render(str(num_items), True, (255, 255, 255))
+                # Draw count in bottom right corner with small background for visibility
+                count_text = str(num_items)
+                count_surface = small_font.render(count_text, True, (255, 255, 255))
                 text_width = count_surface.get_width()
                 text_height = count_surface.get_height()
+                
+                # Draw background for text (solid black for visibility)
+                text_bg_padding = 2
+                pygame.draw.rect(
+                    self.graphik.getGameDisplay(),
+                    (0, 0, 0),
+                    (x + slot_size - text_width - text_bg_padding * 2,
+                     start_y + slot_size - text_height - text_bg_padding * 2,
+                     text_width + text_bg_padding * 2,
+                     text_height + text_bg_padding * 2)
+                )
+                
+                # Draw the count text
                 self.graphik.getGameDisplay().blit(
-                    count_surface, 
-                    (x + (slot_size - text_width) // 2, start_y + (slot_size - text_height) // 2)
+                    count_surface,
+                    (x + slot_size - text_width - text_bg_padding, 
+                     start_y + slot_size - text_height - text_bg_padding)
                 )
             
             # Draw selection indicator (yellow border)
-            selected_index = inventory_data.get('selectedSlotIndex', 0)
+            selected_index = self.player.getInventory().getSelectedInventorySlotIndex()
             if i == selected_index:
                 pygame.draw.rect(
                     self.graphik.getGameDisplay(),
