@@ -468,3 +468,77 @@ def test_integration_session_flow(mock_dependencies):
     assert mock_dependencies['api_client'].perform_player_action.called
     assert mock_dependencies['api_client'].add_item_to_inventory.called
     assert mock_dependencies['api_client'].update_tick.called
+
+
+def test_select_inventory_slot_preserves_player_position(mock_dependencies):
+    """Test that selecting an inventory slot preserves player position data.
+    
+    This test verifies that when a player selects an inventory slot (e.g., by pressing
+    a number key), the player's position data (roomX, roomY, tileX, tileY) is preserved
+    in player_data. This prevents the player from teleporting/flickering when switching slots.
+    """
+    # Set up world screen
+    world_screen = ServerBackedWorldScreen(
+        graphik=mock_dependencies['graphik'],
+        config=mock_dependencies['config'],
+        status=mock_dependencies['status'],
+        tickCounter=mock_dependencies['tick_counter'],
+        stats=mock_dependencies['stats'],
+        player=mock_dependencies['player'],
+        api_client=mock_dependencies['api_client'],
+        session_id=mock_dependencies['session_id']
+    )
+    
+    # Set initial player data with position information
+    initial_player_data = {
+        'roomX': 2,
+        'roomY': 1,
+        'tileX': 15,
+        'tileY': 8,
+        'energy': 95.5,
+        'direction': 2,
+        'inventory': {
+            'selectedSlotIndex': 0,
+            'slots': [
+                {'itemName': 'Wood', 'numItems': 5, 'empty': False},
+                {'empty': True}
+            ]
+        }
+    }
+    world_screen.player_data = initial_player_data
+    
+    # Mock the API response for selecting a slot (returns only inventory data)
+    inventory_response = {
+        'selectedSlotIndex': 3,
+        'slots': [
+            {'itemName': 'Wood', 'numItems': 5, 'empty': False},
+            {'empty': True}
+        ]
+    }
+    mock_dependencies['api_client'].select_inventory_slot.return_value = inventory_response
+    
+    # Mock inventory for status display
+    mock_slot = MagicMock()
+    mock_slot.isEmpty.return_value = True
+    mock_dependencies['player'].getInventory.return_value.getInventorySlots.return_value = [mock_slot] * 10
+    
+    # Select inventory slot 3
+    world_screen._selectInventorySlot(3)
+    
+    # Verify API was called
+    mock_dependencies['api_client'].select_inventory_slot.assert_called_once_with(3)
+    
+    # Verify position data is still present in player_data
+    assert world_screen.player_data is not None
+    assert world_screen.player_data['roomX'] == 2, "roomX should be preserved"
+    assert world_screen.player_data['roomY'] == 1, "roomY should be preserved"
+    assert world_screen.player_data['tileX'] == 15, "tileX should be preserved"
+    assert world_screen.player_data['tileY'] == 8, "tileY should be preserved"
+    assert world_screen.player_data['energy'] == 95.5, "energy should be preserved"
+    assert world_screen.player_data['direction'] == 2, "direction should be preserved"
+    
+    # Verify inventory data was updated
+    assert world_screen.player_data['inventory']['selectedSlotIndex'] == 3
+    
+    # Verify the local inventory object was updated
+    mock_dependencies['player'].getInventory.return_value.setSelectedInventorySlotIndex.assert_called_once_with(3)
