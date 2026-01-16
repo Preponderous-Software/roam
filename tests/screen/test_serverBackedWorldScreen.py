@@ -597,7 +597,6 @@ class TestClientSidePrediction:
         assert world_screen.predicted_position is None
         # No pending request flag
         assert world_screen.pending_move_request is False
-        assert world_screen.predicted_position is None
 
     def test_send_move_request_successful_prediction(
         self, world_screen, mock_dependencies
@@ -708,11 +707,6 @@ class TestClientSidePrediction:
         world_screen.predicted_position = (5, 4)  # Should be ignored
 
         # Render should not use predicted position since player is in different room
-        world_screen.render_world()
-
-        # Test passes if no exception is raised
-        # Just ensure render_world doesn't crash with predicted position
-        # Full rendering test would require pygame mocking
         world_screen.render_world()
 
         # Test passes if no exception is raised
