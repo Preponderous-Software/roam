@@ -6,7 +6,7 @@ from entity.drawableEntity import DrawableEntity
 # Note: Using chicken.png as placeholder - deer.png doesn't exist yet
 class Deer(DrawableEntity):
     def __init__(self):
-        DrawableEntity.__init__(self, "Deer", "assets/images/chicken.png")
+        DrawableEntity.__init__(self, "Deer", "assets/images/deer.png")
         self.solid = False
 
     def isSolid(self):
