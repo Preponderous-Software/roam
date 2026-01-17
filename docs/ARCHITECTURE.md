@@ -150,7 +150,7 @@ Client                Server
 ```
 
 #### Supported Actions
-- **move**: Move player in specified direction (0=up, 1=right, 2=down, 3=left)
+- **move**: Move player in specified direction (0=up, 1=left, 2=down, 3=right)
   - Request: `{action: "move", direction: <0-3>}`
 - **gather**: Toggle gathering mode on/off
   - Request: `{action: "gather", gathering: <true|false>}`
