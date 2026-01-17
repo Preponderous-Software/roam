@@ -149,6 +149,18 @@ Client                Server
   │                     │
 ```
 
+#### Supported Actions
+- **move**: Move player in specified direction (0=up, 1=right, 2=down, 3=left)
+  - Request: `{action: "move", direction: <0-3>}`
+- **gather**: Toggle gathering mode on/off
+  - Request: `{action: "gather", gathering: <true|false>}`
+- **crouch**: Toggle crouching on/off
+  - Request: `{action: "crouch", crouching: <true|false>}`
+- **run**: Toggle running mode on/off (1.5x speed multiplier)
+  - Request: `{action: "run", running: <true|false>}`
+  - Effect: Reduces movement cooldown by applying 1.5x speed multiplier
+  - Cooldown formula: `ticksPerSecond / (movementSpeed * (running ? 1.5 : 1.0))`
+
 ## Security Considerations
 
 Current implementation includes:
