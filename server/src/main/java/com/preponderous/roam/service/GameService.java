@@ -114,9 +114,11 @@ public class GameService {
 
     /**
      * Get an existing game session without ownership check (for internal use).
-     * @deprecated Use getSession(String sessionId, String userId) for user-facing operations
+     *
+     * @deprecated since 1.2.0 and scheduled for removal in a future release.
+     *             Use {@link #getSession(String, String)} for user-facing operations.
      */
-    @Deprecated
+    @Deprecated(since = "1.2.0", forRemoval = true)
     public GameState getSession(String sessionId) {
         GameState gameState = sessions.get(sessionId);
         if (gameState == null) {

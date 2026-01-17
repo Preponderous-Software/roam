@@ -16,6 +16,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.time.Duration;
+
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -169,16 +172,17 @@ class RateLimitIntegrationTest {
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isTooManyRequests());
         
-        // Wait for bucket to refill (1.5 seconds to ensure refill)
-        // Note: Thread.sleep() is appropriate here as we're specifically testing
-        // time-based rate limiter recovery behavior
-        Thread.sleep(1500);
-        
-        // Request should now succeed
-        mockMvc.perform(post("/api/v1/session/" + sessionId + "/player/action")
-                .header("Authorization", "Bearer " + accessToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk());
+        // Wait for bucket to refill using Awaitility
+        await()
+            .atMost(Duration.ofSeconds(2))
+            .pollDelay(Duration.ofMillis(1500))
+            .untilAsserted(() -> {
+                // Request should now succeed after rate limit window expires
+                mockMvc.perform(post("/api/v1/session/" + sessionId + "/player/action")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                        .andExpect(status().isOk());
+            });
     }
 }

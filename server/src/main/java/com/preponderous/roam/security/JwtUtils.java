@@ -38,9 +38,17 @@ public class JwtUtils {
     @Value("${jwt.expiration.refresh:86400000}")
     private long jwtRefreshExpirationMs;
     
+    @Value("${spring.profiles.active:}")
+    private String activeProfiles;
+    
     private SecretKey getSigningKey() {
-        // Log warning if using default secret
+        // Enforce secure configuration: do not allow default secret in production
         if (jwtSecret.equals(DEFAULT_SECRET)) {
+            if (activeProfiles != null && activeProfiles.contains("production")) {
+                throw new IllegalStateException(
+                        "Insecure configuration: default JWT secret is being used while 'production' profile is active. " +
+                        "Please configure a strong 'jwt.secret' value for production.");
+            }
             logger.warn("WARNING: Using default JWT secret. This is insecure! Set JWT_SECRET environment variable in production.");
         }
         byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);

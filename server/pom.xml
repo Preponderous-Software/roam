@@ -129,6 +129,14 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Awaitility for time-based test assertions -->
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>4.2.0</version>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Testcontainers for integration tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

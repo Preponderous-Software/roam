@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -298,10 +299,11 @@ public class PersistenceService implements GameStateStorage {
     }
     
     private void saveTiles(Room room, RoomEntity roomEntity) {
+        // Clear existing tiles; deletions and insertions will be flushed together
         roomEntity.getTiles().clear();
-        roomRepository.saveAndFlush(roomEntity);  // Flush to ensure tiles are deleted
         
         Tile[][] tiles = room.getTiles();
+        List<TileEntity> newTiles = new ArrayList<>();
         for (int y = 0; y < room.getHeight(); y++) {
             for (int x = 0; x < room.getWidth(); x++) {
                 Tile tile = tiles[y][x];
@@ -310,16 +312,18 @@ public class PersistenceService implements GameStateStorage {
                 tileEntity.setResourceAmount(tile.getResourceAmount());
                 tileEntity.setHasHazard(tile.hasHazard());
                 tileEntity.setHazardType(tile.getHazardType());
-                roomEntity.addTile(tileEntity);
+                tileEntity.setRoom(roomEntity);
+                newTiles.add(tileEntity);
             }
         }
-        roomRepository.saveAndFlush(roomEntity);  // Save new tiles
+        roomEntity.getTiles().addAll(newTiles);
     }
     
     private void saveEntities(Room room, RoomEntity roomEntity) {
+        // Clear existing entities; deletions and insertions will be flushed together
         roomEntity.getEntities().clear();
-        roomRepository.saveAndFlush(roomEntity);  // Flush to ensure entities are deleted
         
+        List<GameEntityData> newEntities = new ArrayList<>();
         for (Entity entity : room.getEntitiesList()) {
             GameEntityData entityData = new GameEntityData(
                 entity.getId(),
@@ -379,8 +383,10 @@ public class PersistenceService implements GameStateStorage {
                 entityData.setFleeRange(chicken.getFleeRange());
             }
             
-            roomEntity.addEntity(entityData);
+            entityData.setRoom(roomEntity);
+            newEntities.add(entityData);
         }
+        roomEntity.getEntities().addAll(newEntities);
     }
     
     private Room convertToRoom(RoomEntity roomEntity) {
