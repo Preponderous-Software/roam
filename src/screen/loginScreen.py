@@ -26,6 +26,15 @@ class LoginScreen:
         self.show_password = False  # Toggle password visibility
         self.error_message = ""
         self.success_message = ""
+        self.remember_username = False  # Checkbox to save username
+        
+        # Button rectangles for click detection
+        self.toggle_mode_button_rect = None
+        self.toggle_password_button_rect = None
+        self.submit_button_rect = None
+        
+        # Load saved username if it exists
+        self._load_saved_username()
         
     def handleEvents(self):
         """Handle keyboard input for login form."""
@@ -33,6 +42,21 @@ class LoginScreen:
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
+            
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = pygame.mouse.get_pos()
+                
+                # Check button clicks
+                if self.toggle_mode_button_rect and self.toggle_mode_button_rect.collidepoint(mouse_pos):
+                    self.show_registration = not self.show_registration
+                    self.error_message = ""
+                    self.email_input = ""
+                
+                elif self.toggle_password_button_rect and self.toggle_password_button_rect.collidepoint(mouse_pos):
+                    self.show_password = not self.show_password
+                
+                elif self.submit_button_rect and self.submit_button_rect.collidepoint(mouse_pos):
+                    self.submit()
             
             if event.type == pygame.KEYDOWN:
                 # Tab to switch fields
@@ -70,6 +94,10 @@ class LoginScreen:
                         self.nextScreen = ScreenType.MAIN_MENU_SCREEN
                         self.changeScreen = True
                 
+                # 'S' key to toggle remember username (Shift+S to avoid conflict)
+                elif event.key == pygame.K_s and pygame.key.get_mods() & pygame.KMOD_SHIFT:
+                    self.remember_username = not self.remember_username
+                
                 # Type characters
                 elif event.unicode.isprintable():
                     if self.active_field == "username":
@@ -98,6 +126,11 @@ class LoginScreen:
                 )
                 self.success_message = f"Welcome, {response['username']}!"
                 self.status.set(f"Logged in as {response['username']}")
+                
+                # Save username if remember is checked
+                if self.remember_username:
+                    self._save_username(self.username_input)
+                
                 # Proceed to world screen
                 self.nextScreen = ScreenType.WORLD_SCREEN
                 self.changeScreen = True
@@ -109,20 +142,32 @@ class LoginScreen:
                 )
                 self.success_message = f"Welcome back, {response['username']}!"
                 self.status.set(f"Logged in as {response['username']}")
+                
+                # Save username if remember is checked
+                if self.remember_username:
+                    self._save_username(self.username_input)
+                
                 # Proceed to world screen
                 self.nextScreen = ScreenType.WORLD_SCREEN
                 self.changeScreen = True
         
         except Exception as e:
             error_str = str(e)
-            if "401" in error_str or "Invalid" in error_str:
-                self.error_message = "Invalid username or password"
+            # Provide user-friendly error messages
+            if "connection" in error_str.lower() or "failed to establish" in error_str.lower():
+                self.error_message = "Couldn't connect to server"
+            elif "401" in error_str or "Invalid" in error_str:
+                self.error_message = "That user wasn't found or password is incorrect"
+            elif "404" in error_str:
+                self.error_message = "That user wasn't found"
             elif "400" in error_str:
                 self.error_message = "Please check your input"
             elif "already" in error_str.lower():
                 self.error_message = "Username or email already exists"
+            elif "timeout" in error_str.lower():
+                self.error_message = "Server is taking too long to respond"
             else:
-                self.error_message = f"Error: {error_str}"
+                self.error_message = f"An error occurred: {error_str}"
     
     def drawForm(self):
         """Draw the login/registration form."""
@@ -151,14 +196,16 @@ class LoginScreen:
             (field_x, username_y, field_width, field_height),
             2
         )
-        self.graphik.drawText(self.username_input or "", field_x + 10, username_y + 25, 20, (255, 255, 255))
+        # Center text in field
+        text_surface = pygame.font.Font(None, 20).render(self.username_input or "", True, (255, 255, 255))
+        text_rect = text_surface.get_rect(center=(field_x + field_width / 2, username_y + field_height / 2))
+        self.graphik.getGameDisplay().blit(text_surface, text_rect)
         
         # Password field
         password_y = username_y + spacing
         password_color = (255, 255, 100) if self.active_field == "password" else (200, 200, 200)
         # Draw label above field to avoid overlap
-        password_label = "Password: (Press P to show)" if not self.show_password else "Password: (Press P to hide)"
-        self.graphik.drawText(password_label, field_x + field_width / 2, password_y - 20, 18, (200, 200, 200))
+        self.graphik.drawText("Password:", field_x + field_width / 2, password_y - 20, 18, (200, 200, 200))
         pygame.draw.rect(
             self.graphik.getGameDisplay(),
             password_color,
@@ -170,7 +217,21 @@ class LoginScreen:
             display_password = self.password_input or ""
         else:
             display_password = "*" * len(self.password_input) if self.password_input else ""
-        self.graphik.drawText(display_password, field_x + 10, password_y + 25, 20, (255, 255, 255))
+        # Center text in field
+        text_surface = pygame.font.Font(None, 20).render(display_password, True, (255, 255, 255))
+        text_rect = text_surface.get_rect(center=(field_x + field_width / 2, password_y + field_height / 2))
+        self.graphik.getGameDisplay().blit(text_surface, text_rect)
+        
+        # Show/Hide password button
+        button_width = 80
+        button_height = 30
+        password_button_x = field_x + field_width + 10
+        password_button_y = password_y + field_height / 2 - button_height / 2
+        self.toggle_password_button_rect = pygame.Rect(password_button_x, password_button_y, button_width, button_height)
+        pygame.draw.rect(self.graphik.getGameDisplay(), (70, 70, 120), self.toggle_password_button_rect)
+        pygame.draw.rect(self.graphik.getGameDisplay(), (150, 150, 200), self.toggle_password_button_rect, 2)
+        button_text = "Hide" if self.show_password else "Show"
+        self.graphik.drawText(button_text, password_button_x + button_width / 2, password_button_y + button_height / 2, 16, (255, 255, 255))
         
         # Email field (only for registration)
         if self.show_registration:
@@ -184,7 +245,10 @@ class LoginScreen:
                 (field_x, email_y, field_width, field_height),
                 2
             )
-            self.graphik.drawText(self.email_input or "", field_x + 10, email_y + 25, 20, (255, 255, 255))
+            # Center text in field
+            text_surface = pygame.font.Font(None, 20).render(self.email_input or "", True, (255, 255, 255))
+            text_rect = text_surface.get_rect(center=(field_x + field_width / 2, email_y + field_height / 2))
+            self.graphik.getGameDisplay().blit(text_surface, text_rect)
         
         # Messages
         message_y = y * 2 / 3
@@ -193,32 +257,99 @@ class LoginScreen:
         if self.success_message:
             self.graphik.drawText(self.success_message, x / 2, message_y, 18, (50, 255, 50))
         
+        # Remember username checkbox
+        checkbox_y = message_y + 40
+        checkbox_size = 20
+        checkbox_x = x / 2 - 100
+        checkbox_color = (100, 255, 100) if self.remember_username else (200, 200, 200)
+        pygame.draw.rect(
+            self.graphik.getGameDisplay(),
+            checkbox_color,
+            (checkbox_x, checkbox_y - checkbox_size / 2, checkbox_size, checkbox_size),
+            2 if not self.remember_username else 0
+        )
+        if self.remember_username:
+            # Draw checkmark
+            pygame.draw.line(
+                self.graphik.getGameDisplay(),
+                (0, 0, 0),
+                (checkbox_x + 5, checkbox_y),
+                (checkbox_x + 8, checkbox_y + 5),
+                3
+            )
+            pygame.draw.line(
+                self.graphik.getGameDisplay(),
+                (0, 0, 0),
+                (checkbox_x + 8, checkbox_y + 5),
+                (checkbox_x + 15, checkbox_y - 5),
+                3
+            )
+        # Draw label next to checkbox
+        label_font = pygame.font.Font("freesansbold.ttf", 16)
+        label_surface = label_font.render("Remember username (Shift+S)", True, (200, 200, 200))
+        self.graphik.getGameDisplay().blit(label_surface, (checkbox_x + checkbox_size + 10, checkbox_y - checkbox_size / 2))
+        
         # Instructions
         instructions_y = y * 4 / 5
         self.graphik.drawText("TAB: Switch field | ENTER: Submit | ESC: Cancel", x / 2, instructions_y, 16, (150, 150, 150))
         
-        # Toggle link
-        toggle_y = instructions_y + 30
-        toggle_text = "Already have an account? Press R to Login" if self.show_registration else "Don't have an account? Press R to Register"
-        self.graphik.drawText(toggle_text, x / 2, toggle_y, 16, (100, 150, 255))
+        # Submit button
+        submit_button_width = 120
+        submit_button_height = 40
+        submit_button_x = x / 2 - submit_button_width / 2
+        submit_button_y = instructions_y + 40
+        self.submit_button_rect = pygame.Rect(submit_button_x, submit_button_y, submit_button_width, submit_button_height)
+        pygame.draw.rect(self.graphik.getGameDisplay(), (50, 150, 50), self.submit_button_rect)
+        pygame.draw.rect(self.graphik.getGameDisplay(), (100, 200, 100), self.submit_button_rect, 2)
+        submit_text = "Register" if self.show_registration else "Login"
+        self.graphik.drawText(submit_text, submit_button_x + submit_button_width / 2, submit_button_y + submit_button_height / 2, 20, (255, 255, 255))
+        
+        # Toggle mode button
+        toggle_mode_button_width = 200
+        toggle_mode_button_height = 35
+        toggle_mode_button_x = x / 2 - toggle_mode_button_width / 2
+        toggle_mode_button_y = submit_button_y + submit_button_height + 15
+        self.toggle_mode_button_rect = pygame.Rect(toggle_mode_button_x, toggle_mode_button_y, toggle_mode_button_width, toggle_mode_button_height)
+        pygame.draw.rect(self.graphik.getGameDisplay(), (70, 70, 120), self.toggle_mode_button_rect)
+        pygame.draw.rect(self.graphik.getGameDisplay(), (100, 150, 255), self.toggle_mode_button_rect, 2)
+        toggle_mode_text = "Switch to Login" if self.show_registration else "Switch to Register"
+        self.graphik.drawText(toggle_mode_text, toggle_mode_button_x + toggle_mode_button_width / 2, toggle_mode_button_y + toggle_mode_button_height / 2, 16, (100, 150, 255))
+    
+    def _load_saved_username(self):
+        """Load saved username from file if it exists."""
+        try:
+            with open('.saved_username', 'r') as f:
+                self.username_input = f.read().strip()
+                self.remember_username = True
+        except FileNotFoundError:
+            pass
+        except Exception:
+            pass
+    
+    def _save_username(self, username):
+        """Save username to file for future logins."""
+        try:
+            with open('.saved_username', 'w') as f:
+                f.write(username)
+        except Exception:
+            pass
+    
+    def _clear_saved_username(self):
+        """Remove saved username file."""
+        try:
+            import os
+            os.remove('.saved_username')
+        except Exception:
+            pass
     
     def run(self):
         """Main loop for login screen."""
         while self.running:
             self.handleEvents()
             
-            # Check for 'R' key to toggle registration
-            keys = pygame.key.get_pressed()
-            if keys[pygame.K_r]:
-                self.show_registration = not self.show_registration
-                self.error_message = ""
-                self.email_input = ""
-                pygame.time.wait(200)  # Debounce
-            
-            # Check for 'P' key to toggle password visibility
-            if keys[pygame.K_p]:
-                self.show_password = not self.show_password
-                pygame.time.wait(200)  # Debounce
+            # Clear saved username if unchecked
+            if not self.remember_username:
+                self._clear_saved_username()
             
             # Draw
             self.graphik.getGameDisplay().fill((20, 20, 40))
