@@ -6,7 +6,7 @@ package com.preponderous.roam.model;
  * @author Daniel McCoy Stephenson
  */
 public class Player extends LivingEntity {
-    public static final int DEFAULT_MOVEMENT_SPEED = 30;
+    public static final int DEFAULT_MOVEMENT_SPEED = 3;
     public static final int DEFAULT_GATHER_SPEED = 30;
     public static final int DEFAULT_PLACE_SPEED = 30;
     public static final double DEFAULT_PLAYER_ENERGY = 100.0;
