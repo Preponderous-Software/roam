@@ -6,6 +6,8 @@ import com.preponderous.roam.persistence.entity.*;
 import com.preponderous.roam.persistence.repository.GameSessionRepository;
 import com.preponderous.roam.persistence.repository.PlayerRepository;
 import com.preponderous.roam.persistence.repository.RoomRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +46,9 @@ public class PersistenceService implements GameStateStorage {
     
     @Autowired
     private RoomRepository roomRepository;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
     
     /**
      * Save a game state to the database.
@@ -299,8 +304,10 @@ public class PersistenceService implements GameStateStorage {
     }
     
     private void saveTiles(Room room, RoomEntity roomEntity) {
-        // Clear existing tiles; deletions and insertions will be flushed together
+        // Clear existing tiles and flush deletions before inserting new ones
+        // This is necessary due to the unique constraint on (room_id, tile_x, tile_y)
         roomEntity.getTiles().clear();
+        entityManager.flush();  // Ensure deletions are executed before insertions
         
         Tile[][] tiles = room.getTiles();
         List<TileEntity> newTiles = new ArrayList<>();
@@ -316,12 +323,14 @@ public class PersistenceService implements GameStateStorage {
                 newTiles.add(tileEntity);
             }
         }
+        // Batch add new tiles to reduce individual addTile calls
         roomEntity.getTiles().addAll(newTiles);
     }
     
     private void saveEntities(Room room, RoomEntity roomEntity) {
-        // Clear existing entities; deletions and insertions will be flushed together
+        // Clear existing entities and flush deletions before inserting new ones
         roomEntity.getEntities().clear();
+        entityManager.flush();  // Ensure deletions are executed before insertions
         
         List<GameEntityData> newEntities = new ArrayList<>();
         for (Entity entity : room.getEntitiesList()) {
