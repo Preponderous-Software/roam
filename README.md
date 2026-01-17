@@ -63,8 +63,8 @@ See [DOCKER.md](./docs/DOCKER.md) for complete Docker documentation.
 
 ### Clone Repository
 ```bash
-git clone https://github.com/Stephenson-Software/Roam.git
-cd Roam
+git clone https://github.com/Preponderous-Software/roam-prototype.git
+cd roam-prototype
 ```
 
 ### Start the Server

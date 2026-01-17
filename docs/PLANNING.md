@@ -40,13 +40,13 @@ The player can eat food to replenish energy. Food items include:
 Food consumption is automatic when energy drops below certain thresholds.
 
 ### Stats Tracking
-The game tracks player statistics including:
-- Kills (animals defeated)
-- Deaths (player deaths)
-- Items gathered (resources collected)
-- Items placed (objects placed in world)
+The client tracks player statistics locally including:
+- Score (points earned)
+- Rooms explored (number of unique rooms visited)
+- Food eaten (total food items consumed)
+- Number of deaths (times player has died)
 
-Stats are persisted in the database and viewable in the stats screen.
+**Note**: Stats are currently managed client-side and persisted locally. They are not synchronized with the server or stored in the database. Future enhancement could move stats tracking to the server for cross-device persistence and anti-cheat measures.
 
 ## World
 
