@@ -31,8 +31,8 @@ public class PlayerServiceRunSpeedTest {
     private Player player;
     private World world;
     
-    private static final int TICKS_PER_SECOND = 9;
-    private static final int DEFAULT_MOVEMENT_SPEED = 3;
+    private static final int TICKS_PER_SECOND = 18;
+    private static final int DEFAULT_MOVEMENT_SPEED = 6;
 
     @BeforeEach
     public void setUp() {
@@ -69,46 +69,46 @@ public class PlayerServiceRunSpeedTest {
     @Test
     public void testMovementCooldownWithoutRunning() {
         // The cooldown should be: ticksPerSecond / (movementSpeed * 1.0)
-        // With default values: 9 / (3 * 1.0) = 3 ticks
-        // This results in 3 tiles per second (9 ticks/sec / 3 tick cooldown)
+        // With default values: 18 / (6 * 1.0) = 3 ticks
+        // This results in 6 tiles per second (18 ticks/sec / 3 tick cooldown)
         
         // Arrange
         player.setRunning(false);
         player.setDirection(0); // Moving up
         player.setTickLastMoved(0);
         
-        // Expected cooldown: (long)(9 / (3 * 1.0)) = 3
+        // Expected cooldown: (long)(18 / (6 * 1.0)) = 3
         long expectedCooldown = (long) (TICKS_PER_SECOND / (DEFAULT_MOVEMENT_SPEED * 1.0));
         
         // Assert
         assertEquals(3, expectedCooldown, "Cooldown should be 3 ticks when not running");
         
-        // Verify movement rate: 9 ticks/sec / 3 tick cooldown = 3 tiles/sec
+        // Verify movement rate: 18 ticks/sec / 3 tick cooldown = 6 tiles/sec
         double tilesPerSecond = (double) TICKS_PER_SECOND / expectedCooldown;
-        assertEquals(3.0, tilesPerSecond, 0.01, "Should move at 3 tiles per second normally");
+        assertEquals(6.0, tilesPerSecond, 0.01, "Should move at 6 tiles per second normally");
     }
 
     @Test
     public void testMovementCooldownWithRunning() {
         // The cooldown should be: ticksPerSecond / (movementSpeed * 3.0)
-        // With default values: 9 / (3 * 3.0) = 1 tick
-        // This results in 9 tiles per second (9 ticks/sec / 1 tick cooldown)
+        // With default values: 18 / (6 * 3.0) = 1 tick
+        // This results in 18 tiles per second (18 ticks/sec / 1 tick cooldown)
         
         // Arrange
         player.setRunning(true);
         player.setDirection(0); // Moving up
         player.setTickLastMoved(0);
         
-        // Expected cooldown: (long)(9 / (3 * 3.0)) = 1
+        // Expected cooldown: (long)(18 / (6 * 3.0)) = 1
         long expectedCooldown = (long) (TICKS_PER_SECOND / (DEFAULT_MOVEMENT_SPEED * 3.0));
         
         // Assert
         assertEquals(1, expectedCooldown, "Cooldown should be 1 tick when running");
         
         // Verify the 3x speed multiplier
-        // Normal: 3 tiles/sec (9/3), Running: 9 tiles/sec (9/1), Ratio: 3x
+        // Normal: 6 tiles/sec (18/3), Running: 18 tiles/sec (18/1), Ratio: 3x
         double tilesPerSecond = (double) TICKS_PER_SECOND / expectedCooldown;
-        assertEquals(9.0, tilesPerSecond, 0.01, "Should move at 9 tiles per second when running");
+        assertEquals(18.0, tilesPerSecond, 0.01, "Should move at 18 tiles per second when running");
         
         // Verify the speed multiplier ratio
         long normalCooldown = (long) (TICKS_PER_SECOND / (DEFAULT_MOVEMENT_SPEED * 1.0));
@@ -120,7 +120,7 @@ public class PlayerServiceRunSpeedTest {
     @Test
     public void testMovementCooldownWithSlowerSpeed() {
         // Test with a slower movement speed where the difference is visible
-        // With TICKS_PER_SECOND=9 and speed=1: not running = 9/1 = 9 ticks, running = 9/3.0 = 3 ticks
+        // With TICKS_PER_SECOND=18 and speed=1: not running = 18/1 = 18 ticks, running = 18/3.0 = 6 ticks
         
         // Arrange
         player.setMovementSpeed(1);
@@ -128,12 +128,12 @@ public class PlayerServiceRunSpeedTest {
         // Test without running
         player.setRunning(false);
         long cooldownNotRunning = (long) (TICKS_PER_SECOND / (1 * 1.0));
-        assertEquals(9, cooldownNotRunning, "Cooldown should be 9 ticks when not running with speed 1");
+        assertEquals(18, cooldownNotRunning, "Cooldown should be 18 ticks when not running with speed 1");
         
         // Test with running
         player.setRunning(true);
         long cooldownRunning = (long) (TICKS_PER_SECOND / (1 * 3.0));
-        assertEquals(3, cooldownRunning, "Cooldown should be 3 ticks when running with speed 1");
+        assertEquals(6, cooldownRunning, "Cooldown should be 6 ticks when running with speed 1");
         
         // Assert running reduces cooldown
         assertTrue(cooldownRunning < cooldownNotRunning, "Running should reduce cooldown");
