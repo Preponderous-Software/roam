@@ -1137,7 +1137,7 @@ class ServerBackedWorldScreen:
         """Main game loop."""
         logger.info("Starting ServerBackedWorldScreen main loop")
         tick_counter = 0
-        tick_update_frequency = 20  # Update server tick every 20 frames (~3 ticks/sec at 60 FPS)
+        tick_update_frequency = 3  # Update server tick every 3 frames (~20 ticks/sec at 60 FPS, matches server 18 ticks/sec)
         
         clock = pygame.time.Clock()
         target_fps = 60
