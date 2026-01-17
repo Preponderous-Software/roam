@@ -141,7 +141,7 @@ public class PlayerService {
         }
 
         // Calculate movement cooldown based on speed and running state
-        double speedMultiplier = player.isRunning() ? 1.5 : 1.0;
+        double speedMultiplier = player.isRunning() ? 3.0 : 1.0;
         long cooldown = (long) (ticksPerSecond / (player.getMovementSpeed() * speedMultiplier));
         
         // Check if still on cooldown

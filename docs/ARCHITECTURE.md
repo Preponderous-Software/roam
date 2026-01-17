@@ -156,10 +156,10 @@ Client                Server
   - Request: `{action: "gather", gathering: <true|false>}`
 - **crouch**: Toggle crouching on/off
   - Request: `{action: "crouch", crouching: <true|false>}`
-- **run**: Toggle running mode on/off (1.5x speed multiplier)
+- **run**: Toggle running mode on/off (3x speed multiplier)
   - Request: `{action: "run", running: <true|false>}`
-  - Effect: Reduces movement cooldown by applying 1.5x speed multiplier
-  - Cooldown formula: `ticksPerSecond / (movementSpeed * (running ? 1.5 : 1.0))`
+  - Effect: Reduces movement cooldown by applying 3x speed multiplier
+  - Cooldown formula: `ticksPerSecond / (movementSpeed * (running ? 3.0 : 1.0))`
 
 ## Security Considerations
 
