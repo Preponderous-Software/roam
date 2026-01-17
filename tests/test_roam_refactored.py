@@ -22,14 +22,13 @@ class TestRoamInitialization:
     @patch('src.roam.TickCounter')
     @patch('src.roam.Graphik')
     @patch('src.roam.Status')
-    @patch('src.roam.Stats')
+    @patch('src.roam.LoginScreen')
     @patch('src.roam.OptionsScreen')
     @patch('src.roam.MainMenuScreen')
-    @patch('src.roam.StatsScreen')
     @patch('src.roam.ConfigScreen')
     def test_roam_initialization_creates_api_client(
-        self, mock_config_screen, mock_stats_screen, mock_main_menu, 
-        mock_options, mock_stats, mock_status, mock_graphik, 
+        self, mock_config_screen, mock_main_menu, 
+        mock_options, mock_login, mock_status, mock_graphik, 
         mock_tick_counter, mock_player, mock_config, mock_api_client, mock_pygame
     ):
         """Test that Roam initialization creates API client."""
@@ -60,10 +59,9 @@ class TestRoamInitialization:
         with patch('src.roam.TickCounter'), \
              patch('src.roam.Graphik'), \
              patch('src.roam.Status'), \
-             patch('src.roam.Stats'), \
+             patch('src.roam.LoginScreen'), \
              patch('src.roam.OptionsScreen'), \
              patch('src.roam.MainMenuScreen'), \
-             patch('src.roam.StatsScreen'), \
              patch('src.roam.ConfigScreen'):
             
             from src.roam import Roam
@@ -93,10 +91,9 @@ class TestSessionManagement:
              patch('src.roam.TickCounter'), \
              patch('src.roam.Graphik'), \
              patch('src.roam.Status') as mock_status, \
-             patch('src.roam.Stats'), \
+             patch('src.roam.LoginScreen'), \
              patch('src.roam.OptionsScreen'), \
              patch('src.roam.MainMenuScreen'), \
-             patch('src.roam.StatsScreen'), \
              patch('src.roam.ConfigScreen'):
             
             from src.roam import Roam
@@ -136,10 +133,9 @@ class TestSessionManagement:
              patch('src.roam.TickCounter'), \
              patch('src.roam.Graphik'), \
              patch('src.roam.Status') as mock_status, \
-             patch('src.roam.Stats'), \
+             patch('src.roam.LoginScreen'), \
              patch('src.roam.OptionsScreen'), \
              patch('src.roam.MainMenuScreen'), \
-             patch('src.roam.StatsScreen'), \
              patch('src.roam.ConfigScreen'):
             
             from src.roam import Roam
@@ -228,10 +224,9 @@ class TestSessionCleanup:
              patch('src.roam.TickCounter'), \
              patch('src.roam.Graphik'), \
              patch('src.roam.Status'), \
-             patch('src.roam.Stats'), \
+             patch('src.roam.LoginScreen'), \
              patch('src.roam.OptionsScreen'), \
              patch('src.roam.MainMenuScreen'), \
-             patch('src.roam.StatsScreen'), \
              patch('src.roam.ConfigScreen'):
             
             from src.roam import Roam
@@ -270,10 +265,9 @@ class TestServerBackedArchitecturePrinciples:
              patch('src.roam.TickCounter'), \
              patch('src.roam.Graphik'), \
              patch('src.roam.Status'), \
-             patch('src.roam.Stats'), \
+             patch('src.roam.LoginScreen'), \
              patch('src.roam.OptionsScreen'), \
              patch('src.roam.MainMenuScreen'), \
-             patch('src.roam.StatsScreen'), \
              patch('src.roam.ConfigScreen'):
             
             from src.roam import Roam
@@ -297,10 +291,9 @@ class TestServerBackedArchitecturePrinciples:
              patch('src.roam.TickCounter'), \
              patch('src.roam.Graphik'), \
              patch('src.roam.Status'), \
-             patch('src.roam.Stats'), \
+             patch('src.roam.LoginScreen'), \
              patch('src.roam.OptionsScreen'), \
              patch('src.roam.MainMenuScreen'), \
-             patch('src.roam.StatsScreen'), \
              patch('src.roam.ConfigScreen'):
             
             from src.roam import Roam
@@ -329,10 +322,9 @@ def test_integration_full_lifecycle():
          patch('src.roam.TickCounter'), \
          patch('src.roam.Graphik'), \
          patch('src.roam.Status'), \
-         patch('src.roam.Stats'), \
+         patch('src.roam.LoginScreen'), \
          patch('src.roam.OptionsScreen'), \
          patch('src.roam.MainMenuScreen') as mock_main_menu, \
-         patch('src.roam.StatsScreen'), \
          patch('src.roam.ConfigScreen'):
         
         from src.roam import Roam

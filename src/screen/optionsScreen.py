@@ -22,10 +22,6 @@ class OptionsScreen:
         self.nextScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = True
 
-    def switchToStatsScreen(self):
-        self.nextScreen = ScreenType.STATS_SCREEN
-        self.changeScreen = True
-
     def switchToInventoryScreen(self):
         self.nextScreen = ScreenType.INVENTORY_SCREEN
         self.changeScreen = True
@@ -60,18 +56,6 @@ class OptionsScreen:
             30,
             "main menu",
             self.switchToMainMenuScreen,
-        )
-        ypos = ypos + height + margin
-        self.graphik.drawButton(
-            xpos,
-            ypos,
-            width,
-            height,
-            (255, 255, 255),
-            (0, 0, 0),
-            30,
-            "stats",
-            self.switchToStatsScreen,
         )
         ypos = ypos + height + margin
         self.graphik.drawButton(

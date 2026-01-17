@@ -28,7 +28,6 @@ def mock_dependencies():
     status = MagicMock()
     tick_counter = MagicMock()
     tick_counter.getTick.return_value = 0
-    stats = MagicMock()
     player = MagicMock()
     player.getEnergy.return_value = 100.0
     player.getTargetEnergy.return_value = 100.0
@@ -43,7 +42,6 @@ def mock_dependencies():
         'config': config,
         'status': status,
         'tick_counter': tick_counter,
-        'stats': stats,
         'player': player,
         'api_client': api_client,
         'session_id': session_id
@@ -58,7 +56,6 @@ def world_screen(mock_dependencies):
         mock_dependencies['config'],
         mock_dependencies['status'],
         mock_dependencies['tick_counter'],
-        mock_dependencies['stats'],
         mock_dependencies['player'],
         mock_dependencies['api_client'],
         mock_dependencies['session_id']
@@ -429,7 +426,6 @@ def test_integration_session_flow(mock_dependencies):
         mock_dependencies['config'],
         mock_dependencies['status'],
         mock_dependencies['tick_counter'],
-        mock_dependencies['stats'],
         mock_dependencies['player'],
         mock_dependencies['api_client'],
         mock_dependencies['session_id']
@@ -483,7 +479,6 @@ def test_select_inventory_slot_preserves_player_position(mock_dependencies):
         config=mock_dependencies['config'],
         status=mock_dependencies['status'],
         tickCounter=mock_dependencies['tick_counter'],
-        stats=mock_dependencies['stats'],
         player=mock_dependencies['player'],
         api_client=mock_dependencies['api_client'],
         session_id=mock_dependencies['session_id']
