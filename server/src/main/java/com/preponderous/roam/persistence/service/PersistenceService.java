@@ -6,6 +6,8 @@ import com.preponderous.roam.persistence.entity.*;
 import com.preponderous.roam.persistence.repository.GameSessionRepository;
 import com.preponderous.roam.persistence.repository.PlayerRepository;
 import com.preponderous.roam.persistence.repository.RoomRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,6 +46,9 @@ public class PersistenceService implements GameStateStorage {
     
     @Autowired
     private RoomRepository roomRepository;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
     
     /**
      * Save a game state to the database.
@@ -298,10 +304,13 @@ public class PersistenceService implements GameStateStorage {
     }
     
     private void saveTiles(Room room, RoomEntity roomEntity) {
+        // Clear existing tiles and flush deletions before inserting new ones
+        // This is necessary due to the unique constraint on (room_id, tile_x, tile_y)
         roomEntity.getTiles().clear();
-        roomRepository.saveAndFlush(roomEntity);  // Flush to ensure tiles are deleted
+        entityManager.flush();  // Ensure deletions are executed before insertions
         
         Tile[][] tiles = room.getTiles();
+        List<TileEntity> newTiles = new ArrayList<>();
         for (int y = 0; y < room.getHeight(); y++) {
             for (int x = 0; x < room.getWidth(); x++) {
                 Tile tile = tiles[y][x];
@@ -310,16 +319,20 @@ public class PersistenceService implements GameStateStorage {
                 tileEntity.setResourceAmount(tile.getResourceAmount());
                 tileEntity.setHasHazard(tile.hasHazard());
                 tileEntity.setHazardType(tile.getHazardType());
-                roomEntity.addTile(tileEntity);
+                tileEntity.setRoom(roomEntity);
+                newTiles.add(tileEntity);
             }
         }
-        roomRepository.saveAndFlush(roomEntity);  // Save new tiles
+        // Batch add new tiles to reduce individual addTile calls
+        roomEntity.getTiles().addAll(newTiles);
     }
     
     private void saveEntities(Room room, RoomEntity roomEntity) {
+        // Clear existing entities and flush deletions before inserting new ones
         roomEntity.getEntities().clear();
-        roomRepository.saveAndFlush(roomEntity);  // Flush to ensure entities are deleted
+        entityManager.flush();  // Ensure deletions are executed before insertions
         
+        List<GameEntityData> newEntities = new ArrayList<>();
         for (Entity entity : room.getEntitiesList()) {
             GameEntityData entityData = new GameEntityData(
                 entity.getId(),
@@ -379,8 +392,10 @@ public class PersistenceService implements GameStateStorage {
                 entityData.setFleeRange(chicken.getFleeRange());
             }
             
-            roomEntity.addEntity(entityData);
+            entityData.setRoom(roomEntity);
+            newEntities.add(entityData);
         }
+        roomEntity.getEntities().addAll(newEntities);
     }
     
     private Room convertToRoom(RoomEntity roomEntity) {
