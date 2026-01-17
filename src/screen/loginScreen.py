@@ -1,4 +1,5 @@
 import pygame
+import os
 from config.config import Config
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
@@ -27,6 +28,7 @@ class LoginScreen:
         self.error_message = ""
         self.success_message = ""
         self.remember_username = False  # Checkbox to save username
+        self._last_remember_state = False  # Track state changes
         
         # Button rectangles for click detection
         self.toggle_mode_button_rect = None
@@ -197,7 +199,8 @@ class LoginScreen:
             2
         )
         # Center text in field
-        text_surface = pygame.font.Font(None, 20).render(self.username_input or "", True, (255, 255, 255))
+        text_font = pygame.font.Font("freesansbold.ttf", 20)
+        text_surface = text_font.render(self.username_input or "", True, (255, 255, 255))
         text_rect = text_surface.get_rect(center=(field_x + field_width / 2, username_y + field_height / 2))
         self.graphik.getGameDisplay().blit(text_surface, text_rect)
         
@@ -218,7 +221,8 @@ class LoginScreen:
         else:
             display_password = "*" * len(self.password_input) if self.password_input else ""
         # Center text in field
-        text_surface = pygame.font.Font(None, 20).render(display_password, True, (255, 255, 255))
+        text_font = pygame.font.Font("freesansbold.ttf", 20)
+        text_surface = text_font.render(display_password, True, (255, 255, 255))
         text_rect = text_surface.get_rect(center=(field_x + field_width / 2, password_y + field_height / 2))
         self.graphik.getGameDisplay().blit(text_surface, text_rect)
         
@@ -246,7 +250,8 @@ class LoginScreen:
                 2
             )
             # Center text in field
-            text_surface = pygame.font.Font(None, 20).render(self.email_input or "", True, (255, 255, 255))
+            text_font = pygame.font.Font("freesansbold.ttf", 20)
+            text_surface = text_font.render(self.email_input or "", True, (255, 255, 255))
             text_rect = text_surface.get_rect(center=(field_x + field_width / 2, email_y + field_height / 2))
             self.graphik.getGameDisplay().blit(text_surface, text_rect)
         
@@ -337,7 +342,6 @@ class LoginScreen:
     def _clear_saved_username(self):
         """Remove saved username file."""
         try:
-            import os
             os.remove('.saved_username')
         except Exception:
             pass
@@ -347,9 +351,10 @@ class LoginScreen:
         while self.running:
             self.handleEvents()
             
-            # Clear saved username if unchecked
-            if not self.remember_username:
+            # Clear saved username only when state changes from True to False
+            if self._last_remember_state and not self.remember_username:
                 self._clear_saved_username()
+            self._last_remember_state = self.remember_username
             
             # Draw
             self.graphik.getGameDisplay().fill((20, 20, 40))
