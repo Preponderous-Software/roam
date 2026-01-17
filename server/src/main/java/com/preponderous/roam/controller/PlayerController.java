@@ -210,6 +210,11 @@ public class PlayerController {
                     playerService.setCrouching(player, request.getCrouching());
                 }
                 break;
+            case "run":
+                if (request.getRunning() != null) {
+                    playerService.setRunning(player, request.getRunning());
+                }
+                break;
             case "consume":
                 if (request.getItemName() != null) {
                     // Consume food logic - remove the item from inventory and restore energy

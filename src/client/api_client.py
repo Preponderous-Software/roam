@@ -305,6 +305,7 @@ class RoamAPIClient:
         gathering: Optional[bool] = None,
         placing: Optional[bool] = None,
         crouching: Optional[bool] = None,
+        running: Optional[bool] = None,
         tile_x: Optional[int] = None,
         tile_y: Optional[int] = None,
         session_id: Optional[str] = None
@@ -313,12 +314,13 @@ class RoamAPIClient:
         Perform a player action.
         
         Args:
-            action: Action type (move, stop, gather, place, crouch, consume)
+            action: Action type (move, stop, gather, place, crouch, run, consume)
             direction: Movement direction (0=up, 1=left, 2=down, 3=right)
             item_name: Name of item (for consume action)
             gathering: Gathering state
             placing: Placing state
             crouching: Crouching state
+            running: Running state
             tile_x: Target tile X coordinate (for targeted gather/place)
             tile_y: Target tile Y coordinate (for targeted gather/place)
             session_id: Session ID (uses stored session_id if not provided)
@@ -341,6 +343,8 @@ class RoamAPIClient:
             payload["placing"] = placing
         if crouching is not None:
             payload["crouching"] = crouching
+        if running is not None:
+            payload["running"] = running
         if tile_x is not None:
             payload["tileX"] = tile_x
         if tile_y is not None:

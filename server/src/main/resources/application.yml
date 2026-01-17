@@ -48,6 +48,7 @@ roam:
     energy-depletion-rate: 0.1  # Energy removed per tick (passive depletion)
     movement-energy-cost: 1.0   # Energy cost for each movement action
     auto-eat-from-inventory: true  # Automatically eat food from inventory when energy is low
+    ticks-per-second: 18  # Server game tick rate (18 ticks/second provides smooth movement with 6 tiles/sec normal, 18 tiles/sec running)
 
 # JWT Configuration
 jwt:
