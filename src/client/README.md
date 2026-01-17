@@ -86,7 +86,7 @@ All existing methods work the same way, but now require authentication:
 
 ## Documentation
 
-See [docs/AUTHENTICATION.md](../docs/AUTHENTICATION.md) for complete authentication documentation including:
+See [../../docs/AUTHENTICATION.md](../../docs/AUTHENTICATION.md) for complete authentication documentation including:
 - REST API endpoints
 - Token configuration
 - Security considerations

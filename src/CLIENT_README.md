@@ -1,6 +1,6 @@
 # Roam Client Application
 
-This is a client-server implementation of Roam where the Python client communicates with a Spring Boot backend via REST API.
+This is a client-server implementation of Roam where the Python client communicates with a Spring Boot backend via REST API and WebSocket.
 
 ## Architecture
 
@@ -33,38 +33,57 @@ The server will start on `http://localhost:8080`.
 
 ### 2. Start the Client
 
-From the `client` directory:
+From the `src` directory (note: there is only `roam.py`, not `roam_client.py`):
 
 ```bash
-python3 roam_client.py
+cd src
+python3 roam.py
 ```
 
 Or specify a custom server URL:
 
 ```bash
-python3 roam_client.py http://localhost:8080
+python3 roam.py http://localhost:8080
 ```
 
 ## Controls
 
-- **WASD** or **Arrow Keys**: Move player
-- **Space**: Stop movement
-- **G**: Toggle gathering
-- **1/2/3**: Add test items (apple/banana/stone)
-- **E**: Consume first item in inventory
-- **ESC**: Quit
+- **Login Screen**:
+  - Type username/password/email
+  - TAB: Switch between fields
+  - R: Toggle between Login and Registration mode
+  - ENTER: Submit form
+  - ESC: Exit
+
+- **Main Game**:
+  - WASD or Arrow Keys: Move player
+  - Shift: Run
+  - Ctrl: Crouch
+  - Left Mouse: Gather resources (hold down)
+  - Right Mouse: Place items
+  - 1-0: Select hotbar slot
+  - I: Toggle inventory
+  - M: Toggle menu
+  - Print Screen: Take screenshot
+  - ESC: Open menu/quit
 
 ## Features
 
 ### Implemented
 
+- ✅ JWT authentication (login/registration screens)
 - ✅ Session management (create/delete sessions)
-- ✅ Player movement (4 directions)
-- ✅ Inventory management (add/remove items)
-- ✅ Energy system (consume food to restore energy)
+- ✅ Player movement (8-directional with running and crouching)
+- ✅ Inventory management (add/remove items, hotbar)
+- ✅ Energy system (depletes with movement, restored with food)
+- ✅ World rendering (procedurally generated rooms with biomes)
+- ✅ Entity interactions (gather resources, place items)
+- ✅ Multiple screens (world, inventory, stats, menu, login)
+- ✅ Real-time updates via WebSocket
 - ✅ Player state synchronization with server
-- ✅ Real-time UI updates
 - ✅ Game tick progression
+- ✅ Stats tracking (kills, deaths, items gathered/placed)
+- ✅ Database persistence (save/load game state)
 
 ### Client Responsibilities
 
@@ -103,12 +122,13 @@ This server-backed client differs from the original Roam application:
 
 ## Development
 
-The client is intentionally simple to demonstrate the client-server architecture. Future enhancements could include:
+The client follows the client-server architecture principles. Key improvements over the original standalone version:
 
-- World/room rendering (using server-provided world state)
-- Multi-player support (using server's session management)
-- More sophisticated UI (menus, maps, etc.)
-- WebSocket support for real-time updates
+- **Authentication**: JWT-based login/registration system
+- **WebSocket**: Real-time updates for multiplayer readiness  
+- **Database**: Server-side persistence of all game state
+- **Multiplayer Ready**: Session-based architecture supports multiple concurrent players
+- **Server Authority**: All game logic validated server-side
 
 ## Troubleshooting
 
