@@ -23,6 +23,7 @@ public class Player extends LivingEntity {
     private int gatherSpeed;
     private int placeSpeed;
     private boolean crouching;
+    private boolean running;
     
     // Position in world space
     private int roomX;
@@ -44,6 +45,7 @@ public class Player extends LivingEntity {
         this.gatherSpeed = DEFAULT_GATHER_SPEED;
         this.placeSpeed = DEFAULT_PLACE_SPEED;
         this.crouching = false;
+        this.running = false;
         this.setSolid(false);
         
         // Initialize player at starting position (room 0,0, center of room)
@@ -163,6 +165,14 @@ public class Player extends LivingEntity {
 
     public void setCrouching(boolean crouching) {
         this.crouching = crouching;
+    }
+
+    public boolean isRunning() {
+        return running;
+    }
+
+    public void setRunning(boolean running) {
+        this.running = running;
     }
 
     public boolean isMoving() {

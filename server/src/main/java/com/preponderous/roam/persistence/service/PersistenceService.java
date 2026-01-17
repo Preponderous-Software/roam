@@ -240,6 +240,7 @@ public class PersistenceService implements GameStateStorage {
         playerEntity.setGathering(player.isGathering());
         playerEntity.setPlacing(player.isPlacing());
         playerEntity.setCrouching(player.isCrouching());
+        playerEntity.setRunning(player.isRunning());
         playerEntity.setTickLastMoved(player.getTickLastMoved());
         playerEntity.setTickLastGathered(player.getTickLastGathered());
         playerEntity.setTickLastPlaced(player.getTickLastPlaced());
@@ -544,6 +545,7 @@ public class PersistenceService implements GameStateStorage {
         player.setGathering(playerEntity.isGathering());
         player.setPlacing(playerEntity.isPlacing());
         player.setCrouching(playerEntity.isCrouching());
+        player.setRunning(playerEntity.isRunning());
         player.setTickLastMoved(playerEntity.getTickLastMoved());
         player.setTickLastGathered(playerEntity.getTickLastGathered());
         player.setTickLastPlaced(playerEntity.getTickLastPlaced());
@@ -583,6 +585,7 @@ public class PersistenceService implements GameStateStorage {
         target.setGathering(source.isGathering());
         target.setPlacing(source.isPlacing());
         target.setCrouching(source.isCrouching());
+        target.setRunning(source.isRunning());
         target.setTickLastMoved(source.getTickLastMoved());
         target.setTickLastGathered(source.getTickLastGathered());
         target.setTickLastPlaced(source.getTickLastPlaced());

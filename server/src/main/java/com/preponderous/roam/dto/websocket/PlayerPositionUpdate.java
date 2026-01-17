@@ -15,6 +15,7 @@ public class PlayerPositionUpdate extends WebSocketMessage {
     private boolean gathering;
     private boolean placing;
     private boolean crouching;
+    private boolean running;
 
     public PlayerPositionUpdate() {
         super();
@@ -90,5 +91,13 @@ public class PlayerPositionUpdate extends WebSocketMessage {
 
     public void setCrouching(boolean crouching) {
         this.crouching = crouching;
+    }
+
+    public boolean isRunning() {
+        return running;
+    }
+
+    public void setRunning(boolean running) {
+        this.running = running;
     }
 }

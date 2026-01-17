@@ -376,10 +376,17 @@ class ServerBackedWorldScreen:
             self.nextScreen = ScreenType.INVENTORY_SCREEN
             self.changeScreen = True
         elif key == pygame.K_LSHIFT:
-            logger.debug("Shift key pressed (speed changes handled server-side)")
-            # Movement speed changes are handled by the server in a server-backed world.
-            # Do not modify player speed locally to avoid client-server desynchronization.
-            pass
+            logger.debug("Shift key pressed - enabling run")
+            try:
+                self.player_data = self.api_client.perform_player_action(
+                    "run",
+                    running=True
+                )
+                self._updatePlayerFromServerData(self.player_data)
+                self.status.set("Running")
+            except Exception as e:
+                logger.error(f"Failed to enable run: {e}")
+                self.status.set(f"Run failed: {e}")
         elif key == pygame.K_LCTRL:
             logger.debug("Ctrl key pressed - toggling crouch")
             try:
@@ -916,10 +923,17 @@ class ServerBackedWorldScreen:
             logger.debug("Right key released - stopping player")
             self.stopPlayer()
         elif key == pygame.K_LSHIFT:
-            logger.debug("Shift key released (speed changes handled server-side)")
-            # Movement speed changes are handled by the server in a server-backed world.
-            # Do not modify player speed locally to avoid client-server desynchronization.
-            pass
+            logger.debug("Shift key released - disabling run")
+            try:
+                self.player_data = self.api_client.perform_player_action(
+                    "run",
+                    running=False
+                )
+                self._updatePlayerFromServerData(self.player_data)
+                self.status.set("Stopped running")
+            except Exception as e:
+                logger.error(f"Failed to disable run: {e}")
+                self.status.set(f"Stop run failed: {e}")
         elif key == pygame.K_LCTRL:
             logger.debug("Ctrl key released (crouch changes handled server-side)")
             # Crouching state changes are handled by the server in a server-backed world.

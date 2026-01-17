@@ -36,6 +36,7 @@ public class MappingService {
         dto.setGathering(player.isGathering());
         dto.setPlacing(player.isPlacing());
         dto.setCrouching(player.isCrouching());
+        dto.setRunning(player.isRunning());
         dto.setMoving(player.isMoving());
         dto.setDead(player.isDead());
         dto.setTickLastMoved(player.getTickLastMoved());
