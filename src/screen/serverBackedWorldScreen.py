@@ -9,7 +9,6 @@ No local world generation or entity management.
 import pygame
 import logging
 from config.config import Config
-from stats.stats import Stats
 from ui.energyBar import EnergyBar
 from lib.graphik.src.graphik import Graphik
 from player.player import Player
@@ -50,7 +49,6 @@ class ServerBackedWorldScreen:
         config: Config,
         status: Status,
         tickCounter: TickCounter,
-        stats: Stats,
         player: Player,
         api_client: RoamAPIClient,
         session_id: str,
@@ -60,7 +58,6 @@ class ServerBackedWorldScreen:
         self.config = config
         self.status = status
         self.tickCounter = tickCounter
-        self.stats = stats
         self.player = player
         self.api_client = api_client
         self.session_id = session_id
