@@ -10,7 +10,7 @@ packaging==21.3
 Pillow==9.4.0
 pluggy==1.0.0
 py==1.11.0
-pygame==2.1.2
+pygame==2.5.2
 pyparsing==3.0.9
 pyrsistent==0.19.3
 pytest==7.1.3
