@@ -8,6 +8,7 @@ No local world generation or entity management.
 
 import pygame
 import logging
+from typing import Optional
 from config.config import Config
 from ui.energyBar import EnergyBar
 from lib.graphik.src.graphik import Graphik
@@ -16,6 +17,7 @@ from ui.status import Status
 from world.tickCounter import TickCounter
 from screen.screenType import ScreenType
 from client.api_client import RoamAPIClient
+from client.websocket_client import WebSocketClient
 
 # Import item classes for inventory restoration
 from entity.apple import Apple
@@ -70,10 +72,22 @@ class ServerBackedWorldScreen:
         self.player_data = None
         self.server_tick = 0
         
+        # WebSocket client for real-time updates
+        self.ws_client: Optional[WebSocketClient] = None
+        # Enable WebSocket by default (True) but respect explicit config setting
+        # For test mocks without the attribute, default to False to avoid connection attempts
+        if hasattr(config, 'use_websocket'):
+            self.ws_enabled = config.use_websocket
+        else:
+            self.ws_enabled = False
+        
+        # Track if we're using WebSocket or fallback to REST polling
+        self.using_websocket = False
+        
         # OPTIMIZATION: Track when room needs refresh to batch updates
         self.room_needs_refresh = False
         self.last_room_refresh_time = 0
-        self.room_refresh_cooldown_ms = 500  # Minimum 500ms between room refreshes
+        self.room_refresh_cooldown_ms = 150  # Minimum 150ms between room refreshes (reduced from 500ms for faster visual feedback)
         
         # World rendering
         self.current_room = None
@@ -87,7 +101,7 @@ class ServerBackedWorldScreen:
         self.mouse_button_held = {1: False, 3: False}  # Track left and right mouse buttons
         self.last_gather_tile = None
         self.gather_cooldown_frames = 0  # Frames since last gather
-        self.gather_cooldown_max = 10  # Gather every 10 frames when holding
+        self.gather_cooldown_max = 3  # Gather every 3 frames when holding (reduced from 10 for more responsive gathering)
         
         # Load player sprites with error handling
         self.player_sprites = {}
@@ -180,6 +194,40 @@ class ServerBackedWorldScreen:
             print(f"Failed to fetch player state: {e}")
             self.status.set(f"Server error: {e}")
         
+        # Initialize WebSocket connection if enabled
+        if self.ws_enabled:
+            try:
+                logger.info("Initializing WebSocket connection")
+                base_url = self.api_client.base_url
+                self.ws_client = WebSocketClient(
+                    base_url=base_url,
+                    reconnect_base_delay=getattr(self.config, "websocket_reconnect_base_delay", 1.0),
+                    reconnect_max_delay=getattr(self.config, "websocket_reconnect_max_delay", 60.0)
+                )
+                
+                # Register message handlers
+                self.ws_client.register_handler("TICK_UPDATE", self._handle_tick_update)
+                self.ws_client.register_handler("PLAYER_POSITION", self._handle_player_position_update)
+                self.ws_client.register_handler("ENTITY_STATE", self._handle_entity_state_update)
+                self.ws_client.register_handler("WORLD_EVENT", self._handle_world_event)
+                
+                # Connect to WebSocket
+                if self.ws_client.connect(self.session_id):
+                    self.using_websocket = True
+                    logger.info("WebSocket connection established successfully")
+                    self.status.set("Connected to server (WebSocket)")
+                else:
+                    logger.warning("WebSocket connection failed, falling back to REST polling")
+                    self.using_websocket = False
+                    self.status.set("Connected to server (REST)")
+            except Exception as e:
+                logger.error(f"Failed to initialize WebSocket: {e}", exc_info=True)
+                self.using_websocket = False
+                self.status.set("Connected to server (REST)")
+        else:
+            logger.info("WebSocket disabled, using REST polling")
+            self.status.set("Connected to server (REST)")
+        
         # Load initial room with simple retry mechanism
         max_retries = 3
         for attempt in range(1, max_retries + 1):
@@ -207,13 +255,11 @@ class ServerBackedWorldScreen:
         
         # Update player energy
         energy = player_data.get('energy', 100.0)
-        logger.debug(f"Updating player energy: {energy}")
         self.player.setEnergy(energy)
         
         # Update player direction
         direction = player_data.get('direction', -1)
         if direction >= 0:
-            logger.debug(f"Updating player direction: {direction}")
             self.player.setDirection(direction)
         
         # Update player inventory from server data
@@ -227,13 +273,12 @@ class ServerBackedWorldScreen:
         Creates item objects from server item names and restores inventory slots.
         """
         if not inventory_data:
-            logger.debug("No inventory data to sync")
             return
         
         slots_data = inventory_data.get('slots', [])
         selected_slot = inventory_data.get('selectedSlotIndex', 0)
         
-        logger.info(f"Syncing inventory: {len(slots_data)} slots, {inventory_data.get('numItems', 0)} total items")
+        logger.debug(f"Syncing inventory: {len(slots_data)} slots, {inventory_data.get('numItems', 0)} total items")
         
         # Map server item names to client item classes
         item_name_to_class = {
@@ -281,29 +326,88 @@ class ServerBackedWorldScreen:
             for _ in range(num_items):
                 item = item_class()
                 inventory_slot.add(item)
-            
-            logger.debug(f"Restored slot {slot_index}: {num_items}x {item_name}")
         
         # Set selected slot
         self.player.getInventory().setSelectedInventorySlotIndex(selected_slot)
-        logger.info(f"Inventory sync complete: {self.player.getInventory().getNumItems()} items restored")
+        logger.debug(f"Inventory sync complete: {self.player.getInventory().getNumItems()} items restored")
+    
+    # WebSocket Message Handlers
+    
+    def _handle_tick_update(self, message_data: dict):
+        """Handle tick update from WebSocket."""
+        try:
+            current_tick = message_data.get("currentTick", 0)
+            self.server_tick = current_tick
+        except Exception as e:
+            logger.error(f"Error handling tick update: {e}", exc_info=True)
+    
+    def _handle_player_position_update(self, message_data: dict):
+        """Handle player position update from WebSocket."""
+        try:
+            # Extract player data from message
+            player_update = {
+                'roomX': message_data.get('roomX', 0),
+                'roomY': message_data.get('roomY', 0),
+                'tileX': message_data.get('tileX', 0),
+                'tileY': message_data.get('tileY', 0),
+                'direction': message_data.get('direction', -1),
+                'gathering': message_data.get('gathering', False),
+                'placing': message_data.get('placing', False),
+                'crouching': message_data.get('crouching', False),
+                'running': message_data.get('running', False),
+            }
+            
+            # Update player_data to preserve existing data
+            if self.player_data:
+                self.player_data.update(player_update)
+            else:
+                self.player_data = player_update
+            
+            # Update player direction
+            direction = player_update.get('direction', -1)
+            if direction >= 0:
+                self.player.setDirection(direction)
+            
+            # Check if player changed rooms
+            player_room_x = player_update.get('roomX', 0)
+            player_room_y = player_update.get('roomY', 0)
+            if player_room_x != self.current_room_x or player_room_y != self.current_room_y:
+                logger.info(f"Player changed rooms to ({player_room_x}, {player_room_y})")
+                self.load_room(player_room_x, player_room_y)
+        except Exception as e:
+            logger.error(f"Error handling player position update: {e}", exc_info=True)
+    
+    def _handle_entity_state_update(self, message_data: dict):
+        """Handle entity state update from WebSocket."""
+        try:
+            # Mark room for refresh to show updated entity positions
+            self.room_needs_refresh = True
+        except Exception as e:
+            logger.error(f"Error handling entity state update: {e}", exc_info=True)
+    
+    def _handle_world_event(self, message_data: dict):
+        """Handle world event from WebSocket."""
+        try:
+            event_type = message_data.get('eventType', 'unknown')
+            description = message_data.get('description', '')
+            logger.info(f"World event: {event_type} - {description}")
+            
+            # Display event to player if relevant
+            if description:
+                self.status.set(description)
+        except Exception as e:
+            logger.error(f"Error handling world event: {e}", exc_info=True)
     
     def movePlayer(self, direction: int):
         """Send move action to server."""
-        direction_names = ["up", "left", "down", "right"]
-        logger.debug(f"movePlayer called: direction={direction} ({direction_names[direction]})")
-        
         if self.player.isCrouching():
-            logger.debug("Movement blocked - player is crouching")
             return
         
         try:
-            logger.debug(f"Sending move action to server: direction={direction}")
             self.player_data = self.api_client.perform_player_action(
                 "move",
                 direction=direction
             )
-            logger.info(f"Move successful: new position from server, moving={self.player_data.get('moving')}")
             self._updatePlayerFromServerData(self.player_data)
             
             # OPTIMIZATION: Only refresh room if player changed rooms
@@ -313,6 +417,7 @@ class ServerBackedWorldScreen:
                 if player_room_x != self.current_room_x or player_room_y != self.current_room_y:
                     self.load_room(player_room_x, player_room_y)
             
+            direction_names = ["up", "left", "down", "right"]
             self.status.set(f"Moving {direction_names[direction]}")
         except Exception as e:
             logger.error(f"Failed to move player: {e}", exc_info=True)
@@ -321,11 +426,8 @@ class ServerBackedWorldScreen:
     
     def stopPlayer(self):
         """Stop player movement."""
-        logger.debug("stopPlayer called")
         try:
-            logger.debug("Sending stop action to server")
             self.player_data = self.api_client.perform_player_action("stop")
-            logger.info("Stop successful")
             self._updatePlayerFromServerData(self.player_data)
             self.status.set("Stopped")
         except Exception as e:
@@ -335,19 +437,16 @@ class ServerBackedWorldScreen:
     
     def toggleGathering(self):
         """Toggle gathering state."""
-        logger.debug("toggleGathering called")
         try:
             # Safely handle case where player_data may be None
             is_gathering = False
             if self.player_data:
                 is_gathering = self.player_data.get('gathering', False)
             
-            logger.debug(f"Current gathering state: {is_gathering}, toggling to: {not is_gathering}")
             self.player_data = self.api_client.perform_player_action(
                 "gather",
                 gathering=not is_gathering
             )
-            logger.info(f"Gathering toggle successful: now gathering={not is_gathering}")
             self._updatePlayerFromServerData(self.player_data)
             status = "gathering" if not is_gathering else "stopped gathering"
             self.status.set(f"Player {status}")
@@ -385,7 +484,6 @@ class ServerBackedWorldScreen:
             self.nextScreen = ScreenType.INVENTORY_SCREEN
             self.changeScreen = True
         elif key == pygame.K_LSHIFT:
-            logger.debug("Shift key pressed - enabling run")
             try:
                 self.player_data = self.api_client.perform_player_action(
                     "run",
@@ -397,7 +495,6 @@ class ServerBackedWorldScreen:
                 logger.error(f"Failed to enable run: {e}")
                 self.status.set(f"Run failed: {e}")
         elif key == pygame.K_LCTRL:
-            logger.debug("Ctrl key pressed - toggling crouch")
             try:
                 # Toggle crouching state
                 current_crouching = self.player.isCrouching()
@@ -438,13 +535,11 @@ class ServerBackedWorldScreen:
         elif key == pygame.K_0:
             self._selectInventorySlot(9)
         elif key == pygame.K_e:
-            logger.debug("E key pressed - consuming food")
             self._consumeFood()
     
     def _selectInventorySlot(self, slot_index: int):
         """Select an inventory slot."""
         try:
-            logger.debug(f"Selecting inventory slot {slot_index}")
             inventory_response = self.api_client.select_inventory_slot(slot_index)
             
             # Update only the inventory portion of player_data to preserve position data
@@ -476,11 +571,9 @@ class ServerBackedWorldScreen:
     
     def _consumeFood(self):
         """Consume food from inventory."""
-        logger.debug("Attempting to consume food")
         try:
             # Ensure we have player data before attempting to consume food
             if not self.player_data:
-                logger.warning("Cannot consume food - no player data available")
                 self.status.set("No player data available")
                 return
 
@@ -488,23 +581,18 @@ class ServerBackedWorldScreen:
             inventory_data = self.player_data.get('inventory') or {}
             slots = inventory_data.get('slots') or []
             
-            logger.debug(f"Checking inventory slots: {len(slots)} total")
             for i, slot in enumerate(slots):
                 if not slot.get('empty', True):
                     item_name = slot.get('itemName')
                     if item_name:
-                        logger.info(f"Found consumable item in slot {i}: {item_name}")
-                        logger.debug(f"Calling API: perform_player_action('consume', item_name={item_name})")
                         self.player_data = self.api_client.perform_player_action(
                             "consume",
                             item_name=item_name
                         )
-                        logger.info(f"Food consumed successfully: {item_name}")
                         self._updatePlayerFromServerData(self.player_data)
                         self.status.set(f"Consumed {item_name}")
                         return
             
-            logger.debug("No consumable food found in inventory")
             self.status.set("No food to consume")
         except Exception as e:
             logger.error(f"Failed to consume food: {e}", exc_info=True)
@@ -515,11 +603,9 @@ class ServerBackedWorldScreen:
         """Handle mouse button press events."""
         if event.button == 1:  # Left click - gather
             self.mouse_button_held[1] = True
-            logger.debug(f"Left click at position ({event.pos[0]}, {event.pos[1]})")
             self._performGatherAt(event.pos[0], event.pos[1])
         elif event.button == 3:  # Right click - place
             self.mouse_button_held[3] = True
-            logger.debug(f"Right click at position ({event.pos[0]}, {event.pos[1]})")
             self._performPlaceAt(event.pos[0], event.pos[1])
     
     def handleMouseButtonUp(self, event):
@@ -536,7 +622,6 @@ class ServerBackedWorldScreen:
         tile_coords = self._screen_to_tile_coords(screen_x, screen_y)
         if tile_coords:
             tile_x, tile_y = tile_coords
-            logger.debug(f"Gathering at tile ({tile_x}, {tile_y})")
             # Trigger gathering action at the clicked tile
             try:
                 self.player_data = self.api_client.perform_player_action(
@@ -567,7 +652,6 @@ class ServerBackedWorldScreen:
         tile_coords = self._screen_to_tile_coords(screen_x, screen_y)
         if tile_coords:
             tile_x, tile_y = tile_coords
-            logger.debug(f"Placing on tile ({tile_x}, {tile_y})")
             # Trigger placing action at the clicked tile
             try:
                 self.player_data = self.api_client.perform_player_action(
@@ -960,10 +1044,8 @@ class ServerBackedWorldScreen:
     def updateTick(self):
         """Update game tick on server and refresh player and entity state."""
         try:
-            logger.debug(f"Updating tick on server (current: {self.server_tick})")
             session_data = self.api_client.update_tick()
             self.server_tick = session_data.get('currentTick', self.server_tick)
-            logger.debug(f"Tick updated: {self.server_tick}")
             
             # OPTIMIZATION: Get player data directly from tick response instead of separate request
             # The tick endpoint returns the full session data including player state
@@ -1201,16 +1283,29 @@ class ServerBackedWorldScreen:
             if self.room_needs_refresh:
                 current_time_ms = pygame.time.get_ticks()
                 if current_time_ms - self.last_room_refresh_time >= self.room_refresh_cooldown_ms:
-                    logger.debug("Refreshing room after entity modification")
                     self.load_room(self.current_room_x, self.current_room_y)
                     self.room_needs_refresh = False
                     self.last_room_refresh_time = current_time_ms
             
-            # Update tick periodically
-            tick_counter += 1
-            if tick_counter >= tick_update_frequency:
-                self.updateTick()
-                tick_counter = 0
+            # Update tick periodically (only if not using WebSocket)
+            if not self.using_websocket:
+                tick_counter += 1
+                if tick_counter >= tick_update_frequency:
+                    self.updateTick()
+                    tick_counter = 0
+            
+            # Check WebSocket connection health and transition between modes
+            if self.ws_client:
+                # If we were using WebSocket but connection was lost, fall back to REST polling
+                if self.using_websocket and not self.ws_client.is_connected():
+                    logger.warning("WebSocket connection lost, falling back to REST polling")
+                    self.using_websocket = False
+                    self.status.set("Connection lost - using REST mode")
+                # If we are currently in REST mode but WebSocket has reconnected, resume WebSocket mode
+                elif not self.using_websocket and self.ws_client.is_connected():
+                    logger.info("WebSocket connection restored, resuming WebSocket mode")
+                    self.using_websocket = True
+                    self.status.set("Connection restored - using WebSocket mode")
             
             # Check status expiration
             self.status.checkForExpiration(self.tickCounter.getTick())
@@ -1223,6 +1318,14 @@ class ServerBackedWorldScreen:
             
             # Control frame rate
             clock.tick(target_fps)
+        
+        # Cleanup WebSocket connection on exit
+        if self.ws_client:
+            try:
+                logger.info("Disconnecting WebSocket client")
+                self.ws_client.disconnect()
+            except Exception as e:
+                logger.warning(f"Error disconnecting WebSocket: {e}")
         
         logger.info(f"Exiting ServerBackedWorldScreen, next screen: {self.nextScreen}")
         self.changeScreen = False
