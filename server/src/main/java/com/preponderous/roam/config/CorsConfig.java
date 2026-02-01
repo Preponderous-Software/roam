@@ -18,8 +18,9 @@ public class CorsConfig implements WebMvcConfigurer {
         // and restrict to specific domains for security
         String allowedOrigins = System.getenv("ALLOWED_ORIGINS");
         if (allowedOrigins == null || allowedOrigins.isEmpty()) {
-            // Development default: use specific port instead of invalid wildcard
-            allowedOrigins = "http://localhost:8080,http://localhost:3000,http://localhost:5000";
+            // Development default: use specific ports for client applications only
+            // Port 8080 (server's own port) is excluded to prevent self-XSS attacks
+            allowedOrigins = "http://localhost:3000,http://localhost:5000";
         }
         
         // Support comma-separated list of origins

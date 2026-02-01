@@ -11,11 +11,22 @@ DB_NAME="${DATABASE_NAME:-roam}"
 DB_USER="${DATABASE_USERNAME:-roam}"
 DB_PASSWORD="${DATABASE_PASSWORD:-}"
 
-# Require an explicit database password to avoid using insecure defaults
-if [ -z "${DB_PASSWORD}" ]; then
-  echo "Error: DATABASE_PASSWORD environment variable is not set." >&2
-  echo "Refusing to run backup with a default or empty database password." >&2
-  echo "Please set DATABASE_PASSWORD to the database user's password and rerun this script." >&2
+# Require an explicit, non-trivial database password to avoid using insecure defaults
+WEAK_PASSWORDS=("password" "admin" "123456" "12345678" "qwerty" "letmein" "${DB_USER}" "${DB_NAME}")
+
+is_weak_password=0
+for weak in "${WEAK_PASSWORDS[@]}"; do
+  if [ -n "${weak}" ] && [ "${DB_PASSWORD}" = "${weak}" ]; then
+    is_weak_password=1
+    break
+  fi
+done
+
+password_length=${#DB_PASSWORD}
+if [ -z "${DB_PASSWORD}" ] || [ "${password_length}" -lt 8 ] || [ "${is_weak_password}" -eq 1 ]; then
+  echo "Error: DATABASE_PASSWORD environment variable is not set to a sufficiently strong value." >&2
+  echo "Refusing to run backup with an empty, too-short, or commonly used database password." >&2
+  echo "Please set DATABASE_PASSWORD to a stronger password (at least 8 characters, not a common or trivial value) and rerun this script." >&2
   exit 1
 fi
 

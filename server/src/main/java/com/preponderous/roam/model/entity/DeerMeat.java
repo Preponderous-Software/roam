@@ -13,7 +13,7 @@ public class DeerMeat extends Entity {
     private double energyValue;
 
     public DeerMeat() {
-        super("Deer Meat", "assets/images/chicken.png");
+        super("Deer Meat", "assets/images/deerMeat.png");
         this.energyValue = ENERGY_VALUE;
         this.setSolid(false);
     }
@@ -22,7 +22,7 @@ public class DeerMeat extends Entity {
      * Constructor for persistence - creates deer meat with specific ID.
      */
     public DeerMeat(String id) {
-        super(id, "Deer Meat", "assets/images/chicken.png");
+        super(id, "Deer Meat", "assets/images/deerMeat.png");
         this.energyValue = ENERGY_VALUE;
         this.setSolid(false);
     }
