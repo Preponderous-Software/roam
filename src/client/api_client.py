@@ -32,7 +32,7 @@ class RoamAPIClient:
         adapter = requests.adapters.HTTPAdapter(
             pool_connections=10,
             pool_maxsize=20,
-            max_retries=0  # Don't auto-retry, we'll handle it ourselves
+            max_retries=0  # Disabled - failures should be handled by caller
         )
         self.session.mount('http://', adapter)
         self.session.mount('https://', adapter)
@@ -196,8 +196,7 @@ class RoamAPIClient:
         Close the HTTP session and release resources.
         Call this when done with the client to clean up connection pools.
         """
-        if hasattr(self, 'session'):
-            self.session.close()
+        self.session.close()
     
     def is_authenticated(self) -> bool:
         """
