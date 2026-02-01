@@ -82,7 +82,7 @@ class ServerBackedWorldScreen:
         # OPTIMIZATION: Track when room needs refresh to batch updates
         self.room_needs_refresh = False
         self.last_room_refresh_time = 0
-        self.room_refresh_cooldown_ms = 500  # Minimum 500ms between room refreshes
+        self.room_refresh_cooldown_ms = 150  # Minimum 150ms between room refreshes (reduced from 500ms for faster visual feedback)
         
         # World rendering
         self.current_room = None
@@ -96,7 +96,7 @@ class ServerBackedWorldScreen:
         self.mouse_button_held = {1: False, 3: False}  # Track left and right mouse buttons
         self.last_gather_tile = None
         self.gather_cooldown_frames = 0  # Frames since last gather
-        self.gather_cooldown_max = 10  # Gather every 10 frames when holding
+        self.gather_cooldown_max = 3  # Gather every 3 frames when holding (reduced from 10 for more responsive gathering)
         
         # Load player sprites with error handling
         self.player_sprites = {}
