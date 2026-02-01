@@ -26,3 +26,8 @@ class Config:
         self.autoEatFoodInInventory = True
         self.removeDeadEntities = True
         self.showMiniMap = True
+        
+        # WebSocket configuration
+        self.use_websocket = True  # Enable WebSocket for real-time updates
+        self.websocket_reconnect_max_delay = 60  # Maximum delay between reconnection attempts (seconds)
+        self.websocket_reconnect_base_delay = 1  # Initial delay between reconnection attempts (seconds)

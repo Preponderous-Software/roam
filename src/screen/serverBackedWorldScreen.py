@@ -8,6 +8,7 @@ No local world generation or entity management.
 
 import pygame
 import logging
+from typing import Optional
 from config.config import Config
 from ui.energyBar import EnergyBar
 from lib.graphik.src.graphik import Graphik
@@ -16,6 +17,7 @@ from ui.status import Status
 from world.tickCounter import TickCounter
 from screen.screenType import ScreenType
 from client.api_client import RoamAPIClient
+from client.websocket_client import WebSocketClient
 
 # Import item classes for inventory restoration
 from entity.apple import Apple
@@ -69,6 +71,13 @@ class ServerBackedWorldScreen:
         # Server state
         self.player_data = None
         self.server_tick = 0
+        
+        # WebSocket client for real-time updates
+        self.ws_client: Optional[WebSocketClient] = None
+        self.ws_enabled = getattr(config, "use_websocket", True)
+        
+        # Track if we're using WebSocket or fallback to REST polling
+        self.using_websocket = False
         
         # OPTIMIZATION: Track when room needs refresh to batch updates
         self.room_needs_refresh = False
@@ -180,6 +189,40 @@ class ServerBackedWorldScreen:
             print(f"Failed to fetch player state: {e}")
             self.status.set(f"Server error: {e}")
         
+        # Initialize WebSocket connection if enabled
+        if self.ws_enabled:
+            try:
+                logger.info("Initializing WebSocket connection")
+                base_url = self.api_client.base_url
+                self.ws_client = WebSocketClient(
+                    base_url=base_url,
+                    reconnect_base_delay=getattr(self.config, "websocket_reconnect_base_delay", 1.0),
+                    reconnect_max_delay=getattr(self.config, "websocket_reconnect_max_delay", 60.0)
+                )
+                
+                # Register message handlers
+                self.ws_client.register_handler("TICK_UPDATE", self._handle_tick_update)
+                self.ws_client.register_handler("PLAYER_POSITION", self._handle_player_position_update)
+                self.ws_client.register_handler("ENTITY_STATE", self._handle_entity_state_update)
+                self.ws_client.register_handler("WORLD_EVENT", self._handle_world_event)
+                
+                # Connect to WebSocket
+                if self.ws_client.connect(self.session_id):
+                    self.using_websocket = True
+                    logger.info("WebSocket connection established successfully")
+                    self.status.set("Connected to server (WebSocket)")
+                else:
+                    logger.warning("WebSocket connection failed, falling back to REST polling")
+                    self.using_websocket = False
+                    self.status.set("Connected to server (REST)")
+            except Exception as e:
+                logger.error(f"Failed to initialize WebSocket: {e}", exc_info=True)
+                self.using_websocket = False
+                self.status.set("Connected to server (REST)")
+        else:
+            logger.info("WebSocket disabled, using REST polling")
+            self.status.set("Connected to server (REST)")
+        
         # Load initial room with simple retry mechanism
         max_retries = 3
         for attempt in range(1, max_retries + 1):
@@ -287,6 +330,77 @@ class ServerBackedWorldScreen:
         # Set selected slot
         self.player.getInventory().setSelectedInventorySlotIndex(selected_slot)
         logger.info(f"Inventory sync complete: {self.player.getInventory().getNumItems()} items restored")
+    
+    # WebSocket Message Handlers
+    
+    def _handle_tick_update(self, message_data: dict):
+        """Handle tick update from WebSocket."""
+        try:
+            current_tick = message_data.get("currentTick", 0)
+            logger.debug(f"Received tick update via WebSocket: {current_tick}")
+            self.server_tick = current_tick
+        except Exception as e:
+            logger.error(f"Error handling tick update: {e}", exc_info=True)
+    
+    def _handle_player_position_update(self, message_data: dict):
+        """Handle player position update from WebSocket."""
+        try:
+            logger.debug(f"Received player position update via WebSocket")
+            
+            # Extract player data from message
+            player_update = {
+                'roomX': message_data.get('roomX', 0),
+                'roomY': message_data.get('roomY', 0),
+                'tileX': message_data.get('tileX', 0),
+                'tileY': message_data.get('tileY', 0),
+                'direction': message_data.get('direction', -1),
+                'gathering': message_data.get('gathering', False),
+                'placing': message_data.get('placing', False),
+                'crouching': message_data.get('crouching', False),
+                'running': message_data.get('running', False),
+            }
+            
+            # Update player_data to preserve existing data
+            if self.player_data:
+                self.player_data.update(player_update)
+            else:
+                self.player_data = player_update
+            
+            # Update player direction
+            direction = player_update.get('direction', -1)
+            if direction >= 0:
+                self.player.setDirection(direction)
+            
+            # Check if player changed rooms
+            player_room_x = player_update.get('roomX', 0)
+            player_room_y = player_update.get('roomY', 0)
+            if player_room_x != self.current_room_x or player_room_y != self.current_room_y:
+                logger.info(f"Player changed rooms to ({player_room_x}, {player_room_y})")
+                self.load_room(player_room_x, player_room_y)
+        except Exception as e:
+            logger.error(f"Error handling player position update: {e}", exc_info=True)
+    
+    def _handle_entity_state_update(self, message_data: dict):
+        """Handle entity state update from WebSocket."""
+        try:
+            logger.debug(f"Received entity state update via WebSocket")
+            # Mark room for refresh to show updated entity positions
+            self.room_needs_refresh = True
+        except Exception as e:
+            logger.error(f"Error handling entity state update: {e}", exc_info=True)
+    
+    def _handle_world_event(self, message_data: dict):
+        """Handle world event from WebSocket."""
+        try:
+            event_type = message_data.get('eventType', 'unknown')
+            description = message_data.get('description', '')
+            logger.info(f"Received world event via WebSocket: {event_type} - {description}")
+            
+            # Display event to player if relevant
+            if description:
+                self.status.set(description)
+        except Exception as e:
+            logger.error(f"Error handling world event: {e}", exc_info=True)
     
     def movePlayer(self, direction: int):
         """Send move action to server."""
@@ -1206,11 +1320,18 @@ class ServerBackedWorldScreen:
                     self.room_needs_refresh = False
                     self.last_room_refresh_time = current_time_ms
             
-            # Update tick periodically
-            tick_counter += 1
-            if tick_counter >= tick_update_frequency:
-                self.updateTick()
-                tick_counter = 0
+            # Update tick periodically (only if not using WebSocket)
+            if not self.using_websocket:
+                tick_counter += 1
+                if tick_counter >= tick_update_frequency:
+                    self.updateTick()
+                    tick_counter = 0
+            
+            # Check WebSocket connection health
+            if self.using_websocket and self.ws_client and not self.ws_client.is_connected():
+                logger.warning("WebSocket connection lost, falling back to REST polling")
+                self.using_websocket = False
+                self.status.set("Connection lost - using REST mode")
             
             # Check status expiration
             self.status.checkForExpiration(self.tickCounter.getTick())
@@ -1223,6 +1344,14 @@ class ServerBackedWorldScreen:
             
             # Control frame rate
             clock.tick(target_fps)
+        
+        # Cleanup WebSocket connection on exit
+        if self.ws_client:
+            try:
+                logger.info("Disconnecting WebSocket client")
+                self.ws_client.disconnect()
+            except Exception as e:
+                logger.warning(f"Error disconnecting WebSocket: {e}")
         
         logger.info(f"Exiting ServerBackedWorldScreen, next screen: {self.nextScreen}")
         self.changeScreen = False
