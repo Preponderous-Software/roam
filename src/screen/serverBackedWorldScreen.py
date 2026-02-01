@@ -74,8 +74,12 @@ class ServerBackedWorldScreen:
         
         # WebSocket client for real-time updates
         self.ws_client: Optional[WebSocketClient] = None
-        # Only enable WebSocket if config explicitly has the attribute set
-        self.ws_enabled = getattr(config, "use_websocket", False) if hasattr(config, "use_websocket") else False
+        # Enable WebSocket by default (True) but respect explicit config setting
+        # For test mocks without the attribute, default to False to avoid connection attempts
+        if hasattr(config, 'use_websocket'):
+            self.ws_enabled = config.use_websocket
+        else:
+            self.ws_enabled = False
         
         # Track if we're using WebSocket or fallback to REST polling
         self.using_websocket = False
