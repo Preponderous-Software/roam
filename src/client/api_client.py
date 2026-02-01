@@ -12,17 +12,30 @@ from typing import Dict, Any, Optional
 class RoamAPIClient:
     """Client for interacting with Roam server REST API."""
     
-    def __init__(self, base_url: str = "http://localhost:8080"):
+    def __init__(self, base_url: str = "http://localhost:8080", timeout: float = 5.0):
         """
         Initialize the API client.
         
         Args:
             base_url: Base URL of the Roam server
+            timeout: Request timeout in seconds (default: 5.0 for better responsiveness over network)
         """
         self.base_url = base_url
         self.session_id: Optional[str] = None
         self.access_token: Optional[str] = None
         self.refresh_token: Optional[str] = None
+        self.timeout = timeout  # Default timeout for all requests
+        
+        # OPTIMIZATION: Use a session for connection pooling and keep-alive
+        self.session = requests.Session()
+        # Configure connection pooling for better performance
+        adapter = requests.adapters.HTTPAdapter(
+            pool_connections=10,
+            pool_maxsize=20,
+            max_retries=0  # Don't auto-retry, we'll handle it ourselves
+        )
+        self.session.mount('http://', adapter)
+        self.session.mount('https://', adapter)
     
     def _make_request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
         """
@@ -41,6 +54,10 @@ class RoamAPIClient:
         """
         url = f"{self.base_url}{endpoint}"
         
+        # OPTIMIZATION: Add default timeout if not specified
+        if 'timeout' not in kwargs:
+            kwargs['timeout'] = self.timeout
+        
         # Add authentication header if we have an access token
         # and this is not an auth endpoint
         if self.access_token and not endpoint.startswith("/api/v1/auth"):
@@ -48,7 +65,8 @@ class RoamAPIClient:
             headers["Authorization"] = f"Bearer {self.access_token}"
             kwargs["headers"] = headers
         
-        response = requests.request(method, url, **kwargs)
+        # OPTIMIZATION: Use session for connection pooling
+        response = self.session.request(method, url, **kwargs)
         
         # If we get a 401 and have a refresh token, try to refresh
         if response.status_code == 401 and self.refresh_token and not endpoint.startswith("/api/v1/auth"):
@@ -58,7 +76,7 @@ class RoamAPIClient:
                 headers = kwargs.get("headers", {})
                 headers["Authorization"] = f"Bearer {self.access_token}"
                 kwargs["headers"] = headers
-                response = requests.request(method, url, **kwargs)
+                response = self.session.request(method, url, **kwargs)
             except Exception:
                 pass  # Let the original error be raised
         
@@ -172,6 +190,14 @@ class RoamAPIClient:
                 # Clear tokens even if logout fails
                 self.access_token = None
                 self.refresh_token = None
+    
+    def close(self) -> None:
+        """
+        Close the HTTP session and release resources.
+        Call this when done with the client to clean up connection pools.
+        """
+        if hasattr(self, 'session'):
+            self.session.close()
     
     def is_authenticated(self) -> bool:
         """

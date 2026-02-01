@@ -70,6 +70,11 @@ class ServerBackedWorldScreen:
         self.player_data = None
         self.server_tick = 0
         
+        # OPTIMIZATION: Track when room needs refresh to batch updates
+        self.room_needs_refresh = False
+        self.last_room_refresh_time = 0
+        self.room_refresh_cooldown_ms = 500  # Minimum 500ms between room refreshes
+        
         # World rendering
         self.current_room = None
         self.current_room_x = 0
@@ -300,6 +305,13 @@ class ServerBackedWorldScreen:
             )
             logger.info(f"Move successful: new position from server, moving={self.player_data.get('moving')}")
             self._updatePlayerFromServerData(self.player_data)
+            
+            # OPTIMIZATION: Only refresh room if player changed rooms
+            if self.player_data:
+                player_room_x = self.player_data.get('roomX', 0)
+                player_room_y = self.player_data.get('roomY', 0)
+                if player_room_x != self.current_room_x or player_room_y != self.current_room_y:
+                    self.load_room(player_room_x, player_room_y)
             
             self.status.set(f"Moving {direction_names[direction]}")
         except Exception as e:
@@ -535,6 +547,10 @@ class ServerBackedWorldScreen:
                 )
                 self._updatePlayerFromServerData(self.player_data)
                 self.last_gather_tile = (tile_x, tile_y)
+                
+                # OPTIMIZATION: Mark room for refresh instead of immediately refreshing
+                self.room_needs_refresh = True
+                
                 # Don't show status for every gather to avoid spam
                 if not self.config.debug:
                     self.status.set("Gathered")
@@ -561,6 +577,10 @@ class ServerBackedWorldScreen:
                     tile_y=tile_y
                 )
                 self._updatePlayerFromServerData(self.player_data)
+                
+                # OPTIMIZATION: Mark room for refresh instead of immediately refreshing
+                self.room_needs_refresh = True
+                
                 if not self.config.debug:
                     self.status.set("Placed")
                 else:
@@ -945,16 +965,26 @@ class ServerBackedWorldScreen:
             self.server_tick = session_data.get('currentTick', self.server_tick)
             logger.debug(f"Tick updated: {self.server_tick}")
             
-            # Fetch updated player data after tick to get new position
-            self.player_data = self.api_client.get_player()
-            self._updatePlayerFromServerData(self.player_data)
+            # OPTIMIZATION: Get player data directly from tick response instead of separate request
+            # The tick endpoint returns the full session data including player state
+            if 'player' in session_data:
+                self.player_data = session_data['player']
+                self._updatePlayerFromServerData(self.player_data)
+            else:
+                # Fallback: fetch player data separately if not in tick response
+                self.player_data = self.api_client.get_player()
+                self._updatePlayerFromServerData(self.player_data)
             
-            # Always reload current room to get updated entity positions
+            # OPTIMIZATION: Only reload room if player changed rooms or on demand
+            # Check if player moved to a different room since last tick
             if self.player_data:
                 player_room_x = self.player_data.get('roomX', 0)
                 player_room_y = self.player_data.get('roomY', 0)
-                # Reload room every tick to show entity movements
-                self.load_room(player_room_x, player_room_y)
+                
+                # Only reload if we're in a different room than currently displayed
+                if player_room_x != self.current_room_x or player_room_y != self.current_room_y:
+                    logger.info(f"Player changed rooms from ({self.current_room_x}, {self.current_room_y}) to ({player_room_x}, {player_room_y})")
+                    self.load_room(player_room_x, player_room_y)
         except Exception as e:
             logger.error(f"Failed to update tick: {e}", exc_info=True)
             print(f"Failed to update tick: {e}")
@@ -1134,7 +1164,9 @@ class ServerBackedWorldScreen:
         """Main game loop."""
         logger.info("Starting ServerBackedWorldScreen main loop")
         tick_counter = 0
-        tick_update_frequency = 3  # Update server tick every 3 frames (~20 ticks/sec at 60 FPS, matches server 18 ticks/sec)
+        # OPTIMIZATION: Reduce tick update frequency from every 3 frames to every 15 frames
+        # This reduces network requests from ~20/sec to ~4/sec while maintaining responsive gameplay
+        tick_update_frequency = 15  # Update server tick every 15 frames (~4 ticks/sec at 60 FPS)
         
         clock = pygame.time.Clock()
         target_fps = 60
@@ -1164,6 +1196,15 @@ class ServerBackedWorldScreen:
                     self.gather_cooldown_frames = 0
             else:
                 self.gather_cooldown_frames = 0
+            
+            # OPTIMIZATION: Debounced room refresh - only refresh if needed and cooldown expired
+            if self.room_needs_refresh:
+                current_time_ms = pygame.time.get_ticks()
+                if current_time_ms - self.last_room_refresh_time >= self.room_refresh_cooldown_ms:
+                    logger.debug("Refreshing room after entity modification")
+                    self.load_room(self.current_room_x, self.current_room_y)
+                    self.room_needs_refresh = False
+                    self.last_room_refresh_time = current_time_ms
             
             # Update tick periodically
             tick_counter += 1
