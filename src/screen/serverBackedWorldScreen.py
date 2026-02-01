@@ -1287,12 +1287,14 @@ class ServerBackedWorldScreen:
                     self.room_needs_refresh = False
                     self.last_room_refresh_time = current_time_ms
             
-            # Update tick periodically (only if not using WebSocket)
-            if not self.using_websocket:
-                tick_counter += 1
-                if tick_counter >= tick_update_frequency:
-                    self.updateTick()
-                    tick_counter = 0
+            # Update tick periodically
+            # NOTE: We always need to call updateTick() to drive server game state forward,
+            # even when using WebSocket. WebSocket only provides real-time broadcasts of
+            # state changes, but doesn't advance the server tick automatically.
+            tick_counter += 1
+            if tick_counter >= tick_update_frequency:
+                self.updateTick()
+                tick_counter = 0
             
             # Check WebSocket connection health and transition between modes
             if self.ws_client:
