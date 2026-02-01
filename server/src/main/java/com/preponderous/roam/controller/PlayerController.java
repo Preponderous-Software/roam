@@ -141,11 +141,14 @@ public class PlayerController {
                             targetEntity = entityInteractionService.getEntityInFrontOfPlayer(player, currentRoom);
                         }
                         
+                        // If no entity found at the target location, do nothing (intentional)
                         if (targetEntity != null) {
-                            // Try harvesting harvestable entities (trees, rocks, bushes)
+                            // Try harvesting harvestable entities (trees, rocks, bushes) for resources
+                            // Harvesting extracts resources but leaves the entity in place (with cooldown)
                             entityInteractionService.harvestEntity(targetEntity, player);
                             
-                            // Try gathering resources (apples, berries, wood, stone)
+                            // Try gathering resource entities (apples, berries, wood, stone) from the ground
+                            // Gathering picks up and removes the entity completely
                             entityInteractionService.gatherResource(targetEntity, player, currentRoom, sessionId);
                             
                             // Try hunting wildlife (bears, deer, chickens)
@@ -206,6 +209,8 @@ public class PlayerController {
                 }
                 break;
             case "crouch":
+                // Note: Crouching is currently tracked but has no gameplay effect
+                // Future enhancements could implement stealth mechanics, speed reduction, etc.
                 if (request.getCrouching() != null) {
                     playerService.setCrouching(player, request.getCrouching());
                 }
@@ -246,7 +251,8 @@ public class PlayerController {
     private Entity createEntityFromItemName(String itemName) {
         switch (itemName) {
             case "Grass":
-                // Grass is a tile type, not a placeable entity
+                // TODO: Grass should be an entity like in the original implementation, not just a tile type
+                // This would allow grass to be gathered, placed, and interacted with
                 return null;
             case "Wood":
                 return new Wood();
@@ -279,7 +285,7 @@ public class PlayerController {
         
         String username = getCurrentUsername();
         
-        // Apply rate limiting
+        // Apply rate limiting - throws RateLimitExceededException if limit exceeded, stopping further processing
         rateLimitService.checkPlayerActionLimit(username);
         
         GameState gameState = gameService.getSession(sessionId, username);

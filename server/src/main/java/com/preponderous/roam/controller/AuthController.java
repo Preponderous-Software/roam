@@ -64,6 +64,9 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout(HttpServletRequest request) {
         String token = parseJwt(request);
+        if (token == null) {
+            throw new RuntimeException("Missing or invalid Authorization header");
+        }
         authService.logout(token);
         
         Map<String, String> response = new HashMap<>();

@@ -3,6 +3,10 @@ package com.preponderous.roam.dto;
 /**
  * DTO for entity information.
  * 
+ * TODO: Consider adding Lombok to reduce boilerplate getters/setters across all DTOs
+ *       This would reduce code duplication and improve maintainability.
+ *       Example: @Data, @NoArgsConstructor, @AllArgsConstructor annotations
+ * 
  * @author Daniel McCoy Stephenson
  */
 public class EntityDTO {
