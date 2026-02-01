@@ -13,7 +13,7 @@ public class BearMeat extends Entity {
     private double energyValue;
 
     public BearMeat() {
-        super("Bear Meat", "assets/images/bear.png");
+        super("Bear Meat", "assets/images/bearMeat.png");
         this.energyValue = ENERGY_VALUE;
         this.setSolid(false);
     }
@@ -22,7 +22,7 @@ public class BearMeat extends Entity {
      * Constructor for persistence - creates bear meat with specific ID.
      */
     public BearMeat(String id) {
-        super(id, "Bear Meat", "assets/images/bear.png");
+        super(id, "Bear Meat", "assets/images/bearMeat.png");
         this.energyValue = ENERGY_VALUE;
         this.setSolid(false);
     }

@@ -13,7 +13,7 @@ public class ChickenMeat extends Entity {
     private double energyValue;
 
     public ChickenMeat() {
-        super("Chicken Meat", "assets/images/chicken.png");
+        super("Chicken Meat", "assets/images/chickenMeat.png");
         this.energyValue = ENERGY_VALUE;
         this.setSolid(false);
     }
@@ -22,7 +22,7 @@ public class ChickenMeat extends Entity {
      * Constructor for persistence - creates chicken meat with specific ID.
      */
     public ChickenMeat(String id) {
-        super(id, "Chicken Meat", "assets/images/chicken.png");
+        super(id, "Chicken Meat", "assets/images/chickenMeat.png");
         this.energyValue = ENERGY_VALUE;
         this.setSolid(false);
     }
