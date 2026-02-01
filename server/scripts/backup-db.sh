@@ -12,11 +12,16 @@ DB_USER="${DATABASE_USERNAME:-roam}"
 DB_PASSWORD="${DATABASE_PASSWORD:-}"
 
 # Require an explicit, non-trivial database password to avoid using insecure defaults
-WEAK_PASSWORDS=("password" "admin" "123456" "12345678" "qwerty" "letmein" "${DB_USER}" "${DB_NAME}")
+# Expanded list of common weak passwords
+WEAK_PASSWORDS=("password" "password123" "admin" "admin123" "123456" "12345678" "qwerty" "letmein" "roam" "roam123" "roamdev" "${DB_USER}" "${DB_NAME}")
+
+# Convert password to lowercase for case-insensitive comparison
+password_lower=$(echo "${DB_PASSWORD}" | tr '[:upper:]' '[:lower:]')
 
 is_weak_password=0
 for weak in "${WEAK_PASSWORDS[@]}"; do
-  if [ -n "${weak}" ] && [ "${DB_PASSWORD}" = "${weak}" ]; then
+  weak_lower=$(echo "${weak}" | tr '[:upper:]' '[:lower:]')
+  if [ -n "${weak_lower}" ] && [ "${password_lower}" = "${weak_lower}" ]; then
     is_weak_password=1
     break
   fi
