@@ -52,6 +52,7 @@ Result: 75-85% reduction in network traffic!
 - **Before**: Reload room every tick (4/sec)
 - **After**: Only reload when player changes rooms (~0.1/sec)
 - **Savings**: 40x fewer room loads during normal gameplay
+- **⚠️ Tradeoff**: Entity movements (wildlife, NPCs) within the same room are not visible in real-time. Entities only update when changing rooms or during periodic refreshes. For real-time entity tracking, WebSocket integration is recommended.
 
 ### 4. Debounced Action Refresh ⏱️
 - **Before**: Immediate room reload after each gather/place
@@ -162,7 +163,7 @@ To verify improvements:
 Tunable parameters in `serverBackedWorldScreen.py`:
 
 ```python
-tick_update_frequency = 15      # Lower = fewer updates, higher = more responsive
+tick_update_frequency = 15      # Lower = more frequent updates (more responsive, higher network usage), higher = less frequent updates (less responsive, lower network usage)
 room_refresh_cooldown_ms = 500  # Adjust debounce timing
 ```
 

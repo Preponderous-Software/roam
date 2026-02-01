@@ -53,6 +53,8 @@ if 'player' in session_data:
 
 **Impact**: Reduces room loads from ~4/sec to <0.1/sec in normal gameplay (40x reduction)
 
+**Important Tradeoff**: This optimization means that entity movements (wildlife, NPCs) within the same room will not be visible in real-time unless the player changes rooms. The previous implementation reloaded the room every tick specifically to show entity movements. This tradeoff significantly improves network performance but reduces gameplay visibility. For real-time entity tracking, consider implementing WebSocket-based entity position updates or periodic room refreshes at a lower frequency (e.g., every 5 seconds).
+
 ```python
 # Only reload if player moved to a different room
 if player_room_x != self.current_room_x or player_room_y != self.current_room_y:
@@ -169,7 +171,7 @@ The following can be tuned based on network conditions:
 
 ```python
 # Client: serverBackedWorldScreen.py
-tick_update_frequency = 15  # Increase for less network usage, decrease for more responsive feel
+tick_update_frequency = 15  # Increase for less frequent updates (lower network usage), decrease for more frequent updates (more responsive)
 room_refresh_cooldown_ms = 500  # Adjust debounce timing
 
 # Client: api_client.py  

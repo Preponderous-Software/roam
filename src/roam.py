@@ -305,6 +305,10 @@ class Roam:
 
     def quitApplication(self):
         logger.info("Quitting application")
+        # Clean up API client resources
+        if hasattr(self, 'api_client') and self.api_client:
+            logger.debug("Closing API client connection pool")
+            self.api_client.close()
         pygame.quit()
         quit()
 
