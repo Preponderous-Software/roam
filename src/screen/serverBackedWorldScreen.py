@@ -130,6 +130,7 @@ class ServerBackedWorldScreen:
         # Load entity sprites
         self.entity_sprites = {}
         entity_sprite_paths = {
+            # Mapped by entity name (used by most entities)
             'Bear': "assets/images/bear.png",
             'Chicken': "assets/images/chicken.png",
             'Deer': "assets/images/deer.png",  # NEW: dedicated sprite
@@ -143,7 +144,12 @@ class ServerBackedWorldScreen:
             'Grass': "assets/images/grass.png",
             'Chicken Meat': "assets/images/chickenMeat.png",  # NEW: meat sprite
             'Bear Meat': "assets/images/bearMeat.png",  # NEW: meat sprite
-            'Deer Meat': "assets/images/deerMeat.png"  # NEW: meat sprite
+            'Deer Meat': "assets/images/deerMeat.png",  # NEW: meat sprite
+            
+            # Mapped by class name (entity type) for entities where type != name
+            'BearMeat': "assets/images/bearMeat.png",
+            'ChickenMeat': "assets/images/chickenMeat.png",
+            'DeerMeat': "assets/images/deerMeat.png",
         }
         
         for entity_type, path in entity_sprite_paths.items():
