@@ -43,6 +43,12 @@ public class PersistenceIntegrationTest {
         player.setTileX(5);
         player.setTileY(7);
         
+        // Set player stats
+        player.setScore(100);
+        player.setRoomsExplored(5);
+        player.setFoodEaten(3);
+        player.setNumberOfDeaths(1);
+        
         // Advance game tick
         gameState.setCurrentTick(150);
         
@@ -64,6 +70,12 @@ public class PersistenceIntegrationTest {
         assertEquals(2, loadedPlayer.getRoomY());
         assertEquals(5, loadedPlayer.getTileX());
         assertEquals(7, loadedPlayer.getTileY());
+        
+        // Verify player stats are persisted
+        assertEquals(100, loadedPlayer.getScore(), "Score should be persisted");
+        assertEquals(5, loadedPlayer.getRoomsExplored(), "Rooms explored should be persisted");
+        assertEquals(3, loadedPlayer.getFoodEaten(), "Food eaten should be persisted");
+        assertEquals(1, loadedPlayer.getNumberOfDeaths(), "Number of deaths should be persisted");
         
         // Verify world config
         WorldConfig loadedConfig = loaded.getWorld().getConfig();

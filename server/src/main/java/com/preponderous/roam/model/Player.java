@@ -1,5 +1,8 @@
 package com.preponderous.roam.model;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Represents a player in the game.
  * 
@@ -30,6 +33,15 @@ public class Player extends LivingEntity {
     private int roomY;
     private int tileX;
     private int tileY;
+    
+    // Stats tracking
+    private int score;
+    private int roomsExplored;
+    private int foodEaten;
+    private int numberOfDeaths;
+    
+    // Track visited rooms for stats
+    private Set<String> visitedRooms;
 
     public Player(long tickCreated) {
         super("Player", "assets/images/player_down.png", DEFAULT_PLAYER_ENERGY, tickCreated);
@@ -53,6 +65,16 @@ public class Player extends LivingEntity {
         this.roomY = 0;
         this.tileX = 0;
         this.tileY = 0;
+        
+        // Initialize stats
+        this.score = 0;
+        this.roomsExplored = 1; // Start with 1 since player starts in room (0,0)
+        this.foodEaten = 0;
+        this.numberOfDeaths = 0;
+        
+        // Initialize visited rooms set with starting room
+        this.visitedRooms = new HashSet<>();
+        this.visitedRooms.add("0,0");
     }
 
     public int getDirection() {
@@ -209,5 +231,77 @@ public class Player extends LivingEntity {
 
     public void setTileY(int tileY) {
         this.tileY = tileY;
+    }
+
+    public int getScore() {
+        return score;
+    }
+
+    public void setScore(int score) {
+        this.score = score;
+    }
+
+    public void incrementScore() {
+        this.score++;
+    }
+
+    public int getRoomsExplored() {
+        return roomsExplored;
+    }
+
+    public void setRoomsExplored(int roomsExplored) {
+        this.roomsExplored = roomsExplored;
+    }
+
+    public void incrementRoomsExplored() {
+        this.roomsExplored++;
+    }
+
+    public int getFoodEaten() {
+        return foodEaten;
+    }
+
+    public void setFoodEaten(int foodEaten) {
+        this.foodEaten = foodEaten;
+    }
+
+    public void incrementFoodEaten() {
+        this.foodEaten++;
+    }
+
+    public int getNumberOfDeaths() {
+        return numberOfDeaths;
+    }
+
+    public void setNumberOfDeaths(int numberOfDeaths) {
+        this.numberOfDeaths = numberOfDeaths;
+    }
+
+    public void incrementNumberOfDeaths() {
+        this.numberOfDeaths++;
+    }
+    
+    public Set<String> getVisitedRooms() {
+        return visitedRooms;
+    }
+    
+    public void setVisitedRooms(Set<String> visitedRooms) {
+        this.visitedRooms = visitedRooms;
+    }
+    
+    /**
+     * Mark a room as visited. If it's a new room, increments roomsExplored.
+     * 
+     * @param roomX the room X coordinate
+     * @param roomY the room Y coordinate
+     * @return true if this is a newly visited room, false if already visited
+     */
+    public boolean visitRoom(int roomX, int roomY) {
+        String roomKey = roomX + "," + roomY;
+        boolean isNewRoom = visitedRooms.add(roomKey);
+        if (isNewRoom) {
+            incrementRoomsExplored();
+        }
+        return isNewRoom;
     }
 }

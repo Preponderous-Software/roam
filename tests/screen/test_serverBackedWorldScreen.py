@@ -314,6 +314,60 @@ class TestStateUpdates:
         assert world_screen.server_tick == 42
         mock_dependencies['api_client'].update_tick.assert_called_once()
     
+    def test_update_tick_extracts_player_from_response(self, world_screen, mock_dependencies):
+        """Test that updateTick extracts player data from tick response (optimization).
+        
+        This test verifies the optimization where player data is reused from the tick
+        response instead of making a separate GET /player call.
+        """
+        session_data = {
+            'currentTick': 42,
+            'player': {
+                'energy': 95.0,
+                'direction': 1,
+                'roomX': 0,
+                'roomY': 0,
+                'inventory': {'slots': []}
+            }
+        }
+        mock_dependencies['api_client'].update_tick.return_value = session_data
+        
+        world_screen.updateTick()
+        
+        # Verify tick was updated
+        assert world_screen.server_tick == 42
+        # Verify player data was extracted from response
+        assert world_screen.player_data == session_data['player']
+        # Verify get_player was NOT called (optimization working)
+        mock_dependencies['api_client'].get_player.assert_not_called()
+        # Verify player was updated from the data
+        mock_dependencies['player'].setEnergy.assert_called_once_with(95.0)
+    
+    def test_update_tick_fallback_to_get_player(self, world_screen, mock_dependencies):
+        """Test that updateTick falls back to get_player when not in tick response.
+        
+        This tests the fallback behavior when the tick response doesn't include player data.
+        """
+        session_data = {'currentTick': 42}  # No player data
+        player_data = {
+            'energy': 95.0,
+            'direction': 1,
+            'roomX': 0,
+            'roomY': 0,
+            'inventory': {'slots': []}
+        }
+        mock_dependencies['api_client'].update_tick.return_value = session_data
+        mock_dependencies['api_client'].get_player.return_value = player_data
+        
+        world_screen.updateTick()
+        
+        # Verify fallback was triggered
+        mock_dependencies['api_client'].get_player.assert_called_once()
+        # Verify player data was set from fallback
+        assert world_screen.player_data == player_data
+        # Verify player was updated
+        mock_dependencies['player'].setEnergy.assert_called_once_with(95.0)
+    
     def test_update_tick_handles_error(self, world_screen, mock_dependencies):
         """Test that updateTick handles errors."""
         mock_dependencies['api_client'].update_tick.side_effect = Exception("Server error")
