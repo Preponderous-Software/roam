@@ -12,8 +12,16 @@ DB_USER="${DATABASE_USERNAME:-roam}"
 DB_PASSWORD="${DATABASE_PASSWORD:-}"
 
 # Require an explicit, non-trivial database password to avoid using insecure defaults
-# Expanded list of common weak passwords
-WEAK_PASSWORDS=("password" "password123" "admin" "admin123" "123456" "12345678" "qwerty" "letmein" "roam" "roam123" "roamdev" "${DB_USER}" "${DB_NAME}")
+# Build list of common weak passwords
+WEAK_PASSWORDS=("password" "password123" "admin" "admin123" "123456" "12345678" "qwerty" "letmein" "roam" "roam123" "roamdev")
+
+# Add DB_USER and DB_NAME to weak passwords list if they are set
+if [ -n "${DB_USER}" ]; then
+  WEAK_PASSWORDS+=("${DB_USER}")
+fi
+if [ -n "${DB_NAME}" ]; then
+  WEAK_PASSWORDS+=("${DB_NAME}")
+fi
 
 # Convert password to lowercase for case-insensitive comparison
 password_lower=$(echo "${DB_PASSWORD}" | tr '[:upper:]' '[:lower:]')
@@ -21,7 +29,7 @@ password_lower=$(echo "${DB_PASSWORD}" | tr '[:upper:]' '[:lower:]')
 is_weak_password=0
 for weak in "${WEAK_PASSWORDS[@]}"; do
   weak_lower=$(echo "${weak}" | tr '[:upper:]' '[:lower:]')
-  if [ -n "${weak_lower}" ] && [ "${password_lower}" = "${weak_lower}" ]; then
+  if [ "${password_lower}" = "${weak_lower}" ]; then
     is_weak_password=1
     break
   fi
