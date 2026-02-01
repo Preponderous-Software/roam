@@ -273,6 +273,8 @@ class ServerBackedWorldScreen:
         slots_data = inventory_data.get('slots', [])
         selected_slot = inventory_data.get('selectedSlotIndex', 0)
         
+        logger.debug(f"Syncing inventory: {len(slots_data)} slots, {inventory_data.get('numItems', 0)} total items")
+        
         # Map server item names to client item classes
         item_name_to_class = {
             'Apple': Apple,
@@ -322,6 +324,7 @@ class ServerBackedWorldScreen:
         
         # Set selected slot
         self.player.getInventory().setSelectedInventorySlotIndex(selected_slot)
+        logger.debug(f"Inventory sync complete: {self.player.getInventory().getNumItems()} items restored")
     
     # WebSocket Message Handlers
     
