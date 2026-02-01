@@ -4,9 +4,8 @@ Tests the WebSocket client functionality without requiring a live server.
 """
 
 import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 import threading
-import time
 import sys
 import os
 

@@ -74,7 +74,8 @@ class ServerBackedWorldScreen:
         
         # WebSocket client for real-time updates
         self.ws_client: Optional[WebSocketClient] = None
-        self.ws_enabled = getattr(config, "use_websocket", True)
+        # Only enable WebSocket if config explicitly has the attribute set
+        self.ws_enabled = getattr(config, "use_websocket", False) if hasattr(config, "use_websocket") else False
         
         # Track if we're using WebSocket or fallback to REST polling
         self.using_websocket = False
@@ -1289,11 +1290,18 @@ class ServerBackedWorldScreen:
                     self.updateTick()
                     tick_counter = 0
             
-            # Check WebSocket connection health
-            if self.using_websocket and self.ws_client and not self.ws_client.is_connected():
-                logger.warning("WebSocket connection lost, falling back to REST polling")
-                self.using_websocket = False
-                self.status.set("Connection lost - using REST mode")
+            # Check WebSocket connection health and transition between modes
+            if self.ws_client:
+                # If we were using WebSocket but connection was lost, fall back to REST polling
+                if self.using_websocket and not self.ws_client.is_connected():
+                    logger.warning("WebSocket connection lost, falling back to REST polling")
+                    self.using_websocket = False
+                    self.status.set("Connection lost - using REST mode")
+                # If we are currently in REST mode but WebSocket has reconnected, resume WebSocket mode
+                elif not self.using_websocket and self.ws_client.is_connected():
+                    logger.info("WebSocket connection restored, resuming WebSocket mode")
+                    self.using_websocket = True
+                    self.status.set("Connection restored - using WebSocket mode")
             
             # Check status expiration
             self.status.checkForExpiration(self.tickCounter.getTick())

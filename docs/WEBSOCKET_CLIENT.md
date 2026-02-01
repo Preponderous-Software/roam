@@ -26,14 +26,15 @@ self.use_websocket = False
 ### Config Options (src/config/config.py)
 
 ```python
+# In Config.__init__():
 # Enable/disable WebSocket (default: True)
-use_websocket = True
+self.use_websocket = True
 
 # Initial reconnection delay in seconds (default: 1.0)
-websocket_reconnect_base_delay = 1.0
+self.websocket_reconnect_base_delay = 1.0
 
 # Maximum reconnection delay in seconds (default: 60.0)  
-websocket_reconnect_max_delay = 60.0
+self.websocket_reconnect_max_delay = 60.0
 ```
 
 ### Runtime Configuration
@@ -136,10 +137,11 @@ Set using_websocket = False
   ↓
 Fall back to REST tick polling
   ↓
-Attempt reconnection with exponential backoff
+Attempt reconnection with exponential backoff (in background)
   ↓
-If reconnected:
-  - Resume WebSocket mode
+When reconnected:
+  - Detect connection restored in game loop
+  - Resume WebSocket mode (set using_websocket = True)
   - Stop REST polling
 ```
 

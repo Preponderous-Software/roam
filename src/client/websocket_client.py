@@ -152,8 +152,9 @@ class WebSocketClient:
             message_type: Type of message (TICK_UPDATE, PLAYER_POSITION, ENTITY_STATE, WORLD_EVENT)
             handler: Callback function that takes message data as argument
         """
-        self.message_handlers[message_type] = handler
-        logger.debug(f"Registered handler for message type: {message_type}")
+        with self.lock:
+            self.message_handlers[message_type] = handler
+            logger.debug(f"Registered handler for message type: {message_type}")
     
     def _run_websocket(self):
         """Run the WebSocket connection (called in separate thread)."""
