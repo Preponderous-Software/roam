@@ -51,3 +51,4 @@ server/scripts/backup/*.sql.gz
 
 # Client session persistence
 saves/*/session_id.txt
+.saved_username

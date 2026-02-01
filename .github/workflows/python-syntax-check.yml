@@ -1,0 +1,27 @@
+name: Python Syntax Check
+
+on:
+  push:
+    branches: [ main, develop, feat/**, copilot/** ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Check Python syntax
+      run: |
+        python -m py_compile $(find . -name "*.py" -not -path "./venv/*" -not -path "./.venv/*" -not -path "./build/*" -not -path "./dist/*")
+    
+    - name: Verify all Python files compiled successfully
+      run: |
+        echo "✓ All Python files have valid syntax"

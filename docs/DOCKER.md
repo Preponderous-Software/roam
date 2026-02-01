@@ -29,7 +29,7 @@ docker compose logs -f roam-server
 
 # Run client on host (in another terminal)
 cd src
-python3 roam_client.py
+python3 roam.py
 ```
 
 ### Option 2: Server + Client (Linux with X11 only)
@@ -401,7 +401,7 @@ docker compose up -d roam-server
 
 # Terminal 2: Run client natively
 cd src
-python3 roam_client.py http://localhost:8080
+python3 roam.py http://localhost:8080
 ```
 
 This avoids X11 complexity while still containerizing the server.

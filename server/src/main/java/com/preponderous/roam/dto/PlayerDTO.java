@@ -15,6 +15,7 @@ public class PlayerDTO {
     private boolean gathering;
     private boolean placing;
     private boolean crouching;
+    private boolean running;
     private boolean moving;
     private boolean dead;
     private long tickLastMoved;
@@ -111,6 +112,14 @@ public class PlayerDTO {
 
     public void setCrouching(boolean crouching) {
         this.crouching = crouching;
+    }
+
+    public boolean isRunning() {
+        return running;
+    }
+
+    public void setRunning(boolean running) {
+        this.running = running;
     }
 
     public boolean isMoving() {

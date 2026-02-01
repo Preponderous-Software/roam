@@ -6,6 +6,8 @@ import com.preponderous.roam.persistence.entity.*;
 import com.preponderous.roam.persistence.repository.GameSessionRepository;
 import com.preponderous.roam.persistence.repository.PlayerRepository;
 import com.preponderous.roam.persistence.repository.RoomRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,11 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 /**
  * JPA/Hibernate implementation of game state storage.
@@ -46,6 +46,9 @@ public class PersistenceService implements GameStateStorage {
     
     @Autowired
     private RoomRepository roomRepository;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
     
     /**
      * Save a game state to the database.
@@ -237,6 +240,7 @@ public class PersistenceService implements GameStateStorage {
         playerEntity.setGathering(player.isGathering());
         playerEntity.setPlacing(player.isPlacing());
         playerEntity.setCrouching(player.isCrouching());
+        playerEntity.setRunning(player.isRunning());
         playerEntity.setTickLastMoved(player.getTickLastMoved());
         playerEntity.setTickLastGathered(player.getTickLastGathered());
         playerEntity.setTickLastPlaced(player.getTickLastPlaced());
@@ -247,15 +251,6 @@ public class PersistenceService implements GameStateStorage {
         playerEntity.setRoomY(player.getRoomY());
         playerEntity.setTileX(player.getTileX());
         playerEntity.setTileY(player.getTileY());
-        playerEntity.setScore(player.getScore());
-        playerEntity.setRoomsExplored(player.getRoomsExplored());
-        playerEntity.setFoodEaten(player.getFoodEaten());
-        playerEntity.setNumberOfDeaths(player.getNumberOfDeaths());
-        
-        // Save visited rooms as semicolon-separated string
-        String visitedRoomsStr = String.join(";", player.getVisitedRooms());
-        playerEntity.setVisitedRooms(visitedRoomsStr);
-        
         playerEntity.setSelectedInventorySlotIndex(player.getInventory().getSelectedInventorySlotIndex());
         
         playerEntity = playerRepository.save(playerEntity);
@@ -310,10 +305,13 @@ public class PersistenceService implements GameStateStorage {
     }
     
     private void saveTiles(Room room, RoomEntity roomEntity) {
+        // Clear existing tiles and flush deletions before inserting new ones
+        // This is necessary due to the unique constraint on (room_id, tile_x, tile_y)
         roomEntity.getTiles().clear();
-        roomRepository.saveAndFlush(roomEntity);  // Flush to ensure tiles are deleted
+        entityManager.flush();  // Ensure deletions are executed before insertions
         
         Tile[][] tiles = room.getTiles();
+        List<TileEntity> newTiles = new ArrayList<>();
         for (int y = 0; y < room.getHeight(); y++) {
             for (int x = 0; x < room.getWidth(); x++) {
                 Tile tile = tiles[y][x];
@@ -322,16 +320,20 @@ public class PersistenceService implements GameStateStorage {
                 tileEntity.setResourceAmount(tile.getResourceAmount());
                 tileEntity.setHasHazard(tile.hasHazard());
                 tileEntity.setHazardType(tile.getHazardType());
-                roomEntity.addTile(tileEntity);
+                tileEntity.setRoom(roomEntity);
+                newTiles.add(tileEntity);
             }
         }
-        roomRepository.saveAndFlush(roomEntity);  // Save new tiles
+        // Batch add new tiles to reduce individual addTile calls
+        roomEntity.getTiles().addAll(newTiles);
     }
     
     private void saveEntities(Room room, RoomEntity roomEntity) {
+        // Clear existing entities and flush deletions before inserting new ones
         roomEntity.getEntities().clear();
-        roomRepository.saveAndFlush(roomEntity);  // Flush to ensure entities are deleted
+        entityManager.flush();  // Ensure deletions are executed before insertions
         
+        List<GameEntityData> newEntities = new ArrayList<>();
         for (Entity entity : room.getEntitiesList()) {
             GameEntityData entityData = new GameEntityData(
                 entity.getId(),
@@ -391,8 +393,10 @@ public class PersistenceService implements GameStateStorage {
                 entityData.setFleeRange(chicken.getFleeRange());
             }
             
-            roomEntity.addEntity(entityData);
+            entityData.setRoom(roomEntity);
+            newEntities.add(entityData);
         }
+        roomEntity.getEntities().addAll(newEntities);
     }
     
     private Room convertToRoom(RoomEntity roomEntity) {
@@ -467,6 +471,21 @@ public class PersistenceService implements GameStateStorage {
                     if (data.getEnergyValue() != null) berry.setEnergyValue(data.getEnergyValue());
                     return berry;
                     
+                case "Chicken Meat":
+                    ChickenMeat chickenMeat = new ChickenMeat(id);
+                    if (data.getEnergyValue() != null) chickenMeat.setEnergyValue(data.getEnergyValue());
+                    return chickenMeat;
+                    
+                case "Bear Meat":
+                    BearMeat bearMeat = new BearMeat(id);
+                    if (data.getEnergyValue() != null) bearMeat.setEnergyValue(data.getEnergyValue());
+                    return bearMeat;
+                    
+                case "Deer Meat":
+                    DeerMeat deerMeat = new DeerMeat(id);
+                    if (data.getEnergyValue() != null) deerMeat.setEnergyValue(data.getEnergyValue());
+                    return deerMeat;
+                    
                 case "Wood":
                     Wood wood = new Wood(id);
                     if (data.getQuantity() != null) wood.setQuantity(data.getQuantity());
@@ -526,6 +545,7 @@ public class PersistenceService implements GameStateStorage {
         player.setGathering(playerEntity.isGathering());
         player.setPlacing(playerEntity.isPlacing());
         player.setCrouching(playerEntity.isCrouching());
+        player.setRunning(playerEntity.isRunning());
         player.setTickLastMoved(playerEntity.getTickLastMoved());
         player.setTickLastGathered(playerEntity.getTickLastGathered());
         player.setTickLastPlaced(playerEntity.getTickLastPlaced());
@@ -536,17 +556,6 @@ public class PersistenceService implements GameStateStorage {
         player.setRoomY(playerEntity.getRoomY());
         player.setTileX(playerEntity.getTileX());
         player.setTileY(playerEntity.getTileY());
-        player.setScore(playerEntity.getScore());
-        player.setRoomsExplored(playerEntity.getRoomsExplored());
-        player.setFoodEaten(playerEntity.getFoodEaten());
-        player.setNumberOfDeaths(playerEntity.getNumberOfDeaths());
-        
-        // Load visited rooms from semicolon-separated string
-        String visitedRoomsStr = playerEntity.getVisitedRooms();
-        if (visitedRoomsStr != null && !visitedRoomsStr.isEmpty()) {
-            Set<String> visitedRooms = new HashSet<>(Arrays.asList(visitedRoomsStr.split(";")));
-            player.setVisitedRooms(visitedRooms);
-        }
         
         // Load inventory
         Inventory inventory = new Inventory();
@@ -576,6 +585,7 @@ public class PersistenceService implements GameStateStorage {
         target.setGathering(source.isGathering());
         target.setPlacing(source.isPlacing());
         target.setCrouching(source.isCrouching());
+        target.setRunning(source.isRunning());
         target.setTickLastMoved(source.getTickLastMoved());
         target.setTickLastGathered(source.getTickLastGathered());
         target.setTickLastPlaced(source.getTickLastPlaced());
@@ -587,11 +597,5 @@ public class PersistenceService implements GameStateStorage {
         target.setTileX(source.getTileX());
         target.setTileY(source.getTileY());
         target.setInventory(source.getInventory());
-        // Copy stats
-        target.setScore(source.getScore());
-        target.setRoomsExplored(source.getRoomsExplored());
-        target.setFoodEaten(source.getFoodEaten());
-        target.setNumberOfDeaths(source.getNumberOfDeaths());
-        target.setVisitedRooms(new HashSet<>(source.getVisitedRooms()));
     }
 }

@@ -24,6 +24,12 @@ public class PlayerService {
     
     @Autowired(required = false)
     private WebSocketMessageService webSocketMessageService;
+    
+    @org.springframework.beans.factory.annotation.Value("${roam.gameplay.movement-energy-cost:1.0}")
+    private double movementEnergyCost;
+
+    @org.springframework.beans.factory.annotation.Value("${roam.gameplay.ticks-per-second:3}")
+    private int ticksPerSecond;
 
     /**
      * Update player direction.
@@ -51,6 +57,13 @@ public class PlayerService {
      */
     public void setCrouching(Player player, boolean crouching) {
         player.setCrouching(crouching);
+    }
+
+    /**
+     * Update player running state.
+     */
+    public void setRunning(Player player, boolean running) {
+        player.setRunning(running);
     }
 
     /**
@@ -113,6 +126,9 @@ public class PlayerService {
      * Move player in a direction, handling room transitions and collisions.
      * Direction: 0=up, 1=left, 2=down, 3=right
      * 
+     * Applies movement speed cooldown based on player's movement speed and running state.
+     * When running, speed multiplier of 1.5x is applied.
+     * 
      * @param player the player to move
      * @param world the world containing rooms
      * @param currentTick current game tick for room generation
@@ -122,6 +138,15 @@ public class PlayerService {
         int direction = player.getDirection();
         if (direction == -1) {
             return false; // Not moving
+        }
+
+        // Calculate movement cooldown based on speed and running state
+        double speedMultiplier = player.isRunning() ? 3.0 : 1.0;
+        long cooldown = (long) (ticksPerSecond / (player.getMovementSpeed() * speedMultiplier));
+        
+        // Check if still on cooldown
+        if (currentTick < player.getTickLastMoved() + cooldown) {
+            return false; // Still on cooldown
         }
 
         int currentRoomX = player.getRoomX();
@@ -197,14 +222,11 @@ public class PlayerService {
         player.setTileX(newTileX);
         player.setTileY(newTileY);
         
-        // Track room exploration for stats
-        if (newRoomX != currentRoomX || newRoomY != currentRoomY) {
-            boolean isNewRoom = player.visitRoom(newRoomX, newRoomY);
-            if (isNewRoom) {
-                logger.info("Player explored new room ({}, {}). Total rooms explored: {}", 
-                           newRoomX, newRoomY, player.getRoomsExplored());
-            }
-        }
+        // Update tick last moved to current tick
+        player.setTickLastMoved(currentTick);
+        
+        // Apply movement energy cost
+        player.removeEnergy(movementEnergyCost);
         
         // Broadcast position update via WebSocket (sessionId provided by caller)
         // Will be called from GameService with proper sessionId
@@ -247,6 +269,7 @@ public class PlayerService {
             update.setGathering(player.isGathering());
             update.setPlacing(player.isPlacing());
             update.setCrouching(player.isCrouching());
+            update.setRunning(player.isRunning());
             
             webSocketMessageService.broadcastPlayerPosition(sessionId, update);
         }

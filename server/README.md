@@ -9,11 +9,14 @@ The Roam server is the authoritative source for all game data and business logic
 ## Key Features
 
 - RESTful API for game state management
+- JWT authentication and authorization
+- WebSocket support for real-time multiplayer updates
 - Database persistence with JPA/Hibernate
 - PostgreSQL support for production
 - H2 database for development and testing
 - Flyway database migrations
 - Docker Compose support
+- Rate limiting (10 actions/sec, 100 WebSocket msgs/sec)
 - Automatic and manual save functionality
 - Backup and restore capabilities
 

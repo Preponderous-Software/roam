@@ -51,6 +51,9 @@ public class PlayerEntityData {
     @Column(name = "crouching", nullable = false)
     private boolean crouching;
     
+    @Column(name = "running", nullable = false)
+    private boolean running;
+    
     @Column(name = "tick_last_moved", nullable = false)
     private long tickLastMoved;
     
@@ -202,6 +205,14 @@ public class PlayerEntityData {
     
     public void setCrouching(boolean crouching) {
         this.crouching = crouching;
+    }
+    
+    public boolean isRunning() {
+        return running;
+    }
+    
+    public void setRunning(boolean running) {
+        this.running = running;
     }
     
     public long getTickLastMoved() {

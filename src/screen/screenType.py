@@ -4,7 +4,6 @@ class ScreenType:
     LOGIN_SCREEN = "login_screen"
     WORLD_SCREEN = "world_screen"
     OPTIONS_SCREEN = "options_screen"
-    STATS_SCREEN = "stats_screen"
     INVENTORY_SCREEN = "inventory_screen"
     CONFIG_SCREEN = "config_screen"
     NONE = "none_screen"

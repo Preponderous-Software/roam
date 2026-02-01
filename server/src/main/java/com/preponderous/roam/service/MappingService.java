@@ -36,6 +36,7 @@ public class MappingService {
         dto.setGathering(player.isGathering());
         dto.setPlacing(player.isPlacing());
         dto.setCrouching(player.isCrouching());
+        dto.setRunning(player.isRunning());
         dto.setMoving(player.isMoving());
         dto.setDead(player.isDead());
         dto.setTickLastMoved(player.getTickLastMoved());
@@ -228,6 +229,21 @@ public class MappingService {
         if (entity instanceof Berry) {
             Berry berry = (Berry) entity;
             dto.setEnergyValue(berry.getEnergyValue());
+        }
+        
+        if (entity instanceof ChickenMeat) {
+            ChickenMeat chickenMeat = (ChickenMeat) entity;
+            dto.setEnergyValue(chickenMeat.getEnergyValue());
+        }
+        
+        if (entity instanceof BearMeat) {
+            BearMeat bearMeat = (BearMeat) entity;
+            dto.setEnergyValue(bearMeat.getEnergyValue());
+        }
+        
+        if (entity instanceof DeerMeat) {
+            DeerMeat deerMeat = (DeerMeat) entity;
+            dto.setEnergyValue(deerMeat.getEnergyValue());
         }
         
         if (entity instanceof Wood) {

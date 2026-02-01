@@ -210,6 +210,11 @@ public class PlayerController {
                     playerService.setCrouching(player, request.getCrouching());
                 }
                 break;
+            case "run":
+                if (request.getRunning() != null) {
+                    playerService.setRunning(player, request.getRunning());
+                }
+                break;
             case "consume":
                 if (request.getItemName() != null) {
                     // Consume food logic - remove the item from inventory and restore energy
@@ -251,6 +256,12 @@ public class PlayerController {
                 return new Apple();
             case "Berry":
                 return new Berry();
+            case "Chicken Meat":
+                return new ChickenMeat();
+            case "Bear Meat":
+                return new BearMeat();
+            case "Deer Meat":
+                return new DeerMeat();
             // Trees, rocks, and bushes are not directly placeable from inventory
             default:
                 return null;

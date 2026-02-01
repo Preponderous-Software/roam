@@ -11,8 +11,6 @@ from screen.loginScreen import LoginScreen
 from screen.mainMenuScreen import MainMenuScreen
 from screen.optionsScreen import OptionsScreen
 from screen.screenType import ScreenType
-from screen.statsScreen import StatsScreen
-from stats.stats import Stats
 from ui.status import Status
 from screen.serverBackedWorldScreen import ServerBackedWorldScreen
 from world.tickCounter import TickCounter
@@ -63,7 +61,6 @@ class Roam:
         self.gameDisplay = self.initializeGameDisplay()
         self.graphik = Graphik(self.gameDisplay)
         self.status = Status(self.graphik, self.tickCounter)
-        self.stats = Stats(self.config)
         
         # Player will be initialized from server when session starts
         self.player = None
@@ -75,9 +72,6 @@ class Roam:
         self.optionsScreen = OptionsScreen(self.graphik, self.config, self.status)
         self.mainMenuScreen = MainMenuScreen(
             self.graphik, self.config, self.initializeWorldScreen
-        )
-        self.statsScreen = StatsScreen(
-            self.graphik, self.config, self.status, self.stats, self.api_client
         )
         self.inventoryScreen = None  # Will be initialized after player is created
         self.configScreen = ConfigScreen(self.graphik, self.config, self.status)
@@ -183,7 +177,6 @@ class Roam:
                 self.config,
                 self.status,
                 self.tickCounter,
-                self.stats,
                 self.player,
                 self.api_client,
                 self.session_id,
@@ -312,6 +305,10 @@ class Roam:
 
     def quitApplication(self):
         logger.info("Quitting application")
+        # Clean up API client resources
+        if hasattr(self, 'api_client') and self.api_client:
+            logger.debug("Closing API client connection pool")
+            self.api_client.close()
         pygame.quit()
         quit()
 
@@ -353,9 +350,6 @@ class Roam:
             elif result == ScreenType.OPTIONS_SCREEN:
                 logger.debug("Switching to options screen")
                 self.currentScreen = self.optionsScreen
-            elif result == ScreenType.STATS_SCREEN:
-                logger.debug("Switching to stats screen")
-                self.currentScreen = self.statsScreen
             elif result == ScreenType.INVENTORY_SCREEN:
                 if self.inventoryScreen is None or self.player is None:
                     logger.warning("Cannot open inventory - player not initialized")
@@ -378,65 +372,67 @@ class Roam:
                 self.quitApplication()
 
 
-pygame.init()
-config = Config()
 
-# Check for server URL argument
-server_url = "http://localhost:8080"
-if len(sys.argv) > 1:
-    server_url = sys.argv[1]
-
-# Validate server URL format
-from urllib.parse import urlparse
-
-try:
-    parsed = urlparse(server_url)
-    if not parsed.scheme or not parsed.netloc:
-        raise ValueError("Invalid URL format")
-    if parsed.scheme not in ['http', 'https']:
-        raise ValueError("Only HTTP and HTTPS protocols are supported")
-    logger.info(f"Server URL validated: {server_url}")
-except Exception as e:
-    logger.error(f"Invalid server URL: {server_url} - {e}")
-    print("=" * 60)
-    print("ERROR: Invalid server URL")
-    print("=" * 60)
-    print(f"URL: {server_url}")
-    print(f"Error: {e}")
-    print()
-    print("Usage: python3 roam.py [server_url]")
-    print("Example: python3 roam.py http://localhost:8080")
-    print("=" * 60)
-    sys.exit(1)
-
-print("=" * 60)
-print("Roam - Server-Backed Client")
-print("=" * 60)
-print(f"Server URL: {server_url}")
-print("Make sure the Spring Boot server is running!")
-print("=" * 60)
-print()
-
-logger.info("Creating Roam instance")
-roam = Roam(config, server_url)
-while True:
-    logger.info("Starting game run cycle")
-    result = roam.run()
-    if result != "restart":
-        logger.info("Game loop ended without restart")
-        break
-    # Save session before restarting to persist game state
-    logger.info("Restart requested - saving previous session")
+if __name__ == "__main__":
+    pygame.init()
+    config = Config()
+    
+    # Check for server URL argument
+    server_url = "http://localhost:8080"
+    if len(sys.argv) > 1:
+        server_url = sys.argv[1]
+    
+    # Validate server URL format
+    from urllib.parse import urlparse
+    
     try:
-        if getattr(roam, "session_id", None):
-            logger.debug(f"Saving session before restart: {roam.session_id}")
-            roam.api_client.save_session()
-            logger.info("Previous session saved")
-            print("Session saved")
+        parsed = urlparse(server_url)
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError("Invalid URL format")
+        if parsed.scheme not in ['http', 'https']:
+            raise ValueError("Only HTTP and HTTPS protocols are supported")
+        logger.info(f"Server URL validated: {server_url}")
     except Exception as e:
-        logger.error(f"Error saving session during restart: {e}")
-        print(f"Error saving session: {e}")
-    logger.info("Creating new Roam instance for restart")
+        logger.error(f"Invalid server URL: {server_url} - {e}")
+        print("=" * 60)
+        print("ERROR: Invalid server URL")
+        print("=" * 60)
+        print(f"URL: {server_url}")
+        print(f"Error: {e}")
+        print()
+        print("Usage: python3 roam.py [server_url]")
+        print("Example: python3 roam.py http://localhost:8080")
+        print("=" * 60)
+        sys.exit(1)
+    
+    print("=" * 60)
+    print("Roam - Server-Backed Client")
+    print("=" * 60)
+    print(f"Server URL: {server_url}")
+    print("Make sure the Spring Boot server is running!")
+    print("=" * 60)
+    print()
+    
+    logger.info("Creating Roam instance")
     roam = Roam(config, server_url)
-
-logger.info("Application exiting normally")
+    while True:
+        logger.info("Starting game run cycle")
+        result = roam.run()
+        if result != "restart":
+            logger.info("Game loop ended without restart")
+            break
+        # Save session before restarting to persist game state
+        logger.info("Restart requested - saving previous session")
+        try:
+            if getattr(roam, "session_id", None):
+                logger.debug(f"Saving session before restart: {roam.session_id}")
+                roam.api_client.save_session()
+                logger.info("Previous session saved")
+                print("Session saved")
+        except Exception as e:
+            logger.error(f"Error saving session during restart: {e}")
+            print(f"Error saving session: {e}")
+        logger.info("Creating new Roam instance for restart")
+        roam = Roam(config, server_url)
+    
+    logger.info("Application exiting normally")

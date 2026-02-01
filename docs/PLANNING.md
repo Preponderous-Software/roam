@@ -1,38 +1,81 @@
 # Planning Document
-This document is a work in progress. It is a place to collect ideas and plan out the development of the game.
+This document provides an overview of Roam's gameplay mechanics and features.
 
 ## Overview
 Roam is a 2D survival game where the player explores a procedurally-generated world and interacts with their surroundings.
 
 ## Architecture
 Roam uses a client-server architecture:
-- **Server (Java/Spring Boot)**: Manages game state, business logic, and provides REST API
-- **Client (Python)**: Handles UI rendering, user input, and calls server APIs
+- **Server (Java/Spring Boot)**: Manages game state, business logic, provides REST API and WebSocket updates
+- **Client (Python/Pygame)**: Handles UI rendering, user input, and communicates with server
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation.
 
 ## Mechanics
+
+### Authentication
+Players must register and login to play. Authentication uses JWT tokens for secure session management.
+
 ### Energy
-Energy will decrease when the player moves and will replenish when the player eats food.
+Energy decreases when the player moves and replenishes when the player eats food. Different movement speeds (walking, running, crouching) consume energy at different rates.
 
 ### Map Generation
-The map will be generated as the player explores.
+The map is procedurally generated using simplex noise based on a configurable seed. Different biomes (grass, forest, jungle, desert, mountain, snow) are generated based on noise values and temperature/moisture parameters.
 
 ### Inventory
-The player will have an inventory that can hold items. The player can open/close the inventory with the `i` key.
+The player has an inventory that can hold items with a hotbar for quick access. The player can:
+- Open/close the inventory with the `I` key
+- Select hotbar slots with number keys (1-0)
+- Move items between slots
+- Place items from hotbar into the world
 
-### Crafting (unimplemented)
-The player will be able to craft items using the items in their inventory.
+### Crafting
+Not yet implemented. Planned feature for combining items to create new items.
 
 ### Food
-The player will be able to eat food to replenish energy. Food will be able to be found in the world or grown by the player.
+The player can eat food to replenish energy. Food items include:
+- Berries
+- Apples
+- Chicken meat
+Food consumption is automatic when energy drops below certain thresholds.
 
-## Room Types
-- Grass
-- Forest
-- Jungle
-- Mountain
+### Stats Tracking
+The client tracks player statistics locally including:
+- Score (points earned)
+- Rooms explored (number of unique rooms visited)
+- Food eaten (total food items consumed)
+- Number of deaths (times player has died)
 
-## Mobs
-- Chicken
-- Bear
+**Note**: Stats are currently managed client-side and persisted locally. They are not synchronized with the server or stored in the database. Future enhancement could move stats tracking to the server for cross-device persistence and anti-cheat measures.
+
+## World
+
+### Room Types / Biomes
+- Grass (temperate, moderate resources)
+- Forest (trees, wood resources, animals)
+- Jungle (dense vegetation, high moisture)
+- Desert (sparse resources, low moisture)
+- Mountain (stone, ore resources, high elevation)
+- Snow (cold climate, limited resources)
+
+### Resources
+- Oak Wood (from trees)
+- Stone (from rocks)
+- Coal Ore (from mining)
+- Berries (foraged from bushes)
+- Apples (from apple trees)
+
+## Entities
+
+### Wildlife
+- Chicken (peaceful, drops chicken meat)
+- Deer (peaceful, fast moving)
+- Bear (aggressive, high energy)
+
+### Interactive Objects
+- Trees (gather wood)
+- Rocks (gather stone)
+- Berry bushes (gather berries)
+- Apple trees (gather apples)
+
+All entities are server-managed with collision detection and energy/health systems.

@@ -23,10 +23,11 @@ public class WorldConfig {
     /**
      * Creates a default WorldConfig with standard settings.
      * 
-     * Note: Uses System.currentTimeMillis() as the seed, which means every session will generate
-     * a different, non-reproducible world. This provides variety but makes debugging difficult.
-     * For reproducible world generation (testing, debugging, or world sharing), use the constructor
-     * with a fixed seed value instead.
+     * @apiNote This method uses {@link System#currentTimeMillis()} as the seed, which means every
+     *          session will generate a different, non-reproducible world. This provides variety
+     *          but makes debugging difficult. For reproducible world generation (testing,
+     *          debugging, or world sharing), use the {@link WorldConfig#WorldConfig(long, int, int, double, double)}
+     *          constructor with a fixed seed value instead.
      * 
      * @return a WorldConfig with default values and a time-based random seed
      */
