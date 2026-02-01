@@ -40,7 +40,7 @@ logging:
 # Roam-specific configuration
 roam:
   persistence:
-    auto-save: false  # Disabled by default to avoid unexpected background writes; set to true to enable periodic automatic saves and reduce risk of data loss on crashes
+    auto-save: false  # Disabled by default to avoid unexpected background writes; when false, users must save manually and may lose recent progress on crashes. Enable (set to true) in environments where periodic background writes are acceptable to reduce data-loss risk.
     auto-save-interval: 30000  # Auto-save interval in milliseconds (default: 30 seconds)
   
   gameplay:
