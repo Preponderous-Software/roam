@@ -329,18 +329,19 @@ The Roam game client includes a graphical login screen that appears on startup.
 ### Login Screen Features
 
 - **Interactive Form**: Enter username and password with keyboard input
-- **Toggle Mode**: Press 'R' to switch between Login and Registration
+- **Toggle Mode**: Click the "Switch to Registration" / "Switch to Login" button to toggle between modes
 - **Navigation**: 
   - TAB: Switch between input fields
   - ENTER: Submit form
   - ESC: Cancel or return to previous screen
 - **Visual Feedback**: Active field is highlighted, error messages displayed
 - **Auto-Authentication**: Once logged in, the client stores tokens for API calls
+- **Remember Username**: Check the "Remember username" box to save your username between sessions
 
 ### First Time Setup
 
 1. Start the Roam client
-2. Press 'R' to switch to Registration mode
+2. Click "Switch to Registration" button to switch to Registration mode
 3. Enter username, press TAB
 4. Enter password, press TAB  
 5. Enter email, press ENTER
@@ -349,29 +350,9 @@ The Roam game client includes a graphical login screen that appears on startup.
 ### Subsequent Sessions
 
 The client will show the login screen on startup:
-1. Enter your username
+1. Enter your username (or use the saved username if "Remember username" was checked)
 2. Press TAB and enter your password
 3. Press ENTER to login
-
-## Demo Script
-
-Run the included demo script to see authentication in action:
-
-```bash
-# Start the server first
-cd server
-mvn spring-boot:run
-
-# In another terminal, run the demo
-cd ..
-python3 demo_api.py
-```
-
-The demo script demonstrates:
-- User registration
-- Automatic token management
-- Authenticated API calls (session, player, inventory, etc.)
-- Logout and token revocation
 
 ## Security Summary
 

@@ -3,7 +3,7 @@ This game allows you to explore a procedurally-generated 2D world and interact w
 
 ## Architecture
 
-Roam uses a **client-server architecture** implemented in **[PR #242 - Implement client-server architecture with Spring Boot backend, REST API, pygame client, and Docker support](https://github.com/Preponderous-Software/roam-prototype/pull/242)**:
+Roam uses a **client-server architecture** implemented in **[PR #266 - Transition to Spring Boot Server & Pygame Client](https://github.com/Preponderous-Software/roam-prototype/pull/266)**:
 
 - **Server (Spring Boot - Java)**: Authoritative source for all game state and business logic
   - Manages player state, inventory, entities, and world generation
