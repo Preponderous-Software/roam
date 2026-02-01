@@ -41,6 +41,7 @@ public class SessionController {
     
     /**
      * Get the username of the currently authenticated user.
+     * Each user has their own isolated game session.
      */
     private String getCurrentUsername() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

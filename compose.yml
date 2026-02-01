@@ -55,27 +55,6 @@ services:
     networks:
       - roam-network
 
-  # Python Client (optional - requires X11 display)
-  # Uncomment to run client in Docker (Linux with X11 only)
-  # roam-client:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile.client
-  #   container_name: roam-client
-  #   environment:
-  #     - DISPLAY=${DISPLAY}
-  #     - SERVER_URL=http://roam-server:8080
-  #   volumes:
-  #     - /tmp/.X11-unix:/tmp/.X11-unix:rw
-  #     - ${HOME}/.Xauthority:/root/.Xauthority:rw
-  #   depends_on:
-  #     roam-server:
-  #       condition: service_healthy
-  #   network_mode: host
-  #   # Or use:
-  #   # networks:
-  #   #   - roam-network
-
 volumes:
   postgres-data:
     driver: local

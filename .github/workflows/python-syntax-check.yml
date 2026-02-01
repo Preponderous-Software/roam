@@ -3,8 +3,6 @@ name: Python Syntax Check
 on:
   push:
     branches: [ main, develop, feat/**, copilot/** ]
-  pull_request:
-    branches: [ main, develop ]
 
 jobs:
   syntax-check:
