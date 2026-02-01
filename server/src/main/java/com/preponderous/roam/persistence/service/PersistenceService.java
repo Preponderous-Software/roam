@@ -253,6 +253,19 @@ public class PersistenceService implements GameStateStorage {
         playerEntity.setTileY(player.getTileY());
         playerEntity.setSelectedInventorySlotIndex(player.getInventory().getSelectedInventorySlotIndex());
         
+        // Save player stats
+        playerEntity.setScore(player.getScore());
+        playerEntity.setRoomsExplored(player.getRoomsExplored());
+        playerEntity.setFoodEaten(player.getFoodEaten());
+        playerEntity.setNumberOfDeaths(player.getNumberOfDeaths());
+        
+        // Save visited rooms as semicolon-separated list
+        if (player.getVisitedRooms() != null && !player.getVisitedRooms().isEmpty()) {
+            playerEntity.setVisitedRooms(String.join(";", player.getVisitedRooms()));
+        } else {
+            playerEntity.setVisitedRooms("");
+        }
+        
         playerEntity = playerRepository.save(playerEntity);
         
         // Save inventory
@@ -557,6 +570,23 @@ public class PersistenceService implements GameStateStorage {
         player.setTileX(playerEntity.getTileX());
         player.setTileY(playerEntity.getTileY());
         
+        // Load player stats
+        player.setScore(playerEntity.getScore());
+        player.setRoomsExplored(playerEntity.getRoomsExplored());
+        player.setFoodEaten(playerEntity.getFoodEaten());
+        player.setNumberOfDeaths(playerEntity.getNumberOfDeaths());
+        
+        // Load visited rooms from semicolon-separated list
+        if (playerEntity.getVisitedRooms() != null && !playerEntity.getVisitedRooms().isEmpty()) {
+            String[] rooms = playerEntity.getVisitedRooms().split(";");
+            player.getVisitedRooms().clear();
+            for (String room : rooms) {
+                if (!room.trim().isEmpty()) {
+                    player.getVisitedRooms().add(room.trim());
+                }
+            }
+        }
+        
         // Load inventory
         Inventory inventory = new Inventory();
         List<InventorySlotEntity> slotEntities = playerEntity.getInventorySlots();
@@ -597,5 +627,15 @@ public class PersistenceService implements GameStateStorage {
         target.setTileX(source.getTileX());
         target.setTileY(source.getTileY());
         target.setInventory(source.getInventory());
+        
+        // Copy player stats
+        target.setScore(source.getScore());
+        target.setRoomsExplored(source.getRoomsExplored());
+        target.setFoodEaten(source.getFoodEaten());
+        target.setNumberOfDeaths(source.getNumberOfDeaths());
+        
+        // Copy visited rooms
+        target.getVisitedRooms().clear();
+        target.getVisitedRooms().addAll(source.getVisitedRooms());
     }
 }
