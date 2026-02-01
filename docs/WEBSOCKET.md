@@ -205,37 +205,51 @@ const stompClient = new Client({
 stompClient.activate();
 ```
 
-### Python with websocket-client
+### Python with websocket-client (IMPLEMENTED)
+
+The Python client now has full WebSocket support via the `WebSocketClient` class:
 
 ```python
-import json
-import websocket
-from stomp import Connection
+from client.websocket_client import WebSocketClient
 
-# Create WebSocket connection
-ws_url = "ws://localhost:8080/ws"
-conn = Connection([(ws_url, 8080)])
+# Create client
+ws_client = WebSocketClient(
+    base_url="http://localhost:8080",
+    reconnect_base_delay=1.0,
+    reconnect_max_delay=60.0
+)
 
-def on_message(headers, message):
-    data = json.loads(message)
-    print(f"Received: {data}")
-    
-    # Handle different message types
-    if data.get('type') == 'PLAYER_POSITION':
-        # Update player position
-        pass
-    elif data.get('type') == 'ENTITY_STATE':
-        # Update entity state
-        pass
+# Register message handlers
+def handle_tick_update(message_data):
+    tick = message_data.get('currentTick', 0)
+    print(f"Tick: {tick}")
 
-conn.set_listener('', on_message)
-conn.connect()
+def handle_player_position(message_data):
+    x, y = message_data.get('tileX'), message_data.get('tileY')
+    print(f"Player at ({x}, {y})")
 
-# Subscribe to topics
-conn.subscribe(destination=f'/topic/session/{session_id}/player', id=1)
-conn.subscribe(destination=f'/topic/session/{session_id}/entity', id=2)
-conn.subscribe(destination=f'/topic/session/{session_id}/tick', id=3)
+ws_client.register_handler("TICK_UPDATE", handle_tick_update)
+ws_client.register_handler("PLAYER_POSITION", handle_player_position)
+
+# Connect (automatically subscribes to topics)
+if ws_client.connect(session_id):
+    print("Connected!")
+else:
+    print("Connection failed, falling back to REST")
+
+# Disconnect when done
+ws_client.disconnect()
 ```
+
+**Features**:
+- ✅ STOMP protocol support
+- ✅ Automatic topic subscription
+- ✅ Exponential backoff reconnection
+- ✅ Thread-safe operation
+- ✅ Graceful fallback to REST polling
+
+**Integration**:
+The `ServerBackedWorldScreen` automatically initializes WebSocket connection on startup. See [WEBSOCKET_CLIENT.md](./WEBSOCKET_CLIENT.md) for configuration details.
 
 ## Architecture
 
@@ -295,12 +309,26 @@ Tests verify:
 
 ## Fallback to Polling
 
-If WebSocket is unavailable:
-1. SockJS provides automatic fallback to polling
-2. Clients can fall back to REST API polling by:
-   - Polling `/api/v1/session/{sessionId}/player` for player updates
-   - Polling `/api/v1/session/{sessionId}/entities` for entity updates
-   - Polling `/api/v1/session/{sessionId}` for general state
+The Python client (`WebSocketClient`) automatically handles fallback:
+
+1. **Automatic Detection**: Client detects WebSocket connection failure
+2. **Graceful Degradation**: Game continues using REST API polling
+3. **Reconnection Attempts**: Periodic attempts to restore WebSocket connection
+4. **Status Updates**: User is informed of connection state via status messages
+
+Configuration:
+```python
+# In config.py
+use_websocket = False  # Disable WebSocket, use REST only
+```
+
+Manual fallback polling (if WebSocket unavailable):
+- Poll `/api/v1/session/{sessionId}/tick` for tick updates
+- Poll `/api/v1/session/{sessionId}/player` for player updates
+- Poll `/api/v1/session/{sessionId}/entities` for entity updates
+- Poll `/api/v1/session/{sessionId}` for general state
+
+See [PERFORMANCE.md](./PERFORMANCE.md) for polling frequency recommendations.
 
 ## Security Notes
 
@@ -330,6 +358,7 @@ If WebSocket is unavailable:
 
 ## Future Enhancements
 
+- [x] Python client WebSocket implementation
 - [ ] JWT authentication for WebSocket connections
 - [ ] Binary message encoding (Protocol Buffers/MessagePack)
 - [ ] Compression for large messages
@@ -337,3 +366,9 @@ If WebSocket is unavailable:
 - [ ] Bandwidth monitoring and throttling
 - [ ] Load testing with many concurrent connections
 - [ ] Horizontal scaling with external message broker
+
+## Client Documentation
+
+For Python client configuration and troubleshooting, see:
+- [WEBSOCKET_CLIENT.md](./WEBSOCKET_CLIENT.md) - Client configuration guide
+- [PERFORMANCE.md](./PERFORMANCE.md) - Network performance details
