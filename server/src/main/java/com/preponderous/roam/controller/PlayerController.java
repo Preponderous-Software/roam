@@ -251,9 +251,7 @@ public class PlayerController {
     private Entity createEntityFromItemName(String itemName) {
         switch (itemName) {
             case "Grass":
-                // TODO: Grass should be an entity like in the original implementation, not just a tile type
-                // This would allow grass to be gathered, placed, and interacted with
-                return null;
+                return new Grass();
             case "Wood":
                 return new Wood();
             case "Stone":

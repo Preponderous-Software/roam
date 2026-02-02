@@ -23,6 +23,7 @@ public class EntityManager {
     private static final Logger logger = LoggerFactory.getLogger(EntityManager.class);
     
     // Spawn rates per room (0.0 to 1.0)
+    public static final double GRASS_SPAWN_RATE = 0.8;  // High spawn rate to match original implementation
     public static final double TREE_SPAWN_RATE = 0.05;
     public static final double ROCK_SPAWN_RATE = 0.03;
     public static final double BUSH_SPAWN_RATE = 0.04;
@@ -46,6 +47,17 @@ public class EntityManager {
         int width = room.getWidth();
         int height = room.getHeight();
         int totalTiles = width * height;
+        
+        // Spawn grass - high spawn rate to cover most of the map like in the original
+        int expectedGrass = (int) (totalTiles * GRASS_SPAWN_RATE);
+        logger.debug("Spawning {} grass in room ({}, {})", expectedGrass, room.getRoomX(), room.getRoomY());
+        for (int i = 0; i < expectedGrass; i++) {
+            Grass grass = new Grass();
+            int x = random.nextInt(width);
+            int y = random.nextInt(height);
+            grass.setLocationId(room.getRoomX() + "," + room.getRoomY() + "," + x + "," + y);
+            room.addEntity(grass);
+        }
         
         // Spawn trees - calculate expected count based on spawn rate
         int expectedTrees = (int) (totalTiles * TREE_SPAWN_RATE);
