@@ -6,11 +6,15 @@
  */
 
 // Configuration
-const API_BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:8080' 
-    : `${window.location.protocol}//${window.location.hostname}:8080`;
+// When running through docker-compose, the web client is served by nginx which proxies API requests
+// When running standalone (e.g., with python -m http.server), connect directly to server
+const API_BASE_URL = window.location.port === '' || window.location.port === '80' || window.location.port === '443'
+    ? `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`
+    : 'http://localhost:8080';
 
-const WS_BASE_URL = API_BASE_URL.replace('http://', 'ws://').replace('https://', 'wss://');
+const WS_BASE_URL = window.location.port === '' || window.location.port === '80' || window.location.port === '443'
+    ? `${window.location.protocol.replace('http', 'ws')}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`
+    : 'ws://localhost:8080';
 
 // Game state
 let gameState = {
