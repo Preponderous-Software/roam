@@ -130,9 +130,11 @@ async function handleLogin() {
         return;
     }
     
-    // Basic sanitization - prevent script injection
-    if (username.includes('<') || username.includes('>')) {
-        errorEl.textContent = 'Invalid characters in username';
+    // Basic input sanitization - server will do comprehensive validation
+    // Client-side check is just for UX feedback
+    const username_clean = username.replace(/[<>'"]/g, '');
+    if (username_clean !== username) {
+        errorEl.textContent = 'Username contains invalid characters';
         return;
     }
     
@@ -180,15 +182,17 @@ async function handleRegister() {
         return;
     }
     
-    // Basic sanitization and validation
-    if (username.includes('<') || username.includes('>') || email.includes('<') || email.includes('>')) {
-        errorEl.textContent = 'Invalid characters in input';
+    // Basic input sanitization - server will do comprehensive validation
+    // Client-side check is just for UX feedback
+    const username_clean = username.replace(/[<>'"]/g, '');
+    const email_clean = email.replace(/[<>'"]/g, '');
+    if (username_clean !== username || email_clean !== email) {
+        errorEl.textContent = 'Input contains invalid characters';
         return;
     }
     
-    // Email format validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    // Basic email format validation (server will do comprehensive validation)
+    if (!email.includes('@') || !email.includes('.')) {
         errorEl.textContent = 'Invalid email format';
         return;
     }
@@ -352,7 +356,7 @@ async function refreshToken() {
 
 function connectWebSocket() {
     // Reset reconnection attempts on explicit connect
-    if (!gameState.ws || !gameState.ws.connected) {
+    if (!gameState.stompClient || !gameState.stompClient.connected) {
         gameState.reconnectAttempts = 0;
     }
     
@@ -370,7 +374,10 @@ function connectWebSocket() {
             Authorization: `Bearer ${gameState.accessToken}`
         },
         debug: (str) => {
-            console.log('STOMP: ' + str);
+            // Only log in development (when on non-standard ports)
+            if (window.location.port && !['80', '443', '8000'].includes(window.location.port)) {
+                console.log('STOMP: ' + str);
+            }
         },
         reconnectDelay: 0, // Disable automatic reconnection, we'll handle it manually
         heartbeatIncoming: 4000,
