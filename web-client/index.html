@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roam - Browser Game Client</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            overflow: hidden;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Authentication Screen */
+        #auth-screen {
+            background: rgba(30, 30, 46, 0.95);
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4ecca3;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        h2 {
+            text-align: center;
+            color: #e0e0e0;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #b0b0b0;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #3a3a5a;
+            background: #2a2a3e;
+            color: #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #4ecca3;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #4ecca3;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background: #3dba8c;
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        .error {
+            color: #ff6b6b;
+            text-align: center;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .success {
+            color: #4ecca3;
+            text-align: center;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .toggle-auth {
+            text-align: center;
+            margin-top: 20px;
+            color: #b0b0b0;
+        }
+
+        .toggle-auth a {
+            color: #4ecca3;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .toggle-auth a:hover {
+            text-decoration: underline;
+        }
+
+        /* Game Screen */
+        #game-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #game-canvas {
+            border: 3px solid #4ecca3;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+
+        #game-info {
+            margin-top: 20px;
+            background: rgba(30, 30, 46, 0.95);
+            padding: 20px;
+            border-radius: 10px;
+            width: 800px;
+            max-width: 90vw;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 5px 0;
+            border-bottom: 1px solid #3a3a5a;
+        }
+
+        .info-label {
+            color: #b0b0b0;
+        }
+
+        .info-value {
+            color: #4ecca3;
+            font-weight: bold;
+        }
+
+        #controls {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(42, 42, 62, 0.5);
+            border-radius: 8px;
+        }
+
+        #controls h3 {
+            color: #4ecca3;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .control-item {
+            padding: 5px;
+            background: rgba(58, 58, 90, 0.5);
+            border-radius: 4px;
+        }
+
+        .key {
+            color: #4ecca3;
+            font-weight: bold;
+        }
+
+        #logout-btn {
+            margin-top: 15px;
+            background: #ff6b6b;
+        }
+
+        #logout-btn:hover {
+            background: #ff5252;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Loading indicator */
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #4ecca3;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Authentication Screen -->
+        <div id="auth-screen">
+            <h1>🗺️ Roam</h1>
+            
+            <!-- Login Form -->
+            <div id="login-form">
+                <h2>Login</h2>
+                <div class="form-group">
+                    <label for="login-username">Username</label>
+                    <input type="text" id="login-username" autocomplete="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" autocomplete="current-password" required>
+                </div>
+                <div id="login-error" class="error"></div>
+                <button id="login-btn">Login</button>
+                <div class="toggle-auth">
+                    Don't have an account? <a id="show-register">Register</a>
+                </div>
+            </div>
+
+            <!-- Register Form -->
+            <div id="register-form" class="hidden">
+                <h2>Register</h2>
+                <div class="form-group">
+                    <label for="register-username">Username</label>
+                    <input type="text" id="register-username" autocomplete="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-email">Email</label>
+                    <input type="email" id="register-email" autocomplete="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Password</label>
+                    <input type="password" id="register-password" autocomplete="new-password" required>
+                </div>
+                <div id="register-error" class="error"></div>
+                <div id="register-success" class="success"></div>
+                <button id="register-btn">Register</button>
+                <div class="toggle-auth">
+                    Already have an account? <a id="show-login">Login</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen">
+            <canvas id="game-canvas" width="800" height="600"></canvas>
+            <div id="game-info">
+                <div class="info-row">
+                    <span class="info-label">Position:</span>
+                    <span class="info-value" id="player-pos">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Energy:</span>
+                    <span class="info-value" id="player-energy">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Status:</span>
+                    <span class="info-value" id="player-status">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Connection:</span>
+                    <span class="info-value" id="connection-status">Connecting...</span>
+                </div>
+                
+                <div id="controls">
+                    <h3>Controls</h3>
+                    <div class="controls-grid">
+                        <div class="control-item"><span class="key">WASD</span> - Move</div>
+                        <div class="control-item"><span class="key">Shift</span> - Run</div>
+                        <div class="control-item"><span class="key">Ctrl</span> - Crouch</div>
+                        <div class="control-item"><span class="key">Space</span> - Gather</div>
+                    </div>
+                </div>
+                
+                <button id="logout-btn">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
