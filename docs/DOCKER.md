@@ -7,7 +7,8 @@ This guide explains how to run Roam using Docker containers.
 Roam can be containerized using Docker for easy deployment:
 
 - **Server**: Spring Boot backend runs in a Docker container
-- **Client**: Python pygame client (optional, requires display access)
+- **Web Client**: Browser-based HTML/JavaScript client served by nginx (recommended)
+- **Python Client**: Desktop pygame client (optional, requires display access)
 
 ## Prerequisites
 
@@ -16,25 +17,50 @@ Roam can be containerized using Docker for easy deployment:
 
 ## Quick Start
 
-### Option 1: Server Only (Recommended)
+### Option 1: Web Client (Recommended)
 
-Run the server in Docker and the client natively on your host:
+Play Roam in your web browser with no installation required:
 
 ```bash
-# Start the server
-docker compose up -d roam-server
+# Start all services (database, server, and web client)
+docker compose up -d
+
+# Wait for services to be ready (about 30-60 seconds)
+docker compose logs -f roam-server
+
+# Open your browser to:
+# http://localhost
+
+# To stop all services:
+docker compose down
+```
+
+The web client provides:
+- ✅ No installation required - just open your browser
+- ✅ Works on any platform (Windows, Mac, Linux)
+- ✅ Automatic connection to the server
+- ✅ Full game controls via keyboard
+- ✅ Clean, modern UI
+
+### Option 2: Python Desktop Client
+
+Run the server in Docker and the Python client natively on your host:
+
+```bash
+# Start the server only
+docker compose up -d roam-server postgres
 
 # Check server status
 docker compose logs -f roam-server
 
-# Run client on host (in another terminal)
+# Run Python client on host (in another terminal)
 cd src
 python3 roam.py
 ```
 
-### Option 2: Server + Client (Linux with X11 only)
+### Option 3: Server + Python Client in Docker (Linux with X11 only)
 
-Run both server and client in Docker containers:
+Run both server and Python client in Docker containers:
 
 ```bash
 # Allow Docker to access X11 display
@@ -50,7 +76,7 @@ docker compose logs -f
 
 ## Files
 
-### Dockerfile
+### Dockerfile (Server)
 
 Multi-stage Dockerfile for the Spring Boot server:
 
@@ -64,15 +90,43 @@ Multi-stage Dockerfile for the Spring Boot server:
 - Configurable JVM options
 - CORS environment variable support
 
+### web-client/Dockerfile
+
+Dockerfile for the browser-based web client:
+
+- Based on nginx:alpine for minimal size (~90MB)
+- Serves static HTML/JavaScript files
+- Includes nginx configuration for proxying API requests
+- Health check endpoint
+
+**Features**:
+- Lightweight nginx-based serving
+- Automatic API proxying to backend server
+- WebSocket support for real-time updates
+- Static asset caching
+- Security headers
+
 ### compose.yml
 
 Docker Compose configuration defining services:
+
+- **postgres**: PostgreSQL database
+  - Port: 5432
+  - Persistent data volume
+  - Health checks enabled
 
 - **roam-server**: Spring Boot backend
   - Port: 8080
   - Health checks enabled
   - Auto-restart policy
   - Configurable via environment variables
+
+- **web-client**: Browser-based HTML/JavaScript client
+  - Port: 80
+  - Nginx web server
+  - Proxies API/WebSocket requests to roam-server
+  - Auto-restart policy
+  - Depends on roam-server
 
 - **roam-client** (commented out): Python pygame client
   - Requires X11 display
@@ -81,7 +135,7 @@ Docker Compose configuration defining services:
 
 ### Dockerfile.client
 
-Optional Dockerfile for the Python client:
+Optional Dockerfile for the Python desktop client:
 
 - Based on Python 3.11
 - Installs build tools (gcc, g++, make) for compiling pygame

@@ -10,10 +10,17 @@ Roam uses a **client-server architecture** implemented in **[PR #266 - Transitio
   - Exposes REST API endpoints under `/api/v1/*`
   - See [server/README.md](./server/README.md) for API documentation
   
-- **Client (Python)**: Handles presentation and user interaction only
-  - Renders UI using pygame
-  - Communicates with server via REST API
-  - Contains no business logic
+- **Clients**: Handle presentation and user interaction only
+  - **Web Client (Browser)**: HTML5/JavaScript client for playing in your browser
+    - No installation required - just open http://localhost after starting docker compose
+    - Canvas-based rendering with full game controls
+    - See [web-client/README.md](./web-client/README.md) for details
+  - **Python Client (Desktop)**: Pygame-based desktop client
+    - Renders UI using pygame
+    - Full-featured with inventory and stats screens
+    - See [src/client/README.md](./src/client/README.md) for details
+  - All clients communicate with server via REST API
+  - No business logic in clients
 
 For detailed architecture documentation, see [ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
@@ -42,11 +49,22 @@ esc | quit
 
 The easiest way to run Roam is using Docker:
 
+#### Web Client (Browser)
 ```bash
-# Start the server
+# Start all services (server + web client)
+docker compose up -d
+
+# Open your browser to http://localhost
+```
+
+The web client runs entirely in your browser - no installation needed!
+
+#### Python Client (Desktop)
+```bash
+# Start the server only
 docker compose up -d roam-server
 
-# Run client (on host)
+# Run Python client on host
 cd src
 python3 roam.py
 ```
