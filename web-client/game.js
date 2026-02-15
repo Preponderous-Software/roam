@@ -5,15 +5,29 @@
  * @author Daniel McCoy Stephenson
  */
 
+// Direction constants for better code readability
+const DIRECTION = {
+    UP: 0,
+    LEFT: 1,
+    DOWN: 2,
+    RIGHT: 3
+};
+
 // Configuration
 // When running through docker-compose, the web client is served by nginx which proxies API requests
-// When running standalone (e.g., with python -m http.server), connect directly to server
-const API_BASE_URL = window.location.port === '' || window.location.port === '80' || window.location.port === '443'
-    ? `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`
+// Use relative URLs when served through a proxy (ports 80/443/8000), direct connection for standalone development
+const usingProxy = window.location.port === '' || window.location.port === '80' || window.location.port === '443' || window.location.port === '8000';
+
+const API_BASE_URL = usingProxy
+    // Use relative URLs; nginx will proxy API requests to the backend
+    ? ''
+    // Standalone: connect directly to backend server
     : 'http://localhost:8080';
 
-const WS_BASE_URL = window.location.port === '' || window.location.port === '80' || window.location.port === '443'
-    ? `${window.location.protocol.replace('http', 'ws')}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}`
+const WS_BASE_URL = usingProxy
+    // Match WebSocket protocol to page protocol
+    ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`
+    // Standalone: connect directly to backend WebSocket
     : 'ws://localhost:8080';
 
 // Game state
@@ -24,11 +38,16 @@ let gameState = {
     player: null,
     worldState: null,
     ws: null,
+    stompClient: null,
     lastUpdateTime: Date.now(),
     keys: {},
     gathering: false,
     running: false,
-    crouching: false
+    crouching: false,
+    movePending: false,
+    reconnectAttempts: 0,
+    maxReconnectAttempts: 10,
+    refreshInProgress: false
 };
 
 // Canvas
@@ -43,11 +62,11 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas = document.getElementById('game-canvas');
     ctx = canvas.getContext('2d');
     
-    // Check if we have a saved token
-    const savedToken = localStorage.getItem('accessToken');
+    // Check if we have a saved token (use sessionStorage for better XSS protection)
+    const savedToken = sessionStorage.getItem('accessToken');
     if (savedToken) {
         gameState.accessToken = savedToken;
-        gameState.refreshToken = localStorage.getItem('refreshToken');
+        gameState.refreshToken = sessionStorage.getItem('refreshToken');
         // Try to restore session
         initGame();
     }
@@ -105,8 +124,15 @@ async function handleLogin() {
     const password = document.getElementById('login-password').value;
     const errorEl = document.getElementById('login-error');
     
+    // Input validation
     if (!username || !password) {
         errorEl.textContent = 'Please enter username and password';
+        return;
+    }
+    
+    // Basic sanitization - prevent script injection
+    if (username.includes('<') || username.includes('>')) {
+        errorEl.textContent = 'Invalid characters in username';
         return;
     }
     
@@ -126,9 +152,9 @@ async function handleLogin() {
         gameState.accessToken = data.accessToken;
         gameState.refreshToken = data.refreshToken;
         
-        // Save tokens
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
+        // Save tokens to sessionStorage (more secure than localStorage against XSS)
+        sessionStorage.setItem('accessToken', data.accessToken);
+        sessionStorage.setItem('refreshToken', data.refreshToken);
         
         // Initialize game
         await initGame();
@@ -148,8 +174,22 @@ async function handleRegister() {
     errorEl.textContent = '';
     successEl.textContent = '';
     
+    // Input validation
     if (!username || !email || !password) {
         errorEl.textContent = 'Please fill in all fields';
+        return;
+    }
+    
+    // Basic sanitization and validation
+    if (username.includes('<') || username.includes('>') || email.includes('<') || email.includes('>')) {
+        errorEl.textContent = 'Invalid characters in input';
+        return;
+    }
+    
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        errorEl.textContent = 'Invalid email format';
         return;
     }
     
@@ -179,16 +219,20 @@ async function handleRegister() {
 }
 
 function handleLogout() {
+    if (gameState.stompClient) {
+        gameState.stompClient.disconnect();
+    }
     if (gameState.ws) {
         gameState.ws.close();
     }
     
-    // Clear tokens
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    // Clear tokens from sessionStorage
+    sessionStorage.removeItem('accessToken');
+    sessionStorage.removeItem('refreshToken');
     gameState.accessToken = null;
     gameState.refreshToken = null;
     gameState.sessionId = null;
+    gameState.stompClient = null;
     
     // Show auth screen
     document.getElementById('game-screen').style.display = 'none';
@@ -225,7 +269,13 @@ async function initGame() {
         
     } catch (error) {
         console.error('Game initialization error:', error);
-        alert('Failed to initialize game: ' + error.message);
+        const errorMsg = 'Failed to initialize game: ' + error.message;
+        updateConnectionStatus(errorMsg);
+        // Show error in UI instead of alert
+        const loginError = document.getElementById('login-error');
+        if (loginError) {
+            loginError.textContent = errorMsg;
+        }
         handleLogout();
     }
 }
@@ -251,11 +301,19 @@ async function apiRequest(method, endpoint, body = null) {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
     
     if (response.status === 401) {
-        // Token expired, try to refresh
-        if (gameState.refreshToken) {
-            await refreshToken();
-            // Retry the request
-            return apiRequest(method, endpoint, body);
+        // Token expired, try to refresh (but prevent infinite loops)
+        if (gameState.refreshToken && !gameState.refreshInProgress) {
+            try {
+                gameState.refreshInProgress = true;
+                await refreshToken();
+                gameState.refreshInProgress = false;
+                // Retry the request once
+                return apiRequest(method, endpoint, body);
+            } catch (refreshError) {
+                gameState.refreshInProgress = false;
+                handleLogout();
+                throw new Error('Authentication expired');
+            }
         } else {
             handleLogout();
             throw new Error('Authentication expired');
@@ -287,58 +345,109 @@ async function refreshToken() {
     
     const data = await response.json();
     gameState.accessToken = data.accessToken;
-    localStorage.setItem('accessToken', data.accessToken);
+    sessionStorage.setItem('accessToken', data.accessToken);
 }
 
 // === WebSocket ===
 
 function connectWebSocket() {
-    // Note: Token is passed in URL query parameter as required by the server's WebSocket security configuration.
-    // In a production environment, consider implementing token-based authentication via Sec-WebSocket-Protocol header
-    // to avoid exposing tokens in server logs and browser history.
-    const wsUrl = `${WS_BASE_URL}/ws?access_token=${gameState.accessToken}`;
+    // Reset reconnection attempts on explicit connect
+    if (!gameState.ws || !gameState.ws.connected) {
+        gameState.reconnectAttempts = 0;
+    }
     
-    gameState.ws = new WebSocket(wsUrl);
+    updateConnectionStatus('Connecting...');
     
-    gameState.ws.onopen = () => {
-        console.log('WebSocket connected');
+    // Use STOMP over SockJS for WebSocket connection (matches server configuration)
+    // SockJS provides fallback mechanisms for browsers that don't support WebSocket
+    const wsUrl = `${WS_BASE_URL}/ws`;
+    
+    // Create STOMP client with SockJS
+    gameState.stompClient = new StompJs.Client({
+        webSocketFactory: () => new SockJS(wsUrl),
+        connectHeaders: {
+            // Pass authentication token in STOMP headers
+            Authorization: `Bearer ${gameState.accessToken}`
+        },
+        debug: (str) => {
+            console.log('STOMP: ' + str);
+        },
+        reconnectDelay: 0, // Disable automatic reconnection, we'll handle it manually
+        heartbeatIncoming: 4000,
+        heartbeatOutgoing: 4000
+    });
+    
+    gameState.stompClient.onConnect = (frame) => {
+        console.log('WebSocket connected', frame);
         updateConnectionStatus('Connected');
+        gameState.reconnectAttempts = 0; // Reset on successful connection
         
-        // Subscribe to session topics
-        const subscribeMsg = {
-            type: 'SUBSCRIBE',
-            destination: `/topic/session/${gameState.sessionId}/player`
-        };
-        gameState.ws.send(JSON.stringify(subscribeMsg));
+        // Subscribe to session-specific topics
+        gameState.stompClient.subscribe(`/topic/session/${gameState.sessionId}/player`, (message) => {
+            try {
+                const data = JSON.parse(message.body);
+                handleWebSocketMessage({ type: 'PLAYER_UPDATE', data });
+            } catch (error) {
+                console.error('Error parsing WebSocket message:', error);
+            }
+        });
+        
+        gameState.stompClient.subscribe(`/topic/session/${gameState.sessionId}/tick`, (message) => {
+            try {
+                const data = JSON.parse(message.body);
+                handleWebSocketMessage({ type: 'TICK_UPDATE', data });
+            } catch (error) {
+                console.error('Error parsing WebSocket message:', error);
+            }
+        });
     };
     
-    gameState.ws.onmessage = (event) => {
-        try {
-            const message = JSON.parse(event.data);
-            handleWebSocketMessage(message);
-        } catch (error) {
-            console.error('WebSocket message error:', error);
-        }
+    gameState.stompClient.onStompError = (frame) => {
+        console.error('STOMP error:', frame.headers['message'], frame.body);
+        updateConnectionStatus('Error');
     };
     
-    gameState.ws.onerror = (error) => {
+    gameState.stompClient.onWebSocketError = (error) => {
         console.error('WebSocket error:', error);
         updateConnectionStatus('Error');
     };
     
-    gameState.ws.onclose = () => {
+    gameState.stompClient.onDisconnect = () => {
         console.log('WebSocket disconnected');
         updateConnectionStatus('Disconnected');
         
-        // Attempt to reconnect after 5 seconds if we're still logged in
-        if (gameState.accessToken) {
-            setTimeout(() => {
-                if (gameState.accessToken && gameState.sessionId) {
-                    connectWebSocket();
-                }
-            }, 5000);
+        // Attempt to reconnect with exponential backoff if we're still logged in
+        if (gameState.accessToken && gameState.sessionId) {
+            scheduleReconnect();
         }
     };
+    
+    // Activate the STOMP client
+    gameState.stompClient.activate();
+}
+
+function scheduleReconnect() {
+    if (gameState.reconnectAttempts >= gameState.maxReconnectAttempts) {
+        console.error('Max reconnection attempts reached');
+        updateConnectionStatus('Connection failed');
+        return;
+    }
+    
+    // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 32s, 60s, 60s...
+    const baseDelay = 1000; // 1 second
+    const maxDelay = 60000; // 60 seconds
+    const delay = Math.min(baseDelay * Math.pow(2, gameState.reconnectAttempts), maxDelay);
+    
+    gameState.reconnectAttempts++;
+    
+    console.log(`Reconnecting in ${delay/1000}s (attempt ${gameState.reconnectAttempts}/${gameState.maxReconnectAttempts})`);
+    updateConnectionStatus(`Reconnecting in ${delay/1000}s...`);
+    
+    setTimeout(() => {
+        if (gameState.accessToken && gameState.sessionId) {
+            connectWebSocket();
+        }
+    }, delay);
 }
 
 function handleWebSocketMessage(message) {
@@ -347,6 +456,12 @@ function handleWebSocketMessage(message) {
         if (message.data) {
             gameState.player = { ...gameState.player, ...message.data };
             updateUI();
+        }
+    } else if (message.type === 'TICK_UPDATE') {
+        // Handle game tick updates
+        if (message.data) {
+            // Update any tick-based state
+            console.log('Tick update:', message.data);
         }
     }
 }
@@ -418,10 +533,18 @@ async function sendAction(action, params = {}) {
 }
 
 async function sendMoveAction(direction) {
+    // Prevent race condition - only one move at a time
+    if (gameState.movePending) {
+        return;
+    }
+    
     try {
+        gameState.movePending = true;
         await sendAction('move', { direction });
     } catch (error) {
         console.error('Move action failed:', error);
+    } finally {
+        gameState.movePending = false;
     }
 }
 
@@ -432,18 +555,20 @@ function gameLoop() {
     const deltaTime = now - gameState.lastUpdateTime;
     
     // Process movement input (throttled to avoid spamming server)
-    if (deltaTime > 200) { // Minimum 200ms between moves (maximum rate: 5 moves per second)
+    // Minimum 200ms between moves (maximum rate: 5 moves per second)
+    if (deltaTime > 200 && !gameState.movePending) {
+        // Process in priority order: only one direction per frame
         if (gameState.keys['w']) {
-            sendMoveAction(0); // UP
+            sendMoveAction(DIRECTION.UP);
+            gameState.lastUpdateTime = now;
         } else if (gameState.keys['s']) {
-            sendMoveAction(2); // DOWN
+            sendMoveAction(DIRECTION.DOWN);
+            gameState.lastUpdateTime = now;
         } else if (gameState.keys['a']) {
-            sendMoveAction(1); // LEFT
+            sendMoveAction(DIRECTION.LEFT);
+            gameState.lastUpdateTime = now;
         } else if (gameState.keys['d']) {
-            sendMoveAction(3); // RIGHT
-        }
-        
-        if (gameState.keys['w'] || gameState.keys['s'] || gameState.keys['a'] || gameState.keys['d']) {
+            sendMoveAction(DIRECTION.RIGHT);
             gameState.lastUpdateTime = now;
         }
     }

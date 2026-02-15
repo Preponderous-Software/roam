@@ -54,7 +54,7 @@ The easiest way to run Roam is using Docker:
 # Start all services (server + web client)
 docker compose up -d
 
-# Open your browser to http://localhost
+# Open your browser to http://localhost:8000
 ```
 
 The web client runs entirely in your browser - no installation needed!

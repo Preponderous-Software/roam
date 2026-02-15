@@ -22,7 +22,7 @@ docker compose up -d
 
 2. Open your browser and navigate to:
 ```
-http://localhost
+http://localhost:8000
 ```
 
 3. Register a new account or login with existing credentials
