@@ -8,9 +8,9 @@
 // Configuration
 const API_BASE_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:8080' 
-    : `http://${window.location.hostname}:8080`;
+    : `${window.location.protocol}//${window.location.hostname}:8080`;
 
-const WS_BASE_URL = API_BASE_URL.replace('http', 'ws');
+const WS_BASE_URL = API_BASE_URL.replace('http://', 'ws://').replace('https://', 'wss://');
 
 // Game state
 let gameState = {
@@ -289,6 +289,9 @@ async function refreshToken() {
 // === WebSocket ===
 
 function connectWebSocket() {
+    // Note: Token is passed in URL query parameter as required by the server's WebSocket security configuration.
+    // In a production environment, consider implementing token-based authentication via Sec-WebSocket-Protocol header
+    // to avoid exposing tokens in server logs and browser history.
     const wsUrl = `${WS_BASE_URL}/ws?access_token=${gameState.accessToken}`;
     
     gameState.ws = new WebSocket(wsUrl);
@@ -425,7 +428,7 @@ function gameLoop() {
     const deltaTime = now - gameState.lastUpdateTime;
     
     // Process movement input (throttled to avoid spamming server)
-    if (deltaTime > 200) { // Max 5 moves per second
+    if (deltaTime > 200) { // Minimum 200ms between moves (maximum rate: 5 moves per second)
         if (gameState.keys['w']) {
             sendMoveAction(0); // UP
         } else if (gameState.keys['s']) {
