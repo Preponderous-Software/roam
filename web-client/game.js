@@ -146,8 +146,15 @@ async function handleLogin() {
         });
         
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Login failed');
+            // Check if response is JSON before parsing
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const error = await response.json();
+                throw new Error(error.message || 'Login failed');
+            } else {
+                // Server returned HTML error page (e.g., 502 Bad Gateway)
+                throw new Error(`Server error (${response.status}). Please ensure the game server is running.`);
+            }
         }
         
         const data = await response.json();
@@ -210,8 +217,15 @@ async function handleRegister() {
         });
         
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Registration failed');
+            // Check if response is JSON before parsing
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const error = await response.json();
+                throw new Error(error.message || 'Registration failed');
+            } else {
+                // Server returned HTML error page (e.g., 502 Bad Gateway)
+                throw new Error(`Server error (${response.status}). Please ensure the game server is running.`);
+            }
         }
         
         successEl.textContent = 'Registration successful! Please login.';
@@ -325,15 +339,33 @@ async function apiRequest(method, endpoint, body = null) {
     }
     
     if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Request failed' }));
-        throw new Error(error.message || `Request failed with status ${response.status}`);
+        // Try to parse error as JSON, but handle HTML responses gracefully
+        try {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const error = await response.json();
+                throw new Error(error.message || `Request failed with status ${response.status}`);
+            } else {
+                // Server returned non-JSON response (likely HTML error page)
+                throw new Error(`Server error (${response.status}). Please ensure the game server is running.`);
+            }
+        } catch (parseError) {
+            // If parsing fails, use a generic error message
+            throw new Error(`Request failed with status ${response.status}`);
+        }
     }
     
     if (response.status === 204) {
         return {};
     }
     
-    return response.json();
+    // Parse successful response
+    try {
+        return await response.json();
+    } catch (parseError) {
+        console.error('Failed to parse response:', parseError);
+        throw new Error('Invalid response from server');
+    }
 }
 
 async function refreshToken() {
