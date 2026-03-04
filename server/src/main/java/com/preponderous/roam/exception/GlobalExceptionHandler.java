@@ -18,6 +18,20 @@ import java.util.Map;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(UserAlreadyExistsException.class)
+    public ResponseEntity<Object> handleUserAlreadyExistsException(
+            UserAlreadyExistsException ex, WebRequest request) {
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", HttpStatus.CONFLICT.value());
+        body.put("error", "Conflict");
+        body.put("message", ex.getMessage());
+        body.put("path", request.getDescription(false).replace("uri=", ""));
+
+        return new ResponseEntity<>(body, HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(SessionNotFoundException.class)
     public ResponseEntity<Object> handleSessionNotFoundException(
             SessionNotFoundException ex, WebRequest request) {

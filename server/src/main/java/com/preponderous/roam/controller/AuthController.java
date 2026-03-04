@@ -31,22 +31,14 @@ public class AuthController {
     
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        try {
-            AuthResponse response = authService.register(request);
-            return new ResponseEntity<>(response, HttpStatus.CREATED);
-        } catch (RuntimeException e) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Registration failed. Please check your input and try again.");
-        }
+        AuthResponse response = authService.register(request);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
     
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        try {
-            AuthResponse response = authService.login(request);
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
-        }
+        AuthResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
     }
     
     @PostMapping("/refresh")
