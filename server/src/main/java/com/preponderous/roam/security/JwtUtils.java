@@ -42,12 +42,14 @@ public class JwtUtils {
     private String activeProfiles;
     
     private SecretKey getSigningKey() {
-        // Enforce secure configuration: do not allow default secret in production
+        // Enforce secure configuration: do not allow default secret in non-development profiles
         if (jwtSecret.equals(DEFAULT_SECRET)) {
-            if (activeProfiles != null && activeProfiles.contains("production")) {
+            boolean isProductionLike = activeProfiles != null &&
+                    (activeProfiles.contains("production") || activeProfiles.contains("postgresql"));
+            if (isProductionLike) {
                 throw new IllegalStateException(
-                        "Insecure configuration: default JWT secret is being used while 'production' profile is active. " +
-                        "Please configure a strong 'jwt.secret' value for production.");
+                        "Insecure configuration: default JWT secret is being used in a production-like profile (" +
+                        activeProfiles + "). Please configure a strong 'jwt.secret' value.");
             }
             logger.warn("WARNING: Using default JWT secret. This is insecure! Set JWT_SECRET environment variable in production.");
         }

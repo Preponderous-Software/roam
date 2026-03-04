@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -34,8 +35,7 @@ public class AuthController {
             AuthResponse response = authService.register(request);
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         } catch (RuntimeException e) {
-            // Prevent leaking internal error details
-            throw new RuntimeException("Registration failed. Please check your input and try again.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Registration failed. Please check your input and try again.");
         }
     }
     
@@ -45,8 +45,7 @@ public class AuthController {
             AuthResponse response = authService.login(request);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
-            // Generic error message for security
-            throw new RuntimeException("Invalid username or password");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
         }
     }
     
@@ -56,8 +55,7 @@ public class AuthController {
             AuthResponse response = authService.refreshToken(request);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
-            // Generic error message to not leak token validation details
-            throw new RuntimeException("Invalid or expired refresh token");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired refresh token");
         }
     }
     
@@ -65,7 +63,7 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> logout(HttpServletRequest request) {
         String token = parseJwt(request);
         if (token == null) {
-            throw new RuntimeException("Missing or invalid Authorization header");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing or invalid Authorization header");
         }
         authService.logout(token);
         

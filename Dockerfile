@@ -25,7 +25,7 @@ EXPOSE 8080
 
 # Set environment variables
 ENV JAVA_OPTS="-Xmx512m -Xms256m"
-ENV ALLOWED_ORIGINS="http://localhost:3000,http://localhost:5000,http://localhost:8080"
+ENV ALLOWED_ORIGINS="http://localhost:3000,http://localhost:5000"
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \

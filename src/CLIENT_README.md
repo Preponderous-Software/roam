@@ -78,7 +78,7 @@ python3 roam.py http://localhost:8080
 - ✅ Energy system (depletes with movement, restored with food)
 - ✅ World rendering (procedurally generated rooms with biomes)
 - ✅ Entity interactions (gather resources, place items)
-- ✅ Multiple screens (world, inventory, stats, menu, login)
+- ✅ Multiple screens (world, inventory, menu, login)
 - ✅ Real-time updates via WebSocket
 - ✅ Player state synchronization with server
 - ✅ Game tick progression

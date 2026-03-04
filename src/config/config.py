@@ -28,6 +28,6 @@ class Config:
         self.showMiniMap = True
         
         # WebSocket configuration
-        self.use_websocket = True  # Enable WebSocket for real-time updates
-        self.websocket_reconnect_max_delay = 60  # Maximum delay between reconnection attempts (seconds)
-        self.websocket_reconnect_base_delay = 1  # Initial delay between reconnection attempts (seconds)
+        self.useWebSocket = True  # Enable WebSocket for real-time updates
+        self.websocketReconnectMaxDelay = 60  # Maximum delay between reconnection attempts (seconds)
+        self.websocketReconnectBaseDelay = 1  # Initial delay between reconnection attempts (seconds)
