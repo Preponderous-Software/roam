@@ -76,13 +76,20 @@ public class AutoSaveService {
     }
     
     /**
-     * Save all active sessions immediately.
      * Invoked during graceful shutdown via Spring's lifecycle management.
-     * This method is called when the ApplicationContext is closed.
-     * 
-     * @return Number of sessions successfully saved
+     * This method is called when the ApplicationContext is closed and will
+     * trigger saving of all active sessions.
      */
     @PreDestroy
+    public void onShutdown() {
+        saveAllSessionsNow();
+    }
+
+    /**
+     * Save all active sessions immediately.
+     *
+     * @return Number of sessions successfully saved
+     */
     public int saveAllSessionsNow() {
         Map<String, GameState> activeSessions = gameService.getActiveSessions();
         

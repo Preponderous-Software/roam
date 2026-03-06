@@ -19,4 +19,4 @@ echo "========================================="
 echo ""
 
 # Run the client
-python3 roam_client.py "$SERVER_URL"
+python3 roam.py "$SERVER_URL"

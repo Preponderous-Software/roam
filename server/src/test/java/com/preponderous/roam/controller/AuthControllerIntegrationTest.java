@@ -77,7 +77,7 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(duplicateRequest)))
-                .andExpect(status().is5xxServerError());
+                .andExpect(status().isConflict());
     }
     
     @Test
@@ -116,7 +116,7 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginRequest)))
-                .andExpect(status().is5xxServerError());
+                .andExpect(status().isUnauthorized());
     }
     
     @Test

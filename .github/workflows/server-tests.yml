@@ -2,7 +2,9 @@ name: Server Tests
 
 on:
   push:
-    branches: [ main, develop, feat/**, copilot/** ]
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
 
 jobs:
   test:

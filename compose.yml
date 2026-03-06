@@ -10,7 +10,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-roam}
       POSTGRES_USER: ${POSTGRES_USER:-roam}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-roamdev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD environment variable must be set}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./server/scripts/backup:/backups
@@ -41,7 +41,7 @@ services:
       SPRING_PROFILES_ACTIVE: postgresql
       DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-roam}
       DATABASE_USERNAME: ${POSTGRES_USER:-roam}
-      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-roamdev}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD environment variable must be set}
     depends_on:
       postgres:
         condition: service_healthy

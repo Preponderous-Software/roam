@@ -57,14 +57,16 @@ The new Spring Boot server architecture:
 - Centralized exception handling
 - No sensitive data exposure in DTOs
 - Session isolation (in-memory, per-session state)
+- JWT-based authentication with access and refresh tokens
+- Rate limiting on API endpoints
+- Database persistence with Spring Data JPA and parameterized queries (SQL injection protection)
+- BCrypt password hashing
 
 ⚠️ **Future Enhancements Recommended**:
-- Add authentication (JWT tokens)
-- Add rate limiting
 - Add request validation hardening
-- Implement database persistence with proper SQL injection protection
 - Add audit logging
 - Implement HTTPS in production
+- Harden production secret management (e.g., environment variables or secret vault)
 
 ## Dependency Scan Results
 

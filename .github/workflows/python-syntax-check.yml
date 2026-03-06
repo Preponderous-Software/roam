@@ -2,7 +2,9 @@ name: Python Syntax Check
 
 on:
   push:
-    branches: [ main, develop, feat/**, copilot/** ]
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
 
 jobs:
   syntax-check:

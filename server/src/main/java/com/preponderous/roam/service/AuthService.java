@@ -11,6 +11,7 @@ import com.preponderous.roam.persistence.repository.RefreshTokenRepository;
 import com.preponderous.roam.persistence.repository.TokenBlacklistRepository;
 import com.preponderous.roam.persistence.repository.UserRepository;
 import com.preponderous.roam.security.JwtUtils;
+import com.preponderous.roam.exception.UserAlreadyExistsException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -55,11 +56,11 @@ public class AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Username is already taken");
+            throw new UserAlreadyExistsException("Username is already taken");
         }
         
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email is already in use");
+            throw new UserAlreadyExistsException("Email is already in use");
         }
         
         User user = new User();

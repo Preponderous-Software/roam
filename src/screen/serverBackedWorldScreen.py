@@ -76,8 +76,8 @@ class ServerBackedWorldScreen:
         self.ws_client: Optional[WebSocketClient] = None
         # Enable WebSocket by default (True) but respect explicit config setting
         # For test mocks without the attribute, default to False to avoid connection attempts
-        if hasattr(config, 'use_websocket'):
-            self.ws_enabled = config.use_websocket
+        if hasattr(config, 'useWebSocket'):
+            self.ws_enabled = config.useWebSocket
         else:
             self.ws_enabled = False
         
@@ -207,8 +207,8 @@ class ServerBackedWorldScreen:
                 base_url = self.api_client.base_url
                 self.ws_client = WebSocketClient(
                     base_url=base_url,
-                    reconnect_base_delay=getattr(self.config, "websocket_reconnect_base_delay", 1.0),
-                    reconnect_max_delay=getattr(self.config, "websocket_reconnect_max_delay", 60.0)
+                    reconnect_base_delay=getattr(self.config, "websocketReconnectBaseDelay", 1.0),
+                    reconnect_max_delay=getattr(self.config, "websocketReconnectMaxDelay", 60.0)
                 )
                 
                 # Register message handlers
