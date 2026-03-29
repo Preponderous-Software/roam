@@ -1,5 +1,5 @@
 # Roam
-This game allows you to explore a procedurally-generated 2D world and interact with your surroundings.
+Roam is a **single-player** game that allows you to explore a procedurally-generated 2D world and interact with your surroundings. There are currently no plans to add multiplayer.
 
 ## Planning Document
 The planning document can be found [here](./PLANNING.md)

@@ -2,7 +2,7 @@
 This document is a work in progress. It is a place to collect ideas and plan out the development of the game.
 
 ## Overview
-Roam is a 2D survival game where the player explores a procedurally-generated world and interacts with their surroundings.
+Roam is a **single-player** 2D survival game where the player explores a procedurally-generated world and interacts with their surroundings. There are currently no plans to add multiplayer.
 
 ## Mechanics
 ### Energy
