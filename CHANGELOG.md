@@ -65,7 +65,7 @@ logged in detail below.
 ## AI Agent Sessions
 
 ### 2026-04-13 — Camera Mode: Follow Player
-- Added `cameraFollowPlayer` config option (default: `False`) to `Config`.
+- Added `cameraFollowPlayer` config option (default: `True`) to `Config`.
 - Added `drawWithOffset` method to `Room` for rendering at arbitrary screen
   positions.
 - Added `drawFollowMode` method to `WorldScreen` that renders multiple rooms

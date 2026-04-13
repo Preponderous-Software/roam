@@ -26,4 +26,4 @@ class Config:
         self.autoEatFoodInInventory = True
         self.removeDeadEntities = True
         self.showMiniMap = True
-        self.cameraFollowPlayer = False
+        self.cameraFollowPlayer = True

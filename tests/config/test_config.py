@@ -22,14 +22,14 @@ def test_defaults():
     assert config.autoEatFoodInInventory == True
     assert config.removeDeadEntities == True
     assert config.showMiniMap == True
-    assert config.cameraFollowPlayer == False
+    assert config.cameraFollowPlayer == True
 
 
 def test_toggle_camera_follow_player():
     config = Config()
 
-    assert config.cameraFollowPlayer == False
-    config.cameraFollowPlayer = True
     assert config.cameraFollowPlayer == True
     config.cameraFollowPlayer = False
     assert config.cameraFollowPlayer == False
+    config.cameraFollowPlayer = True
+    assert config.cameraFollowPlayer == True
