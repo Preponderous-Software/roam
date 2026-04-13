@@ -90,12 +90,12 @@ class SaveSelectionScreen:
     def drawSaveList(self, saves):
         x, y = self.graphik.getGameDisplay().get_size()
         width = x * 0.6
-        height = y / 12
+        height = y / 14
         xpos = x / 2 - width / 2
-        ypos = y / 6
+        ypos = y / 8
         margin = 8
-
-        maxVisible = int((y * 0.6) / (height + margin))
+        bottomLimit = y - y / 4
+        maxVisible = int((bottomLimit - ypos) / (height + margin))
         visibleSaves = saves[self.scrollOffset : self.scrollOffset + maxVisible]
 
         for save in visibleSaves:
@@ -147,6 +147,11 @@ class SaveSelectionScreen:
         )
 
     def run(self):
+        # Wait for mouse button release to prevent click pass-through
+        # from the previous screen (e.g. the main menu "play" button).
+        while pygame.mouse.get_pressed()[0]:
+            pygame.event.pump()
+
         while not self.changeScreen:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:

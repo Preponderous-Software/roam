@@ -78,6 +78,10 @@ logged in detail below.
 - Modified `Roam` to handle the new `SAVE_SELECTION_SCREEN` type and pass
   `initializeWorldScreen` to `SaveSelectionScreen`.
 - Added 12 unit tests in `tests/screen/test_saveSelectionScreen.py`.
+- Fixed click pass-through from main menu "Play" button to save list by
+  waiting for mouse release at the start of `SaveSelectionScreen.run()`.
+- Adjusted save list layout: smaller button height and bounded bottom
+  limit to prevent overlap with the bottom action buttons.
 
 ### 2026-04-13 — Camera Mode: Follow Player
 - Added `cameraFollowPlayer` config option (default: `True`) to `Config`.
