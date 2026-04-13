@@ -1,5 +1,6 @@
 import datetime
 import json
+import math
 from math import ceil
 import os
 import time
@@ -421,7 +422,7 @@ class WorldScreen:
                 return True
         return False
 
-    def getLocationAtMousePosition(self):
+    def getLocationAndRoomAtMousePosition(self):
         x, y = pygame.mouse.get_pos()
         if self.config.cameraFollowPlayer:
             displayWidth = self.graphik.getGameDisplay().get_width()
@@ -437,15 +438,44 @@ class WorldScreen:
             centerY = displayHeight / 2
             offsetX = centerX - playerPixelX
             offsetY = centerY - playerPixelY
-            x = int((x - offsetX) // self.locationWidth)
-            y = int((y - offsetY) // self.locationHeight)
+            worldGridX = int((x - offsetX) // self.locationWidth)
+            worldGridY = int((y - offsetY) // self.locationHeight)
+
+            gridSize = self.config.gridSize
+            roomDX = math.floor(worldGridX / gridSize)
+            roomDY = math.floor(worldGridY / gridSize)
+            localX = worldGridX - roomDX * gridSize
+            localY = worldGridY - roomDY * gridSize
+
+            if roomDX == 0 and roomDY == 0:
+                targetRoom = self.currentRoom
+            else:
+                currentRoomX = self.currentRoom.getX()
+                currentRoomY = self.currentRoom.getY()
+                targetRoomX = currentRoomX + roomDX
+                targetRoomY = currentRoomY + roomDY
+
+                if self.config.worldBorder != 0 and (
+                    abs(targetRoomX) > self.config.worldBorder
+                    or abs(targetRoomY) > self.config.worldBorder
+                ):
+                    return (-1, None)
+                targetRoom = self.getOrLoadRoom(targetRoomX, targetRoomY)
+
+            location = targetRoom.getGrid().getLocationByCoordinates(localX, localY)
+            return (location, targetRoom)
         else:
-            x = int(x // self.locationWidth)
-            y = int(y // self.locationHeight)
-        return self.currentRoom.getGrid().getLocationByCoordinates(x, y)
+            gridX = int(x // self.locationWidth)
+            gridY = int(y // self.locationHeight)
+            location = self.currentRoom.getGrid().getLocationByCoordinates(gridX, gridY)
+            return (location, self.currentRoom)
+
+    def getLocationAtMousePosition(self):
+        location, room = self.getLocationAndRoomAtMousePosition()
+        return location
 
     def executeGatherAction(self):
-        targetLocation = self.getLocationAtMousePosition()
+        targetLocation, targetRoom = self.getLocationAndRoomAtMousePosition()
 
         if targetLocation == -1:
             self.status.set("no location available")
@@ -454,9 +484,14 @@ class WorldScreen:
         # if location too far away
         distanceLimit = self.config.playerInteractionDistanceLimit
         playerLocation = self.getLocationOfPlayer()
+        gridSize = self.config.gridSize
+        worldTargetX = targetRoom.getX() * gridSize + targetLocation.getX()
+        worldTargetY = targetRoom.getY() * gridSize + targetLocation.getY()
+        worldPlayerX = self.currentRoom.getX() * gridSize + playerLocation.getX()
+        worldPlayerY = self.currentRoom.getY() * gridSize + playerLocation.getY()
         if (
-            abs(targetLocation.getX() - playerLocation.getX()) > distanceLimit
-            or abs(targetLocation.getY() - playerLocation.getY()) > distanceLimit
+            abs(worldTargetX - worldPlayerX) > distanceLimit
+            or abs(worldTargetY - worldPlayerY) > distanceLimit
         ):
             self.status.set("too far away")
             return
@@ -478,9 +513,9 @@ class WorldScreen:
         if result == False:
             self.status.set("no available inventory slots")
             return
-        self.currentRoom.removeEntity(toRemove)
+        targetRoom.removeEntity(toRemove)
         if isinstance(toRemove, LivingEntity):
-            self.currentRoom.removeLivingEntity(toRemove)
+            targetRoom.removeLivingEntity(toRemove)
         self.status.set("picked up '" + entity.getName() + "'")
         self.player.removeEnergy(self.config.playerInteractionEnergyCost)
         self.player.setTickLastGathered(self.tickCounter.getTick())
@@ -509,7 +544,7 @@ class WorldScreen:
             self.status.set("no items")
             return
 
-        targetLocation = self.getLocationAtMousePosition()
+        targetLocation, targetRoom = self.getLocationAndRoomAtMousePosition()
         if targetLocation == -1:
             self.status.set("no location available")
             return
@@ -523,9 +558,14 @@ class WorldScreen:
         # if location too far away
         distanceLimit = self.config.playerInteractionDistanceLimit
         playerLocation = self.getLocationOfPlayer()
+        gridSize = self.config.gridSize
+        worldTargetX = targetRoom.getX() * gridSize + targetLocation.getX()
+        worldTargetY = targetRoom.getY() * gridSize + targetLocation.getY()
+        worldPlayerX = self.currentRoom.getX() * gridSize + playerLocation.getX()
+        worldPlayerY = self.currentRoom.getY() * gridSize + playerLocation.getY()
         if (
-            abs(targetLocation.getX() - playerLocation.getX()) > distanceLimit
-            or abs(targetLocation.getY() - playerLocation.getY()) > distanceLimit
+            abs(worldTargetX - worldPlayerX) > distanceLimit
+            or abs(worldTargetY - worldPlayerY) > distanceLimit
         ):
             self.status.set("too far away")
             return
@@ -548,9 +588,9 @@ class WorldScreen:
         if toPlace == -1:
             return
 
-        self.currentRoom.addEntityToLocation(toPlace, targetLocation)
+        targetRoom.addEntityToLocation(toPlace, targetLocation)
         if isinstance(toPlace, LivingEntity):
-            self.currentRoom.addLivingEntity(toPlace)
+            targetRoom.addLivingEntity(toPlace)
         self.status.set("placed '" + toPlace.getName() + "'")
         self.player.setTickLastPlaced(self.tickCounter.getTick())
 

@@ -99,6 +99,13 @@ logged in detail below.
   invalidation on room transitions.
 - Removed redundant `fill()` call from `drawFollowMode` since `draw()` already
   clears the screen.
+- Added `getLocationAndRoomAtMousePosition` method to resolve mouse clicks to
+  the correct neighboring room in follow mode, enabling cross-room interaction.
+- Updated `executeGatherAction` and `executePlaceAction` to operate on the
+  target room (not just `currentRoom`) so entities in visible neighboring rooms
+  can be gathered from and placed into.
+- Updated distance checks in gather/place actions to use world-grid coordinates
+  for correct cross-room distance calculation.
 
 ### 2026-04-12 — Initial Copilot instructions created
 - Created `.github/copilot-instructions.md` with project context gathered
