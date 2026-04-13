@@ -47,6 +47,10 @@ class ConfigScreen:
         self.config.showMiniMap = not self.config.showMiniMap
         sleep(0.1)
 
+    def toggleCameraFollowPlayer(self):
+        self.config.cameraFollowPlayer = not self.config.cameraFollowPlayer
+        sleep(0.1)
+
     def drawMenuButtons(self):
         # draw buttons in red or green depending on config option value
         # config options to include: debug, fullscreen, autoEatInInventory
@@ -120,6 +124,19 @@ class ConfigScreen:
             30,
             "show minimap",
             self.toggleShowMiniMap,
+        )
+        ypos = ypos + height + margin
+        color = (0, 255, 0) if self.config.cameraFollowPlayer else (255, 0, 0)
+        self.graphik.drawButton(
+            xpos,
+            ypos,
+            width,
+            height,
+            (255, 255, 255),
+            color,
+            30,
+            "camera follow player",
+            self.toggleCameraFollowPlayer,
         )
 
         self.drawBackButton()

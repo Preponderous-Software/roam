@@ -13,6 +13,7 @@ from world.room import Room
 class Map:
     def __init__(self, gridSize, graphik: Graphik, tickCounter: TickCounter, config):
         self.rooms = []
+        self._roomIndex = {}
         self.gridSize = gridSize
         self.graphik = graphik
         self.tickCounter = tickCounter
@@ -23,9 +24,9 @@ class Map:
         return self.rooms
 
     def getRoom(self, x, y):
-        for room in self.getRooms():
-            if room.getX() == x and room.getY() == y:
-                return room
+        key = (x, y)
+        if key in self._roomIndex:
+            return self._roomIndex[key]
 
         # attempt to load room if file exists, otherwise generate new room
         nextRoomPath = (
@@ -61,8 +62,12 @@ class Map:
         else:
             newRoom = self.roomFactory.createRandomRoom(x, y)
         self.rooms.append(newRoom)
+        self._roomIndex[(x, y)] = newRoom
 
         return newRoom
 
     def addRoom(self, room):
-        self.rooms.append(room)
+        key = (room.getX(), room.getY())
+        if key not in self._roomIndex:
+            self.rooms.append(room)
+        self._roomIndex[key] = room

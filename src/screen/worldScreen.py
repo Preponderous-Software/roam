@@ -1,5 +1,6 @@
 import datetime
 import json
+import math
 from math import ceil
 import os
 import time
@@ -101,8 +102,27 @@ class WorldScreen:
 
     def initializeLocationWidthAndHeight(self):
         x, y = self.graphik.getGameDisplay().get_size()
-        self.locationWidth = x / self.currentRoom.getGrid().getRows()
-        self.locationHeight = y / self.currentRoom.getGrid().getColumns()
+        locationWidth = x / self.currentRoom.getGrid().getRows()
+        locationHeight = y / self.currentRoom.getGrid().getColumns()
+
+        locationSizeChanged = (
+            not hasattr(self, "locationWidth")
+            or not hasattr(self, "locationHeight")
+            or self.locationWidth != locationWidth
+            or self.locationHeight != locationHeight
+        )
+
+        self.locationWidth = locationWidth
+        self.locationHeight = locationHeight
+
+        if locationSizeChanged:
+            Room._scaledImageCache.clear()
+
+    def getOrLoadRoom(self, x, y):
+        room = self.map.getRoom(x, y)
+        if room == -1:
+            room = self.map.generateNewRoom(x, y)
+        return room
 
     def printStatsToConsole(self):
         print("=== Stats ===")
@@ -262,7 +282,7 @@ class WorldScreen:
             )
             if os.path.exists(nextRoomPath):
                 roomJsonReaderWriter = RoomJsonReaderWriter(
-                    self.config.gridSize, self.graphik, self.tickCounter
+                    self.config.gridSize, self.graphik, self.tickCounter, self.config
                 )
                 room = roomJsonReaderWriter.loadRoom(nextRoomPath)
                 self.map.addRoom(room)
@@ -401,26 +421,79 @@ class WorldScreen:
                 return True
         return False
 
-    def getLocationAtMousePosition(self):
+    def getLocationAndRoomAtMousePosition(self):
         x, y = pygame.mouse.get_pos()
-        x = int(x / self.locationWidth)
-        y = int(y / self.locationHeight)
-        return self.currentRoom.getGrid().getLocationByCoordinates(x, y)
+        if self.config.cameraFollowPlayer:
+            displayWidth = self.graphik.getGameDisplay().get_width()
+            displayHeight = self.graphik.getGameDisplay().get_height()
+            playerLocation = self.getLocationOfPlayer()
+            playerPixelX = (
+                playerLocation.getX() * self.locationWidth + self.locationWidth / 2
+            )
+            playerPixelY = (
+                playerLocation.getY() * self.locationHeight + self.locationHeight / 2
+            )
+            centerX = displayWidth / 2
+            centerY = displayHeight / 2
+            offsetX = centerX - playerPixelX
+            offsetY = centerY - playerPixelY
+            worldGridX = int((x - offsetX) // self.locationWidth)
+            worldGridY = int((y - offsetY) // self.locationHeight)
+
+            gridSize = self.config.gridSize
+            roomDX = math.floor(worldGridX / gridSize)
+            roomDY = math.floor(worldGridY / gridSize)
+            localX = worldGridX - roomDX * gridSize
+            localY = worldGridY - roomDY * gridSize
+
+            if roomDX == 0 and roomDY == 0:
+                targetRoom = self.currentRoom
+            else:
+                currentRoomX = self.currentRoom.getX()
+                currentRoomY = self.currentRoom.getY()
+                targetRoomX = currentRoomX + roomDX
+                targetRoomY = currentRoomY + roomDY
+
+                if self.config.worldBorder != 0 and (
+                    abs(targetRoomX) > self.config.worldBorder
+                    or abs(targetRoomY) > self.config.worldBorder
+                ):
+                    return (-1, None)
+                targetRoom = self.getOrLoadRoom(targetRoomX, targetRoomY)
+
+            location = targetRoom.getGrid().getLocationByCoordinates(localX, localY)
+            return (location, targetRoom)
+        else:
+            gridX = int(x // self.locationWidth)
+            gridY = int(y // self.locationHeight)
+            location = self.currentRoom.getGrid().getLocationByCoordinates(gridX, gridY)
+            return (location, self.currentRoom)
+
+    def getLocationAtMousePosition(self):
+        location, room = self.getLocationAndRoomAtMousePosition()
+        return location
+
+    def isLocationTooFar(self, targetLocation, targetRoom):
+        distanceLimit = self.config.playerInteractionDistanceLimit
+        playerLocation = self.getLocationOfPlayer()
+        gridSize = self.config.gridSize
+        worldTargetX = targetRoom.getX() * gridSize + targetLocation.getX()
+        worldTargetY = targetRoom.getY() * gridSize + targetLocation.getY()
+        worldPlayerX = self.currentRoom.getX() * gridSize + playerLocation.getX()
+        worldPlayerY = self.currentRoom.getY() * gridSize + playerLocation.getY()
+        return (
+            abs(worldTargetX - worldPlayerX) > distanceLimit
+            or abs(worldTargetY - worldPlayerY) > distanceLimit
+        )
 
     def executeGatherAction(self):
-        targetLocation = self.getLocationAtMousePosition()
+        targetLocation, targetRoom = self.getLocationAndRoomAtMousePosition()
 
         if targetLocation == -1:
             self.status.set("no location available")
             return
 
-        # if location too far away
-        distanceLimit = self.config.playerInteractionDistanceLimit
-        playerLocation = self.getLocationOfPlayer()
-        if (
-            abs(targetLocation.getX() - playerLocation.getX()) > distanceLimit
-            or abs(targetLocation.getY() - playerLocation.getY()) > distanceLimit
-        ):
+        if self.isLocationTooFar(targetLocation, targetRoom):
             self.status.set("too far away")
             return
 
@@ -441,9 +514,9 @@ class WorldScreen:
         if result == False:
             self.status.set("no available inventory slots")
             return
-        self.currentRoom.removeEntity(toRemove)
+        targetRoom.removeEntity(toRemove)
         if isinstance(toRemove, LivingEntity):
-            self.currentRoom.removeLivingEntity(toRemove)
+            targetRoom.removeLivingEntity(toRemove)
         self.status.set("picked up '" + entity.getName() + "'")
         self.player.removeEnergy(self.config.playerInteractionEnergyCost)
         self.player.setTickLastGathered(self.tickCounter.getTick())
@@ -472,7 +545,7 @@ class WorldScreen:
             self.status.set("no items")
             return
 
-        targetLocation = self.getLocationAtMousePosition()
+        targetLocation, targetRoom = self.getLocationAndRoomAtMousePosition()
         if targetLocation == -1:
             self.status.set("no location available")
             return
@@ -483,13 +556,7 @@ class WorldScreen:
             self.status.set("location blocked")
             return
 
-        # if location too far away
-        distanceLimit = self.config.playerInteractionDistanceLimit
-        playerLocation = self.getLocationOfPlayer()
-        if (
-            abs(targetLocation.getX() - playerLocation.getX()) > distanceLimit
-            or abs(targetLocation.getY() - playerLocation.getY()) > distanceLimit
-        ):
+        if self.isLocationTooFar(targetLocation, targetRoom):
             self.status.set("too far away")
             return
 
@@ -511,9 +578,9 @@ class WorldScreen:
         if toPlace == -1:
             return
 
-        self.currentRoom.addEntityToLocation(toPlace, targetLocation)
+        targetRoom.addEntityToLocation(toPlace, targetLocation)
         if isinstance(toPlace, LivingEntity):
-            self.currentRoom.addLivingEntity(toPlace)
+            targetRoom.addLivingEntity(toPlace)
         self.status.set("placed '" + toPlace.getName() + "'")
         self.player.setTickLastPlaced(self.tickCounter.getTick())
 
@@ -607,6 +674,9 @@ class WorldScreen:
             # decrease minimap scale factor
             if self.minimapScaleFactor > 0:
                 self.minimapScaleFactor -= 0.1
+        elif key == pygame.K_c:
+            # toggle camera follow mode
+            self.config.cameraFollowPlayer = not self.config.cameraFollowPlayer
 
     def handleKeyUpEvent(self, key):
         if (
@@ -808,13 +878,87 @@ class WorldScreen:
             mapImage, (self.minimapX + 10, self.minimapY + 10)
         )
 
+    def drawFollowMode(self):
+        displayWidth = self.graphik.getGameDisplay().get_width()
+        displayHeight = self.graphik.getGameDisplay().get_height()
+
+        # get player position in current room grid
+        playerLocation = self.getLocationOfPlayer()
+        playerGridX = playerLocation.getX()
+        playerGridY = playerLocation.getY()
+        gridSize = self.config.gridSize
+
+        # calculate the pixel size of a single room
+        roomPixelWidth = gridSize * self.locationWidth
+        roomPixelHeight = gridSize * self.locationHeight
+
+        # calculate screen center
+        centerX = displayWidth / 2
+        centerY = displayHeight / 2
+
+        # world-pixel position of the player within the current room
+        playerPixelX = playerGridX * self.locationWidth + self.locationWidth / 2
+        playerPixelY = playerGridY * self.locationHeight + self.locationHeight / 2
+
+        # offset to center the current room's player on the screen center
+        baseOffsetX = centerX - playerPixelX
+        baseOffsetY = centerY - playerPixelY
+
+        # determine which neighboring rooms are visible
+        currentRoomX = self.currentRoom.getX()
+        currentRoomY = self.currentRoom.getY()
+
+        # calculate how many rooms could be visible in each direction
+        roomsLeft = int(centerX / roomPixelWidth) + 1
+        roomsRight = int(centerX / roomPixelWidth) + 1
+        roomsUp = int(centerY / roomPixelHeight) + 1
+        roomsDown = int(centerY / roomPixelHeight) + 1
+
+        for dx in range(-roomsLeft, roomsRight + 1):
+            for dy in range(-roomsUp, roomsDown + 1):
+                roomX = currentRoomX + dx
+                roomY = currentRoomY + dy
+
+                # check world border
+                if self.config.worldBorder != 0 and (
+                    abs(roomX) > self.config.worldBorder
+                    or abs(roomY) > self.config.worldBorder
+                ):
+                    continue
+
+                # calculate screen offset for this room
+                roomOffsetX = baseOffsetX + dx * roomPixelWidth
+                roomOffsetY = baseOffsetY + dy * roomPixelHeight
+
+                # skip if the room is entirely off-screen
+                if (
+                    roomOffsetX + roomPixelWidth < 0
+                    or roomOffsetX > displayWidth
+                    or roomOffsetY + roomPixelHeight < 0
+                    or roomOffsetY > displayHeight
+                ):
+                    continue
+
+                room = self.getOrLoadRoom(roomX, roomY)
+                room.drawWithOffset(
+                    self.locationWidth,
+                    self.locationHeight,
+                    roomOffsetX,
+                    roomOffsetY,
+                    displayWidth,
+                    displayHeight,
+                )
+
     def draw(self):
         self.graphik.getGameDisplay().fill(self.currentRoom.getBackgroundColor())
 
         if self.config.showMiniMap and not self.isCurrentRoomSavedAsPNG():
             self.saveCurrentRoomAsPNG()
 
-        self.currentRoom.draw(self.locationWidth, self.locationHeight)
+        if self.config.cameraFollowPlayer:
+            self.drawFollowMode()
+        else:
+            self.currentRoom.draw(self.locationWidth, self.locationHeight)
         self.status.draw()
         self.energyBar.draw()
 
@@ -1107,6 +1251,10 @@ class WorldScreen:
         toRemove = []
         for livingEntityId in self.currentRoom.getLivingEntities():
             livingEntity = self.currentRoom.getEntity(livingEntityId)
+            if livingEntity is None:
+                print("Error: living entity with id " + str(livingEntityId) + " not found in room. Removing from living entities list.")
+                self.currentRoom.removeLivingEntityById(livingEntityId)
+                continue
             if livingEntity.getEnergy() == 0:
                 toRemove.append(livingEntityId)
 
@@ -1189,7 +1337,7 @@ class WorldScreen:
                         )
                         if os.path.exists(nextRoomPath):
                             roomJsonReaderWriter = RoomJsonReaderWriter(
-                                self.config.gridSize, self.graphik, self.tickCounter
+                                self.config.gridSize, self.graphik, self.tickCounter, self.config
                             )
                             newRoom = roomJsonReaderWriter.loadRoom(nextRoomPath)
                             self.map.addRoom(newRoom)

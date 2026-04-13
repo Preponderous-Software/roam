@@ -64,6 +64,50 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-13 — Camera Mode: Follow Player
+- Added `cameraFollowPlayer` config option (default: `True`) to `Config`.
+- Added `drawWithOffset` method to `Room` for rendering at arbitrary screen
+  positions.
+- Added `drawFollowMode` method to `WorldScreen` that renders multiple rooms
+  centered on the player, allowing cross-room visibility.
+- Modified `WorldScreen.draw()` to branch between follow mode and the
+  original room-at-a-time mode.
+- Updated `getLocationAtMousePosition` to account for camera offset in
+  follow mode.
+- Added `getOrLoadRoom` helper in `WorldScreen` for retrieving or generating
+  adjacent rooms.
+- Added 'C' key toggle in `WorldScreen` for camera follow mode.
+- Added "camera follow player" toggle button in `ConfigScreen`.
+- Added unit tests for the new config option in `tests/config/test_config.py`.
+- Optimized rendering performance: cached `pygame.image.load` results in
+  `DrawableEntity`, cached `pygame.transform.scale` results in `Room`, and
+  added screen-bounds clipping to `drawWithOffset`.
+- Fixed `drawWithOffset` to guard `clipHeight` independently from `clipWidth`.
+- Simplified `getOrLoadRoom` to delegate room loading to `Map.getRoom`,
+  removing duplicate disk-loading logic.
+- Removed `roomsExplored` stat inflation from auto-generated neighbor rooms
+  in follow mode.
+- Fixed mouse coordinate mapping in `getLocationAtMousePosition` to use
+  floor division instead of `int()` truncation for correct negative-value
+  handling.
+- Moved `pygame.init()`/`pygame.quit()` into a pytest fixture in
+  `test_config.py` to avoid leaking global state.
+- Updated resize-related cache invalidation to clear `Room._scaledImageCache`
+  when tile dimensions change, preventing stale scaled Surface reuse after
+  display-size-driven tile resizing.
+- Optimized `initializeLocationWidthAndHeight` to only clear the scaled image
+  cache when tile dimensions actually change, preventing unnecessary cache
+  invalidation on room transitions.
+- Removed redundant `fill()` call from `drawFollowMode` since `draw()` already
+  clears the screen.
+- Added `getLocationAndRoomAtMousePosition` method to resolve mouse clicks to
+  the correct neighboring room in follow mode, enabling cross-room interaction.
+- Updated `executeGatherAction` and `executePlaceAction` to operate on the
+  target room (not just `currentRoom`) so entities in visible neighboring rooms
+  can be gathered from and placed into.
+- Updated distance checks in gather/place actions to use world-grid coordinates
+  for correct cross-room distance calculation.
+
 ### 2026-04-12 — Initial Copilot instructions created
 - Created `.github/copilot-instructions.md` with project context gathered
   from repository inspection.

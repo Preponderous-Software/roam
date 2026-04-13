@@ -11,6 +11,8 @@ from lib.graphik.src.graphik import Graphik
 # @author Daniel McCoy Stephenson
 # @since August 8th, 2022
 class Room(Environment):
+    _scaledImageCache = {}
+
     def __init__(self, name, gridSize, backgroundColor, x, y, graphik: Graphik):
         Environment.__init__(self, name, gridSize)
         self.backgroundColor = backgroundColor
@@ -39,15 +41,41 @@ class Room(Environment):
                 locationHeight + 2,
             )
 
+    def drawWithOffset(
+        self, locationWidth, locationHeight, offsetX, offsetY, clipWidth=None, clipHeight=None
+    ):
+        locWidth = locationWidth + 2
+        locHeight = locationHeight + 2
+        for locationId in self.grid.getLocations():
+            location = self.grid.getLocation(locationId)
+            xPos = offsetX + location.getX() * locationWidth - 1
+            yPos = offsetY + location.getY() * locationHeight - 1
+            if clipWidth is not None:
+                if xPos + locWidth < 0 or xPos > clipWidth:
+                    continue
+            if clipHeight is not None:
+                if yPos + locHeight < 0 or yPos > clipHeight:
+                    continue
+            self.drawLocation(location, xPos, yPos, locWidth, locHeight)
+
     # Draws a location at a specified position.
     def drawLocation(self, location, xPos, yPos, width, height):
         if location.getNumEntities() > 0:
             # draw texture
             topEntityId = list(location.getEntities().keys())[-1]
             topEntity = location.getEntities()[topEntityId]
-            image = topEntity.getImage()
-            scaledImage = pygame.transform.scale(image, (width, height))
-            self.graphik.gameDisplay.blit(scaledImage, (xPos, yPos))
+            imagePath = topEntity.getImagePath()
+            scaledWidth = int(width)
+            scaledHeight = int(height)
+            cacheKey = (imagePath, scaledWidth, scaledHeight)
+            if cacheKey not in Room._scaledImageCache:
+                image = topEntity.getImage()
+                Room._scaledImageCache[cacheKey] = pygame.transform.scale(
+                    image, (scaledWidth, scaledHeight)
+                )
+            self.graphik.gameDisplay.blit(
+                Room._scaledImageCache[cacheKey], (xPos, yPos)
+            )
         else:
             # draw background color
             self.graphik.drawRectangle(xPos, yPos, width, height, self.backgroundColor)
@@ -63,6 +91,15 @@ class Room(Environment):
             )
             return
         del self.livingEntities[entity.getID()]
+
+    def removeLivingEntityById(self, entityId):
+        if entityId not in self.livingEntities:
+            print(
+                "Entity was not found in living entities list when trying to remove it. Entity ID: "
+                + str(entityId)
+            )
+            return
+        del self.livingEntities[entityId]
 
     def getRandomAdjacentLocation(self, location):
         num = random.randrange(0, 4)
