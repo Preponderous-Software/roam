@@ -96,35 +96,42 @@ def test_selectSave(temp_saves_dir):
     assert screen.changeScreen == True
 
 
-def test_createNewGame(temp_saves_dir):
+def test_createNewGameWithName(temp_saves_dir):
     screen = createSaveSelectionScreen(temp_saves_dir)
 
-    screen.createNewGame()
+    screen.createNewGameWithName("save_1")
     assert screen.changeScreen == True
     assert screen.nextScreen == ScreenType.WORLD_SCREEN
     assert os.path.isdir(os.path.join(temp_saves_dir, "save_1"))
     assert screen.config.pathToSaveDirectory == os.path.join(temp_saves_dir, "save_1")
 
 
-def test_createNewGame_increments_number(temp_saves_dir):
+def test_createNewGameWithName_existing(temp_saves_dir):
     os.makedirs(os.path.join(temp_saves_dir, "save_1"))
 
     screen = createSaveSelectionScreen(temp_saves_dir)
-    screen.createNewGame()
+    screen.createNewGameWithName("save_1")
 
-    assert os.path.isdir(os.path.join(temp_saves_dir, "save_2"))
-    assert screen.config.pathToSaveDirectory == os.path.join(temp_saves_dir, "save_2")
+    assert screen.changeScreen == False
 
 
-def test_createNewGame_skips_non_directory(temp_saves_dir):
+def test_generateSaveName_increments(temp_saves_dir):
+    os.makedirs(os.path.join(temp_saves_dir, "save_1"))
+
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    name = screen._generateSaveName()
+
+    assert name == "save_2"
+
+
+def test_generateSaveName_skips_non_directory(temp_saves_dir):
     with open(os.path.join(temp_saves_dir, "save_1"), "w") as f:
         f.write("not a directory")
 
     screen = createSaveSelectionScreen(temp_saves_dir)
-    screen.createNewGame()
+    name = screen._generateSaveName()
 
-    assert os.path.isdir(os.path.join(temp_saves_dir, "save_2"))
-    assert screen.config.pathToSaveDirectory == os.path.join(temp_saves_dir, "save_2")
+    assert name == "save_2"
 
 
 def test_switchToMainMenuScreen(temp_saves_dir):
@@ -258,3 +265,104 @@ def test_refreshSaveCache(temp_saves_dir):
 
     screen.refreshSaveCache()
     assert len(screen.getSaveDirectories()) == 1
+
+
+def test_scrollUp_and_scrollDown(temp_saves_dir):
+    for i in range(5):
+        os.makedirs(os.path.join(temp_saves_dir, "save_" + str(i + 1)))
+
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.refreshSaveCache()
+
+    screen.scrollDown()
+    assert screen.scrollOffset == 1
+    screen.scrollDown()
+    assert screen.scrollOffset == 2
+    screen.scrollUp()
+    assert screen.scrollOffset == 1
+    screen.scrollUp()
+    assert screen.scrollOffset == 0
+    screen.scrollUp()
+    assert screen.scrollOffset == 0
+
+
+def test_startNamingNewSave(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+
+    assert screen.namingNewSave == False
+    screen.startNamingNewSave()
+    assert screen.namingNewSave == True
+    assert screen.newSaveNameInput == ""
+
+
+def test_cancelNamingNewSave(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.namingNewSave = True
+    screen.newSaveNameInput = "partial"
+
+    screen.cancelNamingNewSave()
+    assert screen.namingNewSave == False
+    assert screen.newSaveNameInput == ""
+
+
+def test_confirmNewSaveName_custom(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.namingNewSave = True
+    screen.newSaveNameInput = "my_world"
+
+    screen.confirmNewSaveName()
+    assert screen.namingNewSave == False
+    assert screen.changeScreen == True
+    assert os.path.isdir(os.path.join(temp_saves_dir, "my_world"))
+    assert screen.config.pathToSaveDirectory == os.path.join(temp_saves_dir, "my_world")
+
+
+def test_confirmNewSaveName_empty_uses_generated(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.namingNewSave = True
+    screen.newSaveNameInput = ""
+
+    screen.confirmNewSaveName()
+    assert screen.namingNewSave == False
+    assert screen.changeScreen == True
+    assert os.path.isdir(os.path.join(temp_saves_dir, "save_1"))
+
+
+def test_handleKeyDownEvent_escape_cancels_naming(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.namingNewSave = True
+    screen.newSaveNameInput = "test"
+
+    screen.handleKeyDownEvent(pygame.K_ESCAPE)
+    assert screen.namingNewSave == False
+    assert screen.changeScreen == False
+
+
+def test_handleKeyDownEvent_enter_confirms_naming(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.namingNewSave = True
+    screen.newSaveNameInput = "named_save"
+
+    screen.handleKeyDownEvent(pygame.K_RETURN)
+    assert screen.namingNewSave == False
+    assert screen.changeScreen == True
+    assert os.path.isdir(os.path.join(temp_saves_dir, "named_save"))
+
+
+def test_handleKeyDownEvent_backspace_in_naming(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.namingNewSave = True
+    screen.newSaveNameInput = "abc"
+
+    screen.handleKeyDownEvent(pygame.K_BACKSPACE)
+    assert screen.newSaveNameInput == "ab"
+
+
+def test_handleKeyDownEvent_keys_ignored_during_naming(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.namingNewSave = True
+
+    screen.handleKeyDownEvent(pygame.K_DOWN)
+    assert screen.scrollOffset == 0
+    screen.handleKeyDownEvent(pygame.K_UP)
+    assert screen.scrollOffset == 0

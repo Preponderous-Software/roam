@@ -68,10 +68,12 @@ logged in detail below.
 - Added `SAVE_SELECTION_SCREEN` to `ScreenType`.
 - Created `src/screen/saveSelectionScreen.py` implementing a save selection UI:
   - Lists existing save directories with name and last-played date.
-  - "New Game" button creates a new numbered save directory.
+  - "New Game" button opens a naming dialog to type a custom save name.
+  - Pressing Enter with an empty name auto-generates `save_1`, `save_2`, etc.
   - "Back" button returns to the main menu.
   - Displays a message when no save files exist.
-  - Supports keyboard scrolling (Up/Down) and Escape to go back.
+  - Supports keyboard scrolling (Up/Down) and mouse wheel scrolling.
+  - Escape to go back.
   - Matches visual style of other game screens.
 - Modified `MainMenuScreen` to navigate to Save Selection Screen instead of
   directly to World Screen.
@@ -83,6 +85,8 @@ logged in detail below.
   limit to prevent overlap with the bottom action buttons.
 - Added sort toggle button (date/name) to save selection screen.
 - Added delete save functionality with confirmation dialog.
+- Disabled underlying save/delete/bottom buttons when a dialog is active,
+  preventing accidental save entry when clicking delete.
 - Cached save directory scanning to avoid filesystem hits every frame.
 - Clamped scroll offset to prevent scrolling past end of save list.
 - Fixed busy-wait mouse release loop to handle QUIT events and use delay.
@@ -90,7 +94,7 @@ logged in detail below.
   non-directory entries.
 - Updated window caption when a save is selected.
 - Updated test to use `tmp_path` instead of hard-coded `/tmp` path.
-- Added 21 unit tests in `tests/screen/test_saveSelectionScreen.py`.
+- Added 31 unit tests in `tests/screen/test_saveSelectionScreen.py`.
 
 ### 2026-04-13 — Camera Mode: Follow Player
 - Added `cameraFollowPlayer` config option (default: `True`) to `Config`.
