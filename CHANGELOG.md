@@ -79,6 +79,9 @@ logged in detail below.
 - Added 'C' key toggle in `WorldScreen` for camera follow mode.
 - Added "camera follow player" toggle button in `ConfigScreen`.
 - Added unit tests for the new config option in `tests/config/test_config.py`.
+- Optimized rendering performance: cached `pygame.image.load` results in
+  `DrawableEntity`, cached `pygame.transform.scale` results in `Room`, and
+  added screen-bounds clipping to `drawWithOffset`.
 
 ### 2026-04-12 — Initial Copilot instructions created
 - Created `.github/copilot-instructions.md` with project context gathered

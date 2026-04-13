@@ -103,6 +103,7 @@ class WorldScreen:
         x, y = self.graphik.getGameDisplay().get_size()
         self.locationWidth = x / self.currentRoom.getGrid().getRows()
         self.locationHeight = y / self.currentRoom.getGrid().getColumns()
+        Room._scaledImageCache.clear()
 
     def getOrLoadRoom(self, x, y):
         room = self.map.getRoom(x, y)
@@ -922,6 +923,8 @@ class WorldScreen:
                     self.locationHeight,
                     roomOffsetX,
                     roomOffsetY,
+                    displayWidth,
+                    displayHeight,
                 )
 
     def draw(self):
