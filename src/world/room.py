@@ -39,6 +39,17 @@ class Room(Environment):
                 locationHeight + 2,
             )
 
+    def drawWithOffset(self, locationWidth, locationHeight, offsetX, offsetY):
+        for locationId in self.grid.getLocations():
+            location = self.grid.getLocation(locationId)
+            self.drawLocation(
+                location,
+                offsetX + location.getX() * locationWidth - 1,
+                offsetY + location.getY() * locationHeight - 1,
+                locationWidth + 2,
+                locationHeight + 2,
+            )
+
     # Draws a location at a specified position.
     def drawLocation(self, location, xPos, yPos, width, height):
         if location.getNumEntities() > 0:

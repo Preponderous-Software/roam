@@ -64,6 +64,22 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-13 — Camera Mode: Follow Player
+- Added `cameraFollowPlayer` config option (default: `False`) to `Config`.
+- Added `drawWithOffset` method to `Room` for rendering at arbitrary screen
+  positions.
+- Added `drawFollowMode` method to `WorldScreen` that renders multiple rooms
+  centered on the player, allowing cross-room visibility.
+- Modified `WorldScreen.draw()` to branch between follow mode and the
+  original room-at-a-time mode.
+- Updated `getLocationAtMousePosition` to account for camera offset in
+  follow mode.
+- Added `getOrLoadRoom` helper in `WorldScreen` for retrieving or generating
+  adjacent rooms.
+- Added 'C' key toggle in `WorldScreen` for camera follow mode.
+- Added "camera follow player" toggle button in `ConfigScreen`.
+- Added unit tests for the new config option in `tests/config/test_config.py`.
+
 ### 2026-04-12 — Initial Copilot instructions created
 - Created `.github/copilot-instructions.md` with project context gathered
   from repository inspection.

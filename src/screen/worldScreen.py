@@ -104,6 +104,31 @@ class WorldScreen:
         self.locationWidth = x / self.currentRoom.getGrid().getRows()
         self.locationHeight = y / self.currentRoom.getGrid().getColumns()
 
+    def getOrLoadRoom(self, x, y):
+        room = self.map.getRoom(x, y)
+        if room == -1:
+            nextRoomPath = (
+                self.config.pathToSaveDirectory
+                + "/rooms/room_"
+                + str(x)
+                + "_"
+                + str(y)
+                + ".json"
+            )
+            if os.path.exists(nextRoomPath):
+                roomJsonReaderWriter = RoomJsonReaderWriter(
+                    self.config.gridSize,
+                    self.graphik,
+                    self.tickCounter,
+                    self.config,
+                )
+                room = roomJsonReaderWriter.loadRoom(nextRoomPath)
+                self.map.addRoom(room)
+            else:
+                room = self.map.generateNewRoom(x, y)
+                self.stats.incrementRoomsExplored()
+        return room
+
     def printStatsToConsole(self):
         print("=== Stats ===")
         print("Rooms Explored: " + str(self.stats.getRoomsExplored()))
@@ -403,8 +428,25 @@ class WorldScreen:
 
     def getLocationAtMousePosition(self):
         x, y = pygame.mouse.get_pos()
-        x = int(x / self.locationWidth)
-        y = int(y / self.locationHeight)
+        if self.config.cameraFollowPlayer:
+            displayWidth = self.graphik.getGameDisplay().get_width()
+            displayHeight = self.graphik.getGameDisplay().get_height()
+            playerLocation = self.getLocationOfPlayer()
+            playerPixelX = (
+                playerLocation.getX() * self.locationWidth + self.locationWidth / 2
+            )
+            playerPixelY = (
+                playerLocation.getY() * self.locationHeight + self.locationHeight / 2
+            )
+            centerX = displayWidth / 2
+            centerY = displayHeight / 2
+            offsetX = centerX - playerPixelX
+            offsetY = centerY - playerPixelY
+            x = int((x - offsetX) / self.locationWidth)
+            y = int((y - offsetY) / self.locationHeight)
+        else:
+            x = int(x / self.locationWidth)
+            y = int(y / self.locationHeight)
         return self.currentRoom.getGrid().getLocationByCoordinates(x, y)
 
     def executeGatherAction(self):
@@ -607,6 +649,9 @@ class WorldScreen:
             # decrease minimap scale factor
             if self.minimapScaleFactor > 0:
                 self.minimapScaleFactor -= 0.1
+        elif key == pygame.K_c:
+            # toggle camera follow mode
+            self.config.cameraFollowPlayer = not self.config.cameraFollowPlayer
 
     def handleKeyUpEvent(self, key):
         if (
@@ -808,13 +853,87 @@ class WorldScreen:
             mapImage, (self.minimapX + 10, self.minimapY + 10)
         )
 
+    def drawFollowMode(self):
+        displayWidth = self.graphik.getGameDisplay().get_width()
+        displayHeight = self.graphik.getGameDisplay().get_height()
+
+        # get player position in current room grid
+        playerLocation = self.getLocationOfPlayer()
+        playerGridX = playerLocation.getX()
+        playerGridY = playerLocation.getY()
+        gridSize = self.config.gridSize
+
+        # calculate the pixel size of a single room
+        roomPixelWidth = gridSize * self.locationWidth
+        roomPixelHeight = gridSize * self.locationHeight
+
+        # calculate screen center
+        centerX = displayWidth / 2
+        centerY = displayHeight / 2
+
+        # world-pixel position of the player within the current room
+        playerPixelX = playerGridX * self.locationWidth + self.locationWidth / 2
+        playerPixelY = playerGridY * self.locationHeight + self.locationHeight / 2
+
+        # offset to center the current room's player on the screen center
+        baseOffsetX = centerX - playerPixelX
+        baseOffsetY = centerY - playerPixelY
+
+        # determine which neighboring rooms are visible
+        currentRoomX = self.currentRoom.getX()
+        currentRoomY = self.currentRoom.getY()
+
+        # calculate how many rooms could be visible in each direction
+        roomsLeft = int(centerX / roomPixelWidth) + 1
+        roomsRight = int(centerX / roomPixelWidth) + 1
+        roomsUp = int(centerY / roomPixelHeight) + 1
+        roomsDown = int(centerY / roomPixelHeight) + 1
+
+        self.graphik.getGameDisplay().fill(self.currentRoom.getBackgroundColor())
+
+        for dx in range(-roomsLeft, roomsRight + 1):
+            for dy in range(-roomsUp, roomsDown + 1):
+                roomX = currentRoomX + dx
+                roomY = currentRoomY + dy
+
+                # check world border
+                if self.config.worldBorder != 0 and (
+                    abs(roomX) > self.config.worldBorder
+                    or abs(roomY) > self.config.worldBorder
+                ):
+                    continue
+
+                # calculate screen offset for this room
+                roomOffsetX = baseOffsetX + dx * roomPixelWidth
+                roomOffsetY = baseOffsetY + dy * roomPixelHeight
+
+                # skip if the room is entirely off-screen
+                if (
+                    roomOffsetX + roomPixelWidth < 0
+                    or roomOffsetX > displayWidth
+                    or roomOffsetY + roomPixelHeight < 0
+                    or roomOffsetY > displayHeight
+                ):
+                    continue
+
+                room = self.getOrLoadRoom(roomX, roomY)
+                room.drawWithOffset(
+                    self.locationWidth,
+                    self.locationHeight,
+                    roomOffsetX,
+                    roomOffsetY,
+                )
+
     def draw(self):
         self.graphik.getGameDisplay().fill(self.currentRoom.getBackgroundColor())
 
         if self.config.showMiniMap and not self.isCurrentRoomSavedAsPNG():
             self.saveCurrentRoomAsPNG()
 
-        self.currentRoom.draw(self.locationWidth, self.locationHeight)
+        if self.config.cameraFollowPlayer:
+            self.drawFollowMode()
+        else:
+            self.currentRoom.draw(self.locationWidth, self.locationHeight)
         self.status.draw()
         self.energyBar.draw()
 
