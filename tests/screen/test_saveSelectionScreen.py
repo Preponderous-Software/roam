@@ -42,6 +42,8 @@ def test_initialization(temp_saves_dir):
     assert screen.nextScreen == ScreenType.MAIN_MENU_SCREEN
     assert screen.changeScreen == False
     assert screen.scrollOffset == 0
+    assert screen.sortMode == SaveSelectionScreen.SORT_BY_DATE
+    assert screen.confirmingDelete is None
 
 
 def test_getSaveDirectories_empty(temp_saves_dir):
@@ -51,8 +53,11 @@ def test_getSaveDirectories_empty(temp_saves_dir):
     assert saves == []
 
 
-def test_getSaveDirectories_nonexistent():
-    screen = createSaveSelectionScreen("/tmp/nonexistent_saves_dir_xyz")
+def test_getSaveDirectories_nonexistent(tmp_path):
+    nonexistentDir = tmp_path / "does_not_exist"
+    assert not nonexistentDir.exists()
+
+    screen = createSaveSelectionScreen(str(nonexistentDir))
 
     saves = screen.getSaveDirectories()
     assert saves == []
@@ -111,6 +116,17 @@ def test_createNewGame_increments_number(temp_saves_dir):
     assert screen.config.pathToSaveDirectory == os.path.join(temp_saves_dir, "save_2")
 
 
+def test_createNewGame_skips_non_directory(temp_saves_dir):
+    with open(os.path.join(temp_saves_dir, "save_1"), "w") as f:
+        f.write("not a directory")
+
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.createNewGame()
+
+    assert os.path.isdir(os.path.join(temp_saves_dir, "save_2"))
+    assert screen.config.pathToSaveDirectory == os.path.join(temp_saves_dir, "save_2")
+
+
 def test_switchToMainMenuScreen(temp_saves_dir):
     screen = createSaveSelectionScreen(temp_saves_dir)
 
@@ -127,10 +143,26 @@ def test_handleKeyDownEvent_escape(temp_saves_dir):
     assert screen.changeScreen == True
 
 
+def test_handleKeyDownEvent_escape_cancels_delete(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.confirmingDelete = "some/path"
+
+    screen.handleKeyDownEvent(pygame.K_ESCAPE)
+    assert screen.confirmingDelete is None
+    assert screen.changeScreen == False
+
+
 def test_handleKeyDownEvent_scroll(temp_saves_dir):
     screen = createSaveSelectionScreen(temp_saves_dir)
 
     assert screen.scrollOffset == 0
+    screen.handleKeyDownEvent(pygame.K_DOWN)
+    assert screen.scrollOffset == 0
+
+    for i in range(5):
+        os.makedirs(os.path.join(temp_saves_dir, "save_" + str(i + 1)))
+    screen.refreshSaveCache()
+
     screen.handleKeyDownEvent(pygame.K_DOWN)
     assert screen.scrollOffset == 1
     screen.handleKeyDownEvent(pygame.K_DOWN)
@@ -143,6 +175,86 @@ def test_handleKeyDownEvent_scroll(temp_saves_dir):
     assert screen.scrollOffset == 0
 
 
+def test_handleKeyDownEvent_scroll_clamped(temp_saves_dir):
+    os.makedirs(os.path.join(temp_saves_dir, "save_1"))
+    os.makedirs(os.path.join(temp_saves_dir, "save_2"))
+
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.refreshSaveCache()
+
+    for _ in range(10):
+        screen.handleKeyDownEvent(pygame.K_DOWN)
+
+    assert screen.scrollOffset == 1
+
+
 def test_screenType_has_save_selection():
     assert hasattr(ScreenType, "SAVE_SELECTION_SCREEN")
     assert ScreenType.SAVE_SELECTION_SCREEN == "save_selection_screen"
+
+
+def test_toggleSort(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+
+    assert screen.sortMode == SaveSelectionScreen.SORT_BY_DATE
+    screen.toggleSort()
+    assert screen.sortMode == SaveSelectionScreen.SORT_BY_NAME
+    screen.toggleSort()
+    assert screen.sortMode == SaveSelectionScreen.SORT_BY_DATE
+
+
+def test_sort_by_name(temp_saves_dir):
+    os.makedirs(os.path.join(temp_saves_dir, "beta_save"))
+    os.makedirs(os.path.join(temp_saves_dir, "alpha_save"))
+    os.makedirs(os.path.join(temp_saves_dir, "gamma_save"))
+
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.sortMode = SaveSelectionScreen.SORT_BY_NAME
+    saves = screen.getSaveDirectories()
+
+    names = [s["name"] for s in saves]
+    assert names == ["alpha_save", "beta_save", "gamma_save"]
+
+
+def test_deleteSave(temp_saves_dir):
+    savePath = os.path.join(temp_saves_dir, "save_to_delete")
+    os.makedirs(savePath)
+    assert os.path.isdir(savePath)
+
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.deleteSave(savePath)
+
+    assert not os.path.exists(savePath)
+    saves = screen.getSaveDirectories()
+    assert len(saves) == 0
+
+
+def test_deleteSave_adjusts_scroll(temp_saves_dir):
+    for i in range(3):
+        os.makedirs(os.path.join(temp_saves_dir, "save_" + str(i + 1)))
+
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.scrollOffset = 2
+
+    screen.deleteSave(os.path.join(temp_saves_dir, "save_3"))
+    assert screen.scrollOffset <= 1
+
+
+def test_requestDelete(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+
+    assert screen.confirmingDelete is None
+    screen._requestDelete("saves/my_save")
+    assert screen.confirmingDelete == "saves/my_save"
+
+
+def test_refreshSaveCache(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    saves = screen.getSaveDirectories()
+    assert len(saves) == 0
+
+    os.makedirs(os.path.join(temp_saves_dir, "new_save"))
+    assert len(screen.getSaveDirectories()) == 0
+
+    screen.refreshSaveCache()
+    assert len(screen.getSaveDirectories()) == 1
