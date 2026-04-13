@@ -94,6 +94,11 @@ logged in detail below.
   `test_config.py` to avoid leaking global state.
 - Added `DrawableEntity._imageCache` clearing on display resize to prevent
   stale Surface references after display mode changes.
+- Optimized `initializeLocationWidthAndHeight` to only clear the scaled image
+  cache when tile dimensions actually change, preventing unnecessary cache
+  invalidation on room transitions.
+- Removed redundant `fill()` call from `drawFollowMode` since `draw()` already
+  clears the screen.
 
 ### 2026-04-12 — Initial Copilot instructions created
 - Created `.github/copilot-instructions.md` with project context gathered

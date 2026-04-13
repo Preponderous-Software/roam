@@ -102,10 +102,21 @@ class WorldScreen:
 
     def initializeLocationWidthAndHeight(self):
         x, y = self.graphik.getGameDisplay().get_size()
-        self.locationWidth = x / self.currentRoom.getGrid().getRows()
-        self.locationHeight = y / self.currentRoom.getGrid().getColumns()
-        Room._scaledImageCache.clear()
-        DrawableEntity._imageCache.clear()
+        locationWidth = x / self.currentRoom.getGrid().getRows()
+        locationHeight = y / self.currentRoom.getGrid().getColumns()
+
+        locationSizeChanged = (
+            not hasattr(self, "locationWidth")
+            or not hasattr(self, "locationHeight")
+            or self.locationWidth != locationWidth
+            or self.locationHeight != locationHeight
+        )
+
+        self.locationWidth = locationWidth
+        self.locationHeight = locationHeight
+
+        if locationSizeChanged:
+            Room._scaledImageCache.clear()
 
     def getOrLoadRoom(self, x, y):
         room = self.map.getRoom(x, y)
@@ -872,8 +883,6 @@ class WorldScreen:
         roomsRight = int(centerX / roomPixelWidth) + 1
         roomsUp = int(centerY / roomPixelHeight) + 1
         roomsDown = int(centerY / roomPixelHeight) + 1
-
-        self.graphik.getGameDisplay().fill(self.currentRoom.getBackgroundColor())
 
         for dx in range(-roomsLeft, roomsRight + 1):
             for dy in range(-roomsUp, roomsDown + 1):
