@@ -44,18 +44,18 @@ class Room(Environment):
     def drawWithOffset(
         self, locationWidth, locationHeight, offsetX, offsetY, clipWidth=None, clipHeight=None
     ):
+        locWidth = locationWidth + 2
+        locHeight = locationHeight + 2
         for locationId in self.grid.getLocations():
             location = self.grid.getLocation(locationId)
             xPos = offsetX + location.getX() * locationWidth - 1
             yPos = offsetY + location.getY() * locationHeight - 1
-            w = locationWidth + 2
-            h = locationHeight + 2
             if clipWidth is not None:
-                if xPos + w < 0 or xPos > clipWidth:
+                if xPos + locWidth < 0 or xPos > clipWidth:
                     continue
-                if yPos + h < 0 or yPos > clipHeight:
+                if yPos + locHeight < 0 or yPos > clipHeight:
                     continue
-            self.drawLocation(location, xPos, yPos, w, h)
+            self.drawLocation(location, xPos, yPos, locWidth, locHeight)
 
     # Draws a location at a specified position.
     def drawLocation(self, location, xPos, yPos, width, height):
@@ -64,11 +64,13 @@ class Room(Environment):
             topEntityId = list(location.getEntities().keys())[-1]
             topEntity = location.getEntities()[topEntityId]
             imagePath = topEntity.getImagePath()
-            cacheKey = (imagePath, int(width), int(height))
+            scaledWidth = int(width)
+            scaledHeight = int(height)
+            cacheKey = (imagePath, scaledWidth, scaledHeight)
             if cacheKey not in Room._scaledImageCache:
                 image = topEntity.getImage()
                 Room._scaledImageCache[cacheKey] = pygame.transform.scale(
-                    image, (int(width), int(height))
+                    image, (scaledWidth, scaledHeight)
                 )
             self.graphik.gameDisplay.blit(
                 Room._scaledImageCache[cacheKey], (xPos, yPos)
