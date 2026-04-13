@@ -474,14 +474,7 @@ class WorldScreen:
         location, room = self.getLocationAndRoomAtMousePosition()
         return location
 
-    def executeGatherAction(self):
-        targetLocation, targetRoom = self.getLocationAndRoomAtMousePosition()
-
-        if targetLocation == -1:
-            self.status.set("no location available")
-            return
-
-        # if location too far away
+    def isLocationTooFar(self, targetLocation, targetRoom):
         distanceLimit = self.config.playerInteractionDistanceLimit
         playerLocation = self.getLocationOfPlayer()
         gridSize = self.config.gridSize
@@ -489,10 +482,19 @@ class WorldScreen:
         worldTargetY = targetRoom.getY() * gridSize + targetLocation.getY()
         worldPlayerX = self.currentRoom.getX() * gridSize + playerLocation.getX()
         worldPlayerY = self.currentRoom.getY() * gridSize + playerLocation.getY()
-        if (
+        return (
             abs(worldTargetX - worldPlayerX) > distanceLimit
             or abs(worldTargetY - worldPlayerY) > distanceLimit
-        ):
+        )
+
+    def executeGatherAction(self):
+        targetLocation, targetRoom = self.getLocationAndRoomAtMousePosition()
+
+        if targetLocation == -1:
+            self.status.set("no location available")
+            return
+
+        if self.isLocationTooFar(targetLocation, targetRoom):
             self.status.set("too far away")
             return
 
@@ -555,18 +557,7 @@ class WorldScreen:
             self.status.set("location blocked")
             return
 
-        # if location too far away
-        distanceLimit = self.config.playerInteractionDistanceLimit
-        playerLocation = self.getLocationOfPlayer()
-        gridSize = self.config.gridSize
-        worldTargetX = targetRoom.getX() * gridSize + targetLocation.getX()
-        worldTargetY = targetRoom.getY() * gridSize + targetLocation.getY()
-        worldPlayerX = self.currentRoom.getX() * gridSize + playerLocation.getX()
-        worldPlayerY = self.currentRoom.getY() * gridSize + playerLocation.getY()
-        if (
-            abs(worldTargetX - worldPlayerX) > distanceLimit
-            or abs(worldTargetY - worldPlayerY) > distanceLimit
-        ):
+        if self.isLocationTooFar(targetLocation, targetRoom):
             self.status.set("too far away")
             return
 
