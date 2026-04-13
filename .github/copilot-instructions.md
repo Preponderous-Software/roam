@@ -60,13 +60,25 @@ Roam is a single-player 2D survival game built with Python and Pygame. Players e
 - **Running tests:**
   - `python -m pytest` — run all tests.
   - `./test.sh` — run tests with verbose output and coverage report (generates `cov.xml`).
-- **pytest configuration:** `pytest.ini` adds `src` and `src/entity` to `pythonpath`.
+- **pytest configuration:** `pytest.ini` adds `.`, `src`, and `src/entity` to `pythonpath` — imports in tests resolve against these roots.
 - **Coverage:** pytest-cov generates a terminal and XML coverage report via `test.sh`.
+- **Headless Pygame:** CI sets `SDL_VIDEODRIVER=dummy` and `SDL_AUDIODRIVER=dummy`. Tests that call `pygame.init()` should use a pytest fixture to ensure `pygame.quit()` is called after the test, avoiding leaked global state.
+
+## CI/CD
+
+- **Workflow:** `.github/workflows/tests.yml` runs the `Tests` workflow.
+- **Triggers:** Push and pull request events targeting `main` or `master` branches.
+- **Environment:** Ubuntu latest, Python 3.12, with `SDL_VIDEODRIVER=dummy` and `SDL_AUDIODRIVER=dummy` for headless Pygame.
+- **Steps:** Installs dependencies (`pygame`, `pytest`, `pytest-cov`, `jsonschema`, `Pillow`), then runs `python -m pytest --verbose -vv --cov=src --cov-report=term-missing`.
+- **Required checks:** The `test` job must pass before merging.
 
 ## AI Agent Guidelines
 
 - Always read this file at the start of every session before making changes.
 - Update `CHANGELOG.md` after every session in which files are modified, noting the date and a brief description of what was changed.
+- Maintain the **Learning Log** section in `CHANGELOG.md`. Whenever you discover something about the repository that is not already documented — an undocumented convention, a non-obvious dependency, a gotcha, a useful pattern, or any context that would help a future AI agent work more effectively — append it to the learning log. This creates a feedback loop: insights gathered in one session inform every subsequent session.
+- Each learning log entry must include an integration status — either `[not yet integrated]` or `[integrated]` — indicating whether the insight has been incorporated into this file (`.github/copilot-instructions.md`). If you notice that these instructions already contain a lesson from the learning log that is still marked `[not yet integrated]`, update its status to `[integrated]`.
+- **Integrate learning log discoveries.** When writing or updating this file, review the Learning Log in `CHANGELOG.md` for entries marked `[not yet integrated]`. If an entry contains information that belongs here (e.g., an undocumented convention, a gotcha, or an implicit dependency), incorporate it into the appropriate section and update the entry's tag from `[not yet integrated]` to `[integrated]`.
 - Do not rename or restructure files without a clear reason documented in the change log.
 - Preserve existing conventions; do not introduce new patterns unless they are strictly necessary.
 - When in doubt about intent, stop and ask rather than guessing.

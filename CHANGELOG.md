@@ -108,8 +108,29 @@ logged in detail below.
 - Updated distance checks in gather/place actions to use world-grid coordinates
   for correct cross-room distance calculation.
 
+### 2026-04-13 — Copilot instructions & learning log enhancements
+- Added CI/CD section to `.github/copilot-instructions.md` documenting the
+  `Tests` workflow, triggers, environment, and required checks.
+- Expanded AI Agent Guidelines in `.github/copilot-instructions.md` with
+  learning log maintenance instructions, integration status tracking, and
+  feedback loop process.
+- Added Learning Log section to `CHANGELOG.md` with initial entries.
+
 ### 2026-04-12 — Initial Copilot instructions created
 - Created `.github/copilot-instructions.md` with project context gathered
   from repository inspection.
 - Created `CHANGELOG.md` with commit history summary and initial AI agent
   session entry.
+
+## Learning Log
+
+Insights discovered by AI agents during their sessions. Future agents
+should read this section before starting work — it captures context that
+may not be obvious from the code alone. When you learn something new
+about this repository, add it here so the next agent benefits.
+
+- 2026-04-13: `[integrated]` The CI workflow sets `SDL_VIDEODRIVER=dummy` and `SDL_AUDIODRIVER=dummy` to run Pygame in headless mode. Tests that initialize Pygame must account for this (e.g., use a pytest fixture for `pygame.init()`/`pygame.quit()`).
+- 2026-04-13: `[integrated]` `pytest.ini` adds `.`, `src`, and `src/entity` to `pythonpath` — imports in tests resolve against these roots.
+- 2026-04-13: `[not yet integrated]` The `requirements.txt` includes Django and several unrelated packages that are not used by the game itself; they appear to be leftover from the original development environment. Agents should not assume every listed dependency is required at runtime.
+- 2026-04-13: `[not yet integrated]` Room save/load uses JSON files validated against schemas in `schemas/`. When adding new persistent data, a matching JSON schema should be created or updated.
+- 2026-04-13: `[not yet integrated]` The `run.sh` script runs `git pull` before starting the game — it should not be used in CI or automated environments as it will attempt to fetch from the remote.
