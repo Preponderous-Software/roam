@@ -40,8 +40,8 @@ Roam is a single-player 2D survival game built with Python and Pygame. Players e
   - Classes use `PascalCase` (e.g., `DrawableEntity`, `RoomFactory`).
   - Methods and variables use `camelCase` (e.g., `getImagePath`, `livingEntities`).
   - Test functions use `snake_case` prefixed with `test_` (e.g., `test_initialization`).
-  - Source files use `camelCase` (e.g., `drawableEntity.py`, `roomFactory.py`).
-  - Test files mirror source names with a `test_` prefix (e.g., `test_drawableEntity.py`).
+  - Source files use lowercase for single-word modules (e.g., `apple.py`, `map.py`) and lowerCamelCase for multiword modules (e.g., `drawableEntity.py`, `roomFactory.py`).
+  - Test files mirror the source module name with a `test_` prefix (e.g., `test_apple.py`, `test_drawableEntity.py`).
 - **Indentation:** 4 spaces (Python standard).
 - **Formatting:** Code is formatted with Black and cleaned with autoflake. Run `./format.sh` to format.
 - **Docstrings/comments:** Author and date annotations appear as `# @author` / `# @since` comments above classes. Inline comments are used sparingly.
