@@ -67,5 +67,7 @@ class Map:
         return newRoom
 
     def addRoom(self, room):
-        self.rooms.append(room)
-        self._roomIndex[(room.getX(), room.getY())] = room
+        key = (room.getX(), room.getY())
+        if key not in self._roomIndex:
+            self.rooms.append(room)
+        self._roomIndex[key] = room
