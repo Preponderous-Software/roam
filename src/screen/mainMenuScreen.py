@@ -7,16 +7,15 @@ from screen.screenType import ScreenType
 
 # @author Daniel McCoy Stephenson
 class MainMenuScreen:
-    def __init__(self, graphik: Graphik, config: Config, initializeWorldScreen):
+    def __init__(self, graphik: Graphik, config: Config):
         self.graphik = graphik
         self.config = config
         self.running = True
-        self.initializeWorldScreen = initializeWorldScreen
-        self.nextScreen = ScreenType.WORLD_SCREEN
+        self.nextScreen = ScreenType.SAVE_SELECTION_SCREEN
         self.changeScreen = False
 
-    def switchToWorldScreen(self):
-        self.nextScreen = ScreenType.WORLD_SCREEN
+    def switchToSaveSelectionScreen(self):
+        self.nextScreen = ScreenType.SAVE_SELECTION_SCREEN
         self.changeScreen = True
 
     def switchToConfigScreen(self):
@@ -54,7 +53,7 @@ class MainMenuScreen:
             (0, 0, 0),
             30,
             "play",
-            self.switchToWorldScreen,
+            self.switchToSaveSelectionScreen,
         )
         ypos = ypos + height + margin
         self.graphik.drawButton(
@@ -96,7 +95,7 @@ class MainMenuScreen:
                 )
 
     def handleKeyDownEvent(self, key):
-        self.switchToWorldScreen()
+        self.switchToSaveSelectionScreen()
 
     def run(self):
         while not self.changeScreen:
@@ -113,6 +112,5 @@ class MainMenuScreen:
             self.drawMenuButtons()
             self.drawVersion()
             pygame.display.update()
-        self.initializeWorldScreen()
         self.changeScreen = False
         return self.nextScreen

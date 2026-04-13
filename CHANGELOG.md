@@ -64,6 +64,44 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-13 — Save Selection Screen
+- Added `SAVE_SELECTION_SCREEN` to `ScreenType`.
+- Created `src/screen/saveSelectionScreen.py` implementing a save selection UI:
+  - Lists existing save directories with name and last-played date.
+  - "New Game" button opens a naming dialog to type a custom save name.
+  - Pressing Enter with an empty name auto-generates `save_1`, `save_2`, etc.
+  - "Back" button returns to the main menu.
+  - Displays a message when no save files exist.
+  - Supports keyboard scrolling (Up/Down) and mouse wheel scrolling.
+  - Escape to go back.
+  - Matches visual style of other game screens.
+- Modified `MainMenuScreen` to navigate to Save Selection Screen instead of
+  directly to World Screen.
+- Modified `Roam` to handle the new `SAVE_SELECTION_SCREEN` type and pass
+  `initializeWorldScreen` to `SaveSelectionScreen`.
+- Fixed click pass-through from main menu "Play" button to save list by
+  waiting for mouse release at the start of `SaveSelectionScreen.run()`.
+- Adjusted save list layout: smaller button height and bounded bottom
+  limit to prevent overlap with the bottom action buttons.
+- Added sort toggle button (date/name) to save selection screen.
+- Added delete save functionality with confirmation dialog.
+- Disabled underlying save/delete/bottom buttons when a dialog is active,
+  preventing accidental save entry when clicking delete.
+- Cached save directory scanning to avoid filesystem hits every frame.
+- Clamped scroll offset to prevent scrolling past end of save list.
+- Fixed busy-wait mouse release loop to handle QUIT events and use delay.
+- Fixed `createNewGame` to use `os.path.exists` to avoid collisions with
+  non-directory entries.
+- Updated window caption when a save is selected.
+- Updated test to use `tmp_path` instead of hard-coded `/tmp` path.
+- Added 35 unit tests in `tests/screen/test_saveSelectionScreen.py`.
+- Added path traversal validation in `createNewGameWithName` to reject
+  names containing path separators, `..`, or absolute paths.
+- Added safety check in `deleteSave` to verify the target path is within
+  `savesBaseDirectory` before removal.
+- Fixed `checkForLivingEntityDeaths` in `worldScreen.py` to handle
+  missing entities in the removal loop using `removeLivingEntityById`.
+
 ### 2026-04-13 — Camera Mode: Follow Player
 - Added `cameraFollowPlayer` config option (default: `True`) to `Config`.
 - Added `drawWithOffset` method to `Room` for rendering at arbitrary screen

@@ -1253,13 +1253,16 @@ class WorldScreen:
             livingEntity = self.currentRoom.getEntity(livingEntityId)
             if livingEntity is None:
                 print("Error: living entity with id " + str(livingEntityId) + " not found in room. Removing from living entities list.")
-                self.currentRoom.removeLivingEntityById(livingEntityId)
+                toRemove.append(livingEntityId)
                 continue
             if livingEntity.getEnergy() == 0:
                 toRemove.append(livingEntityId)
 
         for livingEntityId in toRemove:
             livingEntity = self.currentRoom.getEntity(livingEntityId)
+            if livingEntity is None:
+                self.currentRoom.removeLivingEntityById(livingEntityId)
+                continue
             self.currentRoom.removeEntity(livingEntity)
             self.currentRoom.removeLivingEntity(livingEntity)
             if self.config.debug:
