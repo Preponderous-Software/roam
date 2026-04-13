@@ -282,7 +282,7 @@ class WorldScreen:
             )
             if os.path.exists(nextRoomPath):
                 roomJsonReaderWriter = RoomJsonReaderWriter(
-                    self.config.gridSize, self.graphik, self.tickCounter
+                    self.config.gridSize, self.graphik, self.tickCounter, self.config
                 )
                 room = roomJsonReaderWriter.loadRoom(nextRoomPath)
                 self.map.addRoom(room)
@@ -1333,7 +1333,7 @@ class WorldScreen:
                         )
                         if os.path.exists(nextRoomPath):
                             roomJsonReaderWriter = RoomJsonReaderWriter(
-                                self.config.gridSize, self.graphik, self.tickCounter
+                                self.config.gridSize, self.graphik, self.tickCounter, self.config
                             )
                             newRoom = roomJsonReaderWriter.loadRoom(nextRoomPath)
                             self.map.addRoom(newRoom)
