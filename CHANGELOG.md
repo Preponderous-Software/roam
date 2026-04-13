@@ -92,8 +92,9 @@ logged in detail below.
   handling.
 - Moved `pygame.init()`/`pygame.quit()` into a pytest fixture in
   `test_config.py` to avoid leaking global state.
-- Added `DrawableEntity._imageCache` clearing on display resize to prevent
-  stale Surface references after display mode changes.
+- Updated resize-related cache invalidation to clear `Room._scaledImageCache`
+  when tile dimensions change, preventing stale scaled Surface reuse after
+  display-size-driven tile resizing.
 - Optimized `initializeLocationWidthAndHeight` to only clear the scaled image
   cache when tile dimensions actually change, preventing unnecessary cache
   invalidation on room transitions.

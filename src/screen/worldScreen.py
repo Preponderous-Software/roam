@@ -10,7 +10,6 @@ from entity.apple import Apple
 from config.config import Config
 from entity.banana import Banana
 from entity.coalOre import CoalOre
-from entity.drawableEntity import DrawableEntity
 from entity.ironOre import IronOre
 from entity.jungleWood import JungleWood
 from entity.living.bear import Bear
