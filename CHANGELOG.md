@@ -64,6 +64,21 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-13 — Save Selection Screen
+- Added `SAVE_SELECTION_SCREEN` to `ScreenType`.
+- Created `src/screen/saveSelectionScreen.py` implementing a save selection UI:
+  - Lists existing save directories with name and last-played date.
+  - "New Game" button creates a new numbered save directory.
+  - "Back" button returns to the main menu.
+  - Displays a message when no save files exist.
+  - Supports keyboard scrolling (Up/Down) and Escape to go back.
+  - Matches visual style of other game screens.
+- Modified `MainMenuScreen` to navigate to Save Selection Screen instead of
+  directly to World Screen.
+- Modified `Roam` to handle the new `SAVE_SELECTION_SCREEN` type and pass
+  `initializeWorldScreen` to `SaveSelectionScreen`.
+- Added 12 unit tests in `tests/screen/test_saveSelectionScreen.py`.
+
 ### 2026-04-13 — Camera Mode: Follow Player
 - Added `cameraFollowPlayer` config option (default: `True`) to `Config`.
 - Added `drawWithOffset` method to `Room` for rendering at arbitrary screen

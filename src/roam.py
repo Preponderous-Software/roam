@@ -6,6 +6,7 @@ from screen.configScreen import ConfigScreen
 from screen.inventoryScreen import InventoryScreen
 from screen.mainMenuScreen import MainMenuScreen
 from screen.optionsScreen import OptionsScreen
+from screen.saveSelectionScreen import SaveSelectionScreen
 from screen.screenType import ScreenType
 from screen.statsScreen import StatsScreen
 from stats.stats import Stats
@@ -39,6 +40,9 @@ class Roam:
         )
         self.optionsScreen = OptionsScreen(self.graphik, self.config, self.status)
         self.mainMenuScreen = MainMenuScreen(
+            self.graphik, self.config
+        )
+        self.saveSelectionScreen = SaveSelectionScreen(
             self.graphik, self.config, self.initializeWorldScreen
         )
         self.statsScreen = StatsScreen(
@@ -83,6 +87,8 @@ class Roam:
                 self.inventoryScreen.setInventory(self.player.getInventory())
             elif result == ScreenType.CONFIG_SCREEN:
                 self.currentScreen = self.configScreen
+            elif result == ScreenType.SAVE_SELECTION_SCREEN:
+                self.currentScreen = self.saveSelectionScreen
             elif result == ScreenType.NONE:
                 self.quitApplication()
             else:
