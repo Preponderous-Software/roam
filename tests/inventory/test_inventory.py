@@ -119,3 +119,57 @@ def test_getFirstTenInventorySlots():
         inventoryInstance.getFirstTenInventorySlots()
         == inventoryInstance.getInventorySlots()[:10]
     )
+
+
+def test_mergeIntoSlot_full_merge():
+    inventoryInstance = createInventory()
+    sourceSlot = inventoryInstance.getInventorySlots()[0]
+    destSlot = inventoryInstance.getInventorySlots()[1]
+    for i in range(5):
+        sourceSlot.add(createGrassEntity())
+    for i in range(10):
+        destSlot.add(createGrassEntity())
+    inventoryInstance.mergeIntoSlot(sourceSlot, destSlot)
+    assert sourceSlot.getNumItems() == 0
+    assert destSlot.getNumItems() == 15
+
+
+def test_mergeIntoSlot_dest_full():
+    inventoryInstance = createInventory()
+    sourceSlot = inventoryInstance.getInventorySlots()[0]
+    destSlot = inventoryInstance.getInventorySlots()[1]
+    for i in range(5):
+        sourceSlot.add(createGrassEntity())
+    for i in range(20):
+        destSlot.add(createGrassEntity())
+    inventoryInstance.mergeIntoSlot(sourceSlot, destSlot)
+    assert sourceSlot.getNumItems() == 5
+    assert destSlot.getNumItems() == 20
+
+
+def test_mergeIntoSlot_partial_merge():
+    inventoryInstance = createInventory()
+    sourceSlot = inventoryInstance.getInventorySlots()[0]
+    destSlot = inventoryInstance.getInventorySlots()[1]
+    for i in range(10):
+        sourceSlot.add(createGrassEntity())
+    for i in range(15):
+        destSlot.add(createGrassEntity())
+    inventoryInstance.mergeIntoSlot(sourceSlot, destSlot)
+    assert destSlot.getNumItems() == 20
+    assert sourceSlot.getNumItems() == 5
+
+
+def test_mergeIntoSlot_different_types():
+    from src.entity.apple import Apple
+
+    inventoryInstance = createInventory()
+    sourceSlot = inventoryInstance.getInventorySlots()[0]
+    destSlot = inventoryInstance.getInventorySlots()[1]
+    for i in range(5):
+        sourceSlot.add(createGrassEntity())
+    for i in range(5):
+        destSlot.add(Apple())
+    inventoryInstance.mergeIntoSlot(sourceSlot, destSlot)
+    assert sourceSlot.getNumItems() == 5
+    assert destSlot.getNumItems() == 5
