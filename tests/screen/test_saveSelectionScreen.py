@@ -366,3 +366,36 @@ def test_handleKeyDownEvent_keys_ignored_during_naming(temp_saves_dir):
     assert screen.scrollOffset == 0
     screen.handleKeyDownEvent(pygame.K_UP)
     assert screen.scrollOffset == 0
+
+
+def test_createNewGameWithName_rejects_path_traversal(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+
+    screen.createNewGameWithName("../escape")
+    assert screen.changeScreen == False
+    assert not os.path.exists(os.path.join(temp_saves_dir, "../escape"))
+
+
+def test_createNewGameWithName_rejects_path_separator(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+
+    screen.createNewGameWithName("sub/dir")
+    assert screen.changeScreen == False
+
+
+def test_createNewGameWithName_rejects_empty(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+
+    screen.createNewGameWithName("")
+    assert screen.changeScreen == False
+
+
+def test_deleteSave_rejects_outside_base(temp_saves_dir):
+    outsidePath = os.path.join(temp_saves_dir, "..", "outside_save")
+    os.makedirs(outsidePath, exist_ok=True)
+
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.deleteSave(outsidePath)
+
+    assert os.path.exists(outsidePath)
+    shutil.rmtree(outsidePath)

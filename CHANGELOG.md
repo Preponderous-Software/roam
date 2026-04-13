@@ -94,7 +94,13 @@ logged in detail below.
   non-directory entries.
 - Updated window caption when a save is selected.
 - Updated test to use `tmp_path` instead of hard-coded `/tmp` path.
-- Added 31 unit tests in `tests/screen/test_saveSelectionScreen.py`.
+- Added 35 unit tests in `tests/screen/test_saveSelectionScreen.py`.
+- Added path traversal validation in `createNewGameWithName` to reject
+  names containing path separators, `..`, or absolute paths.
+- Added safety check in `deleteSave` to verify the target path is within
+  `savesBaseDirectory` before removal.
+- Fixed `checkForLivingEntityDeaths` in `worldScreen.py` to handle
+  missing entities in the removal loop using `removeLivingEntityById`.
 
 ### 2026-04-13 — Camera Mode: Follow Player
 - Added `cameraFollowPlayer` config option (default: `True`) to `Config`.

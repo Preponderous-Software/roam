@@ -1260,6 +1260,9 @@ class WorldScreen:
 
         for livingEntityId in toRemove:
             livingEntity = self.currentRoom.getEntity(livingEntityId)
+            if livingEntity is None:
+                self.currentRoom.removeLivingEntityById(livingEntityId)
+                continue
             self.currentRoom.removeEntity(livingEntity)
             self.currentRoom.removeLivingEntity(livingEntity)
             if self.config.debug:

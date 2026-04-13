@@ -71,7 +71,20 @@ class SaveSelectionScreen:
         self.namingNewSave = True
         self.newSaveNameInput = ""
 
+    def _isValidSaveName(self, name):
+        if not name or name != name.strip():
+            return False
+        if os.sep in name or "/" in name or "\\" in name:
+            return False
+        if ".." in name:
+            return False
+        if os.path.isabs(name):
+            return False
+        return True
+
     def createNewGameWithName(self, name):
+        if not self._isValidSaveName(name):
+            return
         if not os.path.exists(self.savesBaseDirectory):
             os.makedirs(self.savesBaseDirectory)
         newSavePath = os.path.join(self.savesBaseDirectory, name)
@@ -106,6 +119,11 @@ class SaveSelectionScreen:
         return newSaveName
 
     def deleteSave(self, savePath):
+        resolvedPath = os.path.realpath(savePath)
+        resolvedBase = os.path.realpath(self.savesBaseDirectory)
+        if not resolvedPath.startswith(resolvedBase + os.sep):
+            self.confirmingDelete = None
+            return
         if os.path.isdir(savePath):
             shutil.rmtree(savePath)
         self.confirmingDelete = None
