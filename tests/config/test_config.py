@@ -2,9 +2,16 @@ import os
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 import pygame
+import pytest
 
-pygame.init()
 from src.config.config import Config
+
+
+@pytest.fixture(scope="module", autouse=True)
+def init_pygame():
+    pygame.init()
+    yield
+    pygame.quit()
 
 
 def test_defaults():

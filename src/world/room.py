@@ -53,6 +53,7 @@ class Room(Environment):
             if clipWidth is not None:
                 if xPos + locWidth < 0 or xPos > clipWidth:
                     continue
+            if clipHeight is not None:
                 if yPos + locHeight < 0 or yPos > clipHeight:
                     continue
             self.drawLocation(location, xPos, yPos, locWidth, locHeight)

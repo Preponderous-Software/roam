@@ -9,6 +9,7 @@ from entity.apple import Apple
 from config.config import Config
 from entity.banana import Banana
 from entity.coalOre import CoalOre
+from entity.drawableEntity import DrawableEntity
 from entity.ironOre import IronOre
 from entity.jungleWood import JungleWood
 from entity.living.bear import Bear
@@ -104,30 +105,12 @@ class WorldScreen:
         self.locationWidth = x / self.currentRoom.getGrid().getRows()
         self.locationHeight = y / self.currentRoom.getGrid().getColumns()
         Room._scaledImageCache.clear()
+        DrawableEntity._imageCache.clear()
 
     def getOrLoadRoom(self, x, y):
         room = self.map.getRoom(x, y)
         if room == -1:
-            nextRoomPath = (
-                self.config.pathToSaveDirectory
-                + "/rooms/room_"
-                + str(x)
-                + "_"
-                + str(y)
-                + ".json"
-            )
-            if os.path.exists(nextRoomPath):
-                roomJsonReaderWriter = RoomJsonReaderWriter(
-                    self.config.gridSize,
-                    self.graphik,
-                    self.tickCounter,
-                    self.config,
-                )
-                room = roomJsonReaderWriter.loadRoom(nextRoomPath)
-                self.map.addRoom(room)
-            else:
-                room = self.map.generateNewRoom(x, y)
-                self.stats.incrementRoomsExplored()
+            room = self.map.generateNewRoom(x, y)
         return room
 
     def printStatsToConsole(self):
@@ -443,11 +426,11 @@ class WorldScreen:
             centerY = displayHeight / 2
             offsetX = centerX - playerPixelX
             offsetY = centerY - playerPixelY
-            x = int((x - offsetX) / self.locationWidth)
-            y = int((y - offsetY) / self.locationHeight)
+            x = int((x - offsetX) // self.locationWidth)
+            y = int((y - offsetY) // self.locationHeight)
         else:
-            x = int(x / self.locationWidth)
-            y = int(y / self.locationHeight)
+            x = int(x // self.locationWidth)
+            y = int(y // self.locationHeight)
         return self.currentRoom.getGrid().getLocationByCoordinates(x, y)
 
     def executeGatherAction(self):

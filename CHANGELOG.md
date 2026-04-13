@@ -82,6 +82,18 @@ logged in detail below.
 - Optimized rendering performance: cached `pygame.image.load` results in
   `DrawableEntity`, cached `pygame.transform.scale` results in `Room`, and
   added screen-bounds clipping to `drawWithOffset`.
+- Fixed `drawWithOffset` to guard `clipHeight` independently from `clipWidth`.
+- Simplified `getOrLoadRoom` to delegate room loading to `Map.getRoom`,
+  removing duplicate disk-loading logic.
+- Removed `roomsExplored` stat inflation from auto-generated neighbor rooms
+  in follow mode.
+- Fixed mouse coordinate mapping in `getLocationAtMousePosition` to use
+  floor division instead of `int()` truncation for correct negative-value
+  handling.
+- Moved `pygame.init()`/`pygame.quit()` into a pytest fixture in
+  `test_config.py` to avoid leaking global state.
+- Added `DrawableEntity._imageCache` clearing on display resize to prevent
+  stale Surface references after display mode changes.
 
 ### 2026-04-12 — Initial Copilot instructions created
 - Created `.github/copilot-instructions.md` with project context gathered
