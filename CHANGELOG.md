@@ -64,6 +64,17 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-13 — Inventory Stack Merging
+- Added `mergeIntoSlot(sourceSlot, destSlot)` method to `src/inventory/inventory.py`
+  that transfers items from source to destination up to the max stack size of 20.
+- Updated `swapCursorSlotWithInventorySlotByIndex` in `src/screen/inventoryScreen.py`
+  to merge stacks when cursor and target slot hold the same item type.
+- Updated `handleMouseClickEvent` in `src/screen/inventoryScreen.py` to merge
+  stacks on mouse click when cursor and target slot hold the same item type.
+- Existing swap behaviour preserved for empty or different-type slots.
+- Added 4 unit tests to `tests/inventory/test_inventory.py` covering full merge,
+  destination full, partial merge, and different-type no-merge scenarios.
+
 ### 2026-04-13 — Save Selection Screen
 - Added `SAVE_SELECTION_SCREEN` to `ScreenType`.
 - Created `src/screen/saveSelectionScreen.py` implementing a save selection UI:

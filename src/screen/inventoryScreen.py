@@ -8,6 +8,7 @@ from screen.screenType import ScreenType
 from ui.status import Status
 import pygame
 
+
 # @author Daniel McCoy Stephenson
 class InventoryScreen:
     def __init__(
@@ -30,16 +31,19 @@ class InventoryScreen:
         pygame.image.save(image, name)  # Save the image to the disk**
 
     def swapCursorSlotWithInventorySlotByIndex(self, index):
+        destSlot = self.inventory.getInventorySlots()[index]
         if self.cursorSlot.isEmpty():
-            self.cursorSlot.setContents(
-                self.inventory.getInventorySlots()[index].getContents()
-            )
-            self.inventory.getInventorySlots()[index].setContents([])
+            self.cursorSlot.setContents(destSlot.getContents())
+            destSlot.setContents([])
+        elif (
+            not destSlot.isEmpty()
+            and self.cursorSlot.getContents()[0].getName()
+            == destSlot.getContents()[0].getName()
+        ):
+            self.inventory.mergeIntoSlot(self.cursorSlot, destSlot)
         else:
-            temp = self.inventory.getInventorySlots()[index].getContents()
-            self.inventory.getInventorySlots()[index].setContents(
-                self.cursorSlot.getContents()
-            )
+            temp = destSlot.getContents()
+            destSlot.setContents(self.cursorSlot.getContents())
             self.cursorSlot.setContents(temp)
 
     def handleKeyDownEvent(self, key):
@@ -219,11 +223,19 @@ class InventoryScreen:
                     self.inventory.setSelectedInventorySlotIndex(index)
                     return
 
-                # move item from inventory slot to cursor slot
-                inventorySlotContents = inventorySlot.getContents()
-                cursorSlotContents = self.cursorSlot.getContents()
-                inventorySlot.setContents(cursorSlotContents)
-                self.cursorSlot.setContents(inventorySlotContents)
+                # merge matching cursor and inventory slot items, otherwise swap them
+                if (
+                    not self.cursorSlot.isEmpty()
+                    and not inventorySlot.isEmpty()
+                    and self.cursorSlot.getContents()[0].getName()
+                    == inventorySlot.getContents()[0].getName()
+                ):
+                    self.inventory.mergeIntoSlot(self.cursorSlot, inventorySlot)
+                else:
+                    inventorySlotContents = inventorySlot.getContents()
+                    cursorSlotContents = self.cursorSlot.getContents()
+                    inventorySlot.setContents(cursorSlotContents)
+                    self.cursorSlot.setContents(inventorySlotContents)
 
             column += 1
             if column == itemsPerRow:

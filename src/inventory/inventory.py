@@ -1,5 +1,6 @@
 from inventory.inventorySlot import InventorySlot
 
+
 # @author Daniel McCoy Stephenson
 class Inventory:
     def __init__(self):
@@ -88,6 +89,19 @@ class Inventory:
 
     def removeSelectedItem(self):
         return self.inventorySlots[self.selectedInventorySlotIndex].pop()
+
+    def mergeIntoSlot(self, sourceSlot, destSlot):
+        if sourceSlot.isEmpty() or destSlot.isEmpty():
+            return
+        sourceName = sourceSlot.getContents()[0].getName()
+        destName = destSlot.getContents()[0].getName()
+        if sourceName != destName:
+            return
+        maxStack = destSlot.getMaxStackSize()
+        available = maxStack - destSlot.getNumItems()
+        toTransfer = min(available, sourceSlot.getNumItems())
+        for _ in range(toTransfer):
+            destSlot.add(sourceSlot.pop())
 
     def getFirstTenInventorySlots(self):
         if len(self.inventorySlots) > 10:
