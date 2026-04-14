@@ -7,7 +7,9 @@ from config.config import Config
 from entity.apple import Apple
 from entity.banana import Banana
 from entity.bed import Bed
+from entity.campfire import Campfire
 from entity.coalOre import CoalOre
+from entity.fence import Fence
 from entity.food import Food
 from entity.grass import Grass
 from entity.ironOre import IronOre
@@ -18,6 +20,8 @@ from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
 from entity.oakWood import OakWood
 from entity.stone import Stone
+from entity.stoneBed import StoneBed
+from entity.stoneFloor import StoneFloor
 from entity.woodFloor import WoodFloor
 from lib.graphik.src.graphik import Graphik
 from lib.pyenvlib.grid import Grid
@@ -216,6 +220,18 @@ class RoomJsonReaderWriter:
             entity.setID(UUID(entityJson["id"]))
         elif entityClass == "Bed":
             entity = Bed()
+            entity.setID(UUID(entityJson["id"]))
+        elif entityClass == "StoneFloor":
+            entity = StoneFloor()
+            entity.setID(UUID(entityJson["id"]))
+        elif entityClass == "StoneBed":
+            entity = StoneBed()
+            entity.setID(UUID(entityJson["id"]))
+        elif entityClass == "Fence":
+            entity = Fence()
+            entity.setID(UUID(entityJson["id"]))
+        elif entityClass == "Campfire":
+            entity = Campfire()
             entity.setID(UUID(entityJson["id"]))
         elif entityClass == "Player":
             return None

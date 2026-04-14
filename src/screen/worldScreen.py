@@ -8,9 +8,11 @@ import jsonschema
 import pygame
 from entity.apple import Apple
 from entity.bed import Bed
+from entity.campfire import Campfire
 from config.config import Config
 from entity.banana import Banana
 from entity.coalOre import CoalOre
+from entity.fence import Fence
 from entity.ironOre import IronOre
 from entity.jungleWood import JungleWood
 from entity.living.bear import Bear
@@ -25,6 +27,8 @@ from lib.graphik.src.graphik import Graphik
 from entity.grass import Grass
 from lib.pyenvlib.grid import Grid
 from entity.stone import Stone
+from entity.stoneBed import StoneBed
+from entity.stoneFloor import StoneFloor
 from entity.leaves import Leaves
 from lib.pyenvlib.location import Location
 from world.room import Room
@@ -419,6 +423,10 @@ class WorldScreen:
             Banana,
             WoodFloor,
             Bed,
+            StoneFloor,
+            StoneBed,
+            Fence,
+            Campfire,
         ]
         for itemType in itemTypes:
             if isinstance(entity, itemType):

@@ -1,8 +1,14 @@
 from crafting.recipe import Recipe
+from entity.bed import Bed
+from entity.campfire import Campfire
+from entity.coalOre import CoalOre
+from entity.fence import Fence
+from entity.jungleWood import JungleWood
 from entity.oakWood import OakWood
 from entity.stone import Stone
+from entity.stoneBed import StoneBed
+from entity.stoneFloor import StoneFloor
 from entity.woodFloor import WoodFloor
-from entity.bed import Bed
 
 
 # @author Copilot
@@ -24,6 +30,38 @@ class RecipeRegistry:
                 {OakWood: 3, Stone: 2},
                 Bed,
                 "assets/images/bed.png",
+            )
+        )
+        self.recipes.append(
+            Recipe(
+                "Stone Floor",
+                {Stone: 4},
+                StoneFloor,
+                "assets/images/stoneFloor.png",
+            )
+        )
+        self.recipes.append(
+            Recipe(
+                "Stone Bed",
+                {Stone: 3, OakWood: 2},
+                StoneBed,
+                "assets/images/stoneBed.png",
+            )
+        )
+        self.recipes.append(
+            Recipe(
+                "Fence",
+                {JungleWood: 3},
+                Fence,
+                "assets/images/fence.png",
+            )
+        )
+        self.recipes.append(
+            Recipe(
+                "Campfire",
+                {OakWood: 2, CoalOre: 1},
+                Campfire,
+                "assets/images/campfire.png",
             )
         )
 

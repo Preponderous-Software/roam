@@ -83,6 +83,18 @@ logged in detail below.
   and registry validation.
 - Added WoodFloor and Bed to `canBePickedUp` in `src/screen/worldScreen.py`
   so players can pick up placed floors and furniture.
+- Created `src/entity/stoneFloor.py`, `src/entity/stoneBed.py`,
+  `src/entity/fence.py`, `src/entity/campfire.py` (new craftable entities).
+- Created placeholder assets: `assets/images/stoneFloor.png`,
+  `assets/images/stoneBed.png`, `assets/images/fence.png`,
+  `assets/images/campfire.png`.
+- Added 4 new recipes to `src/crafting/recipeRegistry.py`: Stone Floor
+  (4× Stone), Stone Bed (3× Stone + 2× Oak Wood), Fence (3× Jungle Wood),
+  Campfire (2× Oak Wood + 1× Coal Ore).
+- Updated `src/inventory/inventoryJsonReaderWriter.py` and
+  `src/world/roomJsonReaderWriter.py` for new entity save/load.
+- Added all new entities to `canBePickedUp` in `src/screen/worldScreen.py`.
+- Added 4 tests for new recipes in `tests/crafting/test_recipeRegistry.py`.
 
 ### 2026-04-13 — Inventory Stack Merging
 - Added `mergeIntoSlot(sourceSlot, destSlot)` method to `src/inventory/inventory.py`

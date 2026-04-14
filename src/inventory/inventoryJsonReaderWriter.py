@@ -6,7 +6,9 @@ import jsonschema
 from entity.apple import Apple
 from entity.banana import Banana
 from entity.bed import Bed
+from entity.campfire import Campfire
 from entity.coalOre import CoalOre
+from entity.fence import Fence
 from entity.food import Food
 from entity.grass import Grass
 from entity.ironOre import IronOre
@@ -17,6 +19,8 @@ from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
 from entity.oakWood import OakWood
 from entity.stone import Stone
+from entity.stoneBed import StoneBed
+from entity.stoneFloor import StoneFloor
 from entity.woodFloor import WoodFloor
 from inventory.inventory import Inventory
 
@@ -137,6 +141,22 @@ class InventoryJsonReaderWriter:
                     bed = Bed()
                     bed.setID(UUID(entityJson["entityId"]))
                     inventory.placeIntoFirstAvailableInventorySlot(bed)
+                elif entityClass == "StoneFloor":
+                    stoneFloor = StoneFloor()
+                    stoneFloor.setID(UUID(entityJson["entityId"]))
+                    inventory.placeIntoFirstAvailableInventorySlot(stoneFloor)
+                elif entityClass == "StoneBed":
+                    stoneBed = StoneBed()
+                    stoneBed.setID(UUID(entityJson["entityId"]))
+                    inventory.placeIntoFirstAvailableInventorySlot(stoneBed)
+                elif entityClass == "Fence":
+                    fence = Fence()
+                    fence.setID(UUID(entityJson["entityId"]))
+                    inventory.placeIntoFirstAvailableInventorySlot(fence)
+                elif entityClass == "Campfire":
+                    campfire = Campfire()
+                    campfire.setID(UUID(entityJson["entityId"]))
+                    inventory.placeIntoFirstAvailableInventorySlot(campfire)
                 else:
                     raise Exception(
                         "Unknown entity class: " + entityJson["entityClass"]
