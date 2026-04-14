@@ -64,6 +64,40 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-14 — Crafting System
+- Created `src/entity/woodFloor.py` (WoodFloor entity, solid=False).
+- Created `src/entity/bed.py` (Bed entity, solid=True).
+- Created `src/crafting/recipe.py` (Recipe class with canCraft/craft methods).
+- Created `src/crafting/recipeRegistry.py` (RecipeRegistry with Wood Floor
+  and Bed recipes).
+- Updated `src/screen/inventoryScreen.py` to add a Craft button and togglable
+  craft panel showing available recipes; greyed-out recipes when materials are
+  insufficient.
+- Updated `src/inventory/inventoryJsonReaderWriter.py` to handle WoodFloor
+  and Bed entities for save/load.
+- Updated `src/world/roomJsonReaderWriter.py` to handle WoodFloor and Bed
+  entities for room save/load.
+- Created placeholder assets: `assets/images/woodFloor.png` and
+  `assets/images/bed.png`.
+- Added 6 unit tests in `tests/crafting/` covering recipe canCraft, craft,
+  and registry validation.
+- Added WoodFloor and Bed to `canBePickedUp` in `src/screen/worldScreen.py`
+  so players can pick up placed floors and furniture.
+- Created `src/entity/stoneFloor.py`, `src/entity/stoneBed.py`,
+  `src/entity/fence.py`, `src/entity/campfire.py` (new craftable entities).
+- Created placeholder assets: `assets/images/stoneFloor.png`,
+  `assets/images/stoneBed.png`, `assets/images/fence.png`,
+  `assets/images/campfire.png`.
+- Added 4 new recipes to `src/crafting/recipeRegistry.py`: Stone Floor
+  (4× Stone), Stone Bed (3× Stone + 2× Oak Wood), Fence (3× Jungle Wood),
+  Campfire (2× Oak Wood + 1× Coal Ore).
+- Updated `src/inventory/inventoryJsonReaderWriter.py` and
+  `src/world/roomJsonReaderWriter.py` for new entity save/load.
+- Added all new entities to `canBePickedUp` in `src/screen/worldScreen.py`.
+- Added 4 tests for new recipes in `tests/crafting/test_recipeRegistry.py`.
+- Added 1-second cooldown to the Craft button toggle in
+  `src/screen/inventoryScreen.py` to prevent rapid toggling.
+
 ### 2026-04-13 — Inventory Stack Merging
 - Added `mergeIntoSlot(sourceSlot, destSlot)` method to `src/inventory/inventory.py`
   that transfers items from source to destination up to the max stack size of 20.
