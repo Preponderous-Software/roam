@@ -95,6 +95,8 @@ logged in detail below.
   `src/world/roomJsonReaderWriter.py` for new entity save/load.
 - Added all new entities to `canBePickedUp` in `src/screen/worldScreen.py`.
 - Added 4 tests for new recipes in `tests/crafting/test_recipeRegistry.py`.
+- Added 1-second cooldown to the Craft button toggle in
+  `src/screen/inventoryScreen.py` to prevent rapid toggling.
 
 ### 2026-04-13 — Inventory Stack Merging
 - Added `mergeIntoSlot(sourceSlot, destSlot)` method to `src/inventory/inventory.py`

@@ -1,5 +1,6 @@
 import datetime
 import os
+import time
 from config.config import Config
 from crafting.recipeRegistry import RecipeRegistry
 from inventory.inventory import Inventory
@@ -24,6 +25,7 @@ class InventoryScreen:
         self.cursorSlot = InventorySlot()
         self.craftPanelOpen = False
         self.recipeRegistry = RecipeRegistry()
+        self.lastCraftToggleTime = 0
 
     # @source https://stackoverflow.com/questions/63342477/how-to-take-screenshot-of-entire-display-pygame
     def captureScreen(self, name, pos, size):  # (pygame Surface, String, tuple, tuple)
@@ -179,6 +181,10 @@ class InventoryScreen:
         )
 
     def toggleCraftPanel(self):
+        now = time.time()
+        if now - self.lastCraftToggleTime < 1:
+            return
+        self.lastCraftToggleTime = now
         self.craftPanelOpen = not self.craftPanelOpen
 
     def drawCraftButton(self):
