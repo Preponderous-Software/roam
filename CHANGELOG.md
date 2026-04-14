@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-04-14 | 1 | feat: Add living entity drops — chickens and bears now drop meat items (ChickenMeat, BearMeat) on death instead of being eaten whole |
 | 2026-03-29 | 3 | docs: clarify single-player nature and no multiplayer plans; Initial plan |
 | 2025-08-17 | 1 | Merged #232 |
 | 2025-08-09 | 4 | Delete COPYRIGHT.md; Update README.md; Update LICENSE |

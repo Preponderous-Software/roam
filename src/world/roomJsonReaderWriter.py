@@ -6,8 +6,10 @@ import jsonschema
 from config.config import Config
 from entity.apple import Apple
 from entity.banana import Banana
+from entity.bearMeat import BearMeat
 from entity.bed import Bed
 from entity.campfire import Campfire
+from entity.chickenMeat import ChickenMeat
 from entity.coalOre import CoalOre
 from entity.fence import Fence
 from entity.food import Food
@@ -214,6 +216,12 @@ class RoomJsonReaderWriter:
             entity.setID(UUID(entityJson["id"]))
         elif entityClass == "Banana":
             entity = Banana()
+            entity.setID(UUID(entityJson["id"]))
+        elif entityClass == "ChickenMeat":
+            entity = ChickenMeat()
+            entity.setID(UUID(entityJson["id"]))
+        elif entityClass == "BearMeat":
+            entity = BearMeat()
             entity.setID(UUID(entityJson["id"]))
         elif entityClass == "WoodFloor":
             entity = WoodFloor()

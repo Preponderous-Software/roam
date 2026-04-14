@@ -5,8 +5,10 @@ from uuid import UUID
 import jsonschema
 from entity.apple import Apple
 from entity.banana import Banana
+from entity.bearMeat import BearMeat
 from entity.bed import Bed
 from entity.campfire import Campfire
+from entity.chickenMeat import ChickenMeat
 from entity.coalOre import CoalOre
 from entity.fence import Fence
 from entity.food import Food
@@ -133,6 +135,14 @@ class InventoryJsonReaderWriter:
                     banana = Banana()
                     banana.setID(UUID(entityJson["entityId"]))
                     inventory.placeIntoFirstAvailableInventorySlot(banana)
+                elif entityClass == "ChickenMeat":
+                    chickenMeat = ChickenMeat()
+                    chickenMeat.setID(UUID(entityJson["entityId"]))
+                    inventory.placeIntoFirstAvailableInventorySlot(chickenMeat)
+                elif entityClass == "BearMeat":
+                    bearMeat = BearMeat()
+                    bearMeat.setID(UUID(entityJson["entityId"]))
+                    inventory.placeIntoFirstAvailableInventorySlot(bearMeat)
                 elif entityClass == "WoodFloor":
                     woodFloor = WoodFloor()
                     woodFloor.setID(UUID(entityJson["entityId"]))

@@ -11,6 +11,8 @@ from entity.bed import Bed
 from entity.campfire import Campfire
 from config.config import Config
 from entity.banana import Banana
+from entity.bearMeat import BearMeat
+from entity.chickenMeat import ChickenMeat
 from entity.coalOre import CoalOre
 from entity.fence import Fence
 from entity.ironOre import IronOre
@@ -424,6 +426,8 @@ class WorldScreen:
             Chicken,
             Bear,
             Banana,
+            ChickenMeat,
+            BearMeat,
             WoodFloor,
             Bed,
             StoneFloor,
@@ -1390,6 +1394,21 @@ class WorldScreen:
             if livingEntity is None:
                 self.currentRoom.removeLivingEntityById(livingEntityId)
                 continue
+
+            # spawn meat at the living entity's location before removing it
+            locationId = livingEntity.getLocationID()
+            if locationId != -1:
+                try:
+                    location = self.currentRoom.getGrid().getLocation(locationId)
+                    if isinstance(livingEntity, Chicken):
+                        meat = ChickenMeat()
+                        self.currentRoom.addEntityToLocation(meat, location)
+                    elif isinstance(livingEntity, Bear):
+                        meat = BearMeat()
+                        self.currentRoom.addEntityToLocation(meat, location)
+                except Exception:
+                    pass
+
             self.currentRoom.removeEntity(livingEntity)
             self.currentRoom.removeLivingEntity(livingEntity)
             if self.config.debug:
