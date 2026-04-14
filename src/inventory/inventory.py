@@ -103,6 +103,19 @@ class Inventory:
         for _ in range(toTransfer):
             destSlot.add(sourceSlot.pop())
 
+    def placeIntoFirstAvailableNonHotbarSlot(self, item):
+        for inventorySlot in self.inventorySlots[10:]:
+            if inventorySlot.isEmpty():
+                inventorySlot.add(item)
+                return True
+            elif (
+                inventorySlot.getContents()[0].getName() == item.getName()
+                and inventorySlot.getNumItems() < inventorySlot.getMaxStackSize()
+            ):
+                inventorySlot.add(item)
+                return True
+        return False
+
     def getFirstTenInventorySlots(self):
         if len(self.inventorySlots) > 10:
             return self.inventorySlots[:10]

@@ -98,6 +98,27 @@ logged in detail below.
 - Added 1-second cooldown to the Craft button toggle in
   `src/screen/inventoryScreen.py` to prevent rapid toggling.
 
+### 2026-04-14 — Hotbar Mouse Interaction
+- Added direct hotbar mouse interaction to `src/screen/worldScreen.py`:
+  - Left-click a hotbar slot to pick up / swap / merge items via a cursor slot.
+  - Right-click a non-empty hotbar slot to move its contents to the first
+    available non-hotbar inventory slot.
+  - Right-click a hotbar slot while holding a cursor item to place it into
+    that slot (with swap or merge support).
+  - Clicking outside the hotbar while holding a cursor item returns it to
+    the inventory.
+  - Cursor items are returned to inventory when switching to the inventory
+    screen or exiting the world screen.
+- Added `cursorSlot` (InventorySlot) and `drawCursorSlot()` to WorldScreen
+  for visual drag-and-drop feedback.
+- Added `getHotbarSlotAtMousePosition()` to WorldScreen for hotbar hit
+  detection.
+- Added `returnCursorSlotToInventory()` helper to WorldScreen.
+- Added `placeIntoFirstAvailableNonHotbarSlot(item)` to
+  `src/inventory/inventory.py` for moving items out of the hotbar.
+- Added 3 unit tests to `tests/inventory/test_inventory.py` covering the
+  new `placeIntoFirstAvailableNonHotbarSlot` method.
+
 ### 2026-04-13 — Inventory Stack Merging
 - Added `mergeIntoSlot(sourceSlot, destSlot)` method to `src/inventory/inventory.py`
   that transfers items from source to destination up to the max stack size of 20.

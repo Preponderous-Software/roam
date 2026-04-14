@@ -19,6 +19,7 @@ from entity.living.bear import Bear
 from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
 from inventory.inventoryJsonReaderWriter import InventoryJsonReaderWriter
+from inventory.inventorySlot import InventorySlot
 from mapimage.mapImageUpdater import MapImageUpdater
 from screen.screenType import ScreenType
 from stats.stats import Stats
@@ -39,6 +40,7 @@ from player.player import Player
 from ui.status import Status
 from entity.oakWood import OakWood
 from entity.woodFloor import WoodFloor
+
 
 # @author Daniel McCoy Stephenson
 # @since August 16th, 2022
@@ -69,6 +71,7 @@ class WorldScreen:
         self.minimapScaleFactor = 0.10
         self.minimapX = 5
         self.minimapY = 5
+        self.cursorSlot = InventorySlot()
 
     def initialize(self):
         self.map = Map(
@@ -813,6 +816,7 @@ class WorldScreen:
             self.stats.incrementNumberOfDeaths()
 
     def switchToInventoryScreen(self):
+        self.returnCursorSlotToInventory()
         self.nextScreen = ScreenType.INVENTORY_SCREEN
         self.changeScreen = True
 
@@ -1084,13 +1088,120 @@ class WorldScreen:
         if self.config.showMiniMap and self.minimapScaleFactor > 0:
             self.drawMiniMap()
 
+        self.drawCursorSlot()
+
         pygame.display.update()
+
+    def getHotbarSlotAtMousePosition(self):
+        x, y = pygame.mouse.get_pos()
+        displayWidth = self.graphik.getGameDisplay().get_width()
+        displayHeight = self.graphik.getGameDisplay().get_height()
+        itemPreviewXPos = displayWidth / 2 - 50 * 5 - 50 / 2
+        itemPreviewYPos = displayHeight - 50 * 3
+        itemPreviewWidth = 50
+        itemPreviewHeight = 50
+        for i in range(10):
+            slotX = itemPreviewXPos + i * (itemPreviewWidth + 5)
+            if (
+                x >= slotX
+                and x < slotX + itemPreviewWidth
+                and y >= itemPreviewYPos
+                and y < itemPreviewYPos + itemPreviewHeight
+            ):
+                return i
+        return -1
+
+    def returnCursorSlotToInventory(self):
+        if self.cursorSlot.isEmpty():
+            return
+
+        remainingItems = []
+        for item in self.cursorSlot.getContents():
+            if not self.player.getInventory().placeIntoFirstAvailableInventorySlot(item):
+                remainingItems.append(item)
+
+        self.cursorSlot.setContents(remainingItems)
+        if len(remainingItems) > 0:
+            self.status.set("inventory full")
+
+    def drawCursorSlot(self):
+        if self.cursorSlot.isEmpty():
+            return
+        item = self.cursorSlot.getContents()[0]
+        image = item.getImage()
+        scaledImage = pygame.transform.scale(image, (50, 50))
+        self.graphik.gameDisplay.blit(scaledImage, pygame.mouse.get_pos())
+        numItems = self.cursorSlot.getNumItems()
+        if numItems > 1:
+            mouseX, mouseY = pygame.mouse.get_pos()
+            self.graphik.drawText(
+                str(numItems),
+                mouseX + 30,
+                mouseY + 30,
+                20,
+                (255, 255, 255),
+            )
 
     def handleMouseDownEvent(self):
         if self.showInventory:
             # disallow player to interact with the world while inventory is open
             self.status.set("close inventory to interact with the world")
             return
+
+        hotbarIndex = self.getHotbarSlotAtMousePosition()
+        if hotbarIndex != -1:
+            inventory = self.player.getInventory()
+            hotbarSlot = inventory.getInventorySlots()[hotbarIndex]
+            if pygame.mouse.get_pressed()[2]:  # right click
+                if not self.cursorSlot.isEmpty():
+                    # place cursor item into clicked hotbar slot
+                    if hotbarSlot.isEmpty():
+                        hotbarSlot.setContents(self.cursorSlot.getContents())
+                        self.cursorSlot.setContents([])
+                    elif (
+                        self.cursorSlot.getContents()[0].getName()
+                        == hotbarSlot.getContents()[0].getName()
+                    ):
+                        inventory.mergeIntoSlot(self.cursorSlot, hotbarSlot)
+                    else:
+                        temp = hotbarSlot.getContents()
+                        hotbarSlot.setContents(self.cursorSlot.getContents())
+                        self.cursorSlot.setContents(temp)
+                elif not hotbarSlot.isEmpty():
+                    # move hotbar item to first available non-hotbar inventory slot
+                    items = list(hotbarSlot.getContents())
+                    hotbarSlot.setContents([])
+                    remaining = []
+                    for item in items:
+                        if not inventory.placeIntoFirstAvailableNonHotbarSlot(item):
+                            remaining.append(item)
+                    if len(remaining) > 0:
+                        hotbarSlot.setContents(remaining)
+                        self.status.set("inventory full")
+                    else:
+                        self.status.set("moved item to inventory")
+            elif pygame.mouse.get_pressed()[0]:  # left click
+                if self.cursorSlot.isEmpty():
+                    if not hotbarSlot.isEmpty():
+                        self.cursorSlot.setContents(hotbarSlot.getContents())
+                        hotbarSlot.setContents([])
+                elif (
+                    not hotbarSlot.isEmpty()
+                    and self.cursorSlot.getContents()[0].getName()
+                    == hotbarSlot.getContents()[0].getName()
+                ):
+                    inventory.mergeIntoSlot(self.cursorSlot, hotbarSlot)
+                else:
+                    temp = hotbarSlot.getContents()
+                    hotbarSlot.setContents(self.cursorSlot.getContents())
+                    self.cursorSlot.setContents(temp)
+            return
+
+        if not self.cursorSlot.isEmpty():
+            # clicking outside hotbar with cursor item returns it to inventory
+            self.returnCursorSlotToInventory()
+            return
+
         if pygame.mouse.get_pressed()[0]:  # left click
             self.player.setGathering(True)
         elif pygame.mouse.get_pressed()[2]:  # right click
@@ -1264,7 +1375,11 @@ class WorldScreen:
         for livingEntityId in self.currentRoom.getLivingEntities():
             livingEntity = self.currentRoom.getEntity(livingEntityId)
             if livingEntity is None:
-                print("Error: living entity with id " + str(livingEntityId) + " not found in room. Removing from living entities list.")
+                print(
+                    "Error: living entity with id "
+                    + str(livingEntityId)
+                    + " not found in room. Removing from living entities list."
+                )
                 toRemove.append(livingEntityId)
                 continue
             if livingEntity.getEnergy() == 0:
@@ -1352,7 +1467,10 @@ class WorldScreen:
                         )
                         if os.path.exists(nextRoomPath):
                             roomJsonReaderWriter = RoomJsonReaderWriter(
-                                self.config.gridSize, self.graphik, self.tickCounter, self.config
+                                self.config.gridSize,
+                                self.graphik,
+                                self.tickCounter,
+                                self.config,
                             )
                             newRoom = roomJsonReaderWriter.loadRoom(nextRoomPath)
                             self.map.addRoom(newRoom)
@@ -1432,6 +1550,7 @@ class WorldScreen:
         if not os.path.exists(self.config.pathToSaveDirectory):
             os.makedirs(self.config.pathToSaveDirectory)
 
+        self.returnCursorSlotToInventory()
         self.save()
 
         self.changeScreen = False

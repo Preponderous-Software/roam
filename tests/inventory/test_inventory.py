@@ -173,3 +173,36 @@ def test_mergeIntoSlot_different_types_no_merge():
     inventoryInstance.mergeIntoSlot(sourceSlot, destSlot)
     assert sourceSlot.getNumItems() == 5
     assert destSlot.getNumItems() == 5
+
+
+def test_placeIntoFirstAvailableNonHotbarSlot_empty_inventory():
+    inventoryInstance = createInventory()
+    item = createGrassEntity()
+    result = inventoryInstance.placeIntoFirstAvailableNonHotbarSlot(item)
+    assert result is True
+    # should be placed in slot 10 (first non-hotbar slot)
+    assert inventoryInstance.getInventorySlots()[10].getNumItems() == 1
+    # first 10 slots should be empty
+    for i in range(10):
+        assert inventoryInstance.getInventorySlots()[i].isEmpty()
+
+
+def test_placeIntoFirstAvailableNonHotbarSlot_stacks_with_matching():
+    inventoryInstance = createInventory()
+    slot10 = inventoryInstance.getInventorySlots()[10]
+    slot10.add(createGrassEntity())
+    item = createGrassEntity()
+    result = inventoryInstance.placeIntoFirstAvailableNonHotbarSlot(item)
+    assert result is True
+    assert slot10.getNumItems() == 2
+
+
+def test_placeIntoFirstAvailableNonHotbarSlot_non_hotbar_full():
+    inventoryInstance = createInventory()
+    # fill all non-hotbar slots (slots 10-24)
+    for i in range(10, 25):
+        for j in range(20):
+            inventoryInstance.getInventorySlots()[i].add(createGrassEntity())
+    item = createGrassEntity()
+    result = inventoryInstance.placeIntoFirstAvailableNonHotbarSlot(item)
+    assert result is False
