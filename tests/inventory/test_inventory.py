@@ -160,7 +160,7 @@ def test_mergeIntoSlot_partial_merge():
     assert sourceSlot.getNumItems() == 5
 
 
-def test_mergeIntoSlot_different_types():
+def test_mergeIntoSlot_different_types_no_merge():
     from src.entity.apple import Apple
 
     inventoryInstance = createInventory()

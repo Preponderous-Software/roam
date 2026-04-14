@@ -223,7 +223,7 @@ class InventoryScreen:
                     self.inventory.setSelectedInventorySlotIndex(index)
                     return
 
-                # move item from inventory slot to cursor slot
+                # merge matching cursor and inventory slot items, otherwise swap them
                 if (
                     not self.cursorSlot.isEmpty()
                     and not inventorySlot.isEmpty()

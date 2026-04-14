@@ -93,12 +93,14 @@ class Inventory:
     def mergeIntoSlot(self, sourceSlot, destSlot):
         if sourceSlot.isEmpty() or destSlot.isEmpty():
             return
-        if sourceSlot.getContents()[0].getName() != destSlot.getContents()[0].getName():
+        sourceName = sourceSlot.getContents()[0].getName()
+        destName = destSlot.getContents()[0].getName()
+        if sourceName != destName:
             return
         maxStack = destSlot.getMaxStackSize()
         available = maxStack - destSlot.getNumItems()
         toTransfer = min(available, sourceSlot.getNumItems())
-        for i in range(toTransfer):
+        for _ in range(toTransfer):
             destSlot.add(sourceSlot.pop())
 
     def getFirstTenInventorySlots(self):
