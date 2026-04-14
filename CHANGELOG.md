@@ -81,6 +81,8 @@ logged in detail below.
   `assets/images/bed.png`.
 - Added 6 unit tests in `tests/crafting/` covering recipe canCraft, craft,
   and registry validation.
+- Added WoodFloor and Bed to `canBePickedUp` in `src/screen/worldScreen.py`
+  so players can pick up placed floors and furniture.
 
 ### 2026-04-13 — Inventory Stack Merging
 - Added `mergeIntoSlot(sourceSlot, destSlot)` method to `src/inventory/inventory.py`

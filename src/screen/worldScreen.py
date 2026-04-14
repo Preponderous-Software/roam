@@ -7,6 +7,7 @@ import time
 import jsonschema
 import pygame
 from entity.apple import Apple
+from entity.bed import Bed
 from config.config import Config
 from entity.banana import Banana
 from entity.coalOre import CoalOre
@@ -33,6 +34,7 @@ from world.map import Map
 from player.player import Player
 from ui.status import Status
 from entity.oakWood import OakWood
+from entity.woodFloor import WoodFloor
 
 # @author Daniel McCoy Stephenson
 # @since August 16th, 2022
@@ -415,6 +417,8 @@ class WorldScreen:
             Chicken,
             Bear,
             Banana,
+            WoodFloor,
+            Bed,
         ]
         for itemType in itemTypes:
             if isinstance(entity, itemType):
