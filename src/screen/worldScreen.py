@@ -1112,10 +1112,17 @@ class WorldScreen:
         return -1
 
     def returnCursorSlotToInventory(self):
-        if not self.cursorSlot.isEmpty():
-            for item in self.cursorSlot.getContents():
-                self.player.getInventory().placeIntoFirstAvailableInventorySlot(item)
-            self.cursorSlot.setContents([])
+        if self.cursorSlot.isEmpty():
+            return
+
+        remainingItems = []
+        for item in self.cursorSlot.getContents():
+            if not self.player.getInventory().placeIntoFirstAvailableInventorySlot(item):
+                remainingItems.append(item)
+
+        self.cursorSlot.setContents(remainingItems)
+        if len(remainingItems) > 0:
+            self.status.set("inventory full")
 
     def drawCursorSlot(self):
         if self.cursorSlot.isEmpty():
