@@ -1407,7 +1407,13 @@ class WorldScreen:
                         meat = BearMeat()
                         self.currentRoom.addEntityToLocation(meat, location)
                 except Exception:
-                    pass
+                    if self.config.debug:
+                        print(
+                            "ERROR: Could not spawn meat for "
+                            + livingEntity.getName()
+                            + " at location "
+                            + str(locationId)
+                        )
 
             self.currentRoom.removeEntity(livingEntity)
             self.currentRoom.removeLivingEntity(livingEntity)
