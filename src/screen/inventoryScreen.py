@@ -1,6 +1,7 @@
 import datetime
 import os
 from config.config import Config
+from crafting.recipeRegistry import RecipeRegistry
 from inventory.inventory import Inventory
 from inventory.inventorySlot import InventorySlot
 from lib.graphik.src.graphik import Graphik
@@ -21,6 +22,8 @@ class InventoryScreen:
         self.nextScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = False
         self.cursorSlot = InventorySlot()
+        self.craftPanelOpen = False
+        self.recipeRegistry = RecipeRegistry()
 
     # @source https://stackoverflow.com/questions/63342477/how-to-take-screenshot-of-entire-display-pygame
     def captureScreen(self, name, pos, size):  # (pygame Surface, String, tuple, tuple)
@@ -175,6 +178,104 @@ class InventoryScreen:
             (255, 255, 255),
         )
 
+    def toggleCraftPanel(self):
+        self.craftPanelOpen = not self.craftPanelOpen
+
+    def drawCraftButton(self):
+        backgroundX = self.graphik.getGameDisplay().get_width() / 4
+        backgroundY = self.graphik.getGameDisplay().get_height() / 4
+        backgroundWidth = self.graphik.getGameDisplay().get_width() / 2
+        backgroundHeight = self.graphik.getGameDisplay().get_height() / 2
+        buttonWidth = 100
+        buttonHeight = 30
+        buttonX = backgroundX + backgroundWidth - buttonWidth
+        buttonY = backgroundY + backgroundHeight + 20
+        self.graphik.drawButton(
+            buttonX,
+            buttonY,
+            buttonWidth,
+            buttonHeight,
+            (255, 255, 255),
+            (0, 0, 0),
+            20,
+            "Craft",
+            self.toggleCraftPanel,
+        )
+
+    def getCraftPanelRect(self):
+        backgroundX = self.graphik.getGameDisplay().get_width() / 4
+        backgroundY = self.graphik.getGameDisplay().get_height() / 4
+        backgroundWidth = self.graphik.getGameDisplay().get_width() / 2
+        backgroundHeight = self.graphik.getGameDisplay().get_height() / 2
+        panelX = backgroundX + backgroundWidth + 10
+        panelY = backgroundY
+        panelWidth = backgroundWidth * 0.6
+        panelHeight = backgroundHeight
+        return panelX, panelY, panelWidth, panelHeight
+
+    def drawCraftPanel(self):
+        if not self.craftPanelOpen:
+            return
+
+        panelX, panelY, panelWidth, panelHeight = self.getCraftPanelRect()
+        self.graphik.drawRectangle(panelX, panelY, panelWidth, panelHeight, (0, 0, 0))
+
+        self.graphik.drawText(
+            "Recipes",
+            panelX + panelWidth / 2,
+            panelY + 20,
+            24,
+            (255, 255, 255),
+        )
+
+        recipes = self.recipeRegistry.getRecipes()
+        recipeButtonHeight = 40
+        recipeMargin = 10
+        startY = panelY + 50
+
+        for i, recipe in enumerate(recipes):
+            recipeY = startY + i * (recipeButtonHeight + recipeMargin)
+            ingredientText = ", ".join(
+                [
+                    str(count) + "x " + cls.__name__
+                    for cls, count in recipe.getIngredients().items()
+                ]
+            )
+            label = recipe.getName() + " (" + ingredientText + ")"
+
+            if recipe.canCraft(self.inventory):
+                self.graphik.drawButton(
+                    panelX + recipeMargin,
+                    recipeY,
+                    panelWidth - 2 * recipeMargin,
+                    recipeButtonHeight,
+                    (255, 255, 255),
+                    (0, 0, 0),
+                    16,
+                    label,
+                    lambda r=recipe: self.craftRecipe(r),
+                )
+            else:
+                self.graphik.drawRectangle(
+                    panelX + recipeMargin,
+                    recipeY,
+                    panelWidth - 2 * recipeMargin,
+                    recipeButtonHeight,
+                    (80, 80, 80),
+                )
+                self.graphik.drawText(
+                    label,
+                    panelX + panelWidth / 2,
+                    recipeY + recipeButtonHeight / 2,
+                    16,
+                    (150, 150, 150),
+                )
+
+    def craftRecipe(self, recipe):
+        result = recipe.craft(self.inventory)
+        if result is not None:
+            self.inventory.placeIntoFirstAvailableInventorySlot(result)
+
     def drawBackButton(self):
         x, y = self.graphik.getGameDisplay().get_size()
         width = 100
@@ -264,6 +365,8 @@ class InventoryScreen:
 
             self.graphik.getGameDisplay().fill((0, 0, 0))
             self.drawPlayerInventory()
+            self.drawCraftButton()
+            self.drawCraftPanel()
             self.drawBackButton()
             self.drawCursorSlot()
             pygame.display.update()

@@ -64,6 +64,24 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-14 — Crafting System
+- Created `src/entity/woodFloor.py` (WoodFloor entity, solid=False).
+- Created `src/entity/bed.py` (Bed entity, solid=True).
+- Created `src/crafting/recipe.py` (Recipe class with canCraft/craft methods).
+- Created `src/crafting/recipeRegistry.py` (RecipeRegistry with Wood Floor
+  and Bed recipes).
+- Updated `src/screen/inventoryScreen.py` to add a Craft button and togglable
+  craft panel showing available recipes; greyed-out recipes when materials are
+  insufficient.
+- Updated `src/inventory/inventoryJsonReaderWriter.py` to handle WoodFloor
+  and Bed entities for save/load.
+- Updated `src/world/roomJsonReaderWriter.py` to handle WoodFloor and Bed
+  entities for room save/load.
+- Created placeholder assets: `assets/images/woodFloor.png` and
+  `assets/images/bed.png`.
+- Added 6 unit tests in `tests/crafting/` covering recipe canCraft, craft,
+  and registry validation.
+
 ### 2026-04-13 — Inventory Stack Merging
 - Added `mergeIntoSlot(sourceSlot, destSlot)` method to `src/inventory/inventory.py`
   that transfers items from source to destination up to the max stack size of 20.

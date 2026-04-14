@@ -5,6 +5,7 @@ from uuid import UUID
 import jsonschema
 from entity.apple import Apple
 from entity.banana import Banana
+from entity.bed import Bed
 from entity.coalOre import CoalOre
 from entity.food import Food
 from entity.grass import Grass
@@ -16,6 +17,7 @@ from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
 from entity.oakWood import OakWood
 from entity.stone import Stone
+from entity.woodFloor import WoodFloor
 from inventory.inventory import Inventory
 
 
@@ -127,6 +129,14 @@ class InventoryJsonReaderWriter:
                     banana = Banana()
                     banana.setID(UUID(entityJson["entityId"]))
                     inventory.placeIntoFirstAvailableInventorySlot(banana)
+                elif entityClass == "WoodFloor":
+                    woodFloor = WoodFloor()
+                    woodFloor.setID(UUID(entityJson["entityId"]))
+                    inventory.placeIntoFirstAvailableInventorySlot(woodFloor)
+                elif entityClass == "Bed":
+                    bed = Bed()
+                    bed.setID(UUID(entityJson["entityId"]))
+                    inventory.placeIntoFirstAvailableInventorySlot(bed)
                 else:
                     raise Exception(
                         "Unknown entity class: " + entityJson["entityClass"]
