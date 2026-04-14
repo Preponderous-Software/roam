@@ -251,6 +251,8 @@ class RoomJsonReaderWriter:
             entity.setTickCreated(entityJson["tickCreated"])
             entity.setTickLastReproduced(entityJson["tickLastReproduced"])
             entity.setImagePath(entityJson["imagePath"])
+        elif isinstance(entity, Food) and "energy" in entityJson:
+            entity.setEnergy(entityJson["energy"])
 
         entity.setEnvironmentID(UUID(entityJson["environmentId"]))
         entity.setGridID(UUID(entityJson["gridId"]))

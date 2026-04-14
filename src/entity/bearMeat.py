@@ -2,7 +2,6 @@ import random
 from entity.food import Food
 
 
-# @author Copilot
 # @since April 14th, 2026
 class BearMeat(Food):
     def __init__(self):

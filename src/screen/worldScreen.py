@@ -1397,7 +1397,7 @@ class WorldScreen:
 
             # spawn meat at the living entity's location before removing it
             locationId = livingEntity.getLocationID()
-            if locationId != -1:
+            if str(locationId) != "-1":
                 try:
                     location = self.currentRoom.getGrid().getLocation(locationId)
                     if isinstance(livingEntity, Chicken):
@@ -1406,13 +1406,15 @@ class WorldScreen:
                     elif isinstance(livingEntity, Bear):
                         meat = BearMeat()
                         self.currentRoom.addEntityToLocation(meat, location)
-                except Exception:
+                except KeyError as ex:
                     if self.config.debug:
                         print(
                             "ERROR: Could not spawn meat for "
                             + livingEntity.getName()
                             + " at location "
                             + str(locationId)
+                            + ": "
+                            + str(ex)
                         )
 
             self.currentRoom.removeEntity(livingEntity)

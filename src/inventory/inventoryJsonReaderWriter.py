@@ -138,10 +138,14 @@ class InventoryJsonReaderWriter:
                 elif entityClass == "ChickenMeat":
                     chickenMeat = ChickenMeat()
                     chickenMeat.setID(UUID(entityJson["entityId"]))
+                    if "energy" in entityJson:
+                        chickenMeat.setEnergy(entityJson["energy"])
                     inventory.placeIntoFirstAvailableInventorySlot(chickenMeat)
                 elif entityClass == "BearMeat":
                     bearMeat = BearMeat()
                     bearMeat.setID(UUID(entityJson["entityId"]))
+                    if "energy" in entityJson:
+                        bearMeat.setEnergy(entityJson["energy"])
                     inventory.placeIntoFirstAvailableInventorySlot(bearMeat)
                 elif entityClass == "WoodFloor":
                     woodFloor = WoodFloor()
