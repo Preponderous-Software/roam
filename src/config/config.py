@@ -18,6 +18,7 @@ class Config:
         self.ticksPerSecond = 30
         self.gridSize = 17
         self.worldBorder = 0  # 0 = no border
+        self.excrementDecayTicks = 30 * 60 * 2  # 2 minutes at 30 tps
         self.pathToSaveDirectory = "saves/defaultsavefile"
 
         # dynamic (can be changed in game)

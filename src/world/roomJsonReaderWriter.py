@@ -11,6 +11,7 @@ from entity.bed import Bed
 from entity.campfire import Campfire
 from entity.chickenMeat import ChickenMeat
 from entity.coalOre import CoalOre
+from entity.excrement import Excrement
 from entity.fence import Fence
 from entity.food import Food
 from entity.grass import Grass
@@ -123,6 +124,8 @@ class RoomJsonReaderWriter:
             entityJson["tickCreated"] = entity.getTickCreated()
             entityJson["tickLastReproduced"] = entity.getTickLastReproduced()
             entityJson["imagePath"] = entity.getImagePath()
+        elif isinstance(entity, Excrement):
+            entityJson["tickCreated"] = entity.getTickCreated()
         return entityJson
 
     # generate room methods
@@ -240,6 +243,9 @@ class RoomJsonReaderWriter:
             entity.setID(UUID(entityJson["id"]))
         elif entityClass == "Campfire":
             entity = Campfire()
+            entity.setID(UUID(entityJson["id"]))
+        elif entityClass == "Excrement":
+            entity = Excrement(entityJson["tickCreated"])
             entity.setID(UUID(entityJson["id"]))
         elif entityClass == "Player":
             return None
