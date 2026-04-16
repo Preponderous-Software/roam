@@ -581,7 +581,10 @@ class WorldScreen:
         )
 
         if pushDestination == -1:
-            return False
+            # stone is at a room border, try to push into adjacent room
+            return self.tryPushStoneToAdjacentRoom(
+                stoneEntity, location, direction
+            )
 
         if self.locationContainsSolidEntity(pushDestination):
             return False
@@ -589,6 +592,56 @@ class WorldScreen:
         # push the stone
         location.removeEntity(stoneEntity)
         pushDestination.addEntity(stoneEntity)
+        return True
+
+    def tryPushStoneToAdjacentRoom(self, stoneEntity, location, direction):
+        # compute adjacent room coordinates based on push direction
+        roomX = self.currentRoom.getX()
+        roomY = self.currentRoom.getY()
+        if direction == 0:
+            roomY -= 1
+        elif direction == 1:
+            roomX -= 1
+        elif direction == 2:
+            roomY += 1
+        elif direction == 3:
+            roomX += 1
+
+        # check world border
+        if self.config.worldBorder != 0 and (
+            abs(roomX) > self.config.worldBorder
+            or abs(roomY) > self.config.worldBorder
+        ):
+            return False
+
+        adjacentRoom = self.getOrLoadRoom(roomX, roomY)
+
+        # compute entry location on the opposite side of the adjacent room
+        maxCoord = self.config.gridSize - 1
+        targetX = location.getX()
+        targetY = location.getY()
+        if direction == 0:
+            targetY = maxCoord
+        elif direction == 1:
+            targetX = maxCoord
+        elif direction == 2:
+            targetY = 0
+        elif direction == 3:
+            targetX = 0
+
+        targetLocation = adjacentRoom.getGrid().getLocationByCoordinates(
+            targetX, targetY
+        )
+
+        if targetLocation == -1:
+            return False
+
+        if self.locationContainsSolidEntity(targetLocation):
+            return False
+
+        # push stone into adjacent room
+        location.removeEntity(stoneEntity)
+        targetLocation.addEntity(stoneEntity)
         return True
 
     def executePlaceAction(self):
