@@ -66,6 +66,15 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-16 — Read Config Values from `config.yml`
+- Added root-level `config.yml` with default configuration values.
+- Updated `src/config/config.py` to load configuration values from
+  `config.yml` at startup with fallback defaults when values/files are missing.
+- Added config parsing helpers to support booleans, numbers, lists/tuples, and
+  strings from the config file.
+- Added `test_reads_values_from_config_file` in `tests/config/test_config.py`
+  to verify file-based configuration loading.
+
 ### 2026-04-16 — Excrement Spawning and Grass Decay
 - Created `src/entity/excrement.py` (Excrement entity, `solid=False`,
   stores `tickCreated` for decay tracking).

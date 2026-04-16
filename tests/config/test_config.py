@@ -33,3 +33,29 @@ def test_toggle_camera_follow_player():
     assert config.cameraFollowPlayer == False
     config.cameraFollowPlayer = True
     assert config.cameraFollowPlayer == True
+
+
+def test_reads_values_from_config_file(tmp_path, monkeypatch):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text(
+        (
+            "debug: false\n"
+            "fullscreen: true\n"
+            "cameraFollowPlayer: false\n"
+            "playerMovementEnergyCost: 0.75\n"
+            "pathToSaveDirectory: saves/custom\n"
+        ),
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
+
+    config = Config()
+
+    assert config.debug == False
+    assert config.fullscreen == True
+    assert config.cameraFollowPlayer == False
+    assert config.playerMovementEnergyCost == 0.75
+    assert config.pathToSaveDirectory == "saves/custom"
