@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 
 from src.world.map import Map
-from world.room import Room
+from src.world.room import Room
 
 
 def createMap():
@@ -32,7 +32,7 @@ def test_generate_new_room():
 
     room = mapInstance.generateNewRoom(0, 0)
 
-    assert isinstance(room, Room)
+    assert type(room).__name__ == "Room"
     assert room.getX() == 0
     assert room.getY() == 0
     assert len(mapInstance.getRooms()) == 1

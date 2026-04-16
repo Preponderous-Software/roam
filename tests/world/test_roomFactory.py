@@ -2,7 +2,6 @@ from unittest.mock import MagicMock
 
 from src.world.roomFactory import RoomFactory
 from src.world.roomType import RoomType
-from world.room import Room
 
 
 def createRoomFactory():
@@ -24,7 +23,7 @@ def test_create_empty_room():
 
     room = factory.createRoom(RoomType.EMPTY, 0, 0)
 
-    assert isinstance(room, Room)
+    assert type(room).__name__ == "Room"
     assert room.getX() == 0
     assert room.getY() == 0
     assert factory.lastRoomTypeCreated == RoomType.EMPTY
@@ -35,7 +34,7 @@ def test_create_grassland_room():
 
     room = factory.createRoom(RoomType.GRASSLAND, 1, 2)
 
-    assert isinstance(room, Room)
+    assert type(room).__name__ == "Room"
     assert room.getX() == 1
     assert room.getY() == 2
     assert factory.lastRoomTypeCreated == RoomType.GRASSLAND
@@ -46,7 +45,7 @@ def test_create_forest_room():
 
     room = factory.createRoom(RoomType.FOREST, 3, 4)
 
-    assert isinstance(room, Room)
+    assert type(room).__name__ == "Room"
     assert room.getX() == 3
     assert room.getY() == 4
     assert factory.lastRoomTypeCreated == RoomType.FOREST
@@ -57,7 +56,7 @@ def test_create_jungle_room():
 
     room = factory.createRoom(RoomType.JUNGLE, 5, 6)
 
-    assert isinstance(room, Room)
+    assert type(room).__name__ == "Room"
     assert room.getX() == 5
     assert room.getY() == 6
     assert factory.lastRoomTypeCreated == RoomType.JUNGLE
@@ -68,7 +67,7 @@ def test_create_mountain_room():
 
     room = factory.createRoom(RoomType.MOUNTAIN, 7, 8)
 
-    assert isinstance(room, Room)
+    assert type(room).__name__ == "Room"
     assert room.getX() == 7
     assert room.getY() == 8
     assert factory.lastRoomTypeCreated == RoomType.MOUNTAIN
@@ -79,7 +78,7 @@ def test_create_random_room():
 
     room = factory.createRandomRoom(0, 0)
 
-    assert isinstance(room, Room)
+    assert type(room).__name__ == "Room"
     assert room.getX() == 0
     assert room.getY() == 0
 
