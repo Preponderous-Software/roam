@@ -1,6 +1,5 @@
 # @author Daniel McCoy Stephenson
 # @since August 6th, 2022
-import ast
 from pathlib import Path
 
 import pygame
@@ -20,9 +19,23 @@ class Config:
             return False
         if lowerValue == "none" or lowerValue == "null":
             return None
+        if (
+            (value.startswith('"') and value.endswith('"'))
+            or (value.startswith("'") and value.endswith("'"))
+        ):
+            return value[1:-1]
+        if value.startswith("[") and value.endswith("]"):
+            listText = value[1:-1].strip()
+            if listText == "":
+                return []
+            return [Config.parseConfigValue(item.strip()) for item in listText.split(",")]
         try:
-            return ast.literal_eval(value)
-        except (ValueError, SyntaxError):
+            return int(value)
+        except ValueError:
+            pass
+        try:
+            return float(value)
+        except ValueError:
             return value
 
     @classmethod

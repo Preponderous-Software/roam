@@ -44,6 +44,7 @@ def test_reads_values_from_config_file(tmp_path, monkeypatch):
             "cameraFollowPlayer: false\n"
             "playerMovementEnergyCost: 0.75\n"
             "pathToSaveDirectory: saves/custom\n"
+            "black: [1, 2, 3]\n"
         ),
         encoding="utf-8",
     )
@@ -54,8 +55,9 @@ def test_reads_values_from_config_file(tmp_path, monkeypatch):
 
     config = Config()
 
-    assert config.debug == False
-    assert config.fullscreen == True
-    assert config.cameraFollowPlayer == False
+    assert not config.debug
+    assert config.fullscreen
+    assert not config.cameraFollowPlayer
     assert config.playerMovementEnergyCost == 0.75
     assert config.pathToSaveDirectory == "saves/custom"
+    assert config.black == (1, 2, 3)
