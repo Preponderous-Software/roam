@@ -224,9 +224,7 @@ class RoomJsonReaderWriter:
         return entity
 
     def _parseBackgroundColor(self, backgroundColorText):
-        colorParts = (
-            backgroundColorText.replace("(", "").replace(")", "").split(",")
-        )
+        colorParts = backgroundColorText.replace("(", "").replace(")", "").split(",")
         red = int(colorParts[0])
         green = int(colorParts[1])
         blue = int(colorParts[2])

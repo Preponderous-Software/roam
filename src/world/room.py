@@ -46,7 +46,13 @@ class Room(Environment):
             )
 
     def drawWithOffset(
-        self, locationWidth, locationHeight, offsetX, offsetY, clipWidth=None, clipHeight=None
+        self,
+        locationWidth,
+        locationHeight,
+        offsetX,
+        offsetY,
+        clipWidth=None,
+        clipHeight=None,
     ):
         locWidth = locationWidth + 2
         locHeight = locationHeight + 2
