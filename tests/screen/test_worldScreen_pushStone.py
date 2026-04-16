@@ -8,7 +8,6 @@ from unittest.mock import MagicMock
 
 from entity.stone import Stone
 from entity.oakWood import OakWood
-from lib.pyenvlib.location import Location
 from lib.pyenvlib.grid import Grid
 from world.room import Room
 
@@ -114,6 +113,36 @@ def test_tryPushStone_no_stone():
     assert loc1.isEntityPresent(wood)
 
 
+def test_tryPushStone_stone_with_other_solid():
+    ws = createWorldScreen()
+    ws.config.pushableStone = True
+
+    grid = Grid(3, 1)
+    loc1 = grid.getLocationByCoordinates(1, 0)
+    loc2 = grid.getLocationByCoordinates(2, 0)
+
+    stone = Stone()
+    loc1.addEntity(stone)
+
+    # also add a non-stone solid to the same location
+    wood = OakWood()
+    loc1.addEntity(wood)
+
+    room = MagicMock()
+    room.getGrid.return_value = grid
+    ws.currentRoom = room
+
+    # tryPushStone succeeds (stone is moved), but location still has a solid
+    result = ws.tryPushStone(loc1, 3)
+
+    assert result == True
+    assert not loc1.isEntityPresent(stone)
+    assert loc2.isEntityPresent(stone)
+    # the wood remains, so the location still contains a solid entity
+    assert loc1.isEntityPresent(wood)
+    assert ws.locationContainsSolidEntity(loc1)
+
+
 def test_tryPushStone_cross_room_right():
     ws = createWorldScreen()
     ws.config.pushableStone = True
@@ -126,6 +155,7 @@ def test_tryPushStone_cross_room_right():
 
     # mock getOrLoadRoom to return the adjacent room
     ws.getOrLoadRoom = MagicMock(return_value=adjacentRoom)
+    ws.saveRoomToFile = MagicMock()
 
     # place stone at rightmost column (border)
     loc = currentRoom.getGrid().getLocationByCoordinates(2, 0)
@@ -138,6 +168,7 @@ def test_tryPushStone_cross_room_right():
     assert result == True
     assert not loc.isEntityPresent(stone)
     ws.getOrLoadRoom.assert_called_once_with(1, 0)
+    ws.saveRoomToFile.assert_called_once_with(adjacentRoom)
     # stone should be at x=0 (left side) of adjacent room, same y
     targetLoc = adjacentRoom.getGrid().getLocationByCoordinates(0, 0)
     assert targetLoc.isEntityPresent(stone)
@@ -154,6 +185,7 @@ def test_tryPushStone_cross_room_left():
     ws.currentRoom = currentRoom
 
     ws.getOrLoadRoom = MagicMock(return_value=adjacentRoom)
+    ws.saveRoomToFile = MagicMock()
 
     loc = currentRoom.getGrid().getLocationByCoordinates(0, 1)
     stone = Stone()
@@ -165,6 +197,7 @@ def test_tryPushStone_cross_room_left():
     assert result == True
     assert not loc.isEntityPresent(stone)
     ws.getOrLoadRoom.assert_called_once_with(-1, 0)
+    ws.saveRoomToFile.assert_called_once_with(adjacentRoom)
     targetLoc = adjacentRoom.getGrid().getLocationByCoordinates(2, 1)
     assert targetLoc.isEntityPresent(stone)
 
@@ -180,6 +213,7 @@ def test_tryPushStone_cross_room_up():
     ws.currentRoom = currentRoom
 
     ws.getOrLoadRoom = MagicMock(return_value=adjacentRoom)
+    ws.saveRoomToFile = MagicMock()
 
     loc = currentRoom.getGrid().getLocationByCoordinates(1, 0)
     stone = Stone()
@@ -191,6 +225,7 @@ def test_tryPushStone_cross_room_up():
     assert result == True
     assert not loc.isEntityPresent(stone)
     ws.getOrLoadRoom.assert_called_once_with(0, -1)
+    ws.saveRoomToFile.assert_called_once_with(adjacentRoom)
     targetLoc = adjacentRoom.getGrid().getLocationByCoordinates(1, 2)
     assert targetLoc.isEntityPresent(stone)
 
@@ -206,6 +241,7 @@ def test_tryPushStone_cross_room_down():
     ws.currentRoom = currentRoom
 
     ws.getOrLoadRoom = MagicMock(return_value=adjacentRoom)
+    ws.saveRoomToFile = MagicMock()
 
     loc = currentRoom.getGrid().getLocationByCoordinates(1, 2)
     stone = Stone()
@@ -217,6 +253,7 @@ def test_tryPushStone_cross_room_down():
     assert result == True
     assert not loc.isEntityPresent(stone)
     ws.getOrLoadRoom.assert_called_once_with(0, 1)
+    ws.saveRoomToFile.assert_called_once_with(adjacentRoom)
     targetLoc = adjacentRoom.getGrid().getLocationByCoordinates(1, 0)
     assert targetLoc.isEntityPresent(stone)
 

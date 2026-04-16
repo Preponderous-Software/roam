@@ -384,7 +384,8 @@ class WorldScreen:
 
         if self.locationContainsSolidEntity(newLocation):
             if self.config.pushableStone and self.tryPushStone(newLocation, direction):
-                pass  # stone was pushed, continue with movement
+                if self.locationContainsSolidEntity(newLocation):
+                    return
             else:
                 return
 
@@ -642,6 +643,7 @@ class WorldScreen:
         # push stone into adjacent room
         location.removeEntity(stoneEntity)
         targetLocation.addEntity(stoneEntity)
+        self.saveRoomToFile(adjacentRoom)
         return True
 
     def executePlaceAction(self):
