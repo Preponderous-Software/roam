@@ -1,3 +1,4 @@
+import random
 from unittest.mock import MagicMock
 
 from src.world.roomFactory import RoomFactory
@@ -100,6 +101,7 @@ def test_create_room_name():
 
 
 def test_spawn_grass():
+    random.seed(42)
     factory = createRoomFactory()
     room = factory.createEmptyRoom((0, 0, 0), 0, 0)
 
@@ -135,6 +137,7 @@ def test_last_room_type_updated():
 
 
 def test_create_grass_room_has_entities():
+    random.seed(42)
     factory = createRoomFactory()
 
     room = factory.createGrassRoom(0, 0)
