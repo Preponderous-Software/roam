@@ -60,6 +60,8 @@ class Room(Environment):
 
     # Draws a location at a specified position.
     def drawLocation(self, location, xPos, yPos, width, height):
+        # always draw background color first (needed for entities with transparent images)
+        self.graphik.drawRectangle(xPos, yPos, width, height, self.backgroundColor)
         if location.getNumEntities() > 0:
             # draw texture
             topEntityId = list(location.getEntities().keys())[-1]
@@ -76,9 +78,6 @@ class Room(Environment):
             self.graphik.gameDisplay.blit(
                 Room._scaledImageCache[cacheKey], (xPos, yPos)
             )
-        else:
-            # draw background color
-            self.graphik.drawRectangle(xPos, yPos, width, height, self.backgroundColor)
 
     def addLivingEntity(self, entity):
         self.livingEntities[entity.getID()] = entity

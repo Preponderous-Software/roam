@@ -5,8 +5,10 @@ from uuid import UUID
 import jsonschema
 from entity.apple import Apple
 from entity.banana import Banana
+from entity.bearMeat import BearMeat
 from entity.bed import Bed
 from entity.campfire import Campfire
+from entity.chickenMeat import ChickenMeat
 from entity.coalOre import CoalOre
 from entity.fence import Fence
 from entity.food import Food
@@ -86,6 +88,8 @@ class InventoryJsonReaderWriter:
                 if entityClass == "Apple":
                     apple = Apple()
                     apple.setID(UUID(entityJson["entityId"]))
+                    if "energy" in entityJson:
+                        apple.setEnergy(entityJson["energy"])
                     inventory.placeIntoFirstAvailableInventorySlot(apple)
                 elif entityClass == "CoalOre":
                     coalOre = CoalOre()
@@ -132,7 +136,21 @@ class InventoryJsonReaderWriter:
                 elif entityClass == "Banana":
                     banana = Banana()
                     banana.setID(UUID(entityJson["entityId"]))
+                    if "energy" in entityJson:
+                        banana.setEnergy(entityJson["energy"])
                     inventory.placeIntoFirstAvailableInventorySlot(banana)
+                elif entityClass == "ChickenMeat":
+                    chickenMeat = ChickenMeat()
+                    chickenMeat.setID(UUID(entityJson["entityId"]))
+                    if "energy" in entityJson:
+                        chickenMeat.setEnergy(entityJson["energy"])
+                    inventory.placeIntoFirstAvailableInventorySlot(chickenMeat)
+                elif entityClass == "BearMeat":
+                    bearMeat = BearMeat()
+                    bearMeat.setID(UUID(entityJson["entityId"]))
+                    if "energy" in entityJson:
+                        bearMeat.setEnergy(entityJson["energy"])
+                    inventory.placeIntoFirstAvailableInventorySlot(bearMeat)
                 elif entityClass == "WoodFloor":
                     woodFloor = WoodFloor()
                     woodFloor.setID(UUID(entityJson["entityId"]))

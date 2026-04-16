@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-04-14 | 1 | feat: Add living entity drops — chickens and bears now drop meat items (ChickenMeat, BearMeat) on death instead of being eaten whole |
 | 2026-03-29 | 3 | docs: clarify single-player nature and no multiplayer plans; Initial plan |
 | 2025-08-17 | 1 | Merged #232 |
 | 2025-08-09 | 4 | Delete COPYRIGHT.md; Update README.md; Update LICENSE |
@@ -63,6 +64,30 @@ logged in detail below.
 | 2022-08-08 | 21 | Create version.txt; Update README.md; Modified README. (+9 more) |
 
 ## AI Agent Sessions
+
+### 2026-04-14 — Meat Drops on Entity Death
+- Created `src/entity/chickenMeat.py` (ChickenMeat food entity, energy 15–25).
+- Created `src/entity/bearMeat.py` (BearMeat food entity, energy 25–35).
+- Created placeholder assets: `assets/images/chickenMeat.png` and
+  `assets/images/bearMeat.png` (32×32 RGBA sprites).
+- Updated `src/screen/worldScreen.py`:
+  - `checkForLivingEntityDeaths()` spawns meat at dying entity location.
+  - Added ChickenMeat/BearMeat to `canBePickedUp()`.
+- Updated `src/player/player.py`: replaced Chicken in `edibleEntityTypes`
+  with ChickenMeat and BearMeat.
+- Updated `src/inventory/inventoryJsonReaderWriter.py`: added
+  ChickenMeat/BearMeat handling with energy persistence on load for all
+  Food entities (Apple, Banana, ChickenMeat, BearMeat).
+- Updated `src/world/roomJsonReaderWriter.py`: added ChickenMeat/BearMeat
+  handling with energy persistence on load for all Food entities.
+- Added `Food.setEnergy()` method with negative-value clamping.
+- Fixed `drawLocation` in `src/world/room.py` to always draw the room
+  background color before blitting entity textures, ensuring transparent
+  entity images render correctly per room.
+- Added unit tests: `tests/entity/test_chickenMeat.py`,
+  `tests/entity/test_bearMeat.py`, and `setEnergy` tests in
+  `tests/entity/test_food.py`.
+- Updated `CHANGELOG.md`.
 
 ### 2026-04-14 — Crafting System
 - Created `src/entity/woodFloor.py` (WoodFloor entity, solid=False).
