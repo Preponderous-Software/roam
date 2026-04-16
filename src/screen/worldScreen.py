@@ -1554,6 +1554,10 @@ class WorldScreen:
 
             self.currentRoom.reproduceLivingEntities(self.tickCounter.getTick())
 
+            self.currentRoom.tickExcrement(
+                self.tickCounter.getTick(), self.config
+            )
+
             self.handleMouseOver()
 
             self.handlePlayerActions()

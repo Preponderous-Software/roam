@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-04-16 | 1 | feat: Add excrement spawning by living entities that decays into grass over time |
 | 2026-04-14 | 1 | feat: Add living entity drops — chickens and bears now drop meat items (ChickenMeat, BearMeat) on death instead of being eaten whole |
 | 2026-03-29 | 3 | docs: clarify single-player nature and no multiplayer plans; Initial plan |
 | 2025-08-17 | 1 | Merged #232 |
@@ -64,6 +65,27 @@ logged in detail below.
 | 2022-08-08 | 21 | Create version.txt; Update README.md; Modified README. (+9 more) |
 
 ## AI Agent Sessions
+
+### 2026-04-16 — Excrement Spawning and Grass Decay
+- Created `src/entity/excrement.py` (Excrement entity, `solid=False`,
+  stores `tickCreated` for decay tracking).
+- Created placeholder asset `assets/images/excrement.png` (32×32 RGBA).
+- Added `excrementDecayTicks` config option to `src/config/config.py`
+  (default: `30 * 60 * 2` — 2 minutes at 30 tps).
+- Added `tickExcrement(tick, config)` method to `src/world/room.py`:
+  - Living entities have a 0.1% chance per tick to produce Excrement at
+    their current location.
+  - Expired Excrement is replaced by Grass unless the location contains a
+    solid entity, existing Grass, StoneFloor, or WoodFloor.
+- Added `locationContainsEntityOfType(location, entityType)` helper to Room.
+- Called `tickExcrement` from the world screen tick loop in
+  `src/screen/worldScreen.py` alongside `moveLivingEntities` and
+  `reproduceLivingEntities`.
+- Added Excrement serialization/deserialization to
+  `src/world/roomJsonReaderWriter.py` with `tickCreated` persistence.
+- Added 3 unit tests in `tests/entity/test_excrement.py` covering
+  initialization, `solid=False`, and `tickCreated` getter/setter.
+- Updated `CHANGELOG.md`.
 
 ### 2026-04-14 — Meat Drops on Entity Death
 - Created `src/entity/chickenMeat.py` (ChickenMeat food entity, energy 15–25).
