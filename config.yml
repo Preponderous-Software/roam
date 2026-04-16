@@ -1,6 +1,9 @@
 # Roam configuration
 
 # static (cannot be changed in game)
+# displayWidth/displayHeight default to 90% of display height when omitted.
+# displayWidth: 972
+# displayHeight: 972
 black: [0, 0, 0]
 white: [255, 255, 255]
 playerMovementEnergyCost: 0.2

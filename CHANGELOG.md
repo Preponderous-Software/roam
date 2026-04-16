@@ -66,6 +66,21 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-16 — Config Loading Review Follow-up
+- Hardened `src/config/config.py` config-file loading:
+  - Gracefully falls back to defaults when `config.yml` cannot be opened/decoded.
+  - Treats empty values as `None`.
+  - Uses typed/coerced getters with fallback defaults for booleans, numbers,
+    strings, and color tuples to avoid crashes on malformed values.
+  - Stopped stripping inline `#` text from values so quoted strings containing
+    `#` are preserved.
+- Updated `tests/config/test_config.py`:
+  - Added an autouse fixture to isolate all config tests from repo-root
+    `config.yml` (hermetic tests).
+  - Added tests for unreadable config-file fallback behavior.
+  - Added tests for malformed/empty config values falling back to defaults.
+- Updated `config.yml` with documented `displayWidth`/`displayHeight` examples.
+
 ### 2026-04-16 — Read Config Values from `config.yml`
 - Added root-level `config.yml` with default configuration values.
 - Updated `src/config/config.py` to load configuration values from
