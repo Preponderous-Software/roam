@@ -8,7 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
-| 2026-04-16 | 2 | feat: Add excrement spawning by living entities that decays into grass over time; test: Add unit tests for world package (RoomType, TickCounter, Room, RoomFactory, Map) |
+| 2026-04-16 | 5 | feat: Add excrement spawning by living entities that decays into grass over time; test: Add unit tests for world package (RoomType, TickCounter, Room, RoomFactory, Map); feat: Allow player to push stone entities (configurable via `pushableStone` setting) including cross-room pushing; fix: Persist adjacent room after cross-room stone push, re-check solidity after pushing when stacked entities present, remove unused import |
 | 2026-04-14 | 1 | feat: Add living entity drops — chickens and bears now drop meat items (ChickenMeat, BearMeat) on death instead of being eaten whole |
 | 2026-03-29 | 3 | docs: clarify single-player nature and no multiplayer plans; Initial plan |
 | 2025-08-17 | 1 | Merged #232 |
@@ -337,3 +337,10 @@ about this repository, add it here so the next agent benefits.
 - 2026-04-13: `[not yet integrated]` The `run.sh` script runs `git
   pull` before starting the game — it should not be used in CI or
   automated environments as it will attempt to fetch from the remote.
+- 2026-04-16: `[not yet integrated]` When writing tests that use
+  `isinstance` checks against classes also imported in source code
+  (e.g., `worldScreen.py` imports `from entity.stone import Stone`),
+  the test must import from the same module path (`from entity.stone
+  import Stone`) rather than `from src.entity.stone import Stone`.
+  Otherwise `isinstance` comparisons will fail because Python treats
+  them as different classes.

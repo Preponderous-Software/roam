@@ -180,3 +180,4 @@ class Config:
             configValues, "cameraFollowPlayer", True
         )
         self.limitTps = self.getBoolValue(configValues, "limitTps", True)
+        self.pushableStone = self.getBoolValue(configValues, "pushableStone", True)
