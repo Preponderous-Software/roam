@@ -12,4 +12,7 @@ class Food(DrawableEntity):
         return self.energy
 
     def setEnergy(self, energy):
-        self.energy = energy
+        if energy < 0:
+            self.energy = 0
+        else:
+            self.energy = energy

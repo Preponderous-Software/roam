@@ -88,6 +88,8 @@ class InventoryJsonReaderWriter:
                 if entityClass == "Apple":
                     apple = Apple()
                     apple.setID(UUID(entityJson["entityId"]))
+                    if "energy" in entityJson:
+                        apple.setEnergy(entityJson["energy"])
                     inventory.placeIntoFirstAvailableInventorySlot(apple)
                 elif entityClass == "CoalOre":
                     coalOre = CoalOre()
@@ -134,6 +136,8 @@ class InventoryJsonReaderWriter:
                 elif entityClass == "Banana":
                     banana = Banana()
                     banana.setID(UUID(entityJson["entityId"]))
+                    if "energy" in entityJson:
+                        banana.setEnergy(entityJson["energy"])
                     inventory.placeIntoFirstAvailableInventorySlot(banana)
                 elif entityClass == "ChickenMeat":
                     chickenMeat = ChickenMeat()
