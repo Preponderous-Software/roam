@@ -105,14 +105,14 @@ class Room(Environment):
         del self.livingEntities[entityId]
 
     def getRandomAdjacentLocation(self, location):
-        num = random.randrange(0, 4)
-        if num == 0:
+        directionIndex = random.randrange(0, 4)
+        if directionIndex == 0:
             return self.getGrid().getUp(location)
-        elif num == 1:
+        elif directionIndex == 1:
             return self.getGrid().getRight(location)
-        elif num == 2:
+        elif directionIndex == 2:
             return self.getGrid().getDown(location)
-        elif num == 3:
+        elif directionIndex == 3:
             return self.getGrid().getLeft(location)
 
     def checkEntityMovementCooldown(self, tickToCheck, entity):
@@ -130,15 +130,10 @@ class Room(Environment):
             locationId = entity.getLocationID()
             if locationId == -1:
                 continue
-            try:
-                location = self.getGrid().getLocation(locationId)
-            except:
-                print(
-                    "ERROR: Location not found when trying to move entity. Entity ID: "
-                    + str(entity.getID())
-                    + ", Location ID: "
-                    + str(locationId)
-                )
+            location = self._getLocationOrNone(
+                locationId, "move entity", entity.getID()
+            )
+            if location is None:
                 continue
             newLocation = self.getRandomAdjacentLocation(location)
 
@@ -157,24 +152,7 @@ class Room(Environment):
             # decrease energy
             entity.removeEnergy(1)
 
-            # if entity needs energy
-            if entity.needsEnergy():
-                # search for food
-                for targetEntityId in list(newLocation.getEntities().keys()):
-                    if targetEntityId == entity.getID():
-                        continue
-                    targetEntity = newLocation.getEntity(targetEntityId)
-                    if entity.canEat(targetEntity):
-                        if (
-                            isinstance(targetEntity, LivingEntity)
-                            and targetEntity.getEnergy() > 0
-                        ):
-                            targetEntity.kill()
-                            entity.addEnergy(targetEntity.getEnergy())
-                        else:
-                            self.removeEntity(targetEntity)
-                            entity.addEnergy(10)
-                        break
+            self._feedLivingEntityIfNeeded(entity, newLocation)
         return entitiesToMoveToNewRoom
 
     def reproduceLivingEntities(self, tick):
@@ -183,85 +161,46 @@ class Room(Environment):
         reproductionCooldown = minAgeToReproduce / 2  # 2.5 minutes
         for entityId in self.livingEntities:
             entity = self.livingEntities[entityId]
-            if entity.getAge(tick) < minAgeToReproduce:
-                continue
             locationId = entity.getLocationID()
-            if locationId == -1:
+            if not self._isEntityReadyToReproduce(
+                entity, tick, minAgeToReproduce, locationId
+            ):
                 continue
-            try:
-                location = self.getGrid().getLocation(locationId)
-            except:
-                print(
-                    "ERROR: Location not found when trying to reproduce entity. Entity ID: "
-                    + str(entity.getID())
-                    + ", Location ID: "
-                    + str(locationId)
-                )
+            location = self._getLocationOrNone(
+                locationId, "reproduce entity", entity.getID()
+            )
+            if location is None:
                 continue
             for targetEntityId in list(location.getEntities().keys()):
                 targetEntity = location.getEntity(targetEntityId)
-                # check if target entity is a living entity
-                if isinstance(targetEntity, LivingEntity) == False:
+                if not self._isValidReproductionTarget(
+                    entity, targetEntity, tick, minAgeToReproduce
+                ):
                     continue
-                # check if target entity is the entity itself
-                if targetEntity.getID() == entity.getID():
-                    continue
-                # check if target entity is the same type as the entity
-                if isinstance(targetEntity, type(entity)) == False:
-                    continue
-                # check if target entity has enough energy
-                if targetEntity.needsEnergy():
-                    continue
-                # check if target entity is old enough to reproduce
-                if targetEntity.getAge(tick) < minAgeToReproduce:
-                    continue
-                # check reproduction cooldown
                 if (
-                    entity.getTickLastReproduced() != None
+                    entity.getTickLastReproduced() is not None
                     and entity.getTickLastReproduced() + reproductionCooldown > tick
                 ):
                     continue
 
-                # reset image
-                if isinstance(entity, Chicken):
-                    entity.setImagePath("assets/images/chicken.png")
-                elif isinstance(entity, Bear):
-                    entity.setImagePath("assets/images/bear.png")
+                self._setDefaultEntityImage(entity)
 
-                # throw dice
                 if random.randrange(1, 101) > 1:  # 1% chance
                     continue
 
-                # decrease energy by half
                 entity.removeEnergy(entity.getEnergy() / 2)
                 targetEntity.removeEnergy(targetEntity.getEnergy() / 2)
 
-                newEntity = None
-                if isinstance(entity, Bear):
-                    newEntity = Bear(tick)
-                elif isinstance(entity, Chicken):
-                    newEntity = Chicken(tick)
+                newEntity = self._createOffspring(entity, tick)
 
-                if newEntity != None:
-                    entityLocationMappings.append((newEntity, location))
-                    entity.setTickLastReproduced(tick)
-                    targetEntity.setTickLastReproduced(tick)
-                    if isinstance(entity, Chicken):
-                        entity.setImagePath(
-                            "assets/images/chickenOnReproductionCooldown.png"
-                        )
-                        targetEntity.setImagePath(
-                            "assets/images/chickenOnReproductionCooldown.png"
-                        )
-                    if isinstance(entity, Bear):
-                        entity.setImagePath(
-                            "assets/images/bearOnReproductionCooldown.png"
-                        )
-                        targetEntity.setImagePath(
-                            "assets/images/bearOnReproductionCooldown.png"
-                        )
+                if newEntity is None:
+                    continue
 
-                # set new entity's energy to 10% of average of parent's energy
+                entityLocationMappings.append((newEntity, location))
+                entity.setTickLastReproduced(tick)
+                targetEntity.setTickLastReproduced(tick)
+                self._setReproductionCooldownImage(entity)
+                self._setReproductionCooldownImage(targetEntity)
                 newEntity.setEnergy(
                     (entity.getEnergy() + targetEntity.getEnergy()) / 2 * 0.1
                 )
@@ -344,3 +283,71 @@ class Room(Environment):
             if shouldPlaceGrass:
                 grass = Grass()
                 self.addEntityToLocation(grass, location)
+
+    def _getLocationOrNone(self, locationId, actionName, entityId):
+        try:
+            return self.getGrid().getLocation(locationId)
+        except KeyError:
+            print(
+                "ERROR: Location not found when trying to "
+                + actionName
+                + ". Entity ID: "
+                + str(entityId)
+                + ", Location ID: "
+                + str(locationId)
+            )
+            return None
+
+    def _feedLivingEntityIfNeeded(self, entity, location):
+        if not entity.needsEnergy():
+            return
+
+        for targetEntityId in list(location.getEntities().keys()):
+            if targetEntityId == entity.getID():
+                continue
+            targetEntity = location.getEntity(targetEntityId)
+            if not entity.canEat(targetEntity):
+                continue
+
+            if isinstance(targetEntity, LivingEntity) and targetEntity.getEnergy() > 0:
+                targetEntity.kill()
+                entity.addEnergy(targetEntity.getEnergy())
+            else:
+                self.removeEntity(targetEntity)
+                entity.addEnergy(10)
+            return
+
+    def _isEntityReadyToReproduce(self, entity, tick, minAgeToReproduce, locationId):
+        return entity.getAge(tick) >= minAgeToReproduce and locationId != -1
+
+    def _isValidReproductionTarget(self, entity, targetEntity, tick, minAgeToReproduce):
+        if not isinstance(targetEntity, LivingEntity):
+            return False
+        if targetEntity.getID() == entity.getID():
+            return False
+        if not isinstance(targetEntity, type(entity)):
+            return False
+        if targetEntity.needsEnergy():
+            return False
+        if targetEntity.getAge(tick) < minAgeToReproduce:
+            return False
+        return True
+
+    def _setDefaultEntityImage(self, entity):
+        if isinstance(entity, Chicken):
+            entity.setImagePath("assets/images/chicken.png")
+        elif isinstance(entity, Bear):
+            entity.setImagePath("assets/images/bear.png")
+
+    def _setReproductionCooldownImage(self, entity):
+        if isinstance(entity, Chicken):
+            entity.setImagePath("assets/images/chickenOnReproductionCooldown.png")
+        elif isinstance(entity, Bear):
+            entity.setImagePath("assets/images/bearOnReproductionCooldown.png")
+
+    def _createOffspring(self, entity, tick):
+        if isinstance(entity, Bear):
+            return Bear(tick)
+        if isinstance(entity, Chicken):
+            return Chicken(tick)
+        return None
