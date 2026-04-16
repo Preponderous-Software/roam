@@ -1,0 +1,26 @@
+# Roam configuration
+
+# static (cannot be changed in game)
+# displayWidth/displayHeight default to 90% of display height when omitted.
+# displayWidth: 972
+# displayHeight: 972
+black: [0, 0, 0]
+white: [255, 255, 255]
+playerMovementEnergyCost: 0.2
+playerInteractionEnergyCost: 0.05
+runSpeedFactor: 2
+energyDepletionRate: 0.01
+playerInteractionDistanceLimit: 5
+ticksPerSecond: 30
+gridSize: 17
+worldBorder: 0
+excrementDecayTicks: 3600
+pathToSaveDirectory: saves/defaultsavefile
+
+# dynamic (can be changed in game)
+debug: true
+fullscreen: false
+autoEatFoodInInventory: true
+removeDeadEntities: true
+showMiniMap: true
+cameraFollowPlayer: true
