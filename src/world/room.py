@@ -297,14 +297,14 @@ class Room(Environment):
         for entityId in self.livingEntities:
             entity = self.livingEntities[entityId]
             locationId = entity.getLocationID()
-            if locationId == -1:
+            if str(locationId) == "-1":
                 continue
             # 0.1% chance per tick
             if random.randrange(1, 1001) > 1:
                 continue
             try:
                 location = self.getGrid().getLocation(locationId)
-            except Exception:
+            except KeyError:
                 continue
             excrement = Excrement(tick)
             self.addEntityToLocation(excrement, location)
@@ -313,29 +313,34 @@ class Room(Environment):
         entitiesToReplace = []
         for locationId in self.getGrid().getLocations():
             location = self.getGrid().getLocation(locationId)
+            expiredExcrement = []
             for entityId in list(location.getEntities().keys()):
                 entity = location.getEntity(entityId)
                 if not isinstance(entity, Excrement):
                     continue
                 if tick - entity.getTickCreated() < config.excrementDecayTicks:
                     continue
-                # Don't place grass on solid entities, existing grass, or floors
-                if self.locationContainsSolidEntity(location):
-                    entitiesToReplace.append((location, entity, False))
-                    continue
-                if self.locationContainsEntityOfType(location, Grass):
-                    entitiesToReplace.append((location, entity, False))
-                    continue
-                if self.locationContainsEntityOfType(
-                    location, StoneFloor
-                ) or self.locationContainsEntityOfType(location, WoodFloor):
-                    entitiesToReplace.append((location, entity, False))
-                    continue
-                entitiesToReplace.append((location, entity, True))
+                expiredExcrement.append(entity)
 
-        for location, excrement, shouldPlaceGrass in entitiesToReplace:
-            location.removeEntity(excrement)
-            self.removeEntity(excrement)
+            if len(expiredExcrement) == 0:
+                continue
+
+            # Don't place grass on solid entities, existing grass, or floors
+            shouldPlaceGrass = True
+            if self.locationContainsSolidEntity(location):
+                shouldPlaceGrass = False
+            elif self.locationContainsEntityOfType(location, Grass):
+                shouldPlaceGrass = False
+            elif self.locationContainsEntityOfType(
+                location, StoneFloor
+            ) or self.locationContainsEntityOfType(location, WoodFloor):
+                shouldPlaceGrass = False
+
+            entitiesToReplace.append((location, expiredExcrement, shouldPlaceGrass))
+
+        for location, excrementList, shouldPlaceGrass in entitiesToReplace:
+            for excrement in excrementList:
+                location.removeEntity(excrement)
             if shouldPlaceGrass:
                 grass = Grass()
                 self.addEntityToLocation(grass, location)
