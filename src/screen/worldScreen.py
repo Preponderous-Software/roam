@@ -74,6 +74,7 @@ class WorldScreen:
         self.minimapX = 5
         self.minimapY = 5
         self.cursorSlot = InventorySlot()
+        self.clock = pygame.time.Clock()
 
     def initialize(self):
         self.map = Map(
@@ -1568,7 +1569,10 @@ class WorldScreen:
             self.draw()
 
             pygame.display.update()
-            self.tickCounter.incrementTick()  # TODO: implement vsync
+            self.tickCounter.incrementTick()
+
+            if self.config.limitTps:
+                self.clock.tick(self.config.ticksPerSecond)
 
             if self.player.isDead():
                 time.sleep(3)

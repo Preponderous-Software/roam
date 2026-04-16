@@ -30,6 +30,7 @@ def test_defaults():
     assert config.removeDeadEntities == True
     assert config.showMiniMap == True
     assert config.cameraFollowPlayer == True
+    assert config.limitTps == True
 
 
 def test_toggle_camera_follow_player():
@@ -42,6 +43,16 @@ def test_toggle_camera_follow_player():
     assert config.cameraFollowPlayer == True
 
 
+def test_toggle_limit_tps():
+    config = Config()
+
+    assert config.limitTps == True
+    config.limitTps = False
+    assert config.limitTps == False
+    config.limitTps = True
+    assert config.limitTps == True
+
+
 def test_reads_values_from_config_file(tmp_path, monkeypatch):
     configFilePath = tmp_path / "config.yml"
     configFilePath.write_text(
@@ -49,6 +60,7 @@ def test_reads_values_from_config_file(tmp_path, monkeypatch):
             "debug: false\n"
             "fullscreen: true\n"
             "cameraFollowPlayer: false\n"
+            "limitTps: false\n"
             "playerMovementEnergyCost: 0.75\n"
             "pathToSaveDirectory: saves/custom\n"
             "black: [1, 2, 3]\n"
@@ -65,6 +77,7 @@ def test_reads_values_from_config_file(tmp_path, monkeypatch):
     assert not config.debug
     assert config.fullscreen
     assert not config.cameraFollowPlayer
+    assert not config.limitTps
     assert config.playerMovementEnergyCost == 0.75
     assert config.pathToSaveDirectory == "saves/custom"
     assert config.black == (1, 2, 3)

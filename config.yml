@@ -24,3 +24,4 @@ autoEatFoodInInventory: true
 removeDeadEntities: true
 showMiniMap: true
 cameraFollowPlayer: true
+limitTps: true
