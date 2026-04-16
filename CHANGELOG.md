@@ -66,6 +66,19 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-16 — Implement vsync config option to limit TPS
+- Added `vsync` boolean config option (dynamic, default `true`) to
+  `src/config/config.py` — when enabled, uses `pygame.time.Clock.tick()` to
+  limit the game loop to the configured `ticksPerSecond`.
+- Added `vsync: true` to `config.yml`.
+- Created a `pygame.time.Clock` in `WorldScreen.__init__` and used it in the
+  game loop (`WorldScreen.run()`) to enforce the TPS cap when vsync is enabled.
+- Removed the `# TODO: implement vsync` comment from the world screen.
+- Added a "vsync" toggle button to `ConfigScreen` so players can enable/disable
+  the TPS cap in-game.
+- Added unit tests for the `vsync` config option: default value, toggle, and
+  config-file read.
+
 ### 2026-04-16 — Config Loading Review Follow-up
 - Hardened `src/config/config.py` config-file loading:
   - Gracefully falls back to defaults when `config.yml` cannot be opened/decoded.

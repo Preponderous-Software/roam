@@ -179,3 +179,4 @@ class Config:
         self.cameraFollowPlayer = self.getBoolValue(
             configValues, "cameraFollowPlayer", True
         )
+        self.vsync = self.getBoolValue(configValues, "vsync", True)

@@ -51,6 +51,10 @@ class ConfigScreen:
         self.config.cameraFollowPlayer = not self.config.cameraFollowPlayer
         sleep(0.1)
 
+    def toggleVsync(self):
+        self.config.vsync = not self.config.vsync
+        sleep(0.1)
+
     def drawMenuButtons(self):
         # draw buttons in red or green depending on config option value
         # config options to include: debug, fullscreen, autoEatInInventory
@@ -137,6 +141,20 @@ class ConfigScreen:
             30,
             "camera follow player",
             self.toggleCameraFollowPlayer,
+        )
+
+        ypos = ypos + height + margin
+        color = (0, 255, 0) if self.config.vsync else (255, 0, 0)
+        self.graphik.drawButton(
+            xpos,
+            ypos,
+            width,
+            height,
+            (255, 255, 255),
+            color,
+            30,
+            "vsync",
+            self.toggleVsync,
         )
 
         self.drawBackButton()
