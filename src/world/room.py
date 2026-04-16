@@ -304,7 +304,7 @@ class Room(Environment):
                 continue
             try:
                 location = self.getGrid().getLocation(locationId)
-            except:
+            except Exception:
                 continue
             excrement = Excrement(tick)
             self.addEntityToLocation(excrement, location)
