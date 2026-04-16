@@ -51,8 +51,8 @@ class ConfigScreen:
         self.config.cameraFollowPlayer = not self.config.cameraFollowPlayer
         sleep(0.1)
 
-    def toggleVsync(self):
-        self.config.vsync = not self.config.vsync
+    def toggleLimitTps(self):
+        self.config.limitTps = not self.config.limitTps
         sleep(0.1)
 
     def drawMenuButtons(self):
@@ -144,7 +144,7 @@ class ConfigScreen:
         )
 
         ypos = ypos + height + margin
-        color = (0, 255, 0) if self.config.vsync else (255, 0, 0)
+        color = (0, 255, 0) if self.config.limitTps else (255, 0, 0)
         self.graphik.drawButton(
             xpos,
             ypos,
@@ -153,8 +153,8 @@ class ConfigScreen:
             (255, 255, 255),
             color,
             30,
-            "vsync",
-            self.toggleVsync,
+            "limit tps",
+            self.toggleLimitTps,
         )
 
         self.drawBackButton()

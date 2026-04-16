@@ -1571,7 +1571,7 @@ class WorldScreen:
             pygame.display.update()
             self.tickCounter.incrementTick()
 
-            if self.config.vsync:
+            if self.config.limitTps:
                 self.clock.tick(self.config.ticksPerSecond)
 
             if self.player.isDead():
