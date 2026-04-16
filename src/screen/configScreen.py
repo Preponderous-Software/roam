@@ -55,6 +55,10 @@ class ConfigScreen:
         self.config.limitTps = not self.config.limitTps
         sleep(0.1)
 
+    def togglePushableStone(self):
+        self.config.pushableStone = not self.config.pushableStone
+        sleep(0.1)
+
     def drawMenuButtons(self):
         # draw buttons in red or green depending on config option value
         # config options to include: debug, fullscreen, autoEatInInventory
@@ -155,6 +159,20 @@ class ConfigScreen:
             30,
             "limit tps",
             self.toggleLimitTps,
+        )
+
+        ypos = ypos + height + margin
+        color = (0, 255, 0) if self.config.pushableStone else (255, 0, 0)
+        self.graphik.drawButton(
+            xpos,
+            ypos,
+            width,
+            height,
+            (255, 255, 255),
+            color,
+            30,
+            "pushable stone",
+            self.togglePushableStone,
         )
 
         self.drawBackButton()

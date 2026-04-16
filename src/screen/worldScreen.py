@@ -383,7 +383,10 @@ class WorldScreen:
             return
 
         if self.locationContainsSolidEntity(newLocation):
-            return
+            if self.config.pushableStone and self.tryPushStone(newLocation, direction):
+                pass  # stone was pushed, continue with movement
+            else:
+                return
 
         # if bear is in the new location, kill the player
         for entityId in list(newLocation.getEntities().keys()):
@@ -559,6 +562,34 @@ class WorldScreen:
             if entity.isSolid():
                 return True
         return False
+
+    def tryPushStone(self, location, direction):
+        # find a Stone entity in the location
+        stoneEntity = None
+        for entityId in list(location.getEntities().keys()):
+            entity = location.getEntity(entityId)
+            if isinstance(entity, Stone):
+                stoneEntity = entity
+                break
+
+        if stoneEntity is None:
+            return False
+
+        # get the location beyond the stone in the same direction
+        pushDestination = self.getLocationDirection(
+            direction, self.currentRoom.getGrid(), location
+        )
+
+        if pushDestination == -1:
+            return False
+
+        if self.locationContainsSolidEntity(pushDestination):
+            return False
+
+        # push the stone
+        location.removeEntity(stoneEntity)
+        pushDestination.addEntity(stoneEntity)
+        return True
 
     def executePlaceAction(self):
         if self.player.getInventory().getNumTakenInventorySlots() == 0:
