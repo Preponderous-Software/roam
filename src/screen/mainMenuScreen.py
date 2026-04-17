@@ -106,8 +106,6 @@ class MainMenuScreen:
                     break
                 elif event.type == pygame.KEYDOWN:
                     self.handleKeyDownEvent(event.key)
-                elif event.type == pygame.VIDEORESIZE:
-                    self.graphik.enforceSquareDisplay()
 
             self.graphik.getGameDisplay().fill((0, 0, 0))
             self.drawText()

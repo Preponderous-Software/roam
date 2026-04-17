@@ -21,14 +21,13 @@ class Graphik:
     def getGameDisplay(self):
         return self.gameDisplay
 
-    # Resizes the display to be square, using the current height as the side length.
-    def enforceSquareDisplay(self):
-        currentWidth, currentHeight = self.gameDisplay.get_size()
-        if currentWidth != currentHeight:
-            size = currentHeight
-            self.gameDisplay = pygame.display.set_mode(
-                (size, size), pygame.RESIZABLE
-            )
+    # Returns a centered square rect that fills as much space as possible.
+    def getGameAreaRect(self):
+        width, height = self.gameDisplay.get_size()
+        size = min(width, height)
+        x = (width - size) // 2
+        y = (height - size) // 2
+        return pygame.Rect(x, y, size, size)
 
     def getVersion(self):
         return self.version

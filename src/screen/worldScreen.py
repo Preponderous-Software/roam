@@ -113,9 +113,9 @@ class WorldScreen:
         self.energyBar = EnergyBar(self.graphik, self.player)
 
     def initializeLocationWidthAndHeight(self):
-        x, y = self.graphik.getGameDisplay().get_size()
-        locationWidth = x / self.currentRoom.getGrid().getRows()
-        locationHeight = y / self.currentRoom.getGrid().getColumns()
+        gameArea = self.graphik.getGameAreaRect()
+        locationWidth = gameArea.width / self.currentRoom.getGrid().getRows()
+        locationHeight = gameArea.height / self.currentRoom.getGrid().getColumns()
 
         locationSizeChanged = (
             not hasattr(self, "locationWidth")
@@ -447,9 +447,8 @@ class WorldScreen:
 
     def getLocationAndRoomAtMousePosition(self):
         x, y = pygame.mouse.get_pos()
+        gameArea = self.graphik.getGameAreaRect()
         if self.config.cameraFollowPlayer:
-            displayWidth = self.graphik.getGameDisplay().get_width()
-            displayHeight = self.graphik.getGameDisplay().get_height()
             playerLocation = self.getLocationOfPlayer()
             playerPixelX = (
                 playerLocation.getX() * self.locationWidth + self.locationWidth / 2
@@ -457,8 +456,8 @@ class WorldScreen:
             playerPixelY = (
                 playerLocation.getY() * self.locationHeight + self.locationHeight / 2
             )
-            centerX = displayWidth / 2
-            centerY = displayHeight / 2
+            centerX = gameArea.x + gameArea.width / 2
+            centerY = gameArea.y + gameArea.height / 2
             offsetX = centerX - playerPixelX
             offsetY = centerY - playerPixelY
             worldGridX = int((x - offsetX) // self.locationWidth)
@@ -488,8 +487,8 @@ class WorldScreen:
             location = targetRoom.getGrid().getLocationByCoordinates(localX, localY)
             return (location, targetRoom)
         else:
-            gridX = int(x // self.locationWidth)
-            gridY = int(y // self.locationHeight)
+            gridX = int((x - gameArea.x) // self.locationWidth)
+            gridY = int((y - gameArea.y) // self.locationHeight)
             location = self.currentRoom.getGrid().getLocationByCoordinates(gridX, gridY)
             return (location, self.currentRoom)
 
@@ -986,8 +985,7 @@ class WorldScreen:
         )
 
     def drawFollowMode(self):
-        displayWidth = self.graphik.getGameDisplay().get_width()
-        displayHeight = self.graphik.getGameDisplay().get_height()
+        gameArea = self.graphik.getGameAreaRect()
 
         # get player position in current room grid
         playerLocation = self.getLocationOfPlayer()
@@ -999,15 +997,15 @@ class WorldScreen:
         roomPixelWidth = gridSize * self.locationWidth
         roomPixelHeight = gridSize * self.locationHeight
 
-        # calculate screen center
-        centerX = displayWidth / 2
-        centerY = displayHeight / 2
+        # calculate center of the game area on screen
+        centerX = gameArea.x + gameArea.width / 2
+        centerY = gameArea.y + gameArea.height / 2
 
         # world-pixel position of the player within the current room
         playerPixelX = playerGridX * self.locationWidth + self.locationWidth / 2
         playerPixelY = playerGridY * self.locationHeight + self.locationHeight / 2
 
-        # offset to center the current room's player on the screen center
+        # offset to center the current room's player on the game area center
         baseOffsetX = centerX - playerPixelX
         baseOffsetY = centerY - playerPixelY
 
@@ -1016,10 +1014,12 @@ class WorldScreen:
         currentRoomY = self.currentRoom.getY()
 
         # calculate how many rooms could be visible in each direction
-        roomsLeft = int(centerX / roomPixelWidth) + 1
-        roomsRight = int(centerX / roomPixelWidth) + 1
-        roomsUp = int(centerY / roomPixelHeight) + 1
-        roomsDown = int(centerY / roomPixelHeight) + 1
+        halfWidth = gameArea.width / 2
+        halfHeight = gameArea.height / 2
+        roomsLeft = int(halfWidth / roomPixelWidth) + 1
+        roomsRight = int(halfWidth / roomPixelWidth) + 1
+        roomsUp = int(halfHeight / roomPixelHeight) + 1
+        roomsDown = int(halfHeight / roomPixelHeight) + 1
 
         for dx in range(-roomsLeft, roomsRight + 1):
             for dy in range(-roomsUp, roomsDown + 1):
@@ -1037,12 +1037,12 @@ class WorldScreen:
                 roomOffsetX = baseOffsetX + dx * roomPixelWidth
                 roomOffsetY = baseOffsetY + dy * roomPixelHeight
 
-                # skip if the room is entirely off-screen
+                # skip if the room is entirely outside the game area
                 if (
-                    roomOffsetX + roomPixelWidth < 0
-                    or roomOffsetX > displayWidth
-                    or roomOffsetY + roomPixelHeight < 0
-                    or roomOffsetY > displayHeight
+                    roomOffsetX + roomPixelWidth < gameArea.x
+                    or roomOffsetX > gameArea.right
+                    or roomOffsetY + roomPixelHeight < gameArea.y
+                    or roomOffsetY > gameArea.bottom
                 ):
                     continue
 
@@ -1052,11 +1052,18 @@ class WorldScreen:
                     self.locationHeight,
                     roomOffsetX,
                     roomOffsetY,
-                    displayWidth,
-                    displayHeight,
+                    gameArea.right,
+                    gameArea.bottom,
                 )
 
     def draw(self):
+        gameArea = self.graphik.getGameAreaRect()
+
+        # fill entire display with black (letterbox bars)
+        self.graphik.getGameDisplay().fill((0, 0, 0))
+
+        # clip drawing to the game area and fill with room background
+        self.graphik.getGameDisplay().set_clip(gameArea)
         self.graphik.getGameDisplay().fill(self.currentRoom.getBackgroundColor())
 
         if self.config.showMiniMap and not self.isCurrentRoomSavedAsPNG():
@@ -1065,7 +1072,13 @@ class WorldScreen:
         if self.config.cameraFollowPlayer:
             self.drawFollowMode()
         else:
-            self.currentRoom.draw(self.locationWidth, self.locationHeight)
+            self.currentRoom.drawWithOffset(
+                self.locationWidth, self.locationHeight, gameArea.x, gameArea.y
+            )
+
+        # remove clip so UI draws over the full display
+        self.graphik.getGameDisplay().set_clip(None)
+
         self.status.draw()
         self.energyBar.draw()
 
@@ -1540,10 +1553,8 @@ class WorldScreen:
                 elif event.type == pygame.KEYUP:
                     self.handleKeyUpEvent(event.key)
                 elif event.type == pygame.WINDOWRESIZED:
-                    self.graphik.enforceSquareDisplay()
                     self.initializeLocationWidthAndHeight()
                 elif event.type == pygame.VIDEORESIZE:
-                    self.graphik.enforceSquareDisplay()
                     self.initializeLocationWidthAndHeight()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     self.handleMouseDownEvent()

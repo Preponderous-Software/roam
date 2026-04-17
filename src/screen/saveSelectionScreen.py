@@ -475,8 +475,6 @@ class SaveSelectionScreen:
                         for ch in event.text:
                             if ch.isalnum() or ch in "-_ ":
                                 self.newSaveNameInput += ch
-                elif event.type == pygame.VIDEORESIZE:
-                    self.graphik.enforceSquareDisplay()
 
             self.graphik.getGameDisplay().fill((0, 0, 0))
             self.drawTitle()
