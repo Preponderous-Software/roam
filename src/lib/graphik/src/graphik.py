@@ -21,6 +21,14 @@ class Graphik:
     def getGameDisplay(self):
         return self.gameDisplay
 
+    def enforceSquareDisplay(self):
+        currentWidth, currentHeight = self.gameDisplay.get_size()
+        if currentWidth != currentHeight:
+            size = currentHeight
+            self.gameDisplay = pygame.display.set_mode(
+                (size, size), pygame.RESIZABLE
+            )
+
     def getVersion(self):
         return self.version
 

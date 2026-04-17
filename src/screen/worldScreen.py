@@ -1540,8 +1540,10 @@ class WorldScreen:
                 elif event.type == pygame.KEYUP:
                     self.handleKeyUpEvent(event.key)
                 elif event.type == pygame.WINDOWRESIZED:
+                    self.graphik.enforceSquareDisplay()
                     self.initializeLocationWidthAndHeight()
                 elif event.type == pygame.VIDEORESIZE:
+                    self.graphik.enforceSquareDisplay()
                     self.initializeLocationWidthAndHeight()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     self.handleMouseDownEvent()

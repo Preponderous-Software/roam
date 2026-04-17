@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-04-17 | 1 | feat: Keep game display square upon window resizing — enforce square aspect ratio (width = height) on all screens when the window is resized; test: Add unit tests for enforceSquareDisplay |
 | 2026-04-16 | 5 | feat: Add excrement spawning by living entities that decays into grass over time; test: Add unit tests for world package (RoomType, TickCounter, Room, RoomFactory, Map); feat: Allow player to push stone entities (configurable via `pushableStone` setting) including cross-room pushing; fix: Persist adjacent room after cross-room stone push, re-check solidity after pushing when stacked entities present, remove unused import |
 | 2026-04-14 | 1 | feat: Add living entity drops — chickens and bears now drop meat items (ChickenMeat, BearMeat) on death instead of being eaten whole |
 | 2026-03-29 | 3 | docs: clarify single-player nature and no multiplayer plans; Initial plan |
@@ -384,3 +385,8 @@ about this repository, add it here so the next agent benefits.
   `pygame==2.1.2` from `requirements.txt` failed on Python 3.12 due to source-build
   compatibility issues; local validation needed a compatible wheel (`pygame==2.5.2`)
   to run tests.
+- 2026-04-17: `[not yet integrated]` When writing tests that use `pygame.display`
+  with the dummy video driver, `pygame.display.set_mode()` may return a surface
+  with `(0, 0)` size if pygame was previously quit and reinitialised. Use
+  `unittest.mock.patch.object(pygame.display, "set_mode")` with `MagicMock`
+  surfaces to avoid dependency on the dummy driver's display subsystem.
