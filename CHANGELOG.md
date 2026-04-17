@@ -66,6 +66,42 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-17 — Follow-up: address PR review coverage threads
+- Added targeted tests to `tests/world/test_room.py` to cover refactored logic:
+  - `moveLivingEntities()` feeding path (entity movement, energy use, food
+    consumption/removal).
+  - `reproduceLivingEntities()` cooldown eligibility path (no reproduction while
+    on cooldown).
+- Added new `tests/world/test_roomJsonReaderWriter.py` with coverage for:
+  - Deserialization success across all supported `entityClass` values.
+  - `Player` deserialization returning `None`.
+  - Unknown `entityClass` raising `ValueError`.
+  - Background color parsing from persisted string format via
+    `generateRoomFromJson()`.
+- Validation:
+  - Targeted tests: `tests/world/test_room.py` and
+    `tests/world/test_roomJsonReaderWriter.py` passed.
+  - Full test suite passed (`231 passed`).
+
+### 2026-04-16 — Clean-code refactor in world modules
+- Refactored `src/world/room.py` to improve function clarity and cohesion:
+  - Replaced broad `except` blocks with `KeyError`-specific handling.
+  - Extracted helper methods for location lookup, feeding behavior, reproduction
+    eligibility checks, image updates, and offspring creation.
+  - Replaced `== False` / `!= None` style checks with clearer boolean/`is None`
+    expressions.
+  - Renamed a cryptic local variable (`num`) to `directionIndex` for intent clarity.
+- Refactored `src/world/roomJsonReaderWriter.py` to reduce duplication and improve
+  naming/error handling:
+  - Added context-managed schema loading (`with open(...)`) in `__init__`.
+  - Replaced repeated entity-constructor `if/elif` blocks with a constructor map
+    and a focused `_createEntity` helper.
+  - Replaced generic `Exception` with `ValueError` for unknown entity classes.
+  - Removed obsolete commented-out code paths and improved color-parsing naming via
+    `_parseBackgroundColor`.
+- Ran formatting with Black on modified files.
+- Ran full test suite with headless SDL settings; all tests passed.
+
 ### 2026-04-16 — Implement limitTps config option to limit TPS
 - Added `limitTps` boolean config option (dynamic, default `true`) to
   `src/config/config.py` — when enabled, uses `pygame.time.Clock.tick()` to
@@ -331,7 +367,7 @@ about this repository, add it here so the next agent benefits.
   itself; they appear to be leftover from the original development
   environment. Agents should not assume every listed dependency is
   required at runtime.
-- 2026-04-13: `[not yet integrated]` Room save/load uses JSON files
+- 2026-04-13: `[integrated]` Room save/load uses JSON files
   validated against schemas in `schemas/`. When adding new persistent
   data, a matching JSON schema should be created or updated.
 - 2026-04-13: `[not yet integrated]` The `run.sh` script runs `git
@@ -344,3 +380,7 @@ about this repository, add it here so the next agent benefits.
   import Stone`) rather than `from src.entity.stone import Stone`.
   Otherwise `isinstance` comparisons will fail because Python treats
   them as different classes.
+- 2026-04-16: `[not yet integrated]` In this sandbox, installing the pinned
+  `pygame==2.1.2` from `requirements.txt` failed on Python 3.12 due to source-build
+  compatibility issues; local validation needed a compatible wheel (`pygame==2.5.2`)
+  to run tests.

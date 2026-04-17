@@ -42,8 +42,28 @@ class RoomJsonReaderWriter:
         self.graphik = graphik
         self.tickCounter = tickCounter
         self.config = config
-        self.roomSchema = json.load(open("schemas/room.json"))
+        with open("schemas/room.json", encoding="utf-8") as roomSchemaFile:
+            self.roomSchema = json.load(roomSchemaFile)
         self.livingEntities = dict()
+        self.entityConstructors = {
+            "Apple": Apple,
+            "CoalOre": CoalOre,
+            "Grass": Grass,
+            "IronOre": IronOre,
+            "JungleWood": JungleWood,
+            "Leaves": Leaves,
+            "OakWood": OakWood,
+            "Stone": Stone,
+            "Banana": Banana,
+            "ChickenMeat": ChickenMeat,
+            "BearMeat": BearMeat,
+            "WoodFloor": WoodFloor,
+            "Bed": Bed,
+            "StoneFloor": StoneFloor,
+            "StoneBed": StoneBed,
+            "Fence": Fence,
+            "Campfire": Campfire,
+        }
 
     # save and load methods
     def saveRoom(self, room, path):
@@ -130,20 +150,16 @@ class RoomJsonReaderWriter:
 
     # generate room methods
     def generateRoomFromJson(self, roomJson):
-        rgb = roomJson["backgroundColor"].replace("(", "").replace(")", "").split(",")
-        r = int(rgb[0])
-        g = int(rgb[1])
-        b = int(rgb[2])
+        backgroundColor = self._parseBackgroundColor(roomJson["backgroundColor"])
         room = Room(
             roomJson["name"],
             self.gridSize,
-            (r, g, b),
+            backgroundColor,
             roomJson["x"],
             roomJson["y"],
             self.graphik,
         )
         room.setID(roomJson["id"])
-        # room.setCreationDate(roomJson["creationDate"])
         room.setGrid(self.generateGridFromJson(roomJson["grid"]))
 
         # add living entities
@@ -154,7 +170,6 @@ class RoomJsonReaderWriter:
     def generateGridFromJson(self, gridJson):
         grid = Grid(self.gridSize, self.gridSize)
         grid.setID(gridJson["id"])
-        # grid.setCreationDate(gridJson["creationDate"])
         grid.setLocations(self.generateLocationsFromJson(gridJson["locations"]))
         return grid
 
@@ -168,7 +183,6 @@ class RoomJsonReaderWriter:
     def generateLocationFromJson(self, locationJson):
         location = Location(locationJson["x"], locationJson["y"])
         location.setID(locationJson["id"])
-        # location.setCreationDate(locationJson["creationDate"])
         location.setEntities(self.generateEntitiesFromJson(locationJson["entities"]))
         return location
 
@@ -176,7 +190,7 @@ class RoomJsonReaderWriter:
         entities = {}
         for entityJson in entitiesJson:
             entity = self.generateEntityFromJson(entityJson)
-            if entity == None:
+            if entity is None:
                 continue
             entities[entity.getID()] = entity
 
@@ -186,71 +200,14 @@ class RoomJsonReaderWriter:
 
     def generateEntityFromJson(self, entityJson):
         entityClass = entityJson["entityClass"]
-        entity = None
-        if entityClass == "Apple":
-            entity = Apple()
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "CoalOre":
-            entity = CoalOre()
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "Grass":
-            entity = Grass()
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "IronOre":
-            entity = IronOre()
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "JungleWood":
-            entity = JungleWood()
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "Leaves":
-            entity = Leaves()
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "OakWood":
-            entity = OakWood()
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "Stone":
-            entity = Stone()
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "Bear":
-            entity = Bear(entityJson["tickCreated"])
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "Chicken":
-            entity = Chicken(entityJson["tickCreated"])
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "Banana":
-            entity = Banana()
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "ChickenMeat":
-            entity = ChickenMeat()
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "BearMeat":
-            entity = BearMeat()
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "WoodFloor":
-            entity = WoodFloor()
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "Bed":
-            entity = Bed()
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "StoneFloor":
-            entity = StoneFloor()
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "StoneBed":
-            entity = StoneBed()
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "Fence":
-            entity = Fence()
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "Campfire":
-            entity = Campfire()
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "Excrement":
-            entity = Excrement(entityJson["tickCreated"])
-            entity.setID(UUID(entityJson["id"]))
-        elif entityClass == "Player":
+        if entityClass == "Player":
             return None
-        else:
-            raise Exception("Unknown entity class: " + entityJson["entityClass"])
+
+        entity = self._createEntity(entityClass, entityJson)
+        if entity is None:
+            raise ValueError("Unknown entity class: " + entityClass)
+
+        entity.setID(UUID(entityJson["id"]))
 
         if isinstance(entity, LivingEntity):
             entity.setEnergy(entityJson["energy"])
@@ -264,5 +221,24 @@ class RoomJsonReaderWriter:
         entity.setGridID(UUID(entityJson["gridId"]))
         entity.setLocationID(entityJson["locationId"])
         entity.setName(entityJson["name"])
-        # entity.setCreationDate(entityJson['creationDate'])
         return entity
+
+    def _parseBackgroundColor(self, backgroundColorText):
+        colorParts = backgroundColorText.replace("(", "").replace(")", "").split(",")
+        red = int(colorParts[0])
+        green = int(colorParts[1])
+        blue = int(colorParts[2])
+        return red, green, blue
+
+    def _createEntity(self, entityClass, entityJson):
+        if entityClass == "Bear":
+            return Bear(entityJson["tickCreated"])
+        if entityClass == "Chicken":
+            return Chicken(entityJson["tickCreated"])
+        if entityClass == "Excrement":
+            return Excrement(entityJson["tickCreated"])
+
+        constructor = self.entityConstructors.get(entityClass)
+        if constructor is None:
+            return None
+        return constructor()
