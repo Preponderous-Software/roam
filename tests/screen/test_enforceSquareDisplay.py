@@ -3,8 +3,7 @@ import os
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 import pygame
-import pytest
-from unittest.mock import patch, MagicMock, PropertyMock
+from unittest.mock import patch, MagicMock
 
 from lib.graphik.src.graphik import Graphik
 

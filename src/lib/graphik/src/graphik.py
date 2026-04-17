@@ -21,6 +21,7 @@ class Graphik:
     def getGameDisplay(self):
         return self.gameDisplay
 
+    # Resizes the display to be square, using the current height as the side length.
     def enforceSquareDisplay(self):
         currentWidth, currentHeight = self.gameDisplay.get_size()
         if currentWidth != currentHeight:
