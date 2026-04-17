@@ -66,6 +66,23 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-17 — Follow-up: address PR review coverage threads
+- Added targeted tests to `tests/world/test_room.py` to cover refactored logic:
+  - `moveLivingEntities()` feeding path (entity movement, energy use, food
+    consumption/removal).
+  - `reproduceLivingEntities()` cooldown eligibility path (no reproduction while
+    on cooldown).
+- Added new `tests/world/test_roomJsonReaderWriter.py` with coverage for:
+  - Deserialization success across all supported `entityClass` values.
+  - `Player` deserialization returning `None`.
+  - Unknown `entityClass` raising `ValueError`.
+  - Background color parsing from persisted string format via
+    `generateRoomFromJson()`.
+- Validation:
+  - Targeted tests: `tests/world/test_room.py` and
+    `tests/world/test_roomJsonReaderWriter.py` passed.
+  - Full test suite passed (`231 passed`).
+
 ### 2026-04-16 — Clean-code refactor in world modules
 - Refactored `src/world/room.py` to improve function clarity and cohesion:
   - Replaced broad `except` blocks with `KeyError`-specific handling.

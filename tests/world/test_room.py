@@ -1,9 +1,10 @@
 from unittest.mock import MagicMock
 
+from entity.apple import Apple
+from entity.living.chicken import Chicken
 from src.world.room import Room
-from src.entity.stone import Stone
 from src.entity.grass import Grass
-from src.entity.apple import Apple
+from src.entity.stone import Stone
 
 
 def createRoom():
@@ -190,3 +191,63 @@ def test_grid_has_locations():
 
     grid = room.getGrid()
     assert grid.getSize() == 9  # 3x3 grid
+
+
+def test_move_living_entities_moves_and_feeds_when_food_is_present(monkeypatch):
+    room = createRoom()
+    entity = MagicMock()
+    entity.getID.return_value = "entity1"
+    entity.getLocationID.return_value = "location1"
+    entity.needsEnergy.return_value = True
+    entity.canEat.return_value = True
+
+    currentLocation = MagicMock()
+    newLocation = MagicMock()
+    newLocation.getID.return_value = "location2"
+    targetEntity = Apple()
+    newLocationEntities = {"entity1": entity, "food1": targetEntity}
+    newLocation.getEntities.return_value = newLocationEntities
+    newLocation.getEntity.side_effect = lambda entityId: newLocationEntities[entityId]
+
+    room.setLivingEntities({"entity1": entity})
+    room.getGrid().getLocation = MagicMock(return_value=currentLocation)
+    room.getRandomAdjacentLocation = MagicMock(return_value=newLocation)
+    room.locationContainsSolidEntity = MagicMock(return_value=False)
+    room.removeEntity = MagicMock()
+    monkeypatch.setattr("src.world.room.random.randrange", lambda _start, _stop: 1)
+
+    entitiesToMoveToNewRoom = room.moveLivingEntities(100)
+
+    assert entitiesToMoveToNewRoom == []
+    currentLocation.removeEntity.assert_called_once_with(entity)
+    newLocation.addEntity.assert_called_once_with(entity)
+    entity.setLocationID.assert_called_once_with("location2")
+    entity.removeEnergy.assert_called_once_with(1)
+    room.removeEntity.assert_called_once_with(targetEntity)
+    entity.addEnergy.assert_called_once_with(10)
+
+
+def test_reproduce_living_entities_respects_reproduction_cooldown():
+    room = createRoom()
+    location = room.getGrid().getLocation(list(room.getGrid().getLocations().keys())[0])
+    firstChicken = Chicken(0)
+    secondChicken = Chicken(0)
+    firstChicken.setEnergy(80)
+    secondChicken.setEnergy(80)
+    firstChicken.setLocationID(location.getID())
+    secondChicken.setLocationID(location.getID())
+    firstChicken.setTickLastReproduced(9_500)
+    secondChicken.setTickLastReproduced(9_500)
+    room.addEntityToLocation(firstChicken, location)
+    room.addEntityToLocation(secondChicken, location)
+    room.addLivingEntity(firstChicken)
+    room.addLivingEntity(secondChicken)
+
+    room.reproduceLivingEntities(10_000)
+
+    assert len(room.getLivingEntities()) == 2
+    chickenCount = 0
+    for entity in location.getEntities().values():
+        if isinstance(entity, Chicken):
+            chickenCount += 1
+    assert chickenCount == 2
