@@ -960,12 +960,14 @@ class WorldScreen:
         # get mapImage.png for current save
         mapImage = pygame.image.load(self.config.pathToSaveDirectory + "/mapImage.png")
 
-        # scale with respect to size of display
+        # scale as a square using the game area size
+        gameArea = self.graphik.getGameAreaRect()
+        minimapSize = gameArea.width * self.minimapScaleFactor
         mapImage = pygame.transform.scale(
             mapImage,
             (
-                self.graphik.getGameDisplay().get_width() * self.minimapScaleFactor,
-                self.graphik.getGameDisplay().get_height() * self.minimapScaleFactor,
+                minimapSize,
+                minimapSize,
             ),
         )
 
