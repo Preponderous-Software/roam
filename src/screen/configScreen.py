@@ -59,15 +59,18 @@ class ConfigScreen:
         self.config.pushableStone = not self.config.pushableStone
         sleep(0.1)
 
+    def drawTitle(self):
+        x, y = self.graphik.getGameDisplay().get_size()
+        self.graphik.drawText("Settings", x / 2, 20, 36, (255, 255, 255))
+
     def drawMenuButtons(self):
         # draw buttons in red or green depending on config option value
-        # config options to include: debug, fullscreen, autoEatInInventory
         x, y = self.graphik.getGameDisplay().get_size()
         width = x / 2
         height = y / 10
-        # start at top of screen
+        # start below title
         xpos = x / 2 - width / 2
-        ypos = 0 + height / 2
+        ypos = 0 + height / 2 + 30
         margin = 10
         color = (0, 255, 0) if self.config.debug else (255, 0, 0)
         self.graphik.drawButton(
@@ -78,7 +81,7 @@ class ConfigScreen:
             (255, 255, 255),
             color,
             30,
-            "debug",
+            "Debug Mode",
             self.toggleDebug,
         )
         ypos = ypos + height + margin
@@ -91,7 +94,7 @@ class ConfigScreen:
             (255, 255, 255),
             color,
             30,
-            "fullscreen",
+            "Fullscreen",
             self.toggleFullscreen,
         )
         ypos = ypos + height + margin
@@ -104,7 +107,7 @@ class ConfigScreen:
             (255, 255, 255),
             color,
             30,
-            "auto eat in inventory",
+            "Auto Eat Food",
             self.toggleAutoEatFoodInInventory,
         )
         ypos = ypos + height + margin
@@ -117,7 +120,7 @@ class ConfigScreen:
             (255, 255, 255),
             color,
             30,
-            "remove dead entities",
+            "Remove Dead Creatures",
             self.toggleRemoveDeadEntities,
         )
         ypos = ypos + height + margin
@@ -130,7 +133,7 @@ class ConfigScreen:
             (255, 255, 255),
             color,
             30,
-            "show minimap",
+            "Show Minimap",
             self.toggleShowMiniMap,
         )
         ypos = ypos + height + margin
@@ -143,7 +146,7 @@ class ConfigScreen:
             (255, 255, 255),
             color,
             30,
-            "camera follow player",
+            "Camera Follow Player",
             self.toggleCameraFollowPlayer,
         )
 
@@ -157,7 +160,7 @@ class ConfigScreen:
             (255, 255, 255),
             color,
             30,
-            "limit tps",
+            "Limit Speed",
             self.toggleLimitTps,
         )
 
@@ -171,7 +174,7 @@ class ConfigScreen:
             (255, 255, 255),
             color,
             30,
-            "pushable stone",
+            "Pushable Stone",
             self.togglePushableStone,
         )
 
@@ -205,6 +208,7 @@ class ConfigScreen:
                     self.handleKeyDownEvent(event.key)
 
             self.graphik.getGameDisplay().fill((0, 0, 0))
+            self.drawTitle()
             self.drawMenuButtons()
             pygame.display.update()
 

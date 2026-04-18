@@ -280,7 +280,13 @@ class InventoryScreen:
     def craftRecipe(self, recipe):
         result = recipe.craft(self.inventory)
         if result is not None:
-            self.inventory.placeIntoFirstAvailableInventorySlot(result)
+            placed = self.inventory.placeIntoFirstAvailableInventorySlot(result)
+            if placed:
+                self.status.set("Crafted " + recipe.getName())
+            else:
+                self.status.set("Inventory full")
+        else:
+            self.status.set("Not enough materials")
 
     def drawBackButton(self):
         x, y = self.graphik.getGameDisplay().get_size()
@@ -296,7 +302,7 @@ class InventoryScreen:
             (255, 255, 255),
             (0, 0, 0),
             30,
-            "back",
+            "Back",
             self.switchToWorldScreen,
         )
 
@@ -448,6 +454,7 @@ class InventoryScreen:
             self.drawCraftPanel()
             self.drawBackButton()
             self.drawCursorSlot()
+            self.status.draw()
             pygame.display.update()
 
         # empty cursor slot when exiting inventory screen

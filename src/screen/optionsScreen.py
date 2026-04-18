@@ -58,7 +58,7 @@ class OptionsScreen:
             (255, 255, 255),
             (0, 0, 0),
             30,
-            "main menu",
+            "Main Menu",
             self.switchToMainMenuScreen,
         )
         ypos = ypos + height + margin
@@ -70,7 +70,7 @@ class OptionsScreen:
             (255, 255, 255),
             (0, 0, 0),
             30,
-            "stats",
+            "Stats",
             self.switchToStatsScreen,
         )
         ypos = ypos + height + margin
@@ -82,7 +82,7 @@ class OptionsScreen:
             (255, 255, 255),
             (0, 0, 0),
             30,
-            "inventory",
+            "Inventory",
             self.switchToInventoryScreen,
         )
         self.drawBackButton()
@@ -102,7 +102,7 @@ class OptionsScreen:
             (255, 255, 255),
             (0, 0, 0),
             30,
-            "back",
+            "Back",
             self.switchToWorldScreen,
         )
 

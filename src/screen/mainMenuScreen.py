@@ -52,7 +52,7 @@ class MainMenuScreen:
             backgroundColor,
             (0, 0, 0),
             30,
-            "play",
+            "Play",
             self.switchToSaveSelectionScreen,
         )
         ypos = ypos + height + margin
@@ -64,7 +64,7 @@ class MainMenuScreen:
             backgroundColor,
             (0, 0, 0),
             30,
-            "config",
+            "Settings",
             self.switchToConfigScreen,
         )
         ypos = ypos + height + margin
@@ -76,7 +76,7 @@ class MainMenuScreen:
             backgroundColor,
             (0, 0, 0),
             30,
-            "quit",
+            "Quit",
             self.quitApplication,
         )
 
@@ -95,7 +95,10 @@ class MainMenuScreen:
                 )
 
     def handleKeyDownEvent(self, key):
-        self.switchToSaveSelectionScreen()
+        if key == pygame.K_ESCAPE:
+            self.quitApplication()
+        else:
+            self.switchToSaveSelectionScreen()
 
     def run(self):
         while not self.changeScreen:
