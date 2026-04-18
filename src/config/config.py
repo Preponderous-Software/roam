@@ -130,16 +130,45 @@ class Config:
             colorValues.append(colorValue)
         return tuple(colorValues)
 
+    MIN_WINDOW_SIZE = 400
+
     def __init__(self):
         configValues = self.readConfigFile()
-        displayDimensionDefault = pygame.display.Info().current_h * 0.90
+        screenHeight = pygame.display.Info().current_h
+        displayDimensionDefault = screenHeight * 0.90
+
+        # Resolve effective display dimensions: manual displayWidth /
+        # displayHeight take priority, then savedWindowWidth /
+        # savedWindowHeight, then the computed default.
+        savedW = configValues.get("savedWindowWidth")
+        savedH = configValues.get("savedWindowHeight")
+        if (
+            isinstance(savedW, (int, float))
+            and not isinstance(savedW, bool)
+            and isinstance(savedH, (int, float))
+            and not isinstance(savedH, bool)
+        ):
+            savedW = float(savedW)
+            savedH = float(savedH)
+            savedW = max(savedW, self.MIN_WINDOW_SIZE)
+            savedH = max(savedH, self.MIN_WINDOW_SIZE)
+            screenWidth = pygame.display.Info().current_w
+            if savedW <= screenWidth and savedH <= screenHeight:
+                displayDimensionDefaultW = savedW
+                displayDimensionDefaultH = savedH
+            else:
+                displayDimensionDefaultW = displayDimensionDefault
+                displayDimensionDefaultH = displayDimensionDefault
+        else:
+            displayDimensionDefaultW = displayDimensionDefault
+            displayDimensionDefaultH = displayDimensionDefault
 
         # static (cannot be changed in game)
         self.displayWidth = self.getFloatValue(
-            configValues, "displayWidth", displayDimensionDefault
+            configValues, "displayWidth", displayDimensionDefaultW
         )
         self.displayHeight = self.getFloatValue(
-            configValues, "displayHeight", displayDimensionDefault
+            configValues, "displayHeight", displayDimensionDefaultH
         )
         self.black = self.getColorValue(configValues, "black", (0, 0, 0))
         self.white = self.getColorValue(configValues, "white", (255, 255, 255))
@@ -181,3 +210,39 @@ class Config:
         )
         self.limitTps = self.getBoolValue(configValues, "limitTps", True)
         self.pushableStone = self.getBoolValue(configValues, "pushableStone", True)
+
+    def saveWindowSize(self, width, height):
+        width = max(int(width), self.MIN_WINDOW_SIZE)
+        height = max(int(height), self.MIN_WINDOW_SIZE)
+        configFilePath = self.getConfigFilePath()
+        lines = []
+        if configFilePath.exists():
+            try:
+                lines = configFilePath.read_text(encoding="utf-8").splitlines()
+            except (OSError, UnicodeDecodeError):
+                lines = []
+
+        updatedKeys = set()
+        newLines = []
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("savedWindowWidth:"):
+                newLines.append("savedWindowWidth: " + str(width))
+                updatedKeys.add("savedWindowWidth")
+            elif stripped.startswith("savedWindowHeight:"):
+                newLines.append("savedWindowHeight: " + str(height))
+                updatedKeys.add("savedWindowHeight")
+            else:
+                newLines.append(line)
+
+        if "savedWindowWidth" not in updatedKeys:
+            newLines.append("savedWindowWidth: " + str(width))
+        if "savedWindowHeight" not in updatedKeys:
+            newLines.append("savedWindowHeight: " + str(height))
+
+        try:
+            configFilePath.write_text(
+                "\n".join(newLines) + "\n", encoding="utf-8"
+            )
+        except OSError:
+            pass

@@ -131,6 +131,12 @@ class WorldScreen:
         if locationSizeChanged:
             Room._scaledImageCache.clear()
 
+    def saveWindowSize(self):
+        w, h = self.graphik.getGameDisplay().get_size()
+        self.config.displayWidth = w
+        self.config.displayHeight = h
+        self.config.saveWindowSize(w, h)
+
     def getOrLoadRoom(self, x, y):
         room = self.map.getRoom(x, y)
         if room == -1:
@@ -1557,8 +1563,10 @@ class WorldScreen:
                     self.handleKeyUpEvent(event.key)
                 elif event.type == pygame.WINDOWRESIZED:
                     self.initializeLocationWidthAndHeight()
+                    self.saveWindowSize()
                 elif event.type == pygame.VIDEORESIZE:
                     self.initializeLocationWidthAndHeight()
+                    self.saveWindowSize()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     self.handleMouseDownEvent()
                 elif event.type == pygame.MOUSEBUTTONUP:
