@@ -76,6 +76,7 @@ class WorldScreen:
         self.minimapY = 5
         self.cursorSlot = InventorySlot()
         self.clock = pygame.time.Clock()
+        self.showHelp = False
 
     def initialize(self):
         self.map = Map(
@@ -110,7 +111,7 @@ class WorldScreen:
 
         self.initializeLocationWidthAndHeight()
 
-        self.status.set("entered the world")
+        self.status.set("Entered the world")
         self.energyBar = EnergyBar(self.graphik, self.player)
 
     def initializeLocationWidthAndHeight(self):
@@ -144,13 +145,12 @@ class WorldScreen:
         return room
 
     def printStatsToConsole(self):
-        print("=== Stats ===")
-        print("Rooms Explored: " + str(self.stats.getRoomsExplored()))
-        print("Food eaten: " + str(self.stats.getFoodEaten()))
-        print("Number of deaths: " + str(self.stats.getNumberOfDeaths()))
-        print("")
+        print("=== Statistics ===")
         print("Score: " + str(self.stats.getScore()))
-        print("----------")
+        print("Rooms Explored: " + str(self.stats.getRoomsExplored()))
+        print("Food Eaten: " + str(self.stats.getFoodEaten()))
+        print("Deaths: " + str(self.stats.getNumberOfDeaths()))
+        print("==================")
 
     def getLocationOfPlayer(self):
         return self.map.getLocationOfEntity(self.player, self.currentRoom)
@@ -282,7 +282,7 @@ class WorldScreen:
         if self.config.worldBorder != 0 and (
             abs(x) > self.config.worldBorder or abs(y) > self.config.worldBorder
         ):
-            self.status.set("reached world border")
+            self.status.set("Reached world border")
             return
 
         playerLocation = self.getLocationOfPlayer()
@@ -306,11 +306,11 @@ class WorldScreen:
                 room = roomJsonReaderWriter.loadRoom(nextRoomPath)
                 self.map.addRoom(room)
                 self.currentRoom = room
-                self.status.set("area loaded")
+                self.status.set("Area loaded")
             else:
                 x, y = self.getCoordinatesForNewRoomBasedOnPlayerLocationAndDirection()
                 self.currentRoom = self.map.generateNewRoom(x, y)
-                self.status.set("new area discovered")
+                self.status.set("New area discovered")
                 self.stats.incrementScore()
                 self.stats.incrementRoomsExplored()
         else:
@@ -413,7 +413,7 @@ class WorldScreen:
 
                     self.stats.incrementFoodEaten()
 
-                    self.status.set("ate '" + entity.getName() + "'")
+                    self.status.set("Ate " + entity.getName())
 
                     self.stats.incrementScore()
 
@@ -520,11 +520,11 @@ class WorldScreen:
         targetLocation, targetRoom = self.getLocationAndRoomAtMousePosition()
 
         if targetLocation == -1:
-            self.status.set("no location available")
+            self.status.set("Nothing to pick up here")
             return
 
         if self.isLocationTooFar(targetLocation, targetRoom):
-            self.status.set("too far away")
+            self.status.set("Too far away")
             return
 
         toRemove = -1
@@ -542,12 +542,12 @@ class WorldScreen:
             toRemove
         )
         if result == False:
-            self.status.set("no available inventory slots")
+            self.status.set("Inventory full")
             return
         targetRoom.removeEntity(toRemove)
         if isinstance(toRemove, LivingEntity):
             targetRoom.removeLivingEntity(toRemove)
-        self.status.set("picked up '" + entity.getName() + "'")
+        self.status.set("Picked up " + entity.getName())
         self.player.removeEnergy(self.config.playerInteractionEnergyCost)
         self.player.setTickLastGathered(self.tickCounter.getTick())
 
@@ -654,36 +654,36 @@ class WorldScreen:
 
     def executePlaceAction(self):
         if self.player.getInventory().getNumTakenInventorySlots() == 0:
-            self.status.set("no items")
+            self.status.set("No items to place")
             return
 
         targetLocation, targetRoom = self.getLocationAndRoomAtMousePosition()
         if targetLocation == -1:
-            self.status.set("no location available")
+            self.status.set("Cannot place here")
             return
         if targetLocation == -2:
-            self.status.set("can't place while moving")
+            self.status.set("Stop moving to place items")
             return
         if self.locationContainsSolidEntity(targetLocation):
-            self.status.set("location blocked")
+            self.status.set("Location is blocked")
             return
 
         if self.isLocationTooFar(targetLocation, targetRoom):
-            self.status.set("too far away")
+            self.status.set("Too far away")
             return
 
         # if living entity is in the location, don't place
         for entityId in list(targetLocation.getEntities().keys()):
             entity = targetLocation.getEntity(entityId)
             if isinstance(entity, LivingEntity):
-                self.status.set("blocked by " + entity.getName())
+                self.status.set("Blocked by " + entity.getName())
                 return
 
         self.player.removeEnergy(self.config.playerInteractionEnergyCost)
 
         inventorySlot = self.player.getInventory().getSelectedInventorySlot()
         if inventorySlot.isEmpty():
-            self.status.set("no item selected")
+            self.status.set("Select an item first (1-0)")
             return
         toPlace = self.player.getInventory().removeSelectedItem()
 
@@ -693,17 +693,17 @@ class WorldScreen:
         targetRoom.addEntityToLocation(toPlace, targetLocation)
         if isinstance(toPlace, LivingEntity):
             targetRoom.addLivingEntity(toPlace)
-        self.status.set("placed '" + toPlace.getName() + "'")
+        self.status.set("Placed " + toPlace.getName())
         self.player.setTickLastPlaced(self.tickCounter.getTick())
 
     def changeSelectedInventorySlot(self, index):
         self.player.getInventory().setSelectedInventorySlotIndex(index)
         inventorySlot = self.player.getInventory().getSelectedInventorySlot()
         if inventorySlot.isEmpty():
-            self.status.set("no item selected")
+            self.status.set("Empty slot")
             return
         item = inventorySlot.getContents()[0]
-        self.status.set("selected '" + item.getName() + "'")
+        self.status.set("Selected " + item.getName())
 
     def handleKeyDownEvent(self, key):
         if key == pygame.K_ESCAPE:
@@ -739,7 +739,7 @@ class WorldScreen:
                 (0, 0),
                 (x, y),
             )
-            self.status.set("screenshot saved")
+            self.status.set("Screenshot saved")
         elif key == pygame.K_LSHIFT:
             self.player.setMovementSpeed(
                 self.player.getMovementSpeed() * self.config.runSpeedFactor
@@ -789,6 +789,8 @@ class WorldScreen:
         elif key == pygame.K_c:
             # toggle camera follow mode
             self.config.cameraFollowPlayer = not self.config.cameraFollowPlayer
+        elif key == pygame.K_F1:
+            self.showHelp = not self.showHelp
 
     def handleKeyUpEvent(self, key):
         if (
@@ -846,7 +848,7 @@ class WorldScreen:
 
         self.currentRoom = self.map.getRoom(0, 0)
         self.player.energy = self.player.targetEnergy
-        self.status.set("respawned")
+        self.status.set("Respawned")
         self.player.setTickCreated(self.tickCounter.getTick())
 
     def checkPlayerMovementCooldown(self, tickToCheck):
@@ -880,7 +882,7 @@ class WorldScreen:
                 self.player.getInventory().removeByItem(item)
                 self.stats.incrementFoodEaten()
 
-                self.status.set("ate " + item.getName() + " from inventory")
+                self.status.set("Ate " + item.getName() + " from inventory")
 
                 self.stats.incrementScore()
                 return
@@ -906,9 +908,9 @@ class WorldScreen:
     def removeEnergyAndCheckForPlayerDeath(self):
         self.player.removeEnergy(self.config.energyDepletionRate)
         if self.player.getEnergy() < self.player.getTargetEnergy() * 0.10:
-            self.status.set("low on energy!")
+            self.status.set("Low on energy!")
         if self.player.isDead():
-            self.status.set("you died")
+            self.status.set("You died! Respawning...")
             self.stats.setScore(ceil(self.stats.getScore() * 0.9))
             self.stats.incrementNumberOfDeaths()
 
@@ -1064,6 +1066,47 @@ class WorldScreen:
                     gameArea.bottom,
                 )
 
+    def drawHelpOverlay(self):
+        x, y = self.graphik.getGameDisplay().get_size()
+        overlayWidth = x * 0.6
+        overlayHeight = y * 0.75
+        overlayX = x / 2 - overlayWidth / 2
+        overlayY = y / 2 - overlayHeight / 2
+
+        # dark background
+        self.graphik.drawRectangle(
+            overlayX, overlayY, overlayWidth, overlayHeight, (30, 30, 30)
+        )
+
+        titleY = overlayY + 25
+        self.graphik.drawText(
+            "Controls  (F1 to close)", x / 2, titleY, 28, (255, 255, 255)
+        )
+
+        helpLines = [
+            "W/A/S/D or Arrows  -  Move",
+            "Left Click  -  Gather / Pick up",
+            "Right Click  -  Place item",
+            "1-0  -  Select hotbar slot",
+            "Scroll Wheel  -  Cycle hotbar",
+            "I  -  Open / Close inventory",
+            "Shift  -  Run",
+            "Ctrl  -  Crouch",
+            "M  -  Toggle minimap",
+            "+/-  -  Resize minimap",
+            "C  -  Toggle camera follow",
+            "F3  -  Toggle debug info",
+            "Print Screen  -  Take screenshot",
+            "Esc  -  Open menu",
+            "F1  -  Toggle this help",
+        ]
+
+        lineY = titleY + 40
+        lineSpacing = 24
+        for line in helpLines:
+            self.graphik.drawText(line, x / 2, lineY, 20, (220, 220, 220))
+            lineY += lineSpacing
+
     def draw(self):
         gameArea = self.graphik.getGameAreaRect()
 
@@ -1165,11 +1208,11 @@ class WorldScreen:
             xpos = self.graphik.getGameDisplay().get_width() - 100
             ypos = 20
             self.graphik.drawText(
-                "tick: "
+                "Tick: "
                 + str(tickValue)
                 + " ("
                 + str(int(measuredTicksPerSecond))
-                + " mtps)",
+                + " TPS)",
                 xpos,
                 ypos,
                 20,
@@ -1181,7 +1224,7 @@ class WorldScreen:
             xpos = self.graphik.getGameDisplay().get_width() - 100
             ypos = 40
             self.graphik.drawText(
-                "max mtps: " + str(int(highestmtps)), xpos, ypos, 20, (255, 255, 255)
+                "Peak TPS: " + str(int(highestmtps)), xpos, ypos, 20, (255, 255, 255)
             )
 
             # draw room coordinates in top left corner
@@ -1201,7 +1244,16 @@ class WorldScreen:
         if self.config.showMiniMap and self.minimapScaleFactor > 0:
             self.drawMiniMap()
 
+        # show help hint in bottom-right corner
+        if not self.showHelp:
+            hintX = self.graphik.getGameDisplay().get_width() - 50
+            hintY = self.graphik.getGameDisplay().get_height() - 20
+            self.graphik.drawText("F1: Help", hintX, hintY, 16, (180, 180, 180))
+
         self.drawCursorSlot()
+
+        if self.showHelp:
+            self.drawHelpOverlay()
 
         pygame.display.update()
 
@@ -1235,7 +1287,7 @@ class WorldScreen:
 
         self.cursorSlot.setContents(remainingItems)
         if len(remainingItems) > 0:
-            self.status.set("inventory full")
+            self.status.set("Inventory full")
 
     def drawCursorSlot(self):
         if self.cursorSlot.isEmpty():
@@ -1258,7 +1310,7 @@ class WorldScreen:
     def handleMouseDownEvent(self):
         if self.showInventory:
             # disallow player to interact with the world while inventory is open
-            self.status.set("close inventory to interact with the world")
+            self.status.set("Close inventory first (I)")
             return
 
         hotbarIndex = self.getHotbarSlotAtMousePosition()
@@ -1290,9 +1342,9 @@ class WorldScreen:
                             remaining.append(item)
                     if len(remaining) > 0:
                         hotbarSlot.setContents(remaining)
-                        self.status.set("inventory full")
+                        self.status.set("Inventory full")
                     else:
-                        self.status.set("moved item to inventory")
+                        self.status.set("Moved to inventory")
             elif pygame.mouse.get_pressed()[0]:  # left click
                 if self.cursorSlot.isEmpty():
                     if not hotbarSlot.isEmpty():
@@ -1360,11 +1412,11 @@ class WorldScreen:
                 if self.config.debug:
                     # include energy and age
                     statusString += (
-                        " (e="
+                        " (energy="
                         + str(entity.getEnergy())
                         + "/"
                         + str(entity.getTargetEnergy())
-                        + ", a="
+                        + ", age="
                         + str(entity.getAge(self.tickCounter.getTick()))
                         + ")"
                     )
@@ -1612,7 +1664,7 @@ class WorldScreen:
                             )
                             newRoom = roomJsonReaderWriter.loadRoom(nextRoomPath)
                             self.map.addRoom(newRoom)
-                            self.status.set("area loaded")
+                            self.status.set("Area loaded")
                         else:
                             (
                                 x,
@@ -1621,7 +1673,7 @@ class WorldScreen:
                                 self.getCoordinatesForNewRoomBasedOnPlayerLocationAndDirection()
                             )
                             newRoom = self.map.generateNewRoom(x, y)
-                            self.status.set("new area discovered")
+                            self.status.set("New area discovered")
                             self.stats.incrementScore()
                             self.stats.incrementRoomsExplored()
 

@@ -53,32 +53,35 @@ class StatsScreen:
     def drawStats(self):
         x, y = self.graphik.getGameDisplay().get_size()
 
+        # draw title
+        self.graphik.drawText("Statistics", x / 2, 25, 36, (255, 255, 255))
+
         # aim for center of screen
         x / 5
         height = y / 10
         xpos = x / 2
-        ypos = 0 + height / 2
+        ypos = 70
 
         # draw score
-        text = "score: " + str(self.stats.getScore())
+        text = "Score: " + str(self.stats.getScore())
         self.graphik.drawText(text, xpos, ypos, 30, (255, 255, 255))
 
         # draw rooms explored
         self.xpos = xpos
         self.ypos = ypos + height
-        text = "rooms explored: " + str(self.stats.getRoomsExplored())
+        text = "Rooms Explored: " + str(self.stats.getRoomsExplored())
         self.graphik.drawText(text, xpos, ypos + height, 30, (255, 255, 255))
 
-        # draw apples eaten
+        # draw food eaten
         self.xpos = xpos
         self.ypos = ypos + height * 2
-        text = "food eaten: " + str(self.stats.getFoodEaten())
+        text = "Food Eaten: " + str(self.stats.getFoodEaten())
         self.graphik.drawText(text, xpos, ypos + height * 2, 30, (255, 255, 255))
 
         # draw number of deaths
         self.xpos = xpos
         self.ypos = ypos + height * 3
-        text = "number of deaths: " + str(self.stats.getNumberOfDeaths())
+        text = "Deaths: " + str(self.stats.getNumberOfDeaths())
         self.graphik.drawText(text, xpos, ypos + height * 3, 30, (255, 255, 255))
 
     def drawBackButton(self):
@@ -95,7 +98,7 @@ class StatsScreen:
             (255, 255, 255),
             (0, 0, 0),
             30,
-            "back",
+            "Back",
             self.switchToOptionsScreen,
         )
 
