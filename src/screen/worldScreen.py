@@ -40,6 +40,7 @@ from world.tickCounter import TickCounter
 from world.map import Map
 from player.player import Player
 from ui.status import Status
+from ui.hotbarLayout import HOTBAR_SLOT_SIZE, HOTBAR_SLOT_GAP, HOTBAR_PADDING, HOTBAR_BOTTOM_OFFSET
 from entity.oakWood import OakWood
 from entity.woodFloor import WoodFloor
 
@@ -1085,16 +1086,16 @@ class WorldScreen:
         self.energyBar.draw()
 
         itemPreviewXPos = (
-            self.graphik.getGameDisplay().get_width() / 2 - 50 * 5 - 50 / 2
+            self.graphik.getGameDisplay().get_width() / 2 - HOTBAR_SLOT_SIZE * 5 - HOTBAR_SLOT_SIZE / 2
         )
-        itemPreviewYPos = self.graphik.getGameDisplay().get_height() - 50 * 3
-        itemPreviewWidth = 50
-        itemPreviewHeight = 50
+        itemPreviewYPos = self.graphik.getGameDisplay().get_height() - HOTBAR_BOTTOM_OFFSET
+        itemPreviewWidth = HOTBAR_SLOT_SIZE
+        itemPreviewHeight = HOTBAR_SLOT_SIZE
 
-        barXPos = itemPreviewXPos - 5
-        barYPos = itemPreviewYPos - 5
-        barWidth = itemPreviewWidth * 11 + 5
-        barHeight = itemPreviewHeight + 10
+        barXPos = itemPreviewXPos - HOTBAR_PADDING
+        barYPos = itemPreviewYPos - HOTBAR_PADDING
+        barWidth = itemPreviewWidth * 11 + HOTBAR_PADDING
+        barHeight = itemPreviewHeight + HOTBAR_PADDING * 2
 
         # draw rectangle slightly bigger than item images
         self.graphik.drawRectangle(barXPos, barYPos, barWidth, barHeight, (0, 0, 0))
@@ -1121,11 +1122,11 @@ class WorldScreen:
                         10,
                         (255, 255, 0),
                     )
-                itemPreviewXPos += 50 + 5
+                itemPreviewXPos += HOTBAR_SLOT_SIZE + HOTBAR_SLOT_GAP
                 continue
             item = inventorySlot.getContents()[0]
             image = item.getImage()
-            scaledImage = pygame.transform.scale(image, (50, 50))
+            scaledImage = pygame.transform.scale(image, (HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE))
             self.graphik.gameDisplay.blit(
                 scaledImage, (itemPreviewXPos, itemPreviewYPos)
             )
@@ -1149,7 +1150,7 @@ class WorldScreen:
                 (255, 255, 255),
             )
 
-            itemPreviewXPos += 50 + 5
+            itemPreviewXPos += HOTBAR_SLOT_SIZE + HOTBAR_SLOT_GAP
 
         if self.config.debug:
             # display tick count in top right corner
@@ -1202,12 +1203,12 @@ class WorldScreen:
         x, y = pygame.mouse.get_pos()
         displayWidth = self.graphik.getGameDisplay().get_width()
         displayHeight = self.graphik.getGameDisplay().get_height()
-        itemPreviewXPos = displayWidth / 2 - 50 * 5 - 50 / 2
-        itemPreviewYPos = displayHeight - 50 * 3
-        itemPreviewWidth = 50
-        itemPreviewHeight = 50
+        itemPreviewXPos = displayWidth / 2 - HOTBAR_SLOT_SIZE * 5 - HOTBAR_SLOT_SIZE / 2
+        itemPreviewYPos = displayHeight - HOTBAR_BOTTOM_OFFSET
+        itemPreviewWidth = HOTBAR_SLOT_SIZE
+        itemPreviewHeight = HOTBAR_SLOT_SIZE
         for i in range(10):
-            slotX = itemPreviewXPos + i * (itemPreviewWidth + 5)
+            slotX = itemPreviewXPos + i * (itemPreviewWidth + HOTBAR_SLOT_GAP)
             if (
                 x >= slotX
                 and x < slotX + itemPreviewWidth

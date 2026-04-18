@@ -1,4 +1,5 @@
 from lib.graphik.src.graphik import Graphik
+from ui.hotbarLayout import getHotbarTop
 from world.tickCounter import TickCounter
 
 
@@ -28,7 +29,8 @@ class Status:
         width = len(self.text) * 10
         height = self.textSize * 2
         xpos = x / 2 - width / 2
-        ypos = y - y / 12 - height / 2
+        hotbarTop = getHotbarTop(y)
+        ypos = hotbarTop - height - 10
         self.graphik.drawButton(
             xpos,
             ypos,
