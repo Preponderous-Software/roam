@@ -75,6 +75,11 @@ class Roam:
         while True:
             result = self.currentScreen.run()
             if result == ScreenType.MAIN_MENU_SCREEN:
+                # Preserve current window dimensions so the restart
+                # does not shrink a maximized/resized window.
+                w, h = self.gameDisplay.get_size()
+                self.config.displayWidth = w
+                self.config.displayHeight = h
                 return "restart"
             if result == ScreenType.WORLD_SCREEN:
                 self.currentScreen = self.worldScreen
