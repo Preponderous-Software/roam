@@ -373,7 +373,7 @@ class InventoryScreen:
         # drop items from cursor slot when clicking outside the inventory panel
         if not clickedSlot and not self.isInsideInventoryPanel(pos):
             if not self.cursorSlot.isEmpty():
-                if pygame.mouse.get_pressed()[1]:
+                if pygame.mouse.get_pressed()[1]:  # middle mouse button
                     self.dropOneFromCursorSlot()
                 else:
                     self.dropCursorSlot()

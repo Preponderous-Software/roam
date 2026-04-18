@@ -46,29 +46,29 @@ def createGrass():
 def test_isInsideInventoryPanel_center():
     screen = createInventoryScreen()
     # center of an 800x600 display is (400, 300), which is inside the panel
-    assert screen.isInsideInventoryPanel((400, 300)) == True
+    assert screen.isInsideInventoryPanel((400, 300))
 
 
 def test_isInsideInventoryPanel_top_left_corner():
     screen = createInventoryScreen()
     # panel starts at (200, 150) for 800x600
-    assert screen.isInsideInventoryPanel((200, 150)) == True
+    assert screen.isInsideInventoryPanel((200, 150))
 
 
 def test_isInsideInventoryPanel_bottom_right_corner():
     screen = createInventoryScreen()
     # panel ends at (600, 450) for 800x600
-    assert screen.isInsideInventoryPanel((600, 450)) == True
+    assert screen.isInsideInventoryPanel((600, 450))
 
 
 def test_isInsideInventoryPanel_outside_top_left():
     screen = createInventoryScreen()
-    assert screen.isInsideInventoryPanel((10, 10)) == False
+    assert not screen.isInsideInventoryPanel((10, 10))
 
 
 def test_isInsideInventoryPanel_outside_bottom_right():
     screen = createInventoryScreen()
-    assert screen.isInsideInventoryPanel((790, 590)) == False
+    assert not screen.isInsideInventoryPanel((790, 590))
 
 
 # --- dropCursorSlot tests ---
