@@ -300,7 +300,66 @@ class InventoryScreen:
             self.switchToWorldScreen,
         )
 
-    def handleMouseClickEvent(self, pos):
+    def isInsideInventoryPanel(self, pos):
+        backgroundX = self.graphik.getGameDisplay().get_width() / 4
+        backgroundY = self.graphik.getGameDisplay().get_height() / 4
+        backgroundWidth = self.graphik.getGameDisplay().get_width() / 2
+        backgroundHeight = self.graphik.getGameDisplay().get_height() / 2
+        return (
+            pos[0] >= backgroundX
+            and pos[0] <= backgroundX + backgroundWidth
+            and pos[1] >= backgroundY
+            and pos[1] <= backgroundY + backgroundHeight
+        )
+
+    def isInsideBackButton(self, pos):
+        x, y = self.graphik.getGameDisplay().get_size()
+        width = 100
+        height = 50
+        xpos = x - width - 10
+        ypos = y - height - 10
+        return (
+            pos[0] >= xpos
+            and pos[0] <= xpos + width
+            and pos[1] >= ypos
+            and pos[1] <= ypos + height
+        )
+
+    def isInsideCraftButton(self, pos):
+        backgroundX = self.graphik.getGameDisplay().get_width() / 4
+        backgroundY = self.graphik.getGameDisplay().get_height() / 4
+        backgroundWidth = self.graphik.getGameDisplay().get_width() / 2
+        backgroundHeight = self.graphik.getGameDisplay().get_height() / 2
+        buttonWidth = 100
+        buttonHeight = 30
+        buttonX = backgroundX + backgroundWidth - buttonWidth
+        buttonY = backgroundY + backgroundHeight + 20
+        return (
+            pos[0] >= buttonX
+            and pos[0] <= buttonX + buttonWidth
+            and pos[1] >= buttonY
+            and pos[1] <= buttonY + buttonHeight
+        )
+
+    def isInsideCraftPanel(self, pos):
+        if not self.craftPanelOpen:
+            return False
+        panelX, panelY, panelWidth, panelHeight = self.getCraftPanelRect()
+        return (
+            pos[0] >= panelX
+            and pos[0] <= panelX + panelWidth
+            and pos[1] >= panelY
+            and pos[1] <= panelY + panelHeight
+        )
+
+    def dropCursorSlot(self):
+        self.cursorSlot.clear()
+
+    def dropOneFromCursorSlot(self):
+        if not self.cursorSlot.isEmpty():
+            self.cursorSlot.pop()
+
+    def handleMouseClickEvent(self, pos, button=1):
         # get inventory slot that was clicked
         backgroundX = self.graphik.getGameDisplay().get_width() / 4
         backgroundY = self.graphik.getGameDisplay().get_height() / 4
@@ -310,6 +369,7 @@ class InventoryScreen:
         row = 0
         column = 0
         margin = 5
+        clickedSlot = False
         for inventorySlot in self.inventory.getInventorySlots():
             itemX = backgroundX + column * backgroundWidth / itemsPerRow + margin
             itemY = backgroundY + row * backgroundHeight / itemsPerRow + margin
@@ -323,10 +383,11 @@ class InventoryScreen:
                 and pos[1] > itemY
                 and pos[1] < itemY + itemHeight
             ):
+                clickedSlot = True
                 index = row * itemsPerRow + column
 
                 # select that inventory slot if right mouse button was clicked
-                if pygame.mouse.get_pressed()[2]:
+                if button == 3:
                     self.inventory.setSelectedInventorySlotIndex(index)
                     return
 
@@ -349,6 +410,18 @@ class InventoryScreen:
                 column = 0
                 row += 1
 
+        # drop items from cursor slot when clicking outside the inventory panel
+        if not clickedSlot and not self.isInsideInventoryPanel(pos):
+            if self.isInsideBackButton(pos) or self.isInsideCraftButton(pos):
+                return
+            if self.isInsideCraftPanel(pos):
+                return
+            if not self.cursorSlot.isEmpty():
+                if button == 2:  # middle mouse button
+                    self.dropOneFromCursorSlot()
+                elif button == 1:  # left mouse button
+                    self.dropCursorSlot()
+
     def drawCursorSlot(self):
         if self.cursorSlot.isEmpty():
             return
@@ -367,7 +440,7 @@ class InventoryScreen:
                 elif event.type == pygame.KEYDOWN:
                     self.handleKeyDownEvent(event.key)
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    self.handleMouseClickEvent(event.pos)
+                    self.handleMouseClickEvent(event.pos, event.button)
 
             self.graphik.getGameDisplay().fill((0, 0, 0))
             self.drawPlayerInventory()
