@@ -5,7 +5,7 @@ os.environ["SDL_AUDIODRIVER"] = "dummy"
 import pygame
 from unittest.mock import MagicMock
 
-from lib.graphik.src.graphik import Graphik
+from src.lib.graphik.src.graphik import Graphik
 
 
 def test_getGameAreaRect_returns_centered_square_for_wide_display():
