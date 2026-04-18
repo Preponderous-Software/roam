@@ -6,6 +6,7 @@ import os
 import time
 import jsonschema
 import pygame
+from di import Container
 from entity.apple import Apple
 from entity.bed import Bed
 from entity.campfire import Campfire
@@ -59,6 +60,7 @@ class WorldScreen:
         tickCounter: TickCounter,
         stats: Stats,
         player: Player,
+        container: Container = None,
     ):
         self.graphik = graphik
         self.config = config
@@ -66,26 +68,35 @@ class WorldScreen:
         self.tickCounter = tickCounter
         self.stats = stats
         self.player = player
+        self.container = container
         self.running = True
         self.showInventory = False
         self.nextScreen = ScreenType.OPTIONS_SCREEN
         self.changeScreen = False
-        self.roomJsonReaderWriter = RoomJsonReaderWriter(
-            self.config.gridSize, self.graphik, self.tickCounter, self.config
-        )
-        self.mapImageUpdater = MapImageUpdater(self.tickCounter, self.config)
+        if self.container is not None:
+            self.roomJsonReaderWriter = self.container.resolve(RoomJsonReaderWriter)
+            self.mapImageUpdater = self.container.resolve(MapImageUpdater)
+            self.hudDragManager = self.container.resolve(HudDragManager)
+        else:
+            self.roomJsonReaderWriter = RoomJsonReaderWriter(
+                self.config.gridSize, self.graphik, self.tickCounter, self.config
+            )
+            self.mapImageUpdater = MapImageUpdater(self.tickCounter, self.config)
+            self.hudDragManager = HudDragManager()
         self.minimapScaleFactor = 0.10
         self.minimapX = 5
         self.minimapY = 5
         self.cursorSlot = InventorySlot()
         self.clock = pygame.time.Clock()
         self.showHelp = False
-        self.hudDragManager = HudDragManager()
 
     def initialize(self):
-        self.map = Map(
-            self.config.gridSize, self.graphik, self.tickCounter, self.config
-        )
+        if self.container is not None:
+            self.map = self.container.resolve(Map)
+        else:
+            self.map = Map(
+                self.config.gridSize, self.graphik, self.tickCounter, self.config
+            )
 
         # load player location if possible
         if os.path.exists(self.config.pathToSaveDirectory + "/playerLocation.json"):
@@ -116,7 +127,10 @@ class WorldScreen:
         self.initializeLocationWidthAndHeight()
 
         self.status.set("Entered the world")
-        self.energyBar = EnergyBar(self.graphik, self.player)
+        if self.container is not None:
+            self.energyBar = self.container.resolve(EnergyBar)
+        else:
+            self.energyBar = EnergyBar(self.graphik, self.player)
 
         self.hudDragManager.register("hotbar", self._getHotbarDefaultRect)
         self.hudDragManager.register("status", lambda: self.status.getDefaultRect())

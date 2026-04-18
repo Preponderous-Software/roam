@@ -3,9 +3,11 @@ import time
 
 import jsonschema
 
+from config.config import Config
+
 
 class TickCounter:
-    def __init__(self, config):
+    def __init__(self, config: Config):
         self.config = config
         self.tick = 0
         self.measuredTicksPerSecond = 0

@@ -1,5 +1,6 @@
 import os
 import random
+from config.config import Config
 from lib.graphik.src.graphik import Graphik
 from lib.pyenvlib.entity import Entity
 from world.roomFactory import RoomFactory
@@ -11,14 +12,18 @@ from world.room import Room
 # @author Daniel McCoy Stephenson
 # @since August 15th, 2022
 class Map:
-    def __init__(self, gridSize, graphik: Graphik, tickCounter: TickCounter, config):
+    def __init__(self, gridSize, graphik: Graphik, tickCounter: TickCounter, config: Config, container=None):
         self.rooms = []
         self._roomIndex = {}
         self.gridSize = gridSize
         self.graphik = graphik
         self.tickCounter = tickCounter
         self.config = config
-        self.roomFactory = RoomFactory(self.gridSize, self.graphik, self.tickCounter)
+        self.container = container
+        if self.container is not None:
+            self.roomFactory = self.container.resolve(RoomFactory)
+        else:
+            self.roomFactory = RoomFactory(self.gridSize, self.graphik, self.tickCounter)
 
     def getRooms(self):
         return self.rooms
@@ -38,9 +43,12 @@ class Map:
             + ".json"
         )
         if os.path.exists(nextRoomPath):
-            roomJsonReaderWriter = RoomJsonReaderWriter(
-                self.gridSize, self.graphik, self.tickCounter, self.config
-            )
+            if self.container is not None:
+                roomJsonReaderWriter = self.container.resolve(RoomJsonReaderWriter)
+            else:
+                roomJsonReaderWriter = RoomJsonReaderWriter(
+                    self.gridSize, self.graphik, self.tickCounter, self.config
+                )
             room = roomJsonReaderWriter.loadRoom(nextRoomPath)
             self.addRoom(room)
             return room

@@ -1,5 +1,8 @@
 import pygame
+from bootstrap import createContainer
 from config.config import Config
+from di import Container
+from inventory.inventory import Inventory
 from player.player import Player
 from lib.graphik.src.graphik import Graphik
 from screen.configScreen import ConfigScreen
@@ -24,34 +27,38 @@ class Roam:
         self.running = True
         self.config = config
         pygame.display.set_caption("Roam" + " (" + config.pathToSaveDirectory + ")")
-        self.tickCounter = TickCounter(self.config)
+
+        # Create the DI container and register runtime dependencies.
+        self.container = createContainer(config)
+        self.tickCounter = self.container.resolve(TickCounter)
         self.gameDisplay = self.initializeGameDisplay()
-        self.graphik = Graphik(self.gameDisplay)
-        self.status = Status(self.graphik, self.tickCounter)
-        self.stats = Stats(self.config)
-        self.player = Player(self.tickCounter.getTick())
-        self.worldScreen = WorldScreen(
-            self.graphik,
-            self.config,
-            self.status,
-            self.tickCounter,
-            self.stats,
-            self.player,
+        self.container.registerInstance(Graphik, Graphik(self.gameDisplay))
+        self.graphik = self.container.resolve(Graphik)
+        self.status = self.container.resolve(Status)
+        self.stats = self.container.resolve(Stats)
+        self.player = self.container.resolve(Player)
+
+        # Register the player inventory so InventoryScreen can auto-wire.
+        self.container.registerInstance(Inventory, self.player.getInventory())
+
+        # Resolve screens that can be fully auto-wired.
+        self.worldScreen = self.container.resolve(WorldScreen)
+        self.optionsScreen = self.container.resolve(OptionsScreen)
+        self.mainMenuScreen = self.container.resolve(MainMenuScreen)
+        self.statsScreen = self.container.resolve(StatsScreen)
+        self.inventoryScreen = self.container.resolve(InventoryScreen)
+        self.configScreen = self.container.resolve(ConfigScreen)
+
+        # SaveSelectionScreen needs a callback that cannot be auto-wired.
+        self.container.register(
+            SaveSelectionScreen,
+            lambda: SaveSelectionScreen(
+                self.container.resolve(Graphik),
+                self.container.resolve(Config),
+                self.initializeWorldScreen,
+            ),
         )
-        self.optionsScreen = OptionsScreen(self.graphik, self.config, self.status)
-        self.mainMenuScreen = MainMenuScreen(
-            self.graphik, self.config
-        )
-        self.saveSelectionScreen = SaveSelectionScreen(
-            self.graphik, self.config, self.initializeWorldScreen
-        )
-        self.statsScreen = StatsScreen(
-            self.graphik, self.config, self.status, self.stats
-        )
-        self.inventoryScreen = InventoryScreen(
-            self.graphik, self.config, self.status, self.player.getInventory()
-        )
-        self.configScreen = ConfigScreen(self.graphik, self.config, self.status)
+        self.saveSelectionScreen = self.container.resolve(SaveSelectionScreen)
         self.currentScreen = self.mainMenuScreen
 
     def initializeGameDisplay(self):

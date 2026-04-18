@@ -1,3 +1,4 @@
+from config.config import Config
 from mapimage.mapImageGenerator import MapImageGenerator
 from world.tickCounter import TickCounter
 
@@ -5,7 +6,7 @@ from world.tickCounter import TickCounter
 # @author Daniel McCoy Stephenson
 # @since February 2nd, 2023
 class MapImageUpdater:
-    def __init__(self, tickCounter: TickCounter, config):
+    def __init__(self, tickCounter: TickCounter, config: Config):
         self.tickCounter = tickCounter
         self.config = config
         self.mapImageGenerator = MapImageGenerator(self.config)

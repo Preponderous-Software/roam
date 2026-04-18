@@ -3,9 +3,11 @@ import json
 import os
 import jsonschema
 
+from config.config import Config
+
 
 class Stats:
-    def __init__(self, config):
+    def __init__(self, config: Config):
         self.config = config
         self.score = 0
         self.roomsExplored = 0

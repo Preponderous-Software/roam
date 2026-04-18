@@ -68,6 +68,46 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-18 — Add lightweight dependency injection container
+- **Goal:** Replace all manual dependency construction patterns with a
+  self-contained DI container, centralizing wiring in a single bootstrap
+  module while preserving all business logic unchanged.
+- **Changes:**
+  - Created `src/di/container.py` — full DI container implementation using
+    only Python stdlib (`inspect`, `typing`, `threading`). Supports
+    registration by type, singleton/transient lifetimes, auto-wiring via
+    type hints, explicit instance registration, `@container.component`
+    decorator, and circular dependency detection with `DIError` exceptions.
+  - Created `src/di/__init__.py` — re-exports public API (`Container`,
+    `DIError`).
+  - Created `src/bootstrap.py` — centralized dependency registration for
+    Config, TickCounter, Stats, Status, Player, Graphik, all screen
+    classes, RoomFactory, RoomJsonReaderWriter, Map, MapImageUpdater,
+    EnergyBar, HudDragManager.
+  - Migrated `src/roam.py` — all manual constructions replaced with
+    `container.resolve(T)`. Runtime dependencies (Graphik, Player,
+    Inventory) registered as instances after pygame initialization.
+    SaveSelectionScreen registered with factory lambda for callback.
+  - Migrated `src/screen/worldScreen.py` — added optional `container`
+    parameter; internal service creation (RoomJsonReaderWriter,
+    MapImageUpdater, HudDragManager, Map, EnergyBar) uses
+    `container.resolve()` when available, falls back to manual
+    construction for backward compatibility with tests.
+  - Migrated `src/world/map.py` — added optional `container` parameter;
+    RoomFactory and RoomJsonReaderWriter creation uses `container.resolve()`
+    when available.
+  - Added type hints to `TickCounter.__init__` (`config: Config`),
+    `Stats.__init__` (`config: Config`), `MapImageUpdater.__init__`
+    (`config: Config`) to enable auto-wiring.
+  - Created `tests/test_di.py` with 12 test cases covering: no-dependency
+    resolution, recursive resolution, singleton lifetime, transient
+    lifetime, instance registration, unregistered type error, circular
+    dependency error, component decorator, decorator with lifetime,
+    default parameters, invalid lifetime error, and instance used in
+    auto-wiring.
+  - Updated `pytest.ini` to include `src/di` in pythonpath.
+- **Tests:** All 300 tests pass (288 existing + 12 new DI tests).
+
 ### 2026-04-18 — Allow players to drop item stacks from inventory screen
 - **Problem:** Players had no way to quickly discard unwanted items from
   inventory. The only options were placing items one at a time in the world
@@ -467,3 +507,18 @@ about this repository, add it here so the next agent benefits.
   that returns its default `pygame.Rect`. Offsets are stored per
   element and applied at draw time. Position clamping ensures at least
   20 % of an element remains visible on screen.
+- 2026-04-18: `[not yet integrated]` Many constructor parameters in the
+  codebase lack type hints (e.g., `config` in `TickCounter`, `Stats`,
+  `MapImageUpdater`, and `Map`). When adding DI or auto-wiring, type
+  hints must be added to enable automatic resolution. Adding type hints
+  is considered a wiring-only change, not a business-logic change.
+- 2026-04-18: `[not yet integrated]` Several classes require primitive
+  values or runtime state in their constructors (e.g., `Player` needs
+  `tickCounter.getTick()`, `Map`/`RoomFactory` need `config.gridSize`,
+  `SaveSelectionScreen` needs a callback). These cannot be auto-wired
+  and require factory functions or explicit instance registration.
+- 2026-04-18: `[not yet integrated]` The `test_worldScreen_pushStone.py`
+  test creates `WorldScreen` using `__new__` (bypassing `__init__`) and
+  manually sets attributes. This pattern means constructor changes to
+  `WorldScreen` won't break those tests, but it also means those tests
+  don't exercise the constructor or DI wiring.
