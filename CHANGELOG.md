@@ -8,7 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
-| 2026-04-18 | 6 | fix: Status text no longer overlaps with the hotbar — repositioned above the hotbar at all display sizes; fix: Keep minimap square by using game area dimensions instead of full display dimensions; fix: Preserve window dimensions when returning to main menu so maximized windows stay maximized; fix: Room PNG captures for minimap now use game area dimensions and draw unclipped to avoid black letterbox bars in minimap |
+| 2026-04-18 | 6 | fix: Status text no longer overlaps with the hotbar — repositioned above the hotbar at all display sizes; fix: Keep minimap square by using game area dimensions instead of full display dimensions; fix: Preserve window dimensions when returning to main menu so maximized windows stay maximized; fix: Room PNG captures for minimap now use game area dimensions and draw unclipped to avoid black letterbox bars in minimap; feat: Allow players to drop item stacks from inventory screen |
 | 2026-04-17 | 2 | feat: Keep game world square and centered upon window resizing — render the game world as a centered square within any-sized window using `Graphik.getGameAreaRect()`; the window itself can be freely resized; test: Add unit tests for getGameAreaRect |
 | 2026-04-16 | 5 | feat: Add excrement spawning by living entities that decays into grass over time; test: Add unit tests for world package (RoomType, TickCounter, Room, RoomFactory, Map); feat: Allow player to push stone entities (configurable via `pushableStone` setting) including cross-room pushing; fix: Persist adjacent room after cross-room stone push, re-check solidity after pushing when stacked entities present, remove unused import |
 | 2026-04-14 | 1 | feat: Add living entity drops — chickens and bears now drop meat items (ChickenMeat, BearMeat) on death instead of being eaten whole |
@@ -67,6 +67,26 @@ logged in detail below.
 | 2022-08-08 | 21 | Create version.txt; Update README.md; Modified README. (+9 more) |
 
 ## AI Agent Sessions
+
+### 2026-04-18 — Allow players to drop item stacks from inventory screen
+- **Problem:** Players had no way to quickly discard unwanted items from
+  inventory. The only options were placing items one at a time in the world
+  or dying.
+- **Feature:** Added drop functionality to the inventory screen:
+  - Left-click outside the inventory panel while holding items on cursor →
+    drops (discards) the entire stack
+  - Middle-click outside the inventory panel while holding items on cursor →
+    drops (discards) a single item from the cursor stack
+- **Changes:**
+  - `src/screen/inventoryScreen.py`: Added `isInsideInventoryPanel(pos)`,
+    `dropCursorSlot()`, and `dropOneFromCursorSlot()` methods. Modified
+    `handleMouseClickEvent` to detect clicks outside the inventory panel
+    when cursor slot has items and trigger drop behavior.
+  - `README.md`: Added drop controls to the Controls table.
+  - `tests/screen/test_inventoryScreen_drop.py`: Added 12 tests covering
+    panel bounds checking, full stack drop, single item drop, empty cursor
+    handling, and inventory isolation.
+- **Validation:** Full test suite passed (254 passed).
 
 ### 2026-04-18 — Fix status text overlapping with hotbar
 - **Problem:** The status text (rendered by `ui/status.py`) was drawn at a
@@ -425,3 +445,11 @@ about this repository, add it here so the next agent benefits.
   background extends from `y - 155` to `y - 95`. Any HUD element
   positioned near the bottom of the screen must account for this
   fixed region to avoid overlap.
+- 2026-04-18: `[not yet integrated]` The `test_inventoryJsonReaderWriter.py`
+  test file globally patches `config.pygame.display = MagicMock()` (line 6)
+  which replaces `pygame.display` with a MagicMock for the entire test
+  session. Any tests that run after this module and call
+  `pygame.display.set_mode()` will receive a MagicMock instead of a real
+  Surface. Screen tests should use `MagicMock` for `gameDisplay` directly
+  (passing it to `Graphik(gameDisplay)` with explicit `get_width`/
+  `get_height`/`get_size` return values) to avoid this pollution.

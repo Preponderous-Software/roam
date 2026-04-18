@@ -300,6 +300,25 @@ class InventoryScreen:
             self.switchToWorldScreen,
         )
 
+    def isInsideInventoryPanel(self, pos):
+        backgroundX = self.graphik.getGameDisplay().get_width() / 4
+        backgroundY = self.graphik.getGameDisplay().get_height() / 4
+        backgroundWidth = self.graphik.getGameDisplay().get_width() / 2
+        backgroundHeight = self.graphik.getGameDisplay().get_height() / 2
+        return (
+            pos[0] >= backgroundX
+            and pos[0] <= backgroundX + backgroundWidth
+            and pos[1] >= backgroundY
+            and pos[1] <= backgroundY + backgroundHeight
+        )
+
+    def dropCursorSlot(self):
+        self.cursorSlot.clear()
+
+    def dropOneFromCursorSlot(self):
+        if not self.cursorSlot.isEmpty():
+            self.cursorSlot.pop()
+
     def handleMouseClickEvent(self, pos):
         # get inventory slot that was clicked
         backgroundX = self.graphik.getGameDisplay().get_width() / 4
@@ -310,6 +329,7 @@ class InventoryScreen:
         row = 0
         column = 0
         margin = 5
+        clickedSlot = False
         for inventorySlot in self.inventory.getInventorySlots():
             itemX = backgroundX + column * backgroundWidth / itemsPerRow + margin
             itemY = backgroundY + row * backgroundHeight / itemsPerRow + margin
@@ -323,6 +343,7 @@ class InventoryScreen:
                 and pos[1] > itemY
                 and pos[1] < itemY + itemHeight
             ):
+                clickedSlot = True
                 index = row * itemsPerRow + column
 
                 # select that inventory slot if right mouse button was clicked
@@ -348,6 +369,14 @@ class InventoryScreen:
             if column == itemsPerRow:
                 column = 0
                 row += 1
+
+        # drop items from cursor slot when clicking outside the inventory panel
+        if not clickedSlot and not self.isInsideInventoryPanel(pos):
+            if not self.cursorSlot.isEmpty():
+                if pygame.mouse.get_pressed()[1]:
+                    self.dropOneFromCursorSlot()
+                else:
+                    self.dropCursorSlot()
 
     def drawCursorSlot(self):
         if self.cursorSlot.isEmpty():

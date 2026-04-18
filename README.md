@@ -19,6 +19,8 @@ right mouse | place
 i | open/close inventory
 print screen | take screenshot
 esc | quit
+left click outside inventory panel | drop entire cursor stack (inventory screen)
+middle click outside inventory panel | drop single item from cursor (inventory screen)
 
 ## Clone and Run
 ### Clone
