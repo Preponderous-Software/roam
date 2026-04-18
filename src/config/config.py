@@ -222,23 +222,29 @@ class Config:
             except (OSError, UnicodeDecodeError):
                 lines = []
 
+        savedValues = {
+            "savedWindowWidth": str(width),
+            "savedWindowHeight": str(height),
+        }
         updatedKeys = set()
         newLines = []
         for line in lines:
             stripped = line.strip()
-            if stripped.startswith("savedWindowWidth:"):
-                newLines.append("savedWindowWidth: " + str(width))
-                updatedKeys.add("savedWindowWidth")
-            elif stripped.startswith("savedWindowHeight:"):
-                newLines.append("savedWindowHeight: " + str(height))
-                updatedKeys.add("savedWindowHeight")
-            else:
+            if stripped == "" or stripped.startswith("#"):
                 newLines.append(line)
+                continue
+            parts = stripped.split(":", 1)
+            if len(parts) == 2:
+                key = parts[0].strip()
+                if key in savedValues:
+                    newLines.append(key + ": " + savedValues[key])
+                    updatedKeys.add(key)
+                    continue
+            newLines.append(line)
 
-        if "savedWindowWidth" not in updatedKeys:
-            newLines.append("savedWindowWidth: " + str(width))
-        if "savedWindowHeight" not in updatedKeys:
-            newLines.append("savedWindowHeight: " + str(height))
+        for key, value in savedValues.items():
+            if key not in updatedKeys:
+                newLines.append(key + ": " + value)
 
         try:
             configFilePath.write_text(

@@ -227,6 +227,24 @@ def test_save_window_size_updates_existing_entries(tmp_path, monkeypatch):
     assert "500" not in content
 
 
+def test_save_window_size_matches_whitespace_before_colon(tmp_path, monkeypatch):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text(
+        "savedWindowWidth : 500\nsavedWindowHeight : 500\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+
+    config = Config()
+    config.saveWindowSize(900, 700)
+
+    content = configFilePath.read_text(encoding="utf-8")
+    assert "savedWindowWidth: 900" in content
+    assert "savedWindowHeight: 700" in content
+    # No duplicate keys — old lines were replaced, not appended
+    assert content.count("savedWindowWidth") == 1
+    assert content.count("savedWindowHeight") == 1
+
+
 def test_save_window_size_clamps_to_minimum(tmp_path, monkeypatch):
     configFilePath = tmp_path / "config.yml"
     configFilePath.write_text("", encoding="utf-8")
