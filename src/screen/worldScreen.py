@@ -41,6 +41,7 @@ from world.map import Map
 from player.player import Player
 from ui.status import Status
 from ui.hotbarLayout import HOTBAR_SLOT_SIZE, HOTBAR_SLOT_GAP, HOTBAR_PADDING, HOTBAR_BOTTOM_OFFSET
+from ui.hudDragManager import HudDragManager
 from entity.oakWood import OakWood
 from entity.woodFloor import WoodFloor
 
@@ -77,6 +78,7 @@ class WorldScreen:
         self.cursorSlot = InventorySlot()
         self.clock = pygame.time.Clock()
         self.showHelp = False
+        self.hudDragManager = HudDragManager()
 
     def initialize(self):
         self.map = Map(
@@ -113,6 +115,13 @@ class WorldScreen:
 
         self.status.set("Entered the world")
         self.energyBar = EnergyBar(self.graphik, self.player)
+
+        self.hudDragManager.register("hotbar", self._getHotbarDefaultRect)
+        self.hudDragManager.register("status", lambda: self.status.getDefaultRect())
+        self.hudDragManager.register(
+            "energyBar", lambda: self.energyBar.getDefaultRect()
+        )
+        self.hudDragManager.register("minimap", self._getMinimapDefaultRect)
 
     def initializeLocationWidthAndHeight(self):
         gameArea = self.graphik.getGameAreaRect()
@@ -979,11 +988,15 @@ class WorldScreen:
             ),
         )
 
+        minimapOx, minimapOy = self.hudDragManager.getOffset("minimap")
+        drawX = self.minimapX + minimapOx
+        drawY = self.minimapY + minimapOy
+
         # draw rectangle
         backgroundColor = (200, 200, 200)
         self.graphik.drawRectangle(
-            self.minimapX,
-            self.minimapY,
+            drawX,
+            drawY,
             mapImage.get_width() + 20,
             mapImage.get_height() + 20,
             backgroundColor,
@@ -991,7 +1004,7 @@ class WorldScreen:
 
         # blit in top left corner with 10px padding
         self.graphik.getGameDisplay().blit(
-            mapImage, (self.minimapX + 10, self.minimapY + 10)
+            mapImage, (drawX + 10, drawY + 10)
         )
 
     def drawFollowMode(self):
@@ -1107,6 +1120,31 @@ class WorldScreen:
             self.graphik.drawText(line, x / 2, lineY, 20, (220, 220, 220))
             lineY += lineSpacing
 
+    def _getHotbarDefaultRect(self):
+        """Return the default bounding rect for the hotbar (no drag offset)."""
+        displayWidth = self.graphik.getGameDisplay().get_width()
+        displayHeight = self.graphik.getGameDisplay().get_height()
+        itemPreviewXPos = (
+            displayWidth / 2 - HOTBAR_SLOT_SIZE * 5 - HOTBAR_SLOT_SIZE / 2
+        )
+        itemPreviewYPos = displayHeight - HOTBAR_BOTTOM_OFFSET
+        barXPos = itemPreviewXPos - HOTBAR_PADDING
+        barYPos = itemPreviewYPos - HOTBAR_PADDING
+        barWidth = HOTBAR_SLOT_SIZE * 11 + HOTBAR_PADDING
+        barHeight = HOTBAR_SLOT_SIZE + HOTBAR_PADDING * 2
+        return pygame.Rect(barXPos, barYPos, barWidth, barHeight)
+
+    def _getMinimapDefaultRect(self):
+        """Return the default bounding rect for the minimap (no drag offset)."""
+        gameArea = self.graphik.getGameAreaRect()
+        minimapSize = gameArea.width * self.minimapScaleFactor
+        return pygame.Rect(
+            self.minimapX,
+            self.minimapY,
+            minimapSize + 20,
+            minimapSize + 20,
+        )
+
     def draw(self):
         gameArea = self.graphik.getGameAreaRect()
 
@@ -1131,13 +1169,16 @@ class WorldScreen:
         # remove clip so UI draws over the full display
         self.graphik.getGameDisplay().set_clip(None)
 
-        self.status.draw()
-        self.energyBar.draw()
+        statusOx, statusOy = self.hudDragManager.getOffset("status")
+        self.status.draw(statusOx, statusOy)
+        energyOx, energyOy = self.hudDragManager.getOffset("energyBar")
+        self.energyBar.draw(energyOx, energyOy)
 
+        hotbarOx, hotbarOy = self.hudDragManager.getOffset("hotbar")
         itemPreviewXPos = (
             self.graphik.getGameDisplay().get_width() / 2 - HOTBAR_SLOT_SIZE * 5 - HOTBAR_SLOT_SIZE / 2
-        )
-        itemPreviewYPos = self.graphik.getGameDisplay().get_height() - HOTBAR_BOTTOM_OFFSET
+        ) + hotbarOx
+        itemPreviewYPos = self.graphik.getGameDisplay().get_height() - HOTBAR_BOTTOM_OFFSET + hotbarOy
         itemPreviewWidth = HOTBAR_SLOT_SIZE
         itemPreviewHeight = HOTBAR_SLOT_SIZE
 
@@ -1261,8 +1302,9 @@ class WorldScreen:
         x, y = pygame.mouse.get_pos()
         displayWidth = self.graphik.getGameDisplay().get_width()
         displayHeight = self.graphik.getGameDisplay().get_height()
-        itemPreviewXPos = displayWidth / 2 - HOTBAR_SLOT_SIZE * 5 - HOTBAR_SLOT_SIZE / 2
-        itemPreviewYPos = displayHeight - HOTBAR_BOTTOM_OFFSET
+        hotbarOx, hotbarOy = self.hudDragManager.getOffset("hotbar")
+        itemPreviewXPos = displayWidth / 2 - HOTBAR_SLOT_SIZE * 5 - HOTBAR_SLOT_SIZE / 2 + hotbarOx
+        itemPreviewYPos = displayHeight - HOTBAR_BOTTOM_OFFSET + hotbarOy
         itemPreviewWidth = HOTBAR_SLOT_SIZE
         itemPreviewHeight = HOTBAR_SLOT_SIZE
         for i in range(10):
@@ -1307,7 +1349,15 @@ class WorldScreen:
                 (255, 255, 255),
             )
 
-    def handleMouseDownEvent(self):
+    def handleMouseDownEvent(self, event):
+        # Middle-click initiates HUD drag
+        if event.button == 2:
+            mx, my = pygame.mouse.get_pos()
+            sw = self.graphik.getGameDisplay().get_width()
+            sh = self.graphik.getGameDisplay().get_height()
+            self.hudDragManager.handleMouseDown(mx, my, sw, sh)
+            return
+
         if self.showInventory:
             # disallow player to interact with the world while inventory is open
             self.status.set("Close inventory first (I)")
@@ -1372,11 +1422,25 @@ class WorldScreen:
         elif pygame.mouse.get_pressed()[2]:  # right click
             self.player.setPlacing(True)
 
-    def handleMouseUpEvent(self):
+    def handleMouseUpEvent(self, event):
+        # Finish HUD drag on middle-button release
+        if event.button == 2 and self.hudDragManager.isDragging():
+            mx, my = pygame.mouse.get_pos()
+            sw = self.graphik.getGameDisplay().get_width()
+            sh = self.graphik.getGameDisplay().get_height()
+            self.hudDragManager.handleMouseUp(mx, my, sw, sh)
+            return
         if not pygame.mouse.get_pressed()[0]:
             self.player.setGathering(False)
         if not pygame.mouse.get_pressed()[2]:
             self.player.setPlacing(False)
+
+    def handleMouseMotionEvent(self):
+        if self.hudDragManager.isDragging():
+            mx, my = pygame.mouse.get_pos()
+            sw = self.graphik.getGameDisplay().get_width()
+            sh = self.graphik.getGameDisplay().get_height()
+            self.hudDragManager.handleMouseMotion(mx, my, sw, sh)
 
     def handleMouseWheelEvent(self, event):
         if event.y > 0:
@@ -1620,9 +1684,11 @@ class WorldScreen:
                     self.initializeLocationWidthAndHeight()
                     self.updateConfigWindowSize()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    self.handleMouseDownEvent()
+                    self.handleMouseDownEvent(event)
                 elif event.type == pygame.MOUSEBUTTONUP:
-                    self.handleMouseUpEvent()
+                    self.handleMouseUpEvent(event)
+                elif event.type == pygame.MOUSEMOTION:
+                    self.handleMouseMotionEvent()
                 elif event.type == pygame.MOUSEWHEEL:
                     self.handleMouseWheelEvent(event)
 
