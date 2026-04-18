@@ -42,13 +42,17 @@ class OptionsScreen:
         self.nextScreen = ScreenType.NONE
         self.changeScreen = True
 
+    def drawTitle(self):
+        x, y = self.graphik.getGameDisplay().get_size()
+        self.graphik.drawText("Menu", x / 2, 20, 36, (255, 255, 255))
+
     def drawMenuButtons(self):
         x, y = self.graphik.getGameDisplay().get_size()
         width = x / 3
         height = y / 10
-        # start at top of screen
+        # start below title
         xpos = x / 2 - width / 2
-        ypos = 0 + height / 2
+        ypos = 0 + height / 2 + 30
         margin = 10
         self.graphik.drawButton(
             xpos,
@@ -115,6 +119,7 @@ class OptionsScreen:
                     self.handleKeyDownEvent(event.key)
 
             self.graphik.getGameDisplay().fill((0, 0, 0))
+            self.drawTitle()
             self.drawMenuButtons()
             pygame.display.update()
 

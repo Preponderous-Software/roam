@@ -53,11 +53,14 @@ class StatsScreen:
     def drawStats(self):
         x, y = self.graphik.getGameDisplay().get_size()
 
+        # draw title
+        self.graphik.drawText("Statistics", x / 2, 25, 36, (255, 255, 255))
+
         # aim for center of screen
         x / 5
         height = y / 10
         xpos = x / 2
-        ypos = 0 + height / 2
+        ypos = 0 + height / 2 + 30
 
         # draw score
         text = "Score: " + str(self.stats.getScore())

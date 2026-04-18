@@ -7,20 +7,24 @@ The planning document can be found [here](./PLANNING.md)
 ## Controls
 Key | Action
 ------------ | -------------
-w | move up
-a | move left
-s | move down
-d | move right
-shift | run
-ctrl | crouch
-left mouse | gather
-right mouse | place
-1-0 | select item in hotbar
-i | open/close inventory
-print screen | take screenshot
-esc | quit
-left mouse (outside inventory panel) | drop entire cursor stack (inventory screen)
-middle mouse (outside inventory panel) | drop single item from cursor (inventory screen)
+W / A / S / D (or Arrow Keys) | Move up / left / down / right
+Shift | Run
+Ctrl | Crouch
+Left Mouse | Gather / Pick up
+Right Mouse | Place item
+1-0 | Select hotbar slot
+Scroll Wheel | Cycle through hotbar
+I | Open / Close inventory
+M | Toggle minimap
++/- | Resize minimap
+C | Toggle camera follow mode
+F1 | Toggle controls help overlay
+F3 | Toggle debug info
+Print Screen | Take screenshot
+Esc | Open menu (world) / Go back (other screens)
+Left Mouse (outside inventory panel) | Drop entire cursor stack (inventory screen)
+Middle Mouse (outside inventory panel) | Drop single item from cursor (inventory screen)
+Right Mouse (inventory slot) | Select inventory slot (inventory screen)
 
 ## Clone and Run
 ### Clone

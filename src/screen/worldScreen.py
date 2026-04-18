@@ -145,13 +145,12 @@ class WorldScreen:
         return room
 
     def printStatsToConsole(self):
-        print("=== Stats ===")
-        print("Rooms Explored: " + str(self.stats.getRoomsExplored()))
-        print("Food eaten: " + str(self.stats.getFoodEaten()))
-        print("Number of deaths: " + str(self.stats.getNumberOfDeaths()))
-        print("")
+        print("=== Statistics ===")
         print("Score: " + str(self.stats.getScore()))
-        print("----------")
+        print("Rooms Explored: " + str(self.stats.getRoomsExplored()))
+        print("Food Eaten: " + str(self.stats.getFoodEaten()))
+        print("Deaths: " + str(self.stats.getNumberOfDeaths()))
+        print("==================")
 
     def getLocationOfPlayer(self):
         return self.map.getLocationOfEntity(self.player, self.currentRoom)

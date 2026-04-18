@@ -195,7 +195,7 @@ class ConfigScreen:
             (255, 255, 255),
             (0, 0, 0),
             30,
-            "back",
+            "Back",
             self.switchToMainMenuScreen,
         )
 
