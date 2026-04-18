@@ -1,4 +1,5 @@
 from math import ceil
+import pygame
 from lib.graphik.src.graphik import Graphik
 from player.player import Player
 
@@ -11,8 +12,6 @@ class EnergyBar:
 
     def getDefaultRect(self):
         """Return the default bounding rect for the energy bar (no drag offset)."""
-        import pygame
-
         x, y = self.graphik.getGameDisplay().get_size()
         xpos = 0
         ypos = y - y / 64

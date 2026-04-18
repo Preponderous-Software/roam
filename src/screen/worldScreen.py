@@ -45,6 +45,8 @@ from ui.hudDragManager import HudDragManager
 from entity.oakWood import OakWood
 from entity.woodFloor import WoodFloor
 
+MIDDLE_MOUSE_BUTTON = 2
+
 
 # @author Daniel McCoy Stephenson
 # @since August 16th, 2022
@@ -1351,7 +1353,7 @@ class WorldScreen:
 
     def handleMouseDownEvent(self, event):
         # Middle-click initiates HUD drag
-        if event.button == 2:
+        if event.button == MIDDLE_MOUSE_BUTTON:
             mx, my = pygame.mouse.get_pos()
             sw = self.graphik.getGameDisplay().get_width()
             sh = self.graphik.getGameDisplay().get_height()
@@ -1424,7 +1426,7 @@ class WorldScreen:
 
     def handleMouseUpEvent(self, event):
         # Finish HUD drag on middle-button release
-        if event.button == 2 and self.hudDragManager.isDragging():
+        if event.button == MIDDLE_MOUSE_BUTTON and self.hudDragManager.isDragging():
             mx, my = pygame.mouse.get_pos()
             sw = self.graphik.getGameDisplay().get_width()
             sh = self.graphik.getGameDisplay().get_height()

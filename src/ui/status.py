@@ -1,3 +1,4 @@
+import pygame
 from lib.graphik.src.graphik import Graphik
 from ui.hotbarLayout import getHotbarTop
 from world.tickCounter import TickCounter
@@ -24,8 +25,6 @@ class Status:
 
     def getDefaultRect(self):
         """Return the default bounding rect for the status text (no drag offset)."""
-        import pygame
-
         if self.text == -1:
             return pygame.Rect(0, 0, 0, 0)
         x, y = self.graphik.getGameDisplay().get_size()

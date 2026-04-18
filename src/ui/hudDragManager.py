@@ -2,6 +2,8 @@
 # @since April 18th, 2026
 import pygame
 
+MINIMUM_VISIBLE_FRACTION = 0.2
+
 
 class HudElement:
     """Represents a draggable HUD element with a name, default position, and current offset."""
@@ -28,12 +30,11 @@ class HudElement:
 
 
 def clampPosition(x, y, elementWidth, elementHeight, screenWidth, screenHeight):
-    """Clamp x, y so at least 20 % of the element remains visible on screen."""
-    minVisible = 0.2
-    minX = -elementWidth * (1 - minVisible)
-    maxX = screenWidth - elementWidth * minVisible
-    minY = -elementHeight * (1 - minVisible)
-    maxY = screenHeight - elementHeight * minVisible
+    """Clamp x, y so at least MINIMUM_VISIBLE_FRACTION of the element remains visible on screen."""
+    minX = -elementWidth * (1 - MINIMUM_VISIBLE_FRACTION)
+    maxX = screenWidth - elementWidth * MINIMUM_VISIBLE_FRACTION
+    minY = -elementHeight * (1 - MINIMUM_VISIBLE_FRACTION)
+    maxY = screenHeight - elementHeight * MINIMUM_VISIBLE_FRACTION
     cx = max(minX, min(x, maxX))
     cy = max(minY, min(y, maxY))
     return (cx, cy)
