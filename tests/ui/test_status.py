@@ -2,8 +2,9 @@ import os
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
+from src.ui.hotbarLayout import getHotbarTop
 from src.ui.status import Status
 
 
@@ -31,7 +32,7 @@ def test_status_text_does_not_overlap_hotbar_at_720():
     statusHeight = drawButtonCall[0][3]
     statusBottom = statusYPos + statusHeight
 
-    hotbarTop = 720 - 50 * 3 - 5
+    hotbarTop = getHotbarTop(720)
     assert statusBottom <= hotbarTop
 
 
@@ -47,7 +48,7 @@ def test_status_text_does_not_overlap_hotbar_at_1080():
     statusHeight = drawButtonCall[0][3]
     statusBottom = statusYPos + statusHeight
 
-    hotbarTop = 1080 - 50 * 3 - 5
+    hotbarTop = getHotbarTop(1080)
     assert statusBottom <= hotbarTop
 
 
@@ -63,7 +64,7 @@ def test_status_text_does_not_overlap_hotbar_at_500():
     statusHeight = drawButtonCall[0][3]
     statusBottom = statusYPos + statusHeight
 
-    hotbarTop = 500 - 50 * 3 - 5
+    hotbarTop = getHotbarTop(500)
     assert statusBottom <= hotbarTop
 
 

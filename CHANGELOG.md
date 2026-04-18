@@ -75,9 +75,13 @@ logged in detail below.
   unreadable.
 - **Fix:** Changed the status text y-position formula in `src/ui/status.py`
   from `y - y/12 - height/2` (which scaled with display height and overlapped
-  the hotbar at ~1080px+) to `hotbarTop - height - 10` where
-  `hotbarTop = y - 50*3 - 5`. This positions the status text consistently
-  above the hotbar with a 10px gap at all display sizes.
+  the hotbar at ~1080px+) to `hotbarTop - height - 10` using the shared
+  `getHotbarTop()` function from `src/ui/hotbarLayout.py`.
+- **Refactor:** Centralized hotbar layout constants (`HOTBAR_SLOT_SIZE`,
+  `HOTBAR_SLOT_GAP`, `HOTBAR_PADDING`, `HOTBAR_BOTTOM_OFFSET`) into a new
+  `src/ui/hotbarLayout.py` module. Updated `status.py`, `worldScreen.py`,
+  and tests to reference these shared constants instead of duplicating magic
+  numbers.
 - **Tests:** Added `tests/ui/test_status.py` with 8 tests covering:
   - No overlap at 720p, 1080p, and 500px display heights
   - Draw skipped when no text is set or after clear
