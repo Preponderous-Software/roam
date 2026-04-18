@@ -940,13 +940,12 @@ class WorldScreen:
             + str(self.currentRoom.getY())
             + ".png"
         )
+        # capture only the square room area (location sizes are based on game area)
+        gameArea = self.graphik.getGameAreaRect()
         self.captureScreen(
             path,
             (0, 0),
-            (
-                self.graphik.getGameDisplay().get_width(),
-                self.graphik.getGameDisplay().get_height(),
-            ),
+            (int(gameArea.width), int(gameArea.height)),
         )
 
         # add player back
@@ -1061,15 +1060,16 @@ class WorldScreen:
     def draw(self):
         gameArea = self.graphik.getGameAreaRect()
 
+        # save room PNG if needed (before clipping, so it draws unclipped)
+        if self.config.showMiniMap and not self.isCurrentRoomSavedAsPNG():
+            self.saveCurrentRoomAsPNG()
+
         # fill entire display with black (letterbox bars)
         self.graphik.getGameDisplay().fill((0, 0, 0))
 
         # clip drawing to the game area and fill with room background
         self.graphik.getGameDisplay().set_clip(gameArea)
         self.graphik.getGameDisplay().fill(self.currentRoom.getBackgroundColor())
-
-        if self.config.showMiniMap and not self.isCurrentRoomSavedAsPNG():
-            self.saveCurrentRoomAsPNG()
 
         if self.config.cameraFollowPlayer:
             self.drawFollowMode()

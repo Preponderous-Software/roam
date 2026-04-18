@@ -8,7 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
-| 2026-04-18 | 4 | fix: Keep minimap square by using game area dimensions instead of full display dimensions; fix: Preserve window dimensions when returning to main menu so maximized windows stay maximized |
+| 2026-04-18 | 5 | fix: Keep minimap square by using game area dimensions instead of full display dimensions; fix: Preserve window dimensions when returning to main menu so maximized windows stay maximized; fix: Room PNG captures for minimap now use game area dimensions and draw unclipped to avoid black letterbox bars in minimap |
 | 2026-04-17 | 2 | feat: Keep game world square and centered upon window resizing — render the game world as a centered square within any-sized window using `Graphik.getGameAreaRect()`; the window itself can be freely resized; test: Add unit tests for getGameAreaRect |
 | 2026-04-16 | 5 | feat: Add excrement spawning by living entities that decays into grass over time; test: Add unit tests for world package (RoomType, TickCounter, Room, RoomFactory, Map); feat: Allow player to push stone entities (configurable via `pushableStone` setting) including cross-room pushing; fix: Persist adjacent room after cross-room stone push, re-check solidity after pushing when stacked entities present, remove unused import |
 | 2026-04-14 | 1 | feat: Add living entity drops — chickens and bears now drop meat items (ChickenMeat, BearMeat) on death instead of being eaten whole |
@@ -391,3 +391,10 @@ about this repository, add it here so the next agent benefits.
   with `(0, 0)` size if pygame was previously quit and reinitialised. Use
   `unittest.mock.patch.object(pygame.display, "set_mode")` with `MagicMock`
   surfaces to avoid dependency on the dummy driver's display subsystem.
+- 2026-04-18: `[not yet integrated]` The `saveCurrentRoomAsPNG` method
+  draws the room at (0, 0) on the main display and captures it as a
+  screenshot. When `set_clip()` is active (e.g., for game area
+  clipping), the draw is clipped and the capture includes letterbox
+  bars. The method must be called before any clip is set, and the
+  capture size must match the actual room area (game area dimensions),
+  not the full display size.
