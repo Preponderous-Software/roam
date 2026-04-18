@@ -8,7 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
-| 2026-04-18 | 5 | fix: Keep minimap square by using game area dimensions instead of full display dimensions; fix: Preserve window dimensions when returning to main menu so maximized windows stay maximized; fix: Room PNG captures for minimap now use game area dimensions and draw unclipped to avoid black letterbox bars in minimap |
+| 2026-04-18 | 6 | fix: Status text no longer overlaps with the hotbar — repositioned above the hotbar at all display sizes; fix: Keep minimap square by using game area dimensions instead of full display dimensions; fix: Preserve window dimensions when returning to main menu so maximized windows stay maximized; fix: Room PNG captures for minimap now use game area dimensions and draw unclipped to avoid black letterbox bars in minimap |
 | 2026-04-17 | 2 | feat: Keep game world square and centered upon window resizing — render the game world as a centered square within any-sized window using `Graphik.getGameAreaRect()`; the window itself can be freely resized; test: Add unit tests for getGameAreaRect |
 | 2026-04-16 | 5 | feat: Add excrement spawning by living entities that decays into grass over time; test: Add unit tests for world package (RoomType, TickCounter, Room, RoomFactory, Map); feat: Allow player to push stone entities (configurable via `pushableStone` setting) including cross-room pushing; fix: Persist adjacent room after cross-room stone push, re-check solidity after pushing when stacked entities present, remove unused import |
 | 2026-04-14 | 1 | feat: Add living entity drops — chickens and bears now drop meat items (ChickenMeat, BearMeat) on death instead of being eaten whole |
@@ -67,6 +67,23 @@ logged in detail below.
 | 2022-08-08 | 21 | Create version.txt; Update README.md; Modified README. (+9 more) |
 
 ## AI Agent Sessions
+
+### 2026-04-18 — Fix status text overlapping with hotbar
+- **Problem:** The status text (rendered by `ui/status.py`) was drawn at a
+  position that overlapped with the hotbar (rendered in `worldScreen.py`) at
+  larger display sizes. The hotbar painted over the status text making it
+  unreadable.
+- **Fix:** Changed the status text y-position formula in `src/ui/status.py`
+  from `y - y/12 - height/2` (which scaled with display height and overlapped
+  the hotbar at ~1080px+) to `hotbarTop - height - 10` where
+  `hotbarTop = y - 50*3 - 5`. This positions the status text consistently
+  above the hotbar with a 10px gap at all display sizes.
+- **Tests:** Added `tests/ui/test_status.py` with 8 tests covering:
+  - No overlap at 720p, 1080p, and 500px display heights
+  - Draw skipped when no text is set or after clear
+  - Horizontal centering
+  - Expiration behavior
+- Validation: Full test suite passed (242 passed).
 
 ### 2026-04-17 — Follow-up: address PR review coverage threads
 - Added targeted tests to `tests/world/test_room.py` to cover refactored logic:
@@ -398,3 +415,9 @@ about this repository, add it here so the next agent benefits.
   bars. The method must be called before any clip is set, and the
   capture size must match the actual room area (game area dimensions),
   not the full display size.
+- 2026-04-18: `[not yet integrated]` The hotbar in `worldScreen.py`
+  uses fixed pixel values for layout: item slots are 50×50px with 5px
+  gaps, positioned at `y - 150` from the display bottom. The bar
+  background extends from `y - 155` to `y - 95`. Any HUD element
+  positioned near the bottom of the screen must account for this
+  fixed region to avoid overlap.

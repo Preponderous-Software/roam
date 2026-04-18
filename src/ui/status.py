@@ -28,7 +28,8 @@ class Status:
         width = len(self.text) * 10
         height = self.textSize * 2
         xpos = x / 2 - width / 2
-        ypos = y - y / 12 - height / 2
+        hotbarTop = y - 50 * 3 - 5
+        ypos = hotbarTop - height - 10
         self.graphik.drawButton(
             xpos,
             ypos,
