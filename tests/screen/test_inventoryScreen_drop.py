@@ -1,26 +1,9 @@
-import os
-
-os.environ["SDL_VIDEODRIVER"] = "dummy"
-os.environ["SDL_AUDIODRIVER"] = "dummy"
-import pygame
-import pytest
 from unittest.mock import MagicMock
 
-from src.config.config import Config
 from src.inventory.inventory import Inventory
-from src.inventory.inventorySlot import InventorySlot
 from src.entity.grass import Grass
 from src.lib.graphik.src.graphik import Graphik
 from src.screen.inventoryScreen import InventoryScreen
-from src.ui.status import Status
-from src.world.tickCounter import TickCounter
-
-
-@pytest.fixture(autouse=True)
-def init_pygame():
-    pygame.init()
-    yield
-    pygame.quit()
 
 
 def createInventoryScreen():
@@ -29,9 +12,8 @@ def createInventoryScreen():
     gameDisplay.get_height.return_value = 600
     gameDisplay.get_size.return_value = (800, 600)
     graphik = Graphik(gameDisplay)
-    config = Config()
-    tickCounter = TickCounter(config)
-    status = Status(graphik, tickCounter)
+    config = MagicMock()
+    status = MagicMock()
     inventory = Inventory()
     return InventoryScreen(graphik, config, status, inventory)
 
@@ -151,3 +133,96 @@ def test_dropOneFromCursorSlot_does_not_affect_inventory():
 
     assert screen.cursorSlot.getNumItems() == 2
     assert screen.inventory.getNumItems() == 1
+
+
+# --- handleMouseClickEvent integration tests ---
+
+
+def test_handleMouseClickEvent_left_click_outside_drops_all():
+    screen = createInventoryScreen()
+    for i in range(5):
+        screen.cursorSlot.add(createGrass())
+
+    # (10, 10) is outside the inventory panel for 800x600
+    screen.handleMouseClickEvent((10, 10), button=1)
+
+    assert screen.cursorSlot.isEmpty()
+
+
+def test_handleMouseClickEvent_middle_click_outside_drops_one():
+    screen = createInventoryScreen()
+    for i in range(5):
+        screen.cursorSlot.add(createGrass())
+
+    screen.handleMouseClickEvent((10, 10), button=2)
+
+    assert screen.cursorSlot.getNumItems() == 4
+
+
+def test_handleMouseClickEvent_right_click_outside_does_not_drop():
+    screen = createInventoryScreen()
+    for i in range(5):
+        screen.cursorSlot.add(createGrass())
+
+    screen.handleMouseClickEvent((10, 10), button=3)
+
+    assert screen.cursorSlot.getNumItems() == 5
+
+
+def test_handleMouseClickEvent_left_click_inside_panel_does_not_drop():
+    screen = createInventoryScreen()
+    for i in range(3):
+        screen.cursorSlot.add(createGrass())
+
+    # (400, 300) is inside the inventory panel
+    screen.handleMouseClickEvent((400, 300), button=1)
+
+    # items may have been swapped into a slot, but not discarded
+    # cursor should not have been cleared by drop logic
+    totalItems = screen.cursorSlot.getNumItems() + screen.inventory.getNumItems()
+    assert totalItems == 3
+
+
+def test_handleMouseClickEvent_left_click_on_back_button_does_not_drop():
+    screen = createInventoryScreen()
+    for i in range(5):
+        screen.cursorSlot.add(createGrass())
+
+    # back button is at (690, 540) to (790, 590) for 800x600
+    screen.handleMouseClickEvent((750, 560), button=1)
+
+    assert screen.cursorSlot.getNumItems() == 5
+
+
+def test_handleMouseClickEvent_left_click_on_craft_button_does_not_drop():
+    screen = createInventoryScreen()
+    for i in range(5):
+        screen.cursorSlot.add(createGrass())
+
+    # craft button: backgroundX(200)+backgroundWidth(400)-buttonWidth(100)=500,
+    # backgroundY(150)+backgroundHeight(300)+20=470, size 100x30
+    screen.handleMouseClickEvent((550, 480), button=1)
+
+    assert screen.cursorSlot.getNumItems() == 5
+
+
+def test_handleMouseClickEvent_left_click_on_craft_panel_does_not_drop():
+    screen = createInventoryScreen()
+    screen.craftPanelOpen = True
+    for i in range(5):
+        screen.cursorSlot.add(createGrass())
+
+    # craft panel: panelX=610, panelY=150, panelWidth=240, panelHeight=300
+    screen.handleMouseClickEvent((700, 300), button=1)
+
+    assert screen.cursorSlot.getNumItems() == 5
+
+
+def test_handleMouseClickEvent_empty_cursor_left_click_outside_is_noop():
+    screen = createInventoryScreen()
+    assert screen.cursorSlot.isEmpty()
+
+    screen.handleMouseClickEvent((10, 10), button=1)
+
+    assert screen.cursorSlot.isEmpty()
+    assert screen.inventory.getNumItems() == 0
