@@ -196,3 +196,141 @@ def test_preserves_hash_after_escaped_quote_in_string(tmp_path, monkeypatch):
 
     assert "#1" in config.pathToSaveDirectory
     assert config.pathToSaveDirectory.startswith("saves/")
+
+
+def test_save_window_size_creates_entries(tmp_path, monkeypatch):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text("debug: true\n", encoding="utf-8")
+    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+
+    config = Config()
+    config.saveWindowSize(800, 600)
+
+    content = configFilePath.read_text(encoding="utf-8")
+    assert "savedWindowWidth: 800" in content
+    assert "savedWindowHeight: 600" in content
+
+
+def test_save_window_size_updates_existing_entries(tmp_path, monkeypatch):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text(
+        "savedWindowWidth: 500\nsavedWindowHeight: 500\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+
+    config = Config()
+    config.saveWindowSize(900, 700)
+
+    content = configFilePath.read_text(encoding="utf-8")
+    assert "savedWindowWidth: 900" in content
+    assert "savedWindowHeight: 700" in content
+    assert "500" not in content
+
+
+def test_save_window_size_matches_whitespace_before_colon(tmp_path, monkeypatch):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text(
+        "savedWindowWidth : 500\nsavedWindowHeight : 500\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+
+    config = Config()
+    config.saveWindowSize(900, 700)
+
+    content = configFilePath.read_text(encoding="utf-8")
+    assert "savedWindowWidth: 900" in content
+    assert "savedWindowHeight: 700" in content
+    # No duplicate keys — old lines were replaced, not appended
+    assert content.count("savedWindowWidth") == 1
+    assert content.count("savedWindowHeight") == 1
+
+
+def test_save_window_size_clamps_to_minimum(tmp_path, monkeypatch):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text("", encoding="utf-8")
+    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+
+    config = Config()
+    config.saveWindowSize(100, 200)
+
+    content = configFilePath.read_text(encoding="utf-8")
+    assert "savedWindowWidth: 400" in content
+    assert "savedWindowHeight: 400" in content
+
+
+def test_saved_window_size_is_loaded_on_init(tmp_path, monkeypatch):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text(
+        "savedWindowWidth: 800\nsavedWindowHeight: 600\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+
+    config = Config()
+
+    assert config.displayWidth == 800.0
+    assert config.displayHeight == 600.0
+
+
+def test_saved_window_size_fallback_when_too_large(tmp_path, monkeypatch):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text(
+        "savedWindowWidth: 99999\nsavedWindowHeight: 99999\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+
+    config = Config()
+
+    # Should fall back to default (90% of screen height)
+    screenHeight = pygame.display.Info().current_h
+    expectedDefault = screenHeight * 0.90
+    assert config.displayWidth == expectedDefault
+    assert config.displayHeight == expectedDefault
+
+
+def test_manual_display_overrides_saved_window_size(tmp_path, monkeypatch):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text(
+        (
+            "savedWindowWidth: 800\n"
+            "savedWindowHeight: 600\n"
+            "displayWidth: 1024\n"
+            "displayHeight: 768\n"
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+
+    config = Config()
+
+    assert config.displayWidth == 1024.0
+    assert config.displayHeight == 768.0
+
+
+def test_no_saved_dimensions_uses_default(tmp_path, monkeypatch):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text("", encoding="utf-8")
+    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+
+    config = Config()
+
+    screenHeight = pygame.display.Info().current_h
+    expectedDefault = screenHeight * 0.90
+    assert config.displayWidth == expectedDefault
+    assert config.displayHeight == expectedDefault
+
+
+def test_save_window_size_preserves_other_config(tmp_path, monkeypatch):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text(
+        "debug: false\nticksPerSecond: 60\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+
+    config = Config()
+    config.saveWindowSize(800, 600)
+
+    content = configFilePath.read_text(encoding="utf-8")
+    assert "debug: false" in content
+    assert "ticksPerSecond: 60" in content
+    assert "savedWindowWidth: 800" in content
+    assert "savedWindowHeight: 600" in content

@@ -68,6 +68,8 @@ class Roam:
         self.worldScreen.initialize()
 
     def quitApplication(self):
+        w, h = self.gameDisplay.get_size()
+        self.config.saveWindowSize(w, h)
         pygame.quit()
         quit()
 
@@ -80,6 +82,7 @@ class Roam:
                 w, h = self.gameDisplay.get_size()
                 self.config.displayWidth = w
                 self.config.displayHeight = h
+                self.config.saveWindowSize(w, h)
                 return "restart"
             if result == ScreenType.WORLD_SCREEN:
                 self.currentScreen = self.worldScreen
