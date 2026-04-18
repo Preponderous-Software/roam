@@ -60,7 +60,7 @@ class StatsScreen:
         x / 5
         height = y / 10
         xpos = x / 2
-        ypos = 0 + height / 2 + 30
+        ypos = 70
 
         # draw score
         text = "Score: " + str(self.stats.getScore())

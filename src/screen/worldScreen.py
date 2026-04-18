@@ -1073,7 +1073,7 @@ class WorldScreen:
         overlayX = x / 2 - overlayWidth / 2
         overlayY = y / 2 - overlayHeight / 2
 
-        # semi-transparent background
+        # dark background
         self.graphik.drawRectangle(
             overlayX, overlayY, overlayWidth, overlayHeight, (30, 30, 30)
         )

@@ -116,6 +116,19 @@ class Inventory:
                 return True
         return False
 
+    def hasAvailableSlotFor(self, entityClass):
+        probe = entityClass()
+        probeName = probe.getName()
+        for inventorySlot in self.inventorySlots:
+            if inventorySlot.isEmpty():
+                return True
+            if (
+                inventorySlot.getContents()[0].getName() == probeName
+                and inventorySlot.getNumItems() < inventorySlot.getMaxStackSize()
+            ):
+                return True
+        return False
+
     def getFirstTenInventorySlots(self):
         if len(self.inventorySlots) > 10:
             return self.inventorySlots[:10]

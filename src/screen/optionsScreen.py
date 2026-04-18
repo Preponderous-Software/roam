@@ -44,15 +44,15 @@ class OptionsScreen:
 
     def drawTitle(self):
         x, y = self.graphik.getGameDisplay().get_size()
-        self.graphik.drawText("Menu", x / 2, 20, 36, (255, 255, 255))
+        self.graphik.drawText("Menu", x / 2, 25, 36, (255, 255, 255))
 
     def drawMenuButtons(self):
         x, y = self.graphik.getGameDisplay().get_size()
         width = x / 3
         height = y / 10
-        # start below title
+        # start below title with enough margin to avoid overlap
         xpos = x / 2 - width / 2
-        ypos = 0 + height / 2 + 30
+        ypos = 70
         margin = 10
         self.graphik.drawButton(
             xpos,

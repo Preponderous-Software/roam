@@ -278,15 +278,16 @@ class InventoryScreen:
                 )
 
     def craftRecipe(self, recipe):
+        if not recipe.canCraft(self.inventory):
+            self.status.set("Not enough materials")
+            return
+        if not self.inventory.hasAvailableSlotFor(recipe.getResultClass()):
+            self.status.set("Inventory full")
+            return
         result = recipe.craft(self.inventory)
         if result is not None:
-            placed = self.inventory.placeIntoFirstAvailableInventorySlot(result)
-            if placed:
-                self.status.set("Crafted " + recipe.getName())
-            else:
-                self.status.set("Inventory full")
-        else:
-            self.status.set("Not enough materials")
+            self.inventory.placeIntoFirstAvailableInventorySlot(result)
+            self.status.set("Crafted " + recipe.getName())
 
     def drawBackButton(self):
         x, y = self.graphik.getGameDisplay().get_size()

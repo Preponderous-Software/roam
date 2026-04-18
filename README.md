@@ -21,7 +21,7 @@ C | Toggle camera follow mode
 F1 | Toggle controls help overlay
 F3 | Toggle debug info
 Print Screen | Take screenshot
-Esc | Open menu (world) / Go back (other screens)
+Esc | Quit (main menu) / Open menu (world) / Go back (other screens)
 Left Mouse (outside inventory panel) | Drop entire cursor stack (inventory screen)
 Middle Mouse (outside inventory panel) | Drop single item from cursor (inventory screen)
 Right Mouse (inventory slot) | Select inventory slot (inventory screen)

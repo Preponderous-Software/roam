@@ -61,16 +61,16 @@ class ConfigScreen:
 
     def drawTitle(self):
         x, y = self.graphik.getGameDisplay().get_size()
-        self.graphik.drawText("Settings", x / 2, 20, 36, (255, 255, 255))
+        self.graphik.drawText("Settings", x / 2, 25, 36, (255, 255, 255))
 
     def drawMenuButtons(self):
         # draw buttons in red or green depending on config option value
         x, y = self.graphik.getGameDisplay().get_size()
         width = x / 2
         height = y / 10
-        # start below title
+        # start below title with enough margin to avoid overlap
         xpos = x / 2 - width / 2
-        ypos = 0 + height / 2 + 30
+        ypos = 70
         margin = 10
         color = (0, 255, 0) if self.config.debug else (255, 0, 0)
         self.graphik.drawButton(
