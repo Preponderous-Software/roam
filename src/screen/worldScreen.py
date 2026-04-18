@@ -1355,9 +1355,7 @@ class WorldScreen:
         # Middle-click initiates HUD drag
         if event.button == MIDDLE_MOUSE_BUTTON:
             mx, my = pygame.mouse.get_pos()
-            sw = self.graphik.getGameDisplay().get_width()
-            sh = self.graphik.getGameDisplay().get_height()
-            self.hudDragManager.handleMouseDown(mx, my, sw, sh)
+            self.hudDragManager.handleMouseDown(mx, my)
             return
 
         if self.showInventory:

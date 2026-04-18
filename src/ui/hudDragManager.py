@@ -65,9 +65,9 @@ class HudDragManager:
         """Return True if any element is currently being dragged."""
         return self.dragging is not None
 
-    def handleMouseDown(self, mouseX, mouseY, screenWidth, screenHeight):
-        """Begin dragging the topmost HUD element under the cursor. Returns True if a drag started."""
-        for name, element in self.elements.items():
+    def handleMouseDown(self, mouseX, mouseY):
+        """Begin dragging the last-registered HUD element under the cursor. Returns True if a drag started."""
+        for name, element in reversed(list(self.elements.items())):
             rect = element.getRect()
             if rect.collidepoint(mouseX, mouseY):
                 self.dragging = name
