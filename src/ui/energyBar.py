@@ -1,4 +1,5 @@
 from math import ceil
+import pygame
 from lib.graphik.src.graphik import Graphik
 from player.player import Player
 
@@ -9,20 +10,30 @@ class EnergyBar:
         self.graphik = graphik
         self.player = player
 
-    def draw(self):
+    def getDefaultRect(self):
+        """Return the default bounding rect for the energy bar (no drag offset)."""
         x, y = self.graphik.getGameDisplay().get_size()
         xpos = 0
         ypos = y - y / 64
+        width = x
+        height = y / 64
+        return pygame.Rect(xpos, ypos, width, height)
+
+    def draw(self, offsetX=0, offsetY=0):
+        x, y = self.graphik.getGameDisplay().get_size()
+        xpos = 0 + offsetX
+        ypos = y - y / 64 + offsetY
         width = x * (self.player.getEnergy() / self.player.getTargetEnergy())
+        fullWidth = x
         height = y / 64
         color = (255, 215, 73)
 
         # draw black bar
-        self.graphik.drawRectangle(xpos, ypos, x, height, (0, 0, 0))
+        self.graphik.drawRectangle(xpos, ypos, fullWidth, height, (0, 0, 0))
 
         # draw white interior
         self.graphik.drawRectangle(
-            xpos + 1, ypos + 1, x - 2, height - 2, (255, 255, 255)
+            xpos + 1, ypos + 1, fullWidth - 2, height - 2, (255, 255, 255)
         )
 
         # fill interior with energy
@@ -35,5 +46,5 @@ class EnergyBar:
             + str(self.player.getTargetEnergy())
         )
         self.graphik.drawText(
-            text, x / 2, ypos + height / 2, ceil(height) - 1, (0, 0, 0)
+            text, xpos + fullWidth / 2, ypos + height / 2, ceil(height) - 1, (0, 0, 0)
         )
