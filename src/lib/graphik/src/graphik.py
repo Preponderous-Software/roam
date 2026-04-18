@@ -21,6 +21,14 @@ class Graphik:
     def getGameDisplay(self):
         return self.gameDisplay
 
+    # Returns a centered square rect that fills as much space as possible.
+    def getGameAreaRect(self):
+        width, height = self.gameDisplay.get_size()
+        size = min(width, height)
+        x = (width - size) // 2
+        y = (height - size) // 2
+        return pygame.Rect(x, y, size, size)
+
     def getVersion(self):
         return self.version
 
