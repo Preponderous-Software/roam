@@ -286,6 +286,7 @@ class InventoryScreen:
             return
         result = recipe.craft(self.inventory)
         if result is not None:
+            # Placement is guaranteed by the hasAvailableSlotFor check above
             self.inventory.placeIntoFirstAvailableInventorySlot(result)
             self.status.set("Crafted " + recipe.getName())
 
