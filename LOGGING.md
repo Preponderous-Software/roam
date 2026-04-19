@@ -53,8 +53,9 @@ The `redact()` helper replaces sensitive tokens, passwords, API keys, and
 private keys with `[REDACTED]`:
 
 ```python
-from gameLogging.logger import redact
+from gameLogging.logger import getLogger, redact
 
+logger = getLogger(__name__)
 logger.info("config loaded", filePath=redact(somePath))
 ```
 

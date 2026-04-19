@@ -137,9 +137,11 @@ class Roam:
             elif result == ScreenType.NONE:
                 _logger.info("shutting down")
                 self.quitApplication()
+                return
             else:
                 _logger.error("unrecognized screen", screen=result)
                 self.quitApplication()
+                return
             _logger.info("screen transition", screen=str(result))
 
 
