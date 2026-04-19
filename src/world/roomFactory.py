@@ -42,7 +42,6 @@ class RoomFactory:
             return self.createMountainRoom(x, y)
 
     def createRandomRoom(self, x, y):
-        # get random int
         number = random.randrange(0, 4)
         if number == 0:
             newRoom = self.createRoom(RoomType.GRASSLAND, x, y)
@@ -56,7 +55,6 @@ class RoomFactory:
             newRoom = self.createRoom(RoomType.EMPTY, x, y)
         return newRoom
 
-    # create methods
     def createEmptyRoom(self, color, x, y):
         newRoom = Room(
             ("(" + str(x) + ", " + str(y) + ")"),
@@ -75,37 +73,23 @@ class RoomFactory:
             random.randrange(60, 70),
         )
         newRoom = self.createEmptyRoom(newRoomColor, x, y)
-
-        # generate grass
         self.spawnGrass(newRoom)
-
-        # generate rocks
         self.spawnSomeRocks(newRoom)
-
-        # generate chickens
         self.spawnChickens(newRoom)
 
         return newRoom
 
     def createForestRoom(self, x, y):
         newRoom = self.createGrassRoom(x, y)
-
-        # generate food
         maxTrees = ceil(self.gridSize / 3)
         for i in range(0, maxTrees):
             self.spawnOakTree(newRoom)
-
-        # generate bears
         self.spawnBears(newRoom)
         return newRoom
 
     def createJungleRoom(self, x, y):
         newRoom = self.createGrassRoom(x, y)
-
-        # generate leaves
         self.spawnLeaves(newRoom)
-
-        # generate lots of food
         maxTrees = ceil(self.gridSize / 3)
         for i in range(0, maxTrees * 4):
             self.spawnJungleTree(newRoom)
@@ -121,11 +105,7 @@ class RoomFactory:
             x,
             y,
         )
-
-        # generate ore
         self.spawnSomeOre(newRoom)
-
-        # generate rocks
         self.fillWithRocks(newRoom)
 
         return newRoom
@@ -134,13 +114,13 @@ class RoomFactory:
     def spawnGrass(self, room: Room):
         for locationId in room.getGrid().getLocations():
             location = room.getGrid().getLocation(locationId)
-            if random.randrange(1, 101) > 5:  # 95% chance
+            if random.randrange(1, 101) > 5:
                 room.addEntityToLocation(Grass(), location)
 
     def spawnSomeRocks(self, room: Room):
         for locationId in room.getGrid().getLocations():
             location = room.getGrid().getLocation(locationId)
-            if random.randrange(1, 101) == 1:  # 1% chance
+            if random.randrange(1, 101) == 1:
                 room.addEntityToLocation(Stone(), location)
 
     def fillWithRocks(self, room: Room):
@@ -151,8 +131,7 @@ class RoomFactory:
     def spawnSomeOre(self, room: Room):
         for locationId in room.getGrid().getLocations():
             location = room.getGrid().getLocation(locationId)
-            if random.randrange(1, 101) == 1:  # 5% chance
-                # 50% chance for coal, 50% chance for iron
+            if random.randrange(1, 101) == 1:
                 if random.randrange(1, 101) > 50:
                     room.addEntityToLocation(CoalOre(), location)
                 else:
@@ -192,7 +171,6 @@ class RoomFactory:
         locationsToSpawnLeaves.append(room.grid.getDown(location))
         locationsToSpawnLeaves.append(room.grid.getRight(location))
 
-        # spawn abundance of leaves around the tree
         for leavesSpawnLocation in locationsToSpawnLeaves:
             if leavesSpawnLocation == -1 or self.locationContainsEntityType(
                 leavesSpawnLocation, JungleWood
@@ -201,7 +179,6 @@ class RoomFactory:
             room.addEntityToLocation(Leaves(), leavesSpawnLocation)
             room.addEntityToLocation(Leaves(), leavesSpawnLocation)
 
-        # spawn bananas around the tree
         for bananaSpawnLocation in locationsToSpawnLeaves:
             if bananaSpawnLocation == -1 or self.locationContainsEntityType(
                 bananaSpawnLocation, JungleWood
@@ -212,14 +189,14 @@ class RoomFactory:
 
     def spawnChickens(self, room: Room):
         for i in range(0, 5):
-            if random.randrange(1, 101) > 75:  # 25% chance
+            if random.randrange(1, 101) > 75:
                 newChicken = Chicken(self.tickCounter.getTick())
                 room.addEntity(newChicken)
                 room.addLivingEntity(newChicken)
 
     def spawnBears(self, room: Room):
         for i in range(0, 2):
-            if random.randrange(1, 101) > 90:  # 10% chance
+            if random.randrange(1, 101) > 90:
                 newBear = Bear(self.tickCounter.getTick())
                 room.addEntity(newBear)
                 room.addLivingEntity(newBear)
@@ -227,10 +204,9 @@ class RoomFactory:
     def spawnLeaves(self, room: Room):
         for locationId in room.getGrid().getLocations():
             location = room.getGrid().getLocation(locationId)
-            if random.randrange(1, 101) > 5:  # 95% chance
+            if random.randrange(1, 101) > 5:
                 room.addEntityToLocation(Leaves(), location)
 
-    # helper methods
     def getLocationOfEntity(self, entity: Entity, room: Room):
         locationID = entity.getLocationID()
         grid = room.getGrid()

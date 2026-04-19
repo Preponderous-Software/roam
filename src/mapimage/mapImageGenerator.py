@@ -1,4 +1,4 @@
-# Description: Combines all the room images into one image
+# Combines all room images into a single map image
 
 import os
 from PIL import Image
@@ -23,8 +23,6 @@ class MapImageGenerator:
         else:
             self.mapImage = self.createNewMapImage()
 
-    # public methods
-
     def generate(self):
         roomImages = self.getRoomImages()
         self.pasteRoomImagesAtCorrectCoordinates(roomImages)
@@ -33,8 +31,6 @@ class MapImageGenerator:
     def clearRoomImages(self):
         for file in os.listdir(self.roomImagesDirectoryPath):
             os.remove(self.roomImagesDirectoryPath + "/" + file)
-
-    # private methods
 
     def mapImageExists(self):
         return os.path.exists(self.mapImagePath)
@@ -55,28 +51,21 @@ class MapImageGenerator:
         return os.listdir(self.roomImagesDirectoryPath)
 
     def pasteRoomImagesAtCorrectCoordinates(self, roomImages):
-        # save the new image
         numPasted = 0
         numOutOfBounds = 0
 
-        # Loop through all the room images
-        for room_image in roomImages:
-            # Open the room image
-            image = Image.open(self.roomImagesDirectoryPath + "/" + room_image)
+        for roomImageFilename in roomImages:
+            image = Image.open(self.roomImagesDirectoryPath + "/" + roomImageFilename)
 
-            # scale image down
             roomSize = 100
             image = image.resize((roomSize, roomSize))
 
-            # Get the room number from the image name
-            room_number = room_image.split(".")[0].split("_")
-            # Get the x and y coordinates of the room
-            x = int(room_number[0])
-            y = int(room_number[1])
+            roomCoordinates = roomImageFilename.split(".")[0].split("_")
+            roomX = int(roomCoordinates[0])
+            roomY = int(roomCoordinates[1])
 
-            # Paste the room image onto the new image at the correct coordinates
-            picX = int(self.mapImageSizeInPixels / 2) + x * roomSize - int(roomSize / 2)
-            picY = int(self.mapImageSizeInPixels / 2) + y * roomSize - int(roomSize / 2)
+            picX = int(self.mapImageSizeInPixels / 2) + roomX * roomSize - int(roomSize / 2)
+            picY = int(self.mapImageSizeInPixels / 2) + roomY * roomSize - int(roomSize / 2)
             if (
                 picX >= 0
                 and picY >= 0

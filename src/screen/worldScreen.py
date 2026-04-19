@@ -204,80 +204,56 @@ class WorldScreen:
 
         if self.ifCorner(location):
             direction = self.player.getDirection()
-            # if top left corner
             if location.getX() == 0 and location.getY() == 0:
-                # if facing up
                 if direction == 0:
                     y -= 1
-                # if facing left
                 elif direction == 1:
                     x -= 1
-            # if top right corner
             elif location.getX() == self.config.gridSize - 1 and location.getY() == 0:
-                # if facing up
                 if direction == 0:
                     y -= 1
-                # if facing right
                 elif direction == 3:
                     x += 1
-            # if bottom left corner
             elif location.getX() == 0 and location.getY() == self.config.gridSize - 1:
-                # if facing down
                 if direction == 2:
                     y += 1
-                # if facing left
                 elif direction == 1:
                     x -= 1
-            # if bottom right corner
             elif (
                 location.getX() == self.config.gridSize - 1
                 and location.getY() == self.config.gridSize - 1
             ):
-                # if facing down
                 if direction == 2:
                     y += 1
-                # if facing right
                 elif direction == 3:
                     x += 1
         else:
             if location.getX() == self.config.gridSize - 1:
-                # we are on the right side of this room
                 x += 1
             elif location.getX() == 0:
-                # we are on the left side of this room
                 x -= 1
             elif location.getY() == self.config.gridSize - 1:
-                # we are at the bottom of this room
                 y += 1
             elif location.getY() == 0:
-                # we are at the top of this room
                 y -= 1
         return x, y
 
     def getCoordinatesForNewRoomBasedOnLivingEntityLocation(self, livingEntity):
-        # get location of living entity in current room
         locationId = livingEntity.getLocationID()
         location = self.currentRoom.getGrid().getLocation(locationId)
-        location.getX()
-        location.getY()
 
-        # get coordinates of new room based on location of living entity
         x = self.currentRoom.getX()
         y = self.currentRoom.getY()
         if self.ifCorner(location):
             raise Exception("corner movement not implemented yet")
         else:
             if location.getX() == self.config.gridSize - 1:
-                # we are on the right side of this room
                 x += 1
             elif location.getX() == 0:
-                # we are on the left side of this room
                 x -= 1
             elif location.getY() == self.config.gridSize - 1:
-                # we are at the bottom of this room
                 y += 1
             elif location.getY() == 0:
-                # we are at the top of this room
                 y -= 1
         return x, y
 
@@ -379,54 +355,45 @@ class WorldScreen:
         targetX = playerLocation.getX()
         targetY = playerLocation.getY()
 
-        min = 0
-        max = self.config.gridSize - 1
+        minCoord = 0
+        maxCoord = self.config.gridSize - 1
 
         # if in corner
         if self.ifCorner(playerLocation):
             playerDirection = self.player.getDirection()
             # if top left corner
             if playerLocation.getX() == 0 and playerLocation.getY() == 0:
-                # if facing up
                 if playerDirection == 0:
-                    targetY = max
-                # if facing left
+                    targetY = maxCoord
                 elif playerDirection == 1:
-                    targetX = max
+                    targetX = maxCoord
             # if top right corner
-            elif playerLocation.getX() == max and playerLocation.getY() == 0:
-                # if facing up
+            elif playerLocation.getX() == maxCoord and playerLocation.getY() == 0:
                 if playerDirection == 0:
-                    targetY = max
-                # if facing right
+                    targetY = maxCoord
                 elif playerDirection == 3:
-                    targetX = min
+                    targetX = minCoord
             # if bottom left corner
-            elif playerLocation.getX() == 0 and playerLocation.getY() == max:
-                # if facing down
+            elif playerLocation.getX() == 0 and playerLocation.getY() == maxCoord:
                 if playerDirection == 2:
-                    targetY = min
-                # if facing left
+                    targetY = minCoord
                 elif playerDirection == 1:
-                    targetX = max
+                    targetX = maxCoord
             # if bottom right corner
-            elif playerLocation.getX() == max and playerLocation.getY() == max:
-                # if facing down
+            elif playerLocation.getX() == maxCoord and playerLocation.getY() == maxCoord:
                 if playerDirection == 2:
-                    targetY = min
-                # if facing right
+                    targetY = minCoord
                 elif playerDirection == 3:
-                    targetX = min
+                    targetX = minCoord
         else:
-            # handle border
             if playerLocation.getX() == 0:
-                targetX = max
-            elif playerLocation.getX() == max:
-                targetX = min
+                targetX = maxCoord
+            elif playerLocation.getX() == maxCoord:
+                targetX = minCoord
             elif playerLocation.getY() == 0:
-                targetY = max
-            elif playerLocation.getY() == max:
-                targetY = min
+                targetY = maxCoord
+            elif playerLocation.getY() == maxCoord:
+                targetY = minCoord
 
         targetLocation = self.currentRoom.getGrid().getLocationByCoordinates(
             targetX, targetY
@@ -1576,13 +1543,14 @@ class WorldScreen:
         playerLocationId = self.player.getLocationID()
         jsonPlayerLocation["locationId"] = str(playerLocationId)
 
-        # validate
-        playerLocationSchema = json.load(open("schemas/playerLocation.json"))
+        with open("schemas/playerLocation.json") as f:
+            playerLocationSchema = json.load(f)
         jsonschema.validate(jsonPlayerLocation, playerLocationSchema)
 
         path = self.config.pathToSaveDirectory + "/playerLocation.json"
         print("Saving player location to " + path)
-        json.dump(jsonPlayerLocation, open(path, "w"), indent=4)
+        with open(path, "w") as f:
+            json.dump(jsonPlayerLocation, f, indent=4)
 
     def loadPlayerLocationFromFile(self):
         path = self.config.pathToSaveDirectory + "/playerLocation.json"
@@ -1590,10 +1558,11 @@ class WorldScreen:
             return
 
         print("Loading player location from " + path)
-        jsonPlayerLocation = json.load(open(path))
+        with open(path) as f:
+            jsonPlayerLocation = json.load(f)
 
-        # validate
-        playerLocationSchema = json.load(open("schemas/playerLocation.json"))
+        with open("schemas/playerLocation.json") as f:
+            playerLocationSchema = json.load(f)
         jsonschema.validate(jsonPlayerLocation, playerLocationSchema)
 
         roomX = jsonPlayerLocation["roomX"]
@@ -1608,13 +1577,14 @@ class WorldScreen:
         jsonPlayerAttributes = {}
         jsonPlayerAttributes["energy"] = ceil(self.player.getEnergy())
 
-        # validate
-        playerAttributesSchema = json.load(open("schemas/playerAttributes.json"))
+        with open("schemas/playerAttributes.json") as f:
+            playerAttributesSchema = json.load(f)
         jsonschema.validate(jsonPlayerAttributes, playerAttributesSchema)
 
         path = self.config.pathToSaveDirectory + "/playerAttributes.json"
         print("Saving player attributes to " + path)
-        json.dump(jsonPlayerAttributes, open(path, "w"), indent=4)
+        with open(path, "w") as f:
+            json.dump(jsonPlayerAttributes, f, indent=4)
 
     def loadPlayerAttributesFromFile(self):
         path = self.config.pathToSaveDirectory + "/playerAttributes.json"
@@ -1622,10 +1592,11 @@ class WorldScreen:
             return
 
         print("Loading player attributes from " + path)
-        jsonPlayerAttributes = json.load(open(path))
+        with open(path) as f:
+            jsonPlayerAttributes = json.load(f)
 
-        # validate
-        playerAttributesSchema = json.load(open("schemas/playerAttributes.json"))
+        with open("schemas/playerAttributes.json") as f:
+            playerAttributesSchema = json.load(f)
         jsonschema.validate(jsonPlayerAttributes, playerAttributesSchema)
 
         energy = jsonPlayerAttributes["energy"]

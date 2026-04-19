@@ -68,9 +68,8 @@ class Room(Environment):
                     continue
             self.drawLocation(location, xPos, yPos, locWidth, locHeight)
 
-    # Draws a location at a specified position.
     def drawLocation(self, location, xPos, yPos, width, height):
-        # always draw background color first (needed for entities with transparent images)
+        # transparent images require the background color to be drawn first
         self.graphik.drawRectangle(xPos, yPos, width, height, self.backgroundColor)
         if location.getNumEntities() > 0:
             # draw texture

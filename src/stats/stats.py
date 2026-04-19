@@ -53,28 +53,31 @@ class Stats:
         self.numberOfDeaths += 1
 
     def save(self):
-        jsonStats = {}
+        jsonStats = {
+            "score": str(self.getScore()),
+            "roomsExplored": str(self.getRoomsExplored()),
+            "foodEaten": str(self.getFoodEaten()),
+            "numberOfDeaths": str(self.getNumberOfDeaths()),
+        }
 
-        jsonStats["score"] = str(self.getScore())
-        jsonStats["roomsExplored"] = str(self.getRoomsExplored())
-        jsonStats["foodEaten"] = str(self.getFoodEaten())
-        jsonStats["numberOfDeaths"] = str(self.getNumberOfDeaths())
-
-        # validate
-        statsSchema = json.load(open("schemas/stats.json"))
+        with open("schemas/stats.json") as f:
+            statsSchema = json.load(f)
         jsonschema.validate(jsonStats, statsSchema)
 
         path = self.config.pathToSaveDirectory + "/stats.json"
-        json.dump(jsonStats, open(path, "w"), indent=4)
+        with open(path, "w") as f:
+            json.dump(jsonStats, f, indent=4)
 
     def load(self):
         path = self.config.pathToSaveDirectory + "/stats.json"
         if not os.path.exists(path):
             return
-        jsonStats = json.load(open(path))
 
-        # validate
-        statsSchema = json.load(open("schemas/stats.json"))
+        with open(path) as f:
+            jsonStats = json.load(f)
+
+        with open("schemas/stats.json") as f:
+            statsSchema = json.load(f)
         jsonschema.validate(jsonStats, statsSchema)
 
         self.setScore(int(jsonStats["score"]))

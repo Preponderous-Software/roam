@@ -65,7 +65,6 @@ class RoomJsonReaderWriter:
             "Campfire": Campfire,
         }
 
-    # save and load methods
     def saveRoom(self, room, path):
         print("Saving room to " + path)
         roomJson = self.generateJsonForRoom(room)
@@ -80,7 +79,6 @@ class RoomJsonReaderWriter:
             roomJson = json.load(json_file)
             return self.generateRoomFromJson(roomJson)
 
-    # generate json methods
     def generateJsonForRoom(self, room):
         roomJson = {}
         roomJson["backgroundColor"] = str(room.getBackgroundColor())
@@ -148,7 +146,6 @@ class RoomJsonReaderWriter:
             entityJson["tickCreated"] = entity.getTickCreated()
         return entityJson
 
-    # generate room methods
     def generateRoomFromJson(self, roomJson):
         backgroundColor = self._parseBackgroundColor(roomJson["backgroundColor"])
         room = Room(
