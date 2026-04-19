@@ -101,6 +101,16 @@ logged in detail below.
     correctly reverts changes.
   - Removed stray no-op `self.player` statement in `worldScreen.py`.
   - Clarified README tip to note remapping applies only to in-world controls.
+- **Review follow-up (round 3):**
+  - Extended `KeyBindings` usage to `InventoryScreen`: inventory close key,
+    screenshot key, and all hotbar keys now respect remapped bindings.
+  - Updated inventory screen "(press I to close)" hint to dynamically show
+    the current keybinding name.
+  - Extended `KeyBindings` usage to `StatsScreen`: screenshot key now respects
+    remapped bindings.
+  - Updated `tests/screen/test_inventoryScreen_drop.py` to pass `KeyBindings`
+    to the `InventoryScreen` constructor.
+  - Updated README tip to reflect that remapping now works across all screens.
 - **Tests:** All 319 tests pass (303 original + 16 new).
 
 ### 2026-04-19 — Refactor restart mechanism to use `restart()` method

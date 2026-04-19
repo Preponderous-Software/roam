@@ -26,7 +26,7 @@ Left Mouse (outside inventory panel) | Drop entire cursor stack (inventory scree
 Middle Mouse (outside inventory panel) | Drop single item from cursor (inventory screen)
 Right Mouse (inventory slot) | Select inventory slot (inventory screen)
 
-> **Tip:** Keybindings for in-world controls are configurable in-game. Open the options menu and select **Controls** to view or remap those bindings. Some screen-specific shortcuts, such as certain inventory and screenshot actions, currently remain fixed.
+> **Tip:** Keybindings are configurable in-game. Open the options menu and select **Controls** to view or remap bindings. Remapped keys are respected across all screens (world, inventory, stats, etc.).
 
 ## Clone and Run
 ### Clone

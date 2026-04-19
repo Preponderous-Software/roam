@@ -3,6 +3,7 @@ import os
 import time
 from appContainer import component
 from config.config import Config
+from config.keyBindings import KeyBindings
 from crafting.recipeRegistry import RecipeRegistry
 from inventory.inventory import Inventory
 from inventory.inventorySlot import InventorySlot
@@ -16,12 +17,18 @@ import pygame
 @component
 class InventoryScreen:
     def __init__(
-        self, graphik: Graphik, config: Config, status: Status, inventory: Inventory
+        self,
+        graphik: Graphik,
+        config: Config,
+        status: Status,
+        inventory: Inventory,
+        keyBindings: KeyBindings,
     ):
         self.graphik = graphik
         self.config = config
         self.status = status
         self.inventory = inventory
+        self.keyBindings = keyBindings
         self.nextScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = False
         self.cursorSlot = InventorySlot()
@@ -54,9 +61,10 @@ class InventoryScreen:
             self.cursorSlot.setContents(temp)
 
     def handleKeyDownEvent(self, key):
-        if key == pygame.K_i or key == pygame.K_ESCAPE:
+        kb = self.keyBindings
+        if key == kb.getKey("inventory") or key == pygame.K_ESCAPE:
             self.switchToWorldScreen()
-        elif key == pygame.K_PRINTSCREEN:
+        elif key == kb.getKey("screenshot"):
             screenshotsFolder = "screenshots"
             if not os.path.exists(screenshotsFolder):
                 os.makedirs(screenshotsFolder)
@@ -69,25 +77,25 @@ class InventoryScreen:
                 (0, 0),
                 (x, y),
             )
-        elif key == pygame.K_1:
+        elif key == kb.getKey("hotbar_1"):
             self.swapCursorSlotWithInventorySlotByIndex(0)
-        elif key == pygame.K_2:
+        elif key == kb.getKey("hotbar_2"):
             self.swapCursorSlotWithInventorySlotByIndex(1)
-        elif key == pygame.K_3:
+        elif key == kb.getKey("hotbar_3"):
             self.swapCursorSlotWithInventorySlotByIndex(2)
-        elif key == pygame.K_4:
+        elif key == kb.getKey("hotbar_4"):
             self.swapCursorSlotWithInventorySlotByIndex(3)
-        elif key == pygame.K_5:
+        elif key == kb.getKey("hotbar_5"):
             self.swapCursorSlotWithInventorySlotByIndex(4)
-        elif key == pygame.K_6:
+        elif key == kb.getKey("hotbar_6"):
             self.swapCursorSlotWithInventorySlotByIndex(5)
-        elif key == pygame.K_7:
+        elif key == kb.getKey("hotbar_7"):
             self.swapCursorSlotWithInventorySlotByIndex(6)
-        elif key == pygame.K_8:
+        elif key == kb.getKey("hotbar_8"):
             self.swapCursorSlotWithInventorySlotByIndex(7)
-        elif key == pygame.K_9:
+        elif key == kb.getKey("hotbar_9"):
             self.swapCursorSlotWithInventorySlotByIndex(8)
-        elif key == pygame.K_0:
+        elif key == kb.getKey("hotbar_0"):
             self.swapCursorSlotWithInventorySlotByIndex(9)
 
     def switchToWorldScreen(self):
@@ -173,9 +181,10 @@ class InventoryScreen:
                 column = 0
                 row += 1
 
-        # draw '(press I to close)' text below inventory
+        # draw close hint text below inventory
+        closeKeyName = self.keyBindings.getKeyName("inventory").upper()
         self.graphik.drawText(
-            "(press I to close)",
+            "(press " + closeKeyName + " to close)",
             backgroundX,
             backgroundY + backgroundHeight + 20,
             20,
