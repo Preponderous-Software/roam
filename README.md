@@ -26,6 +26,8 @@ Left Mouse (outside inventory panel) | Drop entire cursor stack (inventory scree
 Middle Mouse (outside inventory panel) | Drop single item from cursor (inventory screen)
 Right Mouse (inventory slot) | Select inventory slot (inventory screen)
 
+> **Tip:** Keybindings are configurable in-game. Open the options menu and select **Controls** to view or remap bindings.
+
 ## Clone and Run
 ### Clone
 1. If you don't have git installed, install it from [here](https://git-scm.com/downloads).

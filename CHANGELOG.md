@@ -69,6 +69,27 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-19 — Add controls screen for viewing and remapping keybindings
+- **New files:**
+  - `src/config/keyBindings.py` — `KeyBindings` class managing defaults,
+    remapping, conflict detection, save/load to `config.yml`.
+  - `src/screen/controlsScreen.py` — `ControlsScreen` UI listing all actions,
+    allowing click-to-remap, conflict flagging, reset-to-defaults, save/cancel.
+  - `tests/config/test_keyBindings.py` — 16 unit tests covering defaults,
+    set/get, conflict detection, save/load round-trip, and reset.
+- **Modified files:**
+  - `src/screen/screenType.py` — Added `CONTROLS_SCREEN`.
+  - `src/screen/optionsScreen.py` — Added "Controls" button and
+    `switchToControlsScreen()` method.
+  - `src/roam.py` — Imported `KeyBindings` and `ControlsScreen`, registered
+    `KeyBindings` instance in DI container with config overrides, resolved
+    `ControlsScreen`, handled `CONTROLS_SCREEN` in screen-switching loop.
+  - `src/screen/worldScreen.py` — Added `KeyBindings` dependency, replaced all
+    hardcoded `pygame.K_*` checks in `handleKeyDownEvent` and `handleKeyUpEvent`
+    with `keyBindings.getKey()` calls.
+  - `README.md` — Added note that keybindings are configurable in-game.
+- **Tests:** All 319 tests pass (303 original + 16 new).
+
 ### 2026-04-19 — Refactor restart mechanism to use `restart()` method
 - **Changes:**
   - Refactored `src/roam.py`: extracted shared DI initialization logic into
@@ -595,3 +616,8 @@ about this repository, add it here so the next agent benefits.
   go in `src/bootstrap.py`. The container is a module-level singleton
   that persists across game restarts; `createContainer()` calls
   `resetSingletons()` to clear cached instances on each restart.
+- 2026-04-19: `[not yet integrated]` The `KeyBindings` instance is registered
+  via `registerInstance()` in `roam.py` rather than using `@component`,
+  because it needs to call `loadFromConfig()` with runtime config values
+  before being injected. Classes that depend on `KeyBindings` (e.g.,
+  `WorldScreen`, `ControlsScreen`) receive it via DI auto-wiring.
