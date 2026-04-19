@@ -86,11 +86,12 @@ def test_add_room_duplicate_coordinates(tmp_path):
     room2 = Room("Room2", 3, (0, 0, 0), 2, 3, graphik)
 
     mapInstance.addRoom(room1)
-    mapInstance.addRoom(room2)
+    result = mapInstance.addRoom(room2)
 
-    # should update the index but not duplicate in the list
+    # should be a no-op when the key exists — returns the existing room
     assert len(mapInstance.getRooms()) == 1
-    assert mapInstance.getRoom(2, 3) == room2
+    assert mapInstance.getRoom(2, 3) == room1
+    assert result == room1
 
 
 def test_get_location_of_entity(tmp_path):

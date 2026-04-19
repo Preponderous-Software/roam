@@ -1,5 +1,6 @@
 import os
 import random
+import threading
 from config.config import Config
 from lib.graphik.src.graphik import Graphik
 from lib.pyenvlib.entity import Entity
@@ -17,6 +18,7 @@ class Map:
     ):
         self.rooms = []
         self._roomIndex = {}
+        self._lock = threading.Lock()
         self.gridSize = gridSize
         self.graphik = graphik
         self.tickCounter = tickCounter
@@ -26,10 +28,16 @@ class Map:
     def getRooms(self):
         return self.rooms
 
+    def hasRoom(self, x, y):
+        key = (x, y)
+        with self._lock:
+            return key in self._roomIndex
+
     def getRoom(self, x, y):
         key = (x, y)
-        if key in self._roomIndex:
-            return self._roomIndex[key]
+        with self._lock:
+            if key in self._roomIndex:
+                return self._roomIndex[key]
 
         # attempt to load room if file exists, otherwise generate new room
         nextRoomPath = (
@@ -45,8 +53,7 @@ class Map:
                 self.gridSize, self.graphik, self.tickCounter, self.config
             )
             room = roomJsonReaderWriter.loadRoom(nextRoomPath)
-            self.addRoom(room)
-            return room
+            return self.addRoom(room)
 
         return -1
 
@@ -56,6 +63,9 @@ class Map:
         return grid.getLocation(locationID)
 
     def generateNewRoom(self, x, y):
+        with self._lock:
+            if (x, y) in self._roomIndex:
+                return self._roomIndex[(x, y)]
         # 50% chance to generate last room type
         newRoom = None
         if random.randrange(1, 101) > 50:
@@ -64,13 +74,19 @@ class Map:
             )
         else:
             newRoom = self.roomFactory.createRandomRoom(x, y)
-        self.rooms.append(newRoom)
-        self._roomIndex[(x, y)] = newRoom
+        with self._lock:
+            if (x, y) in self._roomIndex:
+                return self._roomIndex[(x, y)]
+            self.rooms.append(newRoom)
+            self._roomIndex[(x, y)] = newRoom
 
         return newRoom
 
     def addRoom(self, room):
         key = (room.getX(), room.getY())
-        if key not in self._roomIndex:
+        with self._lock:
+            if key in self._roomIndex:
+                return self._roomIndex[key]
             self.rooms.append(room)
-        self._roomIndex[key] = room
+            self._roomIndex[key] = room
+        return room

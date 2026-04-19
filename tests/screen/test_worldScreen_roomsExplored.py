@@ -37,6 +37,7 @@ def createWorldScreen():
     ws.stats = stats
     ws.player = player
     ws.visitedRooms = set()
+    ws.roomPreloader = MagicMock()
     return ws
 
 
@@ -209,7 +210,7 @@ def test_migrateVisitedRoomsFromRoomFiles(tmp_path):
 
 
 def test_save_skips_visitedRooms_when_not_dirty(tmp_path):
-    """When visitedRooms hasn't changed, save() should not write it."""
+    """When visitedRooms hasn't changed, saveSynchronous() should not write it."""
     ws = createWorldScreen()
     ws.config.pathToSaveDirectory = str(tmp_path)
     ws.config.showMiniMap = False
@@ -218,11 +219,13 @@ def test_save_skips_visitedRooms_when_not_dirty(tmp_path):
     ws.currentRoom = MagicMock()
     ws.roomJsonReaderWriter = MagicMock()
     ws.tickCounter = MagicMock()
+    ws._saveExecutor = MagicMock()
+    ws._saveLock = MagicMock()
     ws.saveCurrentRoomToFile = MagicMock()
     ws.savePlayerLocationToFile = MagicMock()
     ws.savePlayerAttributesToFile = MagicMock()
     ws.savePlayerInventoryToFile = MagicMock()
 
-    ws.save()
+    ws.saveSynchronous()
 
     assert not (tmp_path / "visitedRooms.json").exists()
