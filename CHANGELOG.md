@@ -595,7 +595,7 @@ about this repository, add it here so the next agent benefits.
   go in `src/bootstrap.py`. The container is a module-level singleton
   that persists across game restarts; `createContainer()` calls
   `resetSingletons()` to clear cached instances on each restart.
-- 2026-04-19: `[not yet integrated]` The `getOrLoadRoom` method in
+- 2026-04-19: `[integrated]` The `getOrLoadRoom` method in
   `WorldScreen` generates rooms that may not yet be visited by the
   player (e.g., during rendering of adjacent rooms, mouse position
   lookup, or stone pushing). Any statistic that should only track

@@ -55,6 +55,7 @@ Roam is a single-player 2D survival game built with Python and Pygame. Players e
 - **Anti-patterns to avoid:**
   - Do not introduce Python `@property` decorators — the codebase consistently uses explicit getters/setters.
   - Do not restructure the vendored `lib/` directory or update vendored libraries without explicit instruction.
+  - Do not use room generation as a proxy for player exploration. The `getOrLoadRoom` method in `WorldScreen` generates rooms for rendering adjacent rooms, mouse position lookup, and stone pushing — these are not player visits. Use the `visitedRooms` set to determine whether the player has entered a room.
 
 ## Dependency Injection
 
