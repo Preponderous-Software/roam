@@ -1,6 +1,7 @@
 import datetime
 import os
 import time
+from appContainer import component
 from config.config import Config
 from crafting.recipeRegistry import RecipeRegistry
 from inventory.inventory import Inventory
@@ -12,6 +13,7 @@ import pygame
 
 
 # @author Daniel McCoy Stephenson
+@component
 class InventoryScreen:
     def __init__(
         self, graphik: Graphik, config: Config, status: Status, inventory: Inventory

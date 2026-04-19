@@ -68,6 +68,21 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-19 — Use `@component` decorator on class definitions
+- **Changes:**
+  - Created `src/appContainer.py` — module-level container singleton that
+    provides a shared `container` instance and a `component` decorator
+    importable from any class file.
+  - Added `@component` decorator to 12 class definitions: TickCounter,
+    Stats, Status, MapImageUpdater, EnergyBar, HudDragManager, WorldScreen,
+    OptionsScreen, MainMenuScreen, StatsScreen, ConfigScreen, InventoryScreen.
+    These classes now self-register at import time.
+  - Simplified `src/bootstrap.py` — imports the shared container from
+    `appContainer` instead of creating a new one. Removed all
+    `container.component(X)` calls since classes self-register via the
+    decorator. Only factory-based and instance registrations remain.
+- **Tests:** All 301 tests pass.
+
 ### 2026-04-19 — Use `component()` in bootstrap for self-registered types
 - **Changes:**
   - Replaced 12 `container.register(X, X)` calls in `src/bootstrap.py` with

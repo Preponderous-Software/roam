@@ -3,9 +3,11 @@ import time
 
 import jsonschema
 
+from appContainer import component
 from config.config import Config
 
 
+@component
 class TickCounter:
     def __init__(self, config: Config):
         self.config = config

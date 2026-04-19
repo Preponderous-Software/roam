@@ -1,10 +1,12 @@
 from math import ceil
 import pygame
+from appContainer import component
 from lib.graphik.src.graphik import Graphik
 from player.player import Player
 
 # @author Daniel McCoy Stephenson
 # @since August 16th, 2022
+@component
 class EnergyBar:
     def __init__(self, graphik: Graphik, player: Player):
         self.graphik = graphik

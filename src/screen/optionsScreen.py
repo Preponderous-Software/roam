@@ -1,3 +1,4 @@
+from appContainer import component
 from config.config import Config
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
@@ -5,6 +6,7 @@ from ui.status import Status
 import pygame
 
 # @author Daniel McCoy Stephenson
+@component
 class OptionsScreen:
     def __init__(self, graphik: Graphik, config: Config, status: Status):
         self.graphik = graphik

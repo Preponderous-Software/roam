@@ -2,6 +2,8 @@
 # @since April 18th, 2026
 import pygame
 
+from appContainer import component
+
 MINIMUM_VISIBLE_FRACTION = 0.2
 
 
@@ -40,6 +42,7 @@ def clampPosition(x, y, elementWidth, elementHeight, screenWidth, screenHeight):
     return (cx, cy)
 
 
+@component
 class HudDragManager:
     """Manages drag state for all registered HUD elements."""
 

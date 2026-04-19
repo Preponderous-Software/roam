@@ -2,25 +2,16 @@
 
 All dependency wiring is defined here so that the rest of the application
 resolves its services through the DI container instead of constructing them
-manually.
+manually.  Classes decorated with ``@component`` are registered at import
+time; this module adds factory-based and instance registrations.
 """
 
+from appContainer import container
 from di import Container
 
 from config.config import Config
 from lib.graphik.src.graphik import Graphik
-from mapimage.mapImageUpdater import MapImageUpdater
 from player.player import Player
-from screen.configScreen import ConfigScreen
-from screen.inventoryScreen import InventoryScreen
-from screen.mainMenuScreen import MainMenuScreen
-from screen.optionsScreen import OptionsScreen
-from screen.statsScreen import StatsScreen
-from screen.worldScreen import WorldScreen
-from stats.stats import Stats
-from ui.energyBar import EnergyBar
-from ui.hudDragManager import HudDragManager
-from ui.status import Status
 from world.map import Map
 from world.roomFactory import RoomFactory
 from world.roomJsonReaderWriter import RoomJsonReaderWriter
@@ -28,20 +19,9 @@ from world.tickCounter import TickCounter
 
 
 def createContainer(config):
-    """Create and configure the DI container with all application dependencies."""
-    container = Container()
+    """Configure the shared DI container with instance and factory registrations."""
     container.registerInstance(Container, container)
     container.registerInstance(Config, config)
-
-    # Core services — auto-wired via type hints on their constructors.
-    container.component(TickCounter)
-    container.component(Stats)
-    container.component(Status)
-    container.component(MapImageUpdater)
-
-    # UI components
-    container.component(EnergyBar)
-    container.component(HudDragManager)
 
     # Player requires a tick value from TickCounter, so use a factory.
     container.register(
@@ -78,13 +58,5 @@ def createContainer(config):
         ),
         lifetime="transient",
     )
-
-    # Screens — auto-wired via type hints.
-    container.component(WorldScreen)
-    container.component(OptionsScreen)
-    container.component(MainMenuScreen)
-    container.component(StatsScreen)
-    container.component(ConfigScreen)
-    container.component(InventoryScreen)
 
     return container

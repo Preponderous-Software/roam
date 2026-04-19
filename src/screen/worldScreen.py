@@ -6,6 +6,7 @@ import os
 import time
 import jsonschema
 import pygame
+from appContainer import component
 from di import Container
 from entity.apple import Apple
 from entity.bed import Bed
@@ -51,6 +52,7 @@ MIDDLE_MOUSE_BUTTON = 2
 
 # @author Daniel McCoy Stephenson
 # @since August 16th, 2022
+@component
 class WorldScreen:
     def __init__(
         self,

@@ -3,9 +3,11 @@ import json
 import os
 import jsonschema
 
+from appContainer import component
 from config.config import Config
 
 
+@component
 class Stats:
     def __init__(self, config: Config):
         self.config = config
