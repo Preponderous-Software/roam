@@ -137,11 +137,17 @@ class Container:
         """Instantiate *factory* by resolving its ``__init__`` parameters."""
         try:
             if inspect.isclass(factory):
-                hints = typing.get_type_hints(factory.__init__)
+                hintsSource = factory.__init__
             else:
-                hints = typing.get_type_hints(factory)
-        except Exception:
-            hints = {}
+                hintsSource = factory
+            hints = typing.get_type_hints(hintsSource)
+        except Exception as exc:
+            raise DIError(
+                "Failed to evaluate type hints for '"
+                + str(factory)
+                + "': "
+                + str(exc)
+            ) from exc
 
         sig = inspect.signature(factory)
         kwargs = {}

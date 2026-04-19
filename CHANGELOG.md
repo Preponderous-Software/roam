@@ -68,6 +68,22 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-19 — Address second round of DI PR review comments
+- **Changes:**
+  - Moved `tests/test_di.py` → `tests/di/test_container.py` to follow
+    repo convention of mirroring `src/` subdirectory structure in `tests/`.
+  - Removed redundant `src/di` from `pythonpath` in `pytest.ini` (already
+    reachable via `src`).
+  - Fixed `_createInstance()` in `src/di/container.py` to raise `DIError`
+    with the original exception message when `typing.get_type_hints()` fails,
+    instead of silently swallowing the error and continuing with `hints = {}`.
+  - Removed `container` parameter from `Map.__init__` in `src/world/map.py`
+    — `RoomFactory` and `RoomJsonReaderWriter` are now always constructed
+    from the explicit constructor args, eliminating split behavior between
+    container and non-container code paths. Updated `src/bootstrap.py`
+    accordingly.
+- **Tests:** All 301 tests pass.
+
 ### 2026-04-18 — Add lightweight dependency injection container
 - **Goal:** Replace all manual dependency construction patterns with a
   self-contained DI container, centralizing wiring in a single bootstrap
