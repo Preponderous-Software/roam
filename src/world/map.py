@@ -1,5 +1,6 @@
 import os
 import random
+import threading
 from config.config import Config
 from lib.graphik.src.graphik import Graphik
 from lib.pyenvlib.entity import Entity
@@ -17,6 +18,7 @@ class Map:
     ):
         self.rooms = []
         self._roomIndex = {}
+        self._lock = threading.Lock()
         self.gridSize = gridSize
         self.graphik = graphik
         self.tickCounter = tickCounter
@@ -26,10 +28,16 @@ class Map:
     def getRooms(self):
         return self.rooms
 
+    def hasRoom(self, x, y):
+        key = (x, y)
+        with self._lock:
+            return key in self._roomIndex
+
     def getRoom(self, x, y):
         key = (x, y)
-        if key in self._roomIndex:
-            return self._roomIndex[key]
+        with self._lock:
+            if key in self._roomIndex:
+                return self._roomIndex[key]
 
         # attempt to load room if file exists, otherwise generate new room
         nextRoomPath = (
@@ -64,13 +72,15 @@ class Map:
             )
         else:
             newRoom = self.roomFactory.createRandomRoom(x, y)
-        self.rooms.append(newRoom)
-        self._roomIndex[(x, y)] = newRoom
+        with self._lock:
+            self.rooms.append(newRoom)
+            self._roomIndex[(x, y)] = newRoom
 
         return newRoom
 
     def addRoom(self, room):
         key = (room.getX(), room.getY())
-        if key not in self._roomIndex:
-            self.rooms.append(room)
-        self._roomIndex[key] = room
+        with self._lock:
+            if key not in self._roomIndex:
+                self.rooms.append(room)
+            self._roomIndex[key] = room

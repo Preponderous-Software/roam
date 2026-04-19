@@ -38,6 +38,7 @@ from entity.leaves import Leaves
 from lib.pyenvlib.location import Location
 from world.room import Room
 from world.roomJsonReaderWriter import RoomJsonReaderWriter
+from world.roomPreloader import RoomPreloader
 from world.tickCounter import TickCounter
 from world.map import Map
 from player.player import Player
@@ -76,6 +77,7 @@ class WorldScreen:
         self.nextScreen = ScreenType.OPTIONS_SCREEN
         self.changeScreen = False
         self.roomJsonReaderWriter = self.container.resolve(RoomJsonReaderWriter)
+        self.roomPreloader = self.container.resolve(RoomPreloader)
         self.mapImageUpdater = self.container.resolve(MapImageUpdater)
         self.hudDragManager = self.container.resolve(HudDragManager)
         self.minimapScaleFactor = 0.10
@@ -115,6 +117,11 @@ class WorldScreen:
             self.loadPlayerInventoryFromFile()
 
         self.initializeLocationWidthAndHeight()
+
+        # pre-load nearby rooms in the background
+        self.roomPreloader.preloadNearbyRooms(
+            self.currentRoom.getX(), self.currentRoom.getY(), self.map
+        )
 
         self.status.set("Entered the world")
         self.energyBar = self.container.resolve(EnergyBar)
@@ -385,6 +392,11 @@ class WorldScreen:
         )
         self.currentRoom.addEntityToLocation(self.player, targetLocation)
         self.initializeLocationWidthAndHeight()
+
+        # pre-load nearby rooms in the background
+        self.roomPreloader.preloadNearbyRooms(
+            self.currentRoom.getX(), self.currentRoom.getY(), self.map
+        )
 
     def movePlayer(self, direction: int):
         if self.player.isCrouching():
