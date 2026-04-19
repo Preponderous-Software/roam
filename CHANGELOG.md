@@ -88,6 +88,10 @@ logged in detail below.
     hardcoded `pygame.K_*` checks in `handleKeyDownEvent` and `handleKeyUpEvent`
     with `keyBindings.getKey()` calls.
   - `README.md` — Added note that keybindings are configurable in-game.
+- **Review follow-up:** Removed `gather` (E) and `place` (Q) from
+  `KeyBindings` — gathering and placing are mouse-only actions (left/right
+  click) and were never triggered by keyboard keys. Removed corresponding
+  dead-code key-up handlers from `worldScreen.py`.
 - **Tests:** All 319 tests pass (303 original + 16 new).
 
 ### 2026-04-19 — Refactor restart mechanism to use `restart()` method

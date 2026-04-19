@@ -821,10 +821,6 @@ class WorldScreen:
             key == kb.getKey("move_right") or key == kb.getKey("alt_move_right")
         ) and self.player.getDirection() == 3:
             self.player.setDirection(-1)
-        elif key == kb.getKey("gather"):
-            self.player.setGathering(False)
-        elif key == kb.getKey("place"):
-            self.player.setPlacing(False)
         elif key == kb.getKey("run"):
             self.player.setMovementSpeed(
                 self.player.getMovementSpeed() / self.config.runSpeedFactor

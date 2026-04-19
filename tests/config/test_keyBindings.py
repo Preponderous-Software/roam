@@ -34,8 +34,6 @@ def test_defaults():
     assert kb.getKey("alt_move_right") == pygame.K_RIGHT
     assert kb.getKey("run") == pygame.K_LSHIFT
     assert kb.getKey("crouch") == pygame.K_LCTRL
-    assert kb.getKey("gather") == pygame.K_e
-    assert kb.getKey("place") == pygame.K_q
     assert kb.getKey("inventory") == pygame.K_i
     assert kb.getKey("toggle_minimap") == pygame.K_m
     assert kb.getKey("toggle_debug") == pygame.K_F3
@@ -185,11 +183,11 @@ def test_conflict_detection_multiple_bindings():
     # Set three actions to the same key
     kb.setKey("move_up", pygame.K_x)
     kb.setKey("move_down", pygame.K_x)
-    kb.setKey("gather", pygame.K_x)
+    kb.setKey("inventory", pygame.K_x)
     conflicts = kb.getConflicts()
     assert "move_up" in conflicts
     assert "move_down" in conflicts
-    assert "gather" in conflicts
+    assert "inventory" in conflicts
     assert kb.hasConflicts()
 
 
