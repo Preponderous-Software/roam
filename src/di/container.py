@@ -68,7 +68,7 @@ class Container:
         Auto-wires constructor parameters by recursively resolving type hints.
         Raises ``DIError`` for unregistered types or circular dependencies.
         """
-        return self._resolve(abstractType, set())
+        return self._resolve(abstractType, ())
 
     def component(self, cls=None, *, lifetime="singleton"):
         """Decorator that registers a class with the container at definition time.
@@ -84,7 +84,7 @@ class Container:
                 ...
         """
         if cls is not None:
-            self.register(cls, cls, lifetime="singleton")
+            self.register(cls, cls, lifetime=lifetime)
             return cls
 
         def decorator(innerCls):
@@ -97,7 +97,7 @@ class Container:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _resolve(self, abstractType, resolutionStack):
+    def _resolve(self, abstractType, resolutionPath):
         """Recursively resolve *abstractType*, detecting circular dependencies."""
         if abstractType not in self._registrations:
             raise DIError(
@@ -113,15 +113,15 @@ class Container:
             return reg.instance
 
         # Circular dependency guard.
-        if abstractType in resolutionStack:
-            chain = " -> ".join(str(t) for t in resolutionStack)
+        if abstractType in {t for t in resolutionPath}:
+            chain = " -> ".join(str(t) for t in resolutionPath)
             chain += " -> " + str(abstractType)
             raise DIError("Circular dependency detected: " + chain)
 
-        resolutionStack = resolutionStack | {abstractType}
+        resolutionPath = resolutionPath + (abstractType,)
 
         # Build the instance via auto-wiring.
-        instance = self._createInstance(reg.factory, resolutionStack)
+        instance = self._createInstance(reg.factory, resolutionPath)
 
         # Cache singletons.
         if reg.lifetime == "singleton":
@@ -133,10 +133,13 @@ class Container:
 
         return instance
 
-    def _createInstance(self, factory, resolutionStack):
+    def _createInstance(self, factory, resolutionPath):
         """Instantiate *factory* by resolving its ``__init__`` parameters."""
         try:
-            hints = typing.get_type_hints(factory.__init__)
+            if inspect.isclass(factory):
+                hints = typing.get_type_hints(factory.__init__)
+            else:
+                hints = typing.get_type_hints(factory)
         except Exception:
             hints = {}
 
@@ -147,7 +150,7 @@ class Container:
                 continue
             paramType = hints.get(name)
             if paramType is not None and paramType in self._registrations:
-                kwargs[name] = self._resolve(paramType, resolutionStack)
+                kwargs[name] = self._resolve(paramType, resolutionPath)
             elif param.default is not inspect.Parameter.empty:
                 continue
             else:

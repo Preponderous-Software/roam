@@ -96,8 +96,15 @@ def test_error_on_circular_dependency():
     container = Container()
     container.register(CircularA, CircularA)
     container.register(CircularB, CircularB)
-    with pytest.raises(DIError, match="Circular dependency"):
+    with pytest.raises(DIError, match="Circular dependency") as exc_info:
         container.resolve(CircularA)
+    # Verify the chain is deterministically ordered
+    msg = str(exc_info.value)
+    assert "CircularA" in msg
+    assert "CircularB" in msg
+    arrow_idx_a = msg.index("CircularA")
+    arrow_idx_b = msg.index("CircularB")
+    assert arrow_idx_a < arrow_idx_b
 
 
 def test_component_decorator_registers_class():
@@ -146,3 +153,16 @@ def test_instance_registration_used_in_autowiring():
     container.register(ServiceB, ServiceB)
     b = container.resolve(ServiceB)
     assert b.a is prebuilt_a
+
+
+def test_factory_function_autowiring():
+    container = Container()
+    container.register(ServiceA, ServiceA)
+
+    def create_b(a: ServiceA) -> ServiceB:
+        return ServiceB(a)
+
+    container.register(ServiceB, create_b)
+    b = container.resolve(ServiceB)
+    assert isinstance(b, ServiceB)
+    assert isinstance(b.a, ServiceA)

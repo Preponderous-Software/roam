@@ -8,7 +8,6 @@ manually.
 from di import Container
 
 from config.config import Config
-from inventory.inventory import Inventory
 from lib.graphik.src.graphik import Graphik
 from mapimage.mapImageUpdater import MapImageUpdater
 from player.player import Player
@@ -16,7 +15,6 @@ from screen.configScreen import ConfigScreen
 from screen.inventoryScreen import InventoryScreen
 from screen.mainMenuScreen import MainMenuScreen
 from screen.optionsScreen import OptionsScreen
-from screen.saveSelectionScreen import SaveSelectionScreen
 from screen.statsScreen import StatsScreen
 from screen.worldScreen import WorldScreen
 from stats.stats import Stats
@@ -68,6 +66,7 @@ def createContainer(config):
             container.resolve(Graphik),
             container.resolve(TickCounter),
         ),
+        lifetime="transient",
     )
     container.register(
         Map,

@@ -1,7 +1,6 @@
 import pygame
 from bootstrap import createContainer
 from config.config import Config
-from di import Container
 from inventory.inventory import Inventory
 from player.player import Player
 from lib.graphik.src.graphik import Graphik
