@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from src.mapimage.mapImageUpdater import MapImageUpdater
 
@@ -24,11 +24,13 @@ def test_initialization(tmp_path):
 def test_update_map_image_async_runs_in_background(tmp_path):
     updater = _createUpdater(tmp_path)
     updater.mapImageGenerator = MagicMock()
+    updater.mapImageGenerator.mapImagePath = str(tmp_path / "mapImage.png")
     mockImage = MagicMock()
     updater.mapImageGenerator.generate.return_value = mockImage
 
-    updater.updateMapImageAsync()
-    updater.shutdown(wait=True)
+    with patch("mapimage.mapImageUpdater.os.replace"):
+        updater.updateMapImageAsync()
+        updater.shutdown(wait=True)
 
     updater.mapImageGenerator.generate.assert_called_once()
     mockImage.save.assert_called_once()
@@ -38,11 +40,13 @@ def test_update_map_image_async_runs_in_background(tmp_path):
 def test_update_map_image_delegates_to_async(tmp_path):
     updater = _createUpdater(tmp_path)
     updater.mapImageGenerator = MagicMock()
+    updater.mapImageGenerator.mapImagePath = str(tmp_path / "mapImage.png")
     mockImage = MagicMock()
     updater.mapImageGenerator.generate.return_value = mockImage
 
-    updater.updateMapImage()
-    updater.shutdown(wait=True)
+    with patch("mapimage.mapImageUpdater.os.replace"):
+        updater.updateMapImage()
+        updater.shutdown(wait=True)
 
     updater.mapImageGenerator.generate.assert_called_once()
 
@@ -66,11 +70,13 @@ def test_skips_if_update_already_in_progress(tmp_path):
 def test_update_in_progress_flag_resets_after_completion(tmp_path):
     updater = _createUpdater(tmp_path)
     updater.mapImageGenerator = MagicMock()
+    updater.mapImageGenerator.mapImagePath = str(tmp_path / "mapImage.png")
     mockImage = MagicMock()
     updater.mapImageGenerator.generate.return_value = mockImage
 
-    updater.updateMapImageAsync()
-    updater.shutdown(wait=True)
+    with patch("mapimage.mapImageUpdater.os.replace"):
+        updater.updateMapImageAsync()
+        updater.shutdown(wait=True)
 
     assert updater._updateInProgress is False
 
@@ -90,6 +96,7 @@ def test_update_in_progress_flag_resets_on_error(tmp_path):
 def test_update_if_cooldown_over_triggers_when_past_cooldown(tmp_path):
     updater = _createUpdater(tmp_path)
     updater.mapImageGenerator = MagicMock()
+    updater.mapImageGenerator.mapImagePath = str(tmp_path / "mapImage.png")
     mockImage = MagicMock()
     updater.mapImageGenerator.generate.return_value = mockImage
     updater.tickLastUpdated = 0
@@ -97,8 +104,9 @@ def test_update_if_cooldown_over_triggers_when_past_cooldown(tmp_path):
     # Simulate enough ticks passing
     updater.tickCounter.getTick.return_value = 301
 
-    updater.updateIfCooldownOver()
-    updater.shutdown(wait=True)
+    with patch("mapimage.mapImageUpdater.os.replace"):
+        updater.updateIfCooldownOver()
+        updater.shutdown(wait=True)
 
     updater.mapImageGenerator.generate.assert_called_once()
 

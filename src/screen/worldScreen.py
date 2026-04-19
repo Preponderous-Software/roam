@@ -986,11 +986,16 @@ class WorldScreen:
 
     def drawMiniMap(self):
         # if map image doesn't exist, return
-        if not os.path.isfile(self.config.pathToSaveDirectory + "/mapImage.png"):
+        mapImagePath = self.config.pathToSaveDirectory + "/mapImage.png"
+        if not os.path.isfile(mapImagePath):
             return
 
-        # get mapImage.png for current save
-        mapImage = pygame.image.load(self.config.pathToSaveDirectory + "/mapImage.png")
+        # get mapImage.png for current save — the background map updater may
+        # be writing the file concurrently, so guard against load failures.
+        try:
+            mapImage = pygame.image.load(mapImagePath)
+        except (FileNotFoundError, pygame.error):
+            return
 
         # scale as a square using the game area size
         gameArea = self.graphik.getGameAreaRect()

@@ -1,3 +1,4 @@
+import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
@@ -46,7 +47,11 @@ class MapImageUpdater:
         """Perform the actual map image generation. Runs on a background thread."""
         try:
             image = self.mapImageGenerator.generate()
-            image.save(self.mapImageGenerator.mapImagePath)
+            # Write to a temp file then rename to avoid the main thread
+            # reading a partially-written image.
+            tmpPath = self.mapImageGenerator.mapImagePath + ".tmp"
+            image.save(tmpPath)
+            os.replace(tmpPath, self.mapImageGenerator.mapImagePath)
             self.mapImageGenerator.clearRoomImages()
         finally:
             with self._lock:
