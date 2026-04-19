@@ -52,19 +52,21 @@ class TickCounter:
         jsonTick = {}
         jsonTick["tick"] = self.getTick()
 
-        # validate
-        tickSchema = json.load(open("schemas/tick.json"))
+        with open("schemas/tick.json") as f:
+            tickSchema = json.load(f)
         jsonschema.validate(jsonTick, tickSchema)
 
         path = self.config.pathToSaveDirectory + "/tick.json"
-        json.dump(jsonTick, open(path, "w"), indent=4)
+        with open(path, "w") as f:
+            json.dump(jsonTick, f, indent=4)
 
     def load(self):
         path = self.config.pathToSaveDirectory + "/tick.json"
-        jsonTick = json.load(open(path))
+        with open(path) as f:
+            jsonTick = json.load(f)
 
-        # validate
-        tickSchema = json.load(open("schemas/tick.json"))
+        with open("schemas/tick.json") as f:
+            tickSchema = json.load(f)
         jsonschema.validate(jsonTick, tickSchema)
 
         self.tick = int(jsonTick["tick"])

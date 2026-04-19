@@ -1,13 +1,13 @@
-import datetime
-import os
 from appContainer import component
 from config.config import Config
 from config.keyBindings import KeyBindings
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
+from screen.screenshotHelper import takeScreenshot
 from stats.stats import Stats
 from ui.status import Status
 import pygame
+
 
 # @author Daniel McCoy Stephenson
 @component
@@ -28,30 +28,11 @@ class StatsScreen:
         self.nextScreen = ScreenType.OPTIONS_SCREEN
         self.changeScreen = False
 
-    # @source https://stackoverflow.com/questions/63342477/how-to-take-screenshot-of-entire-display-pygame
-    def captureScreen(self, name, pos, size):  # (pygame Surface, String, tuple, tuple)
-        image = pygame.Surface(size)  # Create image surface
-        image.blit(
-            self.graphik.getGameDisplay(), (0, 0), (pos, size)
-        )  # Blit portion of the display to the image
-        pygame.image.save(image, name)  # Save the image to the disk**
-
     def handleKeyDownEvent(self, key):
         if key == pygame.K_ESCAPE:
             self.switchToOptionsScreen()
         elif key == self.keyBindings.getKey("screenshot"):
-            screenshotsFolder = "screenshots"
-            if not os.path.exists(screenshotsFolder):
-                os.makedirs(screenshotsFolder)
-            x, y = self.graphik.getGameDisplay().get_size()
-            self.captureScreen(
-                screenshotsFolder
-                + "/screenshot-"
-                + str(datetime.datetime.now()).replace(" ", "-").replace(":", ".")
-                + ".png",
-                (0, 0),
-                (x, y),
-            )
+            takeScreenshot(self.graphik.getGameDisplay())
 
     def switchToOptionsScreen(self):
         self.nextScreen = ScreenType.OPTIONS_SCREEN
@@ -64,36 +45,23 @@ class StatsScreen:
     def drawStats(self):
         x, y = self.graphik.getGameDisplay().get_size()
 
-        # draw title
         self.graphik.drawText("Statistics", x / 2, 25, 36, (255, 255, 255))
 
-        # aim for center of screen
-        x / 5
-        height = y / 10
+        lineSpacing = y / 10
         xpos = x / 2
         ypos = 70
 
-        # draw score
         text = "Score: " + str(self.stats.getScore())
         self.graphik.drawText(text, xpos, ypos, 30, (255, 255, 255))
 
-        # draw rooms explored
-        self.xpos = xpos
-        self.ypos = ypos + height
         text = "Rooms Explored: " + str(self.stats.getRoomsExplored())
-        self.graphik.drawText(text, xpos, ypos + height, 30, (255, 255, 255))
+        self.graphik.drawText(text, xpos, ypos + lineSpacing, 30, (255, 255, 255))
 
-        # draw food eaten
-        self.xpos = xpos
-        self.ypos = ypos + height * 2
         text = "Food Eaten: " + str(self.stats.getFoodEaten())
-        self.graphik.drawText(text, xpos, ypos + height * 2, 30, (255, 255, 255))
+        self.graphik.drawText(text, xpos, ypos + lineSpacing * 2, 30, (255, 255, 255))
 
-        # draw number of deaths
-        self.xpos = xpos
-        self.ypos = ypos + height * 3
         text = "Deaths: " + str(self.stats.getNumberOfDeaths())
-        self.graphik.drawText(text, xpos, ypos + height * 3, 30, (255, 255, 255))
+        self.graphik.drawText(text, xpos, ypos + lineSpacing * 3, 30, (255, 255, 255))
 
     def drawBackButton(self):
         x, y = self.graphik.getGameDisplay().get_size()

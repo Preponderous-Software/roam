@@ -23,7 +23,9 @@ def _createRoomJsonReaderWriterFactory(graphik, tickCounter, config):
 def _createPreloaderAndMap(tmp_path):
     graphik, tickCounter, config = _createDependencies(tmp_path)
     factory = _createRoomJsonReaderWriterFactory(graphik, tickCounter, config)
-    preloader = RoomPreloader(3, graphik, tickCounter, config, roomJsonReaderWriterFactory=factory)
+    preloader = RoomPreloader(
+        3, graphik, tickCounter, config, roomJsonReaderWriterFactory=factory
+    )
     gameMap = Map(3, graphik, tickCounter, config)
     return preloader, gameMap
 
@@ -82,7 +84,9 @@ def test_preload_respects_world_border(tmp_path):
     config.worldBorder = 1  # border at 1 means rooms at abs(x/y) > 1 are blocked
 
     factory = _createRoomJsonReaderWriterFactory(graphik, tickCounter, config)
-    preloader = RoomPreloader(3, graphik, tickCounter, config, roomJsonReaderWriterFactory=factory)
+    preloader = RoomPreloader(
+        3, graphik, tickCounter, config, roomJsonReaderWriterFactory=factory
+    )
     gameMap = Map(3, graphik, tickCounter, config)
 
     # Player at (1, 1) — all neighbors are at abs >= 2, which exceeds border

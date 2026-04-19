@@ -179,9 +179,7 @@ class SaveSelectionScreen:
         x, y = self.graphik.getGameDisplay().get_size()
         xpos = x / 2
         ypos = y / 3
-        self.graphik.drawText(
-            "No save files found.", xpos, ypos, 28, (255, 255, 255)
-        )
+        self.graphik.drawText("No save files found.", xpos, ypos, 28, (255, 255, 255))
         ypos += 40
         self.graphik.drawText(
             'Click "New Game" to start playing!',
@@ -203,9 +201,7 @@ class SaveSelectionScreen:
         bottomLimit = y - y / 4
         maxVisible = int((bottomLimit - ypos) / (height + margin))
         visibleSaves = saves[self.scrollOffset : self.scrollOffset + maxVisible]
-        interactive = (
-            self.confirmingDelete is None and not self.namingNewSave
-        )
+        interactive = self.confirmingDelete is None and not self.namingNewSave
 
         for save in visibleSaves:
             label = save["name"] + "  |  " + save["lastPlayed"]
@@ -384,9 +380,7 @@ class SaveSelectionScreen:
         totalWidth = buttonWidth * 3 + margin * 2
         startX = x / 2 - totalWidth / 2
         ypos = y - buttonHeight - y / 12
-        interactive = (
-            self.confirmingDelete is None and not self.namingNewSave
-        )
+        interactive = self.confirmingDelete is None and not self.namingNewSave
 
         if interactive:
             self.graphik.drawButton(
@@ -401,7 +395,9 @@ class SaveSelectionScreen:
                 self.startNamingNewSave,
             )
 
-            sortLabel = "Sort: Date" if self.sortMode == self.SORT_BY_DATE else "Sort: Name"
+            sortLabel = (
+                "Sort: Date" if self.sortMode == self.SORT_BY_DATE else "Sort: Name"
+            )
             self.graphik.drawButton(
                 startX + buttonWidth + margin,
                 ypos,
@@ -426,7 +422,9 @@ class SaveSelectionScreen:
                 self.switchToMainMenuScreen,
             )
         else:
-            sortLabel = "Sort: Date" if self.sortMode == self.SORT_BY_DATE else "Sort: Name"
+            sortLabel = (
+                "Sort: Date" if self.sortMode == self.SORT_BY_DATE else "Sort: Name"
+            )
             for i, label in enumerate(["New Game", sortLabel, "Back"]):
                 bx = startX + (buttonWidth + margin) * i
                 self.graphik.drawRectangle(

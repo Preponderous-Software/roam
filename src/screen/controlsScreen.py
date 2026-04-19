@@ -81,7 +81,9 @@ class ControlsScreen:
 
             isConflict = action in conflicts
             labelColor = (255, 100, 100) if isConflict else (255, 255, 255)
-            self.graphik.drawText(label, labelX, rowY + buttonHeight / 2, 20, labelColor)
+            self.graphik.drawText(
+                label, labelX, rowY + buttonHeight / 2, 20, labelColor
+            )
 
             if self.waitingForKey == action:
                 bgColor = (100, 100, 255)

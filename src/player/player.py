@@ -60,14 +60,14 @@ class Player(LivingEntity):
     def isGathering(self):
         return self.gathering
 
-    def setGathering(self, bool):
-        self.gathering = bool
+    def setGathering(self, value):
+        self.gathering = value
 
     def isPlacing(self):
         return self.placing
 
-    def setPlacing(self, bool):
-        self.placing = bool
+    def setPlacing(self, value):
+        self.placing = value
 
     def isDead(self):
         return self.energy < 1
@@ -111,20 +111,8 @@ class Player(LivingEntity):
     def isCrouching(self):
         return self.crouching
 
-    def setCrouching(self, bool):
-        self.crouching = bool
-
-    def getTickLastGathered(self):
-        return self.tickLastGathered
-
-    def setTickLastGathered(self, tick):
-        self.tickLastGathered = tick
-
-    def getTickLastPlaced(self):
-        return self.tickLastPlaced
-
-    def setTickLastPlaced(self, tick):
-        self.tickLastPlaced = tick
+    def setCrouching(self, value):
+        self.crouching = value
 
     def isMoving(self):
         return self.direction != -1

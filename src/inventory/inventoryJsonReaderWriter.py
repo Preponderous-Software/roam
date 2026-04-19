@@ -26,6 +26,39 @@ from entity.stoneFloor import StoneFloor
 from entity.woodFloor import WoodFloor
 from inventory.inventory import Inventory
 
+# Entity registries — must be kept in sync with roomJsonReaderWriter.py
+# when adding new entity types.
+
+# Simple entity classes that require no special constructor arguments
+_SIMPLE_ENTITY_CONSTRUCTORS = {
+    "Apple": Apple,
+    "CoalOre": CoalOre,
+    "Grass": Grass,
+    "IronOre": IronOre,
+    "JungleWood": JungleWood,
+    "Leaves": Leaves,
+    "OakWood": OakWood,
+    "Stone": Stone,
+    "Banana": Banana,
+    "ChickenMeat": ChickenMeat,
+    "BearMeat": BearMeat,
+    "WoodFloor": WoodFloor,
+    "Bed": Bed,
+    "StoneFloor": StoneFloor,
+    "StoneBed": StoneBed,
+    "Fence": Fence,
+    "Campfire": Campfire,
+}
+
+# Food entity classes that have a restorable energy value
+_FOOD_ENTITY_CLASSES = {"Apple", "Banana", "ChickenMeat", "BearMeat"}
+
+# Living entity classes that need a tickCreated constructor argument
+_LIVING_ENTITY_CONSTRUCTORS = {
+    "Bear": Bear,
+    "Chicken": Chicken,
+}
+
 
 class InventoryJsonReaderWriter:
     def __init__(self, config):
@@ -33,33 +66,30 @@ class InventoryJsonReaderWriter:
 
     def saveInventory(self, inventory: Inventory, path):
         print("Saving inventory to " + path)
-        toReturn = {}
-        toReturn["inventorySlots"] = []
+        toReturn = {"inventorySlots": []}
         slotIndex = 0
         for slot in inventory.getInventorySlots():
             slotContents = []
             for entity in slot.getContents():
-                toAppend = {}
-                toAppend = {
+                entityData = {
                     "entityId": str(entity.getID()),
                     "entityClass": entity.__class__.__name__,
                     "name": entity.getName(),
                     "assetPath": entity.getImagePath(),
                 }
                 if isinstance(entity, Food):
-                    toAppend["energy"] = entity.getEnergy()
+                    entityData["energy"] = entity.getEnergy()
                 if isinstance(entity, LivingEntity):
-                    toAppend["energy"] = entity.getEnergy()
-                    toAppend["tickCreated"] = entity.getTickCreated()
-                    toAppend["tickLastReproduced"] = entity.getTickLastReproduced()
-                    toAppend["imagePath"] = entity.getImagePath()
-                slotContents.append(toAppend)
+                    entityData["energy"] = entity.getEnergy()
+                    entityData["tickCreated"] = entity.getTickCreated()
+                    entityData["tickLastReproduced"] = entity.getTickLastReproduced()
+                    entityData["imagePath"] = entity.getImagePath()
+                slotContents.append(entityData)
             toReturn["inventorySlots"].append(
                 {"slotIndex": slotIndex, "slotContents": slotContents}
             )
             slotIndex += 1
 
-        # Validate the JSON
         with open("schemas/inventory.json") as f:
             inventorySchema = json.load(f)
         try:
@@ -67,11 +97,9 @@ class InventoryJsonReaderWriter:
         except jsonschema.exceptions.ValidationError as e:
             print(e)
 
-        # create save directory if it doesn't exist
         if not os.path.exists(self.config.pathToSaveDirectory):
             os.makedirs(self.config.pathToSaveDirectory)
 
-        # print the JSON to file
         with open(path, "w") as f:
             json.dump(toReturn, f, indent=4)
 
@@ -84,99 +112,34 @@ class InventoryJsonReaderWriter:
             inventoryJson = json.load(f)
         for slot in inventoryJson["inventorySlots"]:
             for entityJson in slot["slotContents"]:
-                entityClass = entityJson["entityClass"]
-                if entityClass == "Apple":
-                    apple = Apple()
-                    apple.setID(UUID(entityJson["entityId"]))
-                    if "energy" in entityJson:
-                        apple.setEnergy(entityJson["energy"])
-                    inventory.placeIntoFirstAvailableInventorySlot(apple)
-                elif entityClass == "CoalOre":
-                    coalOre = CoalOre()
-                    coalOre.setID(UUID(entityJson["entityId"]))
-                    inventory.placeIntoFirstAvailableInventorySlot(coalOre)
-                elif entityClass == "Grass":
-                    grass = Grass()
-                    grass.setID(UUID(entityJson["entityId"]))
-                    inventory.placeIntoFirstAvailableInventorySlot(grass)
-                elif entityClass == "IronOre":
-                    ironOre = IronOre()
-                    ironOre.setID(UUID(entityJson["entityId"]))
-                    inventory.placeIntoFirstAvailableInventorySlot(ironOre)
-                elif entityClass == "JungleWood":
-                    jungleWood = JungleWood()
-                    jungleWood.setID(UUID(entityJson["entityId"]))
-                    inventory.placeIntoFirstAvailableInventorySlot(jungleWood)
-                elif entityClass == "Leaves":
-                    leaves = Leaves()
-                    leaves.setID(UUID(entityJson["entityId"]))
-                    inventory.placeIntoFirstAvailableInventorySlot(leaves)
-                elif entityClass == "OakWood":
-                    oakWood = OakWood()
-                    oakWood.setID(UUID(entityJson["entityId"]))
-                    inventory.placeIntoFirstAvailableInventorySlot(oakWood)
-                elif entityClass == "Stone":
-                    stone = Stone()
-                    stone.setID(UUID(entityJson["entityId"]))
-                    inventory.placeIntoFirstAvailableInventorySlot(stone)
-                elif entityClass == "Bear":
-                    bear = Bear(entityJson["tickCreated"])
-                    bear.setID(UUID(entityJson["entityId"]))
-                    inventory.placeIntoFirstAvailableInventorySlot(bear)
-                    bear.setEnergy(entityJson["energy"])
-                    bear.setTickLastReproduced(entityJson["tickLastReproduced"])
-                    bear.setImagePath(entityJson["imagePath"])
-                elif entityClass == "Chicken":
-                    chicken = Chicken(entityJson["tickCreated"])
-                    chicken.setID(UUID(entityJson["entityId"]))
-                    chicken.setEnergy(entityJson["energy"])
-                    chicken.setTickLastReproduced(entityJson["tickLastReproduced"])
-                    chicken.setImagePath(entityJson["imagePath"])
-                    inventory.placeIntoFirstAvailableInventorySlot(chicken)
-                elif entityClass == "Banana":
-                    banana = Banana()
-                    banana.setID(UUID(entityJson["entityId"]))
-                    if "energy" in entityJson:
-                        banana.setEnergy(entityJson["energy"])
-                    inventory.placeIntoFirstAvailableInventorySlot(banana)
-                elif entityClass == "ChickenMeat":
-                    chickenMeat = ChickenMeat()
-                    chickenMeat.setID(UUID(entityJson["entityId"]))
-                    if "energy" in entityJson:
-                        chickenMeat.setEnergy(entityJson["energy"])
-                    inventory.placeIntoFirstAvailableInventorySlot(chickenMeat)
-                elif entityClass == "BearMeat":
-                    bearMeat = BearMeat()
-                    bearMeat.setID(UUID(entityJson["entityId"]))
-                    if "energy" in entityJson:
-                        bearMeat.setEnergy(entityJson["energy"])
-                    inventory.placeIntoFirstAvailableInventorySlot(bearMeat)
-                elif entityClass == "WoodFloor":
-                    woodFloor = WoodFloor()
-                    woodFloor.setID(UUID(entityJson["entityId"]))
-                    inventory.placeIntoFirstAvailableInventorySlot(woodFloor)
-                elif entityClass == "Bed":
-                    bed = Bed()
-                    bed.setID(UUID(entityJson["entityId"]))
-                    inventory.placeIntoFirstAvailableInventorySlot(bed)
-                elif entityClass == "StoneFloor":
-                    stoneFloor = StoneFloor()
-                    stoneFloor.setID(UUID(entityJson["entityId"]))
-                    inventory.placeIntoFirstAvailableInventorySlot(stoneFloor)
-                elif entityClass == "StoneBed":
-                    stoneBed = StoneBed()
-                    stoneBed.setID(UUID(entityJson["entityId"]))
-                    inventory.placeIntoFirstAvailableInventorySlot(stoneBed)
-                elif entityClass == "Fence":
-                    fence = Fence()
-                    fence.setID(UUID(entityJson["entityId"]))
-                    inventory.placeIntoFirstAvailableInventorySlot(fence)
-                elif entityClass == "Campfire":
-                    campfire = Campfire()
-                    campfire.setID(UUID(entityJson["entityId"]))
-                    inventory.placeIntoFirstAvailableInventorySlot(campfire)
-                else:
-                    raise Exception(
-                        "Unknown entity class: " + entityJson["entityClass"]
-                    )
+                entity = self._createEntityFromJson(entityJson)
+                inventory.placeIntoFirstAvailableInventorySlot(entity)
         return inventory
+
+    def _createEntityFromJson(self, entityJson):
+        entityClass = entityJson["entityClass"]
+
+        if entityClass in _LIVING_ENTITY_CONSTRUCTORS:
+            return self._createLivingEntity(entityClass, entityJson)
+
+        if entityClass in _SIMPLE_ENTITY_CONSTRUCTORS:
+            return self._createSimpleEntity(entityClass, entityJson)
+
+        raise Exception("Unknown entity class: " + entityClass)
+
+    def _createSimpleEntity(self, entityClass, entityJson):
+        constructor = _SIMPLE_ENTITY_CONSTRUCTORS[entityClass]
+        entity = constructor()
+        entity.setID(UUID(entityJson["entityId"]))
+        if entityClass in _FOOD_ENTITY_CLASSES and "energy" in entityJson:
+            entity.setEnergy(entityJson["energy"])
+        return entity
+
+    def _createLivingEntity(self, entityClass, entityJson):
+        constructor = _LIVING_ENTITY_CONSTRUCTORS[entityClass]
+        entity = constructor(entityJson["tickCreated"])
+        entity.setID(UUID(entityJson["entityId"]))
+        entity.setEnergy(entityJson["energy"])
+        entity.setTickLastReproduced(entityJson["tickLastReproduced"])
+        entity.setImagePath(entityJson["imagePath"])
+        return entity

@@ -102,9 +102,7 @@ class Container:
         """Recursively resolve *abstractType*, detecting circular dependencies."""
         if abstractType not in self._registrations:
             raise DIError(
-                "Type '"
-                + str(abstractType)
-                + "' is not registered with the container."
+                "Type '" + str(abstractType) + "' is not registered with the container."
             )
 
         reg = self._registrations[abstractType]
@@ -148,10 +146,7 @@ class Container:
             hints = typing.get_type_hints(hintsSource)
         except Exception as exc:
             raise DIError(
-                "Failed to evaluate type hints for '"
-                + str(factory)
-                + "': "
-                + str(exc)
+                "Failed to evaluate type hints for '" + str(factory) + "': " + str(exc)
             ) from exc
 
         sig = inspect.signature(factory)

@@ -29,7 +29,9 @@ class RoomPreloader:
         self.tickCounter = tickCounter
         self.config = config
         self._roomJsonReaderWriterFactory = roomJsonReaderWriterFactory
-        self._executor = ThreadPoolExecutor(max_workers=2)  # balance responsiveness with resource usage
+        self._executor = ThreadPoolExecutor(
+            max_workers=2
+        )  # balance responsiveness with resource usage
         self._pending = set()
         self._pendingLock = threading.Lock()
 
@@ -40,8 +42,7 @@ class RoomPreloader:
             nx, ny = currentX + dx, currentY + dy
 
             if self.config.worldBorder != 0 and (
-                abs(nx) > self.config.worldBorder
-                or abs(ny) > self.config.worldBorder
+                abs(nx) > self.config.worldBorder or abs(ny) > self.config.worldBorder
             ):
                 continue
 
@@ -84,5 +85,7 @@ class RoomPreloader:
                 self._pending.discard((x, y))
 
     def shutdown(self, wait=False):
-        """Cleanly shut down the background thread pool."""
+        """Cleanly shut down the background thread pool and recreate it so the
+        same RoomPreloader instance can be reused after a screen transition."""
         self._executor.shutdown(wait=wait)
+        self._executor = ThreadPoolExecutor(max_workers=2)

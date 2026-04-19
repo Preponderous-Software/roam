@@ -6,6 +6,7 @@ from config.config import Config
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
 
+
 # @author Daniel McCoy Stephenson
 @component
 class MainMenuScreen:

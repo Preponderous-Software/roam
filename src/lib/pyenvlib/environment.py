@@ -5,9 +5,9 @@ import uuid
 from lib.pyenvlib.entity import Entity
 from lib.pyenvlib.grid import Grid
 
-
 # @author Daniel McCoy Stephenson
 # @since July 1st, 2022
+
 
 # Represents a virtual environment with an underlying 2D grid of locations that can contain entities.
 class Environment(object):

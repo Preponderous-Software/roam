@@ -19,7 +19,9 @@ def init_pygame():
 def isolate_config_file(tmp_path, monkeypatch):
     configFilePath = tmp_path / "config.yml"
     configFilePath.write_text("", encoding="utf-8")
-    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
 
 
 def test_defaults():
@@ -125,7 +127,9 @@ def test_load_from_config_ignores_non_int_values():
 def test_save_to_config_file(tmp_path, monkeypatch):
     configFilePath = tmp_path / "config.yml"
     configFilePath.write_text("debug: true\n", encoding="utf-8")
-    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
 
     config = Config()
     kb = KeyBindings()
@@ -140,7 +144,9 @@ def test_save_to_config_file(tmp_path, monkeypatch):
 def test_save_and_load_round_trip(tmp_path, monkeypatch):
     configFilePath = tmp_path / "config.yml"
     configFilePath.write_text("", encoding="utf-8")
-    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
 
     config = Config()
     kb = KeyBindings()
@@ -163,7 +169,9 @@ def test_save_updates_existing_bindings(tmp_path, monkeypatch):
     configFilePath.write_text(
         "key_move_up: " + str(pygame.K_UP) + "\n", encoding="utf-8"
     )
-    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
 
     config = Config()
     kb = KeyBindings()
