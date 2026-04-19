@@ -68,6 +68,16 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-19 — Use `component()` in bootstrap for self-registered types
+- **Changes:**
+  - Replaced 12 `container.register(X, X)` calls in `src/bootstrap.py` with
+    `container.component(X)` for types where the abstract and concrete types
+    are the same (TickCounter, Stats, Status, MapImageUpdater, EnergyBar,
+    HudDragManager, WorldScreen, OptionsScreen, MainMenuScreen, StatsScreen,
+    ConfigScreen, InventoryScreen). Registrations that use factory lambdas or
+    custom lifetimes remain as `container.register(...)`.
+- **Tests:** All 301 tests pass.
+
 ### 2026-04-19 — Third round: split container module, remove manual fallback
 - **Changes:**
   - Split `src/di/container.py` into three modules per Clean Code principles:

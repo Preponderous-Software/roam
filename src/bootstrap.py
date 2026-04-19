@@ -34,14 +34,14 @@ def createContainer(config):
     container.registerInstance(Config, config)
 
     # Core services — auto-wired via type hints on their constructors.
-    container.register(TickCounter, TickCounter)
-    container.register(Stats, Stats)
-    container.register(Status, Status)
-    container.register(MapImageUpdater, MapImageUpdater)
+    container.component(TickCounter)
+    container.component(Stats)
+    container.component(Status)
+    container.component(MapImageUpdater)
 
     # UI components
-    container.register(EnergyBar, EnergyBar)
-    container.register(HudDragManager, HudDragManager)
+    container.component(EnergyBar)
+    container.component(HudDragManager)
 
     # Player requires a tick value from TickCounter, so use a factory.
     container.register(
@@ -80,11 +80,11 @@ def createContainer(config):
     )
 
     # Screens — auto-wired via type hints.
-    container.register(WorldScreen, WorldScreen)
-    container.register(OptionsScreen, OptionsScreen)
-    container.register(MainMenuScreen, MainMenuScreen)
-    container.register(StatsScreen, StatsScreen)
-    container.register(ConfigScreen, ConfigScreen)
-    container.register(InventoryScreen, InventoryScreen)
+    container.component(WorldScreen)
+    container.component(OptionsScreen)
+    container.component(MainMenuScreen)
+    container.component(StatsScreen)
+    container.component(ConfigScreen)
+    container.component(InventoryScreen)
 
     return container
