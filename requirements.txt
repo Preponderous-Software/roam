@@ -6,7 +6,7 @@ image==1.5.33
 iniconfig==1.1.1
 jsonschema==4.17.3
 packaging==21.3
-Pillow==10.4.0
+Pillow==12.2.0
 pluggy==1.0.0
 pygame==2.1.2
 pyparsing==3.0.9
