@@ -6,7 +6,7 @@ import os
 import time
 import jsonschema
 import pygame
-from di import Container, DIError
+from di import Container
 from entity.apple import Apple
 from entity.bed import Bed
 from entity.campfire import Campfire
@@ -73,11 +73,6 @@ class WorldScreen:
         self.showInventory = False
         self.nextScreen = ScreenType.OPTIONS_SCREEN
         self.changeScreen = False
-        if self.container is None:
-            raise DIError(
-                "WorldScreen requires a DI container. "
-                "Pass a configured Container instance."
-            )
         self.roomJsonReaderWriter = self.container.resolve(RoomJsonReaderWriter)
         self.mapImageUpdater = self.container.resolve(MapImageUpdater)
         self.hudDragManager = self.container.resolve(HudDragManager)
