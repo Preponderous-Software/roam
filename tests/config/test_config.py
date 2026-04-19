@@ -18,7 +18,9 @@ def init_pygame():
 def isolate_config_file(tmp_path, monkeypatch):
     configFilePath = tmp_path / "config.yml"
     configFilePath.write_text("", encoding="utf-8")
-    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
 
 
 def test_defaults():
@@ -143,10 +145,7 @@ def test_ignores_invalid_or_empty_values(tmp_path, monkeypatch):
 def test_preserves_hash_character_in_quoted_strings(tmp_path, monkeypatch):
     configFilePath = tmp_path / "config.yml"
     configFilePath.write_text(
-        (
-            'pathToSaveDirectory: "saves/#1" # keep this value\n'
-            "debug: true\n"
-        ),
+        ('pathToSaveDirectory: "saves/#1" # keep this value\n' "debug: true\n"),
         encoding="utf-8",
     )
 
@@ -162,10 +161,7 @@ def test_preserves_hash_character_in_quoted_strings(tmp_path, monkeypatch):
 def test_inline_comments_are_ignored_for_unquoted_values(tmp_path, monkeypatch):
     configFilePath = tmp_path / "config.yml"
     configFilePath.write_text(
-        (
-            "debug: true # enabled\n"
-            "ticksPerSecond: 45 # faster tick rate\n"
-        ),
+        ("debug: true # enabled\n" "ticksPerSecond: 45 # faster tick rate\n"),
         encoding="utf-8",
     )
 
@@ -182,9 +178,7 @@ def test_inline_comments_are_ignored_for_unquoted_values(tmp_path, monkeypatch):
 def test_preserves_hash_after_escaped_quote_in_string(tmp_path, monkeypatch):
     configFilePath = tmp_path / "config.yml"
     configFilePath.write_text(
-        (
-            'pathToSaveDirectory: "saves/\\"#1" # keep after escaped quote\n'
-        ),
+        ('pathToSaveDirectory: "saves/\\"#1" # keep after escaped quote\n'),
         encoding="utf-8",
     )
 
@@ -201,7 +195,9 @@ def test_preserves_hash_after_escaped_quote_in_string(tmp_path, monkeypatch):
 def test_save_window_size_creates_entries(tmp_path, monkeypatch):
     configFilePath = tmp_path / "config.yml"
     configFilePath.write_text("debug: true\n", encoding="utf-8")
-    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
 
     config = Config()
     config.saveWindowSize(800, 600)
@@ -216,7 +212,9 @@ def test_save_window_size_updates_existing_entries(tmp_path, monkeypatch):
     configFilePath.write_text(
         "savedWindowWidth: 500\nsavedWindowHeight: 500\n", encoding="utf-8"
     )
-    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
 
     config = Config()
     config.saveWindowSize(900, 700)
@@ -232,7 +230,9 @@ def test_save_window_size_matches_whitespace_before_colon(tmp_path, monkeypatch)
     configFilePath.write_text(
         "savedWindowWidth : 500\nsavedWindowHeight : 500\n", encoding="utf-8"
     )
-    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
 
     config = Config()
     config.saveWindowSize(900, 700)
@@ -248,7 +248,9 @@ def test_save_window_size_matches_whitespace_before_colon(tmp_path, monkeypatch)
 def test_save_window_size_clamps_to_minimum(tmp_path, monkeypatch):
     configFilePath = tmp_path / "config.yml"
     configFilePath.write_text("", encoding="utf-8")
-    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
 
     config = Config()
     config.saveWindowSize(100, 200)
@@ -263,7 +265,9 @@ def test_saved_window_size_is_loaded_on_init(tmp_path, monkeypatch):
     configFilePath.write_text(
         "savedWindowWidth: 800\nsavedWindowHeight: 600\n", encoding="utf-8"
     )
-    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
 
     config = Config()
 
@@ -276,7 +280,9 @@ def test_saved_window_size_fallback_when_too_large(tmp_path, monkeypatch):
     configFilePath.write_text(
         "savedWindowWidth: 99999\nsavedWindowHeight: 99999\n", encoding="utf-8"
     )
-    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
 
     config = Config()
 
@@ -298,7 +304,9 @@ def test_manual_display_overrides_saved_window_size(tmp_path, monkeypatch):
         ),
         encoding="utf-8",
     )
-    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
 
     config = Config()
 
@@ -309,7 +317,9 @@ def test_manual_display_overrides_saved_window_size(tmp_path, monkeypatch):
 def test_no_saved_dimensions_uses_default(tmp_path, monkeypatch):
     configFilePath = tmp_path / "config.yml"
     configFilePath.write_text("", encoding="utf-8")
-    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
 
     config = Config()
 
@@ -321,10 +331,10 @@ def test_no_saved_dimensions_uses_default(tmp_path, monkeypatch):
 
 def test_save_window_size_preserves_other_config(tmp_path, monkeypatch):
     configFilePath = tmp_path / "config.yml"
-    configFilePath.write_text(
-        "debug: false\nticksPerSecond: 60\n", encoding="utf-8"
+    configFilePath.write_text("debug: false\nticksPerSecond: 60\n", encoding="utf-8")
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
     )
-    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: configFilePath))
 
     config = Config()
     config.saveWindowSize(800, 600)

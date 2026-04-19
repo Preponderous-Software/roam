@@ -17,10 +17,14 @@ class MapImageUpdater:
         self.mapImageGenerator = MapImageGenerator(self.config)
         self.tickLastUpdated = self.tickCounter.getTick()
         self.updateCooldownInTicks = 300
-        self._executor = ThreadPoolExecutor(max_workers=1)  # serialize map updates to avoid concurrent Pillow operations
+        self._executor = ThreadPoolExecutor(
+            max_workers=1
+        )  # serialize map updates to avoid concurrent Pillow operations
         self._updateInProgress = False
         self._lock = threading.Lock()
-        self.roompngsLock = threading.Lock()  # shared with WorldScreen to synchronize roompngs access
+        self.roompngsLock = (
+            threading.Lock()
+        )  # shared with WorldScreen to synchronize roompngs access
 
     def updateIfCooldownOver(self):
         if (

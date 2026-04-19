@@ -29,7 +29,9 @@ class RoomPreloader:
         self.tickCounter = tickCounter
         self.config = config
         self._roomJsonReaderWriterFactory = roomJsonReaderWriterFactory
-        self._executor = ThreadPoolExecutor(max_workers=2)  # balance responsiveness with resource usage
+        self._executor = ThreadPoolExecutor(
+            max_workers=2
+        )  # balance responsiveness with resource usage
         self._pending = set()
         self._pendingLock = threading.Lock()
 
@@ -40,8 +42,7 @@ class RoomPreloader:
             nx, ny = currentX + dx, currentY + dy
 
             if self.config.worldBorder != 0 and (
-                abs(nx) > self.config.worldBorder
-                or abs(ny) > self.config.worldBorder
+                abs(nx) > self.config.worldBorder or abs(ny) > self.config.worldBorder
             ):
                 continue
 

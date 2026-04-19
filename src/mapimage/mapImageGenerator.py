@@ -3,6 +3,7 @@
 import os
 from PIL import Image
 
+
 # @author Daniel McCoy Stephenson
 # @since February 2nd, 2023
 class MapImageGenerator:
@@ -64,8 +65,16 @@ class MapImageGenerator:
             roomX = int(roomCoordinates[0])
             roomY = int(roomCoordinates[1])
 
-            picX = int(self.mapImageSizeInPixels / 2) + roomX * roomSize - int(roomSize / 2)
-            picY = int(self.mapImageSizeInPixels / 2) + roomY * roomSize - int(roomSize / 2)
+            picX = (
+                int(self.mapImageSizeInPixels / 2)
+                + roomX * roomSize
+                - int(roomSize / 2)
+            )
+            picY = (
+                int(self.mapImageSizeInPixels / 2)
+                + roomY * roomSize
+                - int(roomSize / 2)
+            )
             if (
                 picX >= 0
                 and picY >= 0

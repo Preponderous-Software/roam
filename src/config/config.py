@@ -22,16 +22,17 @@ class Config:
             return False
         if lowerValue == "none" or lowerValue == "null":
             return None
-        if (
-            (value.startswith('"') and value.endswith('"'))
-            or (value.startswith("'") and value.endswith("'"))
+        if (value.startswith('"') and value.endswith('"')) or (
+            value.startswith("'") and value.endswith("'")
         ):
             return value[1:-1]
         if value.startswith("[") and value.endswith("]"):
             listText = value[1:-1].strip()
             if listText == "":
                 return []
-            return [Config.parseConfigValue(item.strip()) for item in listText.split(",")]
+            return [
+                Config.parseConfigValue(item.strip()) for item in listText.split(",")
+            ]
         try:
             return int(value)
         except ValueError:
@@ -187,7 +188,9 @@ class Config:
         )
         self.ticksPerSecond = self.getIntValue(configValues, "ticksPerSecond", 30)
         self.gridSize = self.getIntValue(configValues, "gridSize", 17)
-        self.worldBorder = self.getIntValue(configValues, "worldBorder", 0)  # 0 = no border
+        self.worldBorder = self.getIntValue(
+            configValues, "worldBorder", 0
+        )  # 0 = no border
         self.excrementDecayTicks = self.getIntValue(
             configValues, "excrementDecayTicks", 30 * 60 * 2
         )  # 2 minutes at 30 tps
@@ -247,8 +250,6 @@ class Config:
                 newLines.append(key + ": " + value)
 
         try:
-            configFilePath.write_text(
-                "\n".join(newLines) + "\n", encoding="utf-8"
-            )
+            configFilePath.write_text("\n".join(newLines) + "\n", encoding="utf-8")
         except OSError:
             pass

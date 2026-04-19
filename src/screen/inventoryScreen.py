@@ -1,5 +1,3 @@
-import datetime
-import os
 import time
 from appContainer import component
 from config.config import Config
@@ -9,6 +7,7 @@ from inventory.inventory import Inventory
 from inventory.inventorySlot import InventorySlot
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
+from screen.screenshotHelper import takeScreenshot
 from ui.status import Status
 import pygame
 
@@ -36,14 +35,6 @@ class InventoryScreen:
         self.recipeRegistry = RecipeRegistry()
         self.lastCraftToggleTime = 0
 
-    # @source https://stackoverflow.com/questions/63342477/how-to-take-screenshot-of-entire-display-pygame
-    def captureScreen(self, name, pos, size):  # (pygame Surface, String, tuple, tuple)
-        image = pygame.Surface(size)  # Create image surface
-        image.blit(
-            self.graphik.getGameDisplay(), (0, 0), (pos, size)
-        )  # Blit portion of the display to the image
-        pygame.image.save(image, name)  # Save the image to the disk**
-
     def swapCursorSlotWithInventorySlotByIndex(self, index):
         destSlot = self.inventory.getInventorySlots()[index]
         if self.cursorSlot.isEmpty():
@@ -65,18 +56,7 @@ class InventoryScreen:
         if key == kb.getKey("inventory") or key == pygame.K_ESCAPE:
             self.switchToWorldScreen()
         elif key == kb.getKey("screenshot"):
-            screenshotsFolder = "screenshots"
-            if not os.path.exists(screenshotsFolder):
-                os.makedirs(screenshotsFolder)
-            x, y = self.graphik.getGameDisplay().get_size()
-            self.captureScreen(
-                screenshotsFolder
-                + "/screenshot-"
-                + str(datetime.datetime.now()).replace(" ", "-").replace(":", ".")
-                + ".png",
-                (0, 0),
-                (x, y),
-            )
+            takeScreenshot(self.graphik.getGameDisplay())
         elif key == kb.getKey("hotbar_1"):
             self.swapCursorSlotWithInventorySlotByIndex(0)
         elif key == kb.getKey("hotbar_2"):

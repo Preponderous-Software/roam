@@ -1,6 +1,5 @@
 # @author Copilot
 # @since April 18th, 2026
-import pygame
 
 from appContainer import component
 

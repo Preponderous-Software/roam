@@ -6,6 +6,7 @@ from screen.screenType import ScreenType
 from ui.status import Status
 import pygame
 
+
 # @author Daniel McCoy Stephenson
 @component
 class ConfigScreen:

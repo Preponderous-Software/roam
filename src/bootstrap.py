@@ -30,9 +30,7 @@ def createContainer(config):
     container.registerInstance(Config, config)
 
     # Player requires a tick value from TickCounter, so use a factory.
-    container.register(
-        Player, lambda: Player(container.resolve(TickCounter).getTick())
-    )
+    container.register(Player, lambda: Player(container.resolve(TickCounter).getTick()))
 
     # Services that need the gridSize primitive from Config.
     container.register(

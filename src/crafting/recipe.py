@@ -1,5 +1,3 @@
-
-
 # @author Copilot
 # @since April 14th, 2026
 class Recipe:

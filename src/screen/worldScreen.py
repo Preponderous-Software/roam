@@ -1,4 +1,3 @@
-import datetime
 import json
 import math
 from math import ceil
@@ -29,6 +28,7 @@ from inventory.inventoryJsonReaderWriter import InventoryJsonReaderWriter
 from inventory.inventorySlot import InventorySlot
 from mapimage.mapImageUpdater import MapImageUpdater
 from screen.screenType import ScreenType
+from screen.screenshotHelper import takeScreenshot
 from stats.stats import Stats
 from ui.energyBar import EnergyBar
 from lib.graphik.src.graphik import Graphik
@@ -46,7 +46,12 @@ from world.tickCounter import TickCounter
 from world.map import Map
 from player.player import Player
 from ui.status import Status
-from ui.hotbarLayout import HOTBAR_SLOT_SIZE, HOTBAR_SLOT_GAP, HOTBAR_PADDING, HOTBAR_BOTTOM_OFFSET
+from ui.hotbarLayout import (
+    HOTBAR_SLOT_SIZE,
+    HOTBAR_SLOT_GAP,
+    HOTBAR_PADDING,
+    HOTBAR_BOTTOM_OFFSET,
+)
 from ui.hudDragManager import HudDragManager
 from entity.oakWood import OakWood
 from entity.woodFloor import WoodFloor
@@ -90,7 +95,9 @@ class WorldScreen:
         self.minimapY = 5
         self._cachedMiniMapImage = None
         self._miniMapLastLoadTick = 0
-        self._saveExecutor = ThreadPoolExecutor(max_workers=1)  # serialize save operations off main thread
+        self._saveExecutor = ThreadPoolExecutor(
+            max_workers=1
+        )  # serialize save operations off main thread
         self._saveInProgress = False
         self._saveLock = threading.Lock()
         self._pngSavePending = set()
@@ -380,7 +387,9 @@ class WorldScreen:
                 elif playerDirection == 1:
                     targetX = maxCoord
             # if bottom right corner
-            elif playerLocation.getX() == maxCoord and playerLocation.getY() == maxCoord:
+            elif (
+                playerLocation.getX() == maxCoord and playerLocation.getY() == maxCoord
+            ):
                 if playerDirection == 2:
                     targetY = minCoord
                 elif playerDirection == 3:
@@ -621,9 +630,7 @@ class WorldScreen:
 
         if pushDestination == -1:
             # stone is at a room border, try to push into adjacent room
-            return self.tryPushStoneToAdjacentRoom(
-                stoneEntity, location, direction
-            )
+            return self.tryPushStoneToAdjacentRoom(stoneEntity, location, direction)
 
         if self.locationContainsSolidEntity(pushDestination):
             return False
@@ -648,8 +655,7 @@ class WorldScreen:
 
         # check world border
         if self.config.worldBorder != 0 and (
-            abs(roomX) > self.config.worldBorder
-            or abs(roomY) > self.config.worldBorder
+            abs(roomX) > self.config.worldBorder or abs(roomY) > self.config.worldBorder
         ):
             return False
 
@@ -759,18 +765,7 @@ class WorldScreen:
             if self.checkPlayerMovementCooldown(self.player.getTickLastMoved()):
                 self.movePlayer(self.player.direction)
         elif key == kb.getKey("screenshot"):
-            screenshotsFolder = "screenshots"
-            if not os.path.exists(screenshotsFolder):
-                os.makedirs(screenshotsFolder)
-            x, y = self.graphik.getGameDisplay().get_size()
-            self.captureScreen(
-                screenshotsFolder
-                + "/screenshot-"
-                + str(datetime.datetime.now()).replace(" ", "-").replace(":", ".")
-                + ".png",
-                (0, 0),
-                (x, y),
-            )
+            takeScreenshot(self.graphik.getGameDisplay())
             self.status.set("Screenshot saved")
         elif key == kb.getKey("run"):
             self.player.setMovementSpeed(
@@ -843,14 +838,6 @@ class WorldScreen:
             )
         elif key == kb.getKey("crouch"):
             self.player.setCrouching(False)
-
-    # @source https://stackoverflow.com/questions/63342477/how-to-take-screenshot-of-entire-display-pygame
-    def captureScreen(self, name, pos, size):  # (pygame Surface, String, tuple, tuple)
-        image = pygame.Surface(size)  # Create image surface
-        image.blit(
-            self.graphik.getGameDisplay(), (0, 0), (pos, size)
-        )  # Blit portion of the display to the image
-        pygame.image.save(image, name)  # Save the image to the disk**
 
     def respawnPlayer(self):
         # drop all items and clear inventory
@@ -982,7 +969,11 @@ class WorldScreen:
         size = (int(gameArea.width), int(gameArea.height))
         # capture surface on main thread (pygame requirement), save to disk async
         image = pygame.Surface(size)
-        image.blit(self.graphik.getGameDisplay(), (0, 0), ((int(gameArea.x), int(gameArea.y)), size))
+        image.blit(
+            self.graphik.getGameDisplay(),
+            (0, 0),
+            ((int(gameArea.x), int(gameArea.y)), size),
+        )
         self._pngSavePending.add(roomKey)
         self._saveExecutor.submit(self._saveSurfaceToDisk, image, path, roomKey)
 
@@ -1053,9 +1044,7 @@ class WorldScreen:
         )
 
         # blit in top left corner with 10px padding
-        self.graphik.getGameDisplay().blit(
-            mapImage, (drawX + 10, drawY + 10)
-        )
+        self.graphik.getGameDisplay().blit(mapImage, (drawX + 10, drawY + 10))
 
     def drawFollowMode(self):
         gameArea = self.graphik.getGameAreaRect()
@@ -1174,9 +1163,7 @@ class WorldScreen:
         """Return the default bounding rect for the hotbar (no drag offset)."""
         displayWidth = self.graphik.getGameDisplay().get_width()
         displayHeight = self.graphik.getGameDisplay().get_height()
-        itemPreviewXPos = (
-            displayWidth / 2 - HOTBAR_SLOT_SIZE * 5 - HOTBAR_SLOT_SIZE / 2
-        )
+        itemPreviewXPos = displayWidth / 2 - HOTBAR_SLOT_SIZE * 5 - HOTBAR_SLOT_SIZE / 2
         itemPreviewYPos = displayHeight - HOTBAR_BOTTOM_OFFSET
         barXPos = itemPreviewXPos - HOTBAR_PADDING
         barYPos = itemPreviewYPos - HOTBAR_PADDING
@@ -1226,9 +1213,13 @@ class WorldScreen:
 
         hotbarOx, hotbarOy = self.hudDragManager.getOffset("hotbar")
         itemPreviewXPos = (
-            self.graphik.getGameDisplay().get_width() / 2 - HOTBAR_SLOT_SIZE * 5 - HOTBAR_SLOT_SIZE / 2
+            self.graphik.getGameDisplay().get_width() / 2
+            - HOTBAR_SLOT_SIZE * 5
+            - HOTBAR_SLOT_SIZE / 2
         ) + hotbarOx
-        itemPreviewYPos = self.graphik.getGameDisplay().get_height() - HOTBAR_BOTTOM_OFFSET + hotbarOy
+        itemPreviewYPos = (
+            self.graphik.getGameDisplay().get_height() - HOTBAR_BOTTOM_OFFSET + hotbarOy
+        )
         itemPreviewWidth = HOTBAR_SLOT_SIZE
         itemPreviewHeight = HOTBAR_SLOT_SIZE
 
@@ -1266,7 +1257,9 @@ class WorldScreen:
                 continue
             item = inventorySlot.getContents()[0]
             image = item.getImage()
-            scaledImage = pygame.transform.scale(image, (HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE))
+            scaledImage = pygame.transform.scale(
+                image, (HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE)
+            )
             self.graphik.gameDisplay.blit(
                 scaledImage, (itemPreviewXPos, itemPreviewYPos)
             )
@@ -1353,7 +1346,9 @@ class WorldScreen:
         displayWidth = self.graphik.getGameDisplay().get_width()
         displayHeight = self.graphik.getGameDisplay().get_height()
         hotbarOx, hotbarOy = self.hudDragManager.getOffset("hotbar")
-        itemPreviewXPos = displayWidth / 2 - HOTBAR_SLOT_SIZE * 5 - HOTBAR_SLOT_SIZE / 2 + hotbarOx
+        itemPreviewXPos = (
+            displayWidth / 2 - HOTBAR_SLOT_SIZE * 5 - HOTBAR_SLOT_SIZE / 2 + hotbarOx
+        )
         itemPreviewYPos = displayHeight - HOTBAR_BOTTOM_OFFSET + hotbarOy
         itemPreviewWidth = HOTBAR_SLOT_SIZE
         itemPreviewHeight = HOTBAR_SLOT_SIZE
@@ -1374,7 +1369,9 @@ class WorldScreen:
 
         remainingItems = []
         for item in self.cursorSlot.getContents():
-            if not self.player.getInventory().placeIntoFirstAvailableInventorySlot(item):
+            if not self.player.getInventory().placeIntoFirstAvailableInventorySlot(
+                item
+            ):
                 remainingItems.append(item)
 
         self.cursorSlot.setContents(remainingItems)
@@ -1894,9 +1891,7 @@ class WorldScreen:
 
             self.currentRoom.reproduceLivingEntities(self.tickCounter.getTick())
 
-            self.currentRoom.tickExcrement(
-                self.tickCounter.getTick(), self.config
-            )
+            self.currentRoom.tickExcrement(self.tickCounter.getTick(), self.config)
 
             self.handleMouseOver()
 
