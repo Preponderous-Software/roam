@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-04-19 | 10 | feat: Add lightweight DI container (`src/di/`) with auto-wiring, singleton/transient lifetimes, `@component` decorator, circular dependency detection, and factory function support; feat: Create container singleton (`src/appContainer.py`) and centralized bootstrap (`src/bootstrap.py`); refactor: Migrate `roam.py`, `worldScreen.py`, `map.py` to resolve dependencies via container; fix: Remove dead EnergyBar fallback branch in WorldScreen; fix: Add `resetSingletons()` to prevent stale cached instances across game restarts; refactor: Replace new-instance restart with `Roam.restart()` method that resets state on the existing instance; docs: Document DI strategy in `copilot-instructions.md` for contributors; test: Add 15 DI test cases |
 | 2026-04-18 | 9 | fix: Status text no longer overlaps with the hotbar — repositioned above the hotbar at all display sizes; fix: Keep minimap square by using game area dimensions instead of full display dimensions; fix: Preserve window dimensions when returning to main menu so maximized windows stay maximized; fix: Room PNG captures for minimap now use game area dimensions and draw unclipped to avoid black letterbox bars in minimap; feat: Allow players to drop item stacks from inventory screen; feat: Make window size persistent across sessions — saved to config.yml and restored on launch; ux: Usability audit applying Nielsen's 10 heuristics — standardized button labels to Title Case, replaced jargon in config/debug text, improved all status messages, added F1 help overlay, added crafting feedback, updated README controls table; feat: Add draggable HUD elements — hotbar, status text, energy bar, and minimap can be repositioned via middle-click drag with screen-edge clamping |
 | 2026-04-17 | 2 | feat: Keep game world square and centered upon window resizing — render the game world as a centered square within any-sized window using `Graphik.getGameAreaRect()`; the window itself can be freely resized; test: Add unit tests for getGameAreaRect |
 | 2026-04-16 | 5 | feat: Add excrement spawning by living entities that decays into grass over time; test: Add unit tests for world package (RoomType, TickCounter, Room, RoomFactory, Map); feat: Allow player to push stone entities (configurable via `pushableStone` setting) including cross-room pushing; fix: Persist adjacent room after cross-room stone push, re-check solidity after pushing when stacked entities present, remove unused import |
@@ -67,6 +68,111 @@ logged in detail below.
 | 2022-08-08 | 21 | Create version.txt; Update README.md; Modified README. (+9 more) |
 
 ## AI Agent Sessions
+
+### 2026-04-19 — Refactor restart mechanism to use `restart()` method
+- **Changes:**
+  - Refactored `src/roam.py`: extracted shared DI initialization logic into
+    `_initializeDependencies()`. `__init__` calls it once; new `restart()`
+    method calls it again to reset state on the existing instance.
+  - Changed module-level loop from `roam = Roam(config)` to `roam.restart()`,
+    so restarts reuse the existing `Roam` instance and pygame display instead
+    of constructing a new one. This plays naturally with the singleton container.
+  - Updated `copilot-instructions.md` Restart Safety section to document the
+    `restart()` approach.
+- **Tests:** All 303 tests pass.
+
+### 2026-04-19 — Use `@component` decorator on class definitions
+- **Changes:**
+  - Created `src/appContainer.py` — module-level container singleton that
+    provides a shared `container` instance and a `component` decorator
+    importable from any class file.
+  - Added `@component` decorator to 12 class definitions: TickCounter,
+    Stats, Status, MapImageUpdater, EnergyBar, HudDragManager, WorldScreen,
+    OptionsScreen, MainMenuScreen, StatsScreen, ConfigScreen, InventoryScreen.
+    These classes now self-register at import time.
+  - Simplified `src/bootstrap.py` — imports the shared container from
+    `appContainer` instead of creating a new one. Removed all
+    `container.component(X)` calls since classes self-register via the
+    decorator. Only factory-based and instance registrations remain.
+- **Tests:** All 301 tests pass.
+
+### 2026-04-19 — Use `component()` in bootstrap for self-registered types
+- **Changes:**
+  - Replaced 12 `container.register(X, X)` calls in `src/bootstrap.py` with
+    `container.component(X)` for types where the abstract and concrete types
+    are the same (TickCounter, Stats, Status, MapImageUpdater, EnergyBar,
+    HudDragManager, WorldScreen, OptionsScreen, MainMenuScreen, StatsScreen,
+    ConfigScreen, InventoryScreen). Registrations that use factory lambdas or
+    custom lifetimes remain as `container.register(...)`.
+- **Tests:** All 301 tests pass.
+
+### 2026-04-19 — Third round: split container module, remove manual fallback
+- **Changes:**
+  - Split `src/di/container.py` into three modules per Clean Code principles:
+    `src/di/error.py` (`DIError`), `src/di/registration.py` (`_Registration`),
+    and `src/di/container.py` (`Container`). Updated `src/di/__init__.py` to
+    re-export from the new locations. Public API unchanged.
+  - Removed manual dependency fallback from `WorldScreen.__init__` and
+    `WorldScreen.initialize()`. The `container` parameter is now required
+    (no default value); if missing, a `DIError` is raised instead of
+    silently reverting to manual construction.
+- **Tests:** All 301 tests pass.
+
+### 2026-04-19 — Address second round of DI PR review comments
+- **Changes:**
+  - Moved `tests/test_di.py` → `tests/di/test_container.py` to follow
+    repo convention of mirroring `src/` subdirectory structure in `tests/`.
+  - Removed redundant `src/di` from `pythonpath` in `pytest.ini` (already
+    reachable via `src`).
+  - Fixed `_createInstance()` in `src/di/container.py` to raise `DIError`
+    with the original exception message when `typing.get_type_hints()` fails,
+    instead of silently swallowing the error and continuing with `hints = {}`.
+  - Removed `container` parameter from `Map.__init__` in `src/world/map.py`
+    — `RoomFactory` and `RoomJsonReaderWriter` are now always constructed
+    from the explicit constructor args, eliminating split behavior between
+    container and non-container code paths. Updated `src/bootstrap.py`
+    accordingly.
+- **Tests:** All 301 tests pass.
+
+### 2026-04-18 — Add lightweight dependency injection container
+- **Goal:** Replace all manual dependency construction patterns with a
+  self-contained DI container, centralizing wiring in a single bootstrap
+  module while preserving all business logic unchanged.
+- **Changes:**
+  - Created `src/di/container.py` — full DI container implementation using
+    only Python stdlib (`inspect`, `typing`, `threading`). Supports
+    registration by type, singleton/transient lifetimes, auto-wiring via
+    type hints, explicit instance registration, `@container.component`
+    decorator, and circular dependency detection with `DIError` exceptions.
+  - Created `src/di/__init__.py` — re-exports public API (`Container`,
+    `DIError`).
+  - Created `src/bootstrap.py` — centralized dependency registration for
+    Config, TickCounter, Stats, Status, Player, Graphik, all screen
+    classes, RoomFactory, RoomJsonReaderWriter, Map, MapImageUpdater,
+    EnergyBar, HudDragManager.
+  - Migrated `src/roam.py` — all manual constructions replaced with
+    `container.resolve(T)`. Runtime dependencies (Graphik, Player,
+    Inventory) registered as instances after pygame initialization.
+    SaveSelectionScreen registered with factory lambda for callback.
+  - Migrated `src/screen/worldScreen.py` — added optional `container`
+    parameter; internal service creation (RoomJsonReaderWriter,
+    MapImageUpdater, HudDragManager, Map, EnergyBar) uses
+    `container.resolve()` when available, falls back to manual
+    construction for backward compatibility with tests.
+  - Migrated `src/world/map.py` — added optional `container` parameter;
+    RoomFactory and RoomJsonReaderWriter creation uses `container.resolve()`
+    when available.
+  - Added type hints to `TickCounter.__init__` (`config: Config`),
+    `Stats.__init__` (`config: Config`), `MapImageUpdater.__init__`
+    (`config: Config`) to enable auto-wiring.
+  - Created `tests/test_di.py` with 12 test cases covering: no-dependency
+    resolution, recursive resolution, singleton lifetime, transient
+    lifetime, instance registration, unregistered type error, circular
+    dependency error, component decorator, decorator with lifetime,
+    default parameters, invalid lifetime error, and instance used in
+    auto-wiring.
+  - Updated `pytest.ini` to include `src/di` in pythonpath.
+- **Tests:** All 300 tests pass (288 existing + 12 new DI tests).
 
 ### 2026-04-18 — Allow players to drop item stacks from inventory screen
 - **Problem:** Players had no way to quickly discard unwanted items from
@@ -467,3 +573,25 @@ about this repository, add it here so the next agent benefits.
   that returns its default `pygame.Rect`. Offsets are stored per
   element and applied at draw time. Position clamping ensures at least
   20 % of an element remains visible on screen.
+- 2026-04-18: `[integrated]` Many constructor parameters in the
+  codebase lack type hints (e.g., `config` in `TickCounter`, `Stats`,
+  `MapImageUpdater`, and `Map`). When adding DI or auto-wiring, type
+  hints must be added to enable automatic resolution. Adding type hints
+  is considered a wiring-only change, not a business-logic change.
+- 2026-04-18: `[integrated]` Several classes require primitive
+  values or runtime state in their constructors (e.g., `Player` needs
+  `tickCounter.getTick()`, `Map`/`RoomFactory` need `config.gridSize`,
+  `SaveSelectionScreen` needs a callback). These cannot be auto-wired
+  and require factory functions or explicit instance registration.
+- 2026-04-18: `[integrated]` The `test_worldScreen_pushStone.py`
+  test creates `WorldScreen` using `__new__` (bypassing `__init__`) and
+  manually sets attributes. This pattern means constructor changes to
+  `WorldScreen` won't break those tests, but it also means those tests
+  don't exercise the constructor or DI wiring.
+- 2026-04-19: `[integrated]` The project uses a lightweight DI container
+  (`src/di/`) for dependency management. New classes should use the
+  `@component` decorator (from `src/appContainer.py`) instead of being
+  manually constructed. Factory registrations for types needing primitives
+  go in `src/bootstrap.py`. The container is a module-level singleton
+  that persists across game restarts; `createContainer()` calls
+  `resetSingletons()` to clear cached instances on each restart.

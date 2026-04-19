@@ -26,9 +26,12 @@ Roam is a single-player 2D survival game built with Python and Pygame. Players e
   - `ui/` — HUD elements (energy bar, status display).
   - `stats/` — Game statistics tracking.
   - `mapimage/` — Map image generation and updating.
+  - `di/` — Lightweight dependency injection container (stdlib-only).
+  - `appContainer.py` — Module-level container singleton and `component` decorator.
+  - `bootstrap.py` — Centralized factory/instance registrations.
   - `lib/` — Vendored third-party libraries (`graphik`, `pyenvlib`).
   - `media/` — Application icon.
-- **`tests/`** — Unit tests mirroring `src/` structure (`entity/`, `inventory/`, `player/`, `stats/`).
+- **`tests/`** — Unit tests mirroring `src/` structure (`entity/`, `inventory/`, `player/`, `stats/`, `di/`).
 - **`schemas/`** — JSON schemas for save-file validation (`inventory.json`, `room.json`, `playerAttributes.json`, etc.).
 - **`assets/`** — Game asset images.
 - **`pics/`** — Screenshot or promotional images.
@@ -52,6 +55,66 @@ Roam is a single-player 2D survival game built with Python and Pygame. Players e
 - **Anti-patterns to avoid:**
   - Do not introduce Python `@property` decorators — the codebase consistently uses explicit getters/setters.
   - Do not restructure the vendored `lib/` directory or update vendored libraries without explicit instruction.
+
+## Dependency Injection
+
+The project uses a lightweight, stdlib-only DI container (`src/di/`) to manage object creation. Contributors should use the DI system rather than constructing dependencies manually.
+
+### Key Concepts
+
+- **Container** (`src/di/container.py`) — Manages type registrations and resolves instances by auto-wiring constructor type hints.
+- **Singleton** (default) — One instance per type, cached after first resolve.
+- **Transient** — A new instance on every resolve call.
+- **`@component` decorator** — Registers a class with the container at import time. Exported from `src/appContainer.py`.
+- **`bootstrap.py`** — Centralized site for factory-based and instance registrations that cannot use `@component` (e.g., types needing runtime primitives).
+
+### How to Register a New Class
+
+For classes whose constructor parameters are all DI-resolvable types, use the `@component` decorator on the class definition:
+
+````python
+from appContainer import component
+
+@component
+class MyNewService:
+    def __init__(self, config: Config, stats: Stats):
+        self.config = config
+        self.stats = stats
+````
+
+This registers `MyNewService` as a singleton that is auto-wired via its type-hinted `__init__` parameters.
+
+For classes that need **primitive values** (strings, ints) or **runtime objects** (pygame surfaces), register them in `src/bootstrap.py` using a factory lambda:
+
+````python
+container.register(
+    MyService,
+    lambda: MyService(container.resolve(Config).someValue),
+)
+````
+
+Pre-built objects are registered with `container.registerInstance(Type, instance)`.
+
+### How to Resolve a Dependency
+
+Call `container.resolve(Type)` to get an instance. The container recursively resolves all constructor parameters:
+
+````python
+from appContainer import container
+service = container.resolve(MyNewService)
+````
+
+### Restart Safety
+
+The module-level container singleton persists across game restarts. Rather than constructing a new `Roam(config)` to restart, the module-level loop calls `roam.restart()`, which resets state on the existing instance. Internally, `restart()` calls `_initializeDependencies()` which invokes `bootstrap.createContainer()` — this calls `container.resetSingletons()` to clear cached singleton instances, then re-registers and re-resolves everything. This plays naturally with the singleton container and avoids the risk of stale cached instances leaking across sessions. Explicit instance registrations (via `registerInstance`) are preserved until re-registered.
+
+### Rules for Contributors
+
+- **Always use `@component`** for new classes that only depend on other DI-registered types.
+- **Never fall back to manual construction** inside DI-wired classes. If the container cannot resolve a dependency, let it raise `DIError` so the misconfiguration surfaces immediately.
+- **Add type hints** to `__init__` parameters for any class that should be auto-wired.
+- **Register transient** when a fresh instance is needed on each resolve (e.g., `RoomFactory`).
+- **Do not import the container** in class files — use `from appContainer import component` for the decorator only. Resolution should happen in `roam.py` or `bootstrap.py`.
 
 ## Testing
 

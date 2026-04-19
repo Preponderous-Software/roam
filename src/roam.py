@@ -1,5 +1,7 @@
 import pygame
+from bootstrap import createContainer
 from config.config import Config
+from inventory.inventory import Inventory
 from player.player import Player
 from lib.graphik.src.graphik import Graphik
 from screen.configScreen import ConfigScreen
@@ -21,37 +23,57 @@ class Roam:
     def __init__(self, config: Config):
         pygame.init()
         pygame.display.set_icon(pygame.image.load("assets/images/player_down.png"))
-        self.running = True
         self.config = config
-        pygame.display.set_caption("Roam" + " (" + config.pathToSaveDirectory + ")")
-        self.tickCounter = TickCounter(self.config)
         self.gameDisplay = self.initializeGameDisplay()
-        self.graphik = Graphik(self.gameDisplay)
-        self.status = Status(self.graphik, self.tickCounter)
-        self.stats = Stats(self.config)
-        self.player = Player(self.tickCounter.getTick())
-        self.worldScreen = WorldScreen(
-            self.graphik,
-            self.config,
-            self.status,
-            self.tickCounter,
-            self.stats,
-            self.player,
+        self._initializeDependencies()
+
+    def restart(self):
+        """Reset all state for a new game session.
+
+        Re-initializes the pygame display with the current config dimensions
+        and clears cached singleton instances so all services are freshly
+        constructed via the DI container.
+        """
+        self.gameDisplay = self.initializeGameDisplay()
+        self._initializeDependencies()
+
+    def _initializeDependencies(self):
+        """Wire up the DI container and resolve all services and screens."""
+        self.running = True
+        pygame.display.set_caption(
+            "Roam" + " (" + self.config.pathToSaveDirectory + ")"
         )
-        self.optionsScreen = OptionsScreen(self.graphik, self.config, self.status)
-        self.mainMenuScreen = MainMenuScreen(
-            self.graphik, self.config
+
+        # Create the DI container and register runtime dependencies.
+        self.container = createContainer(self.config)
+        self.tickCounter = self.container.resolve(TickCounter)
+        self.container.registerInstance(Graphik, Graphik(self.gameDisplay))
+        self.graphik = self.container.resolve(Graphik)
+        self.status = self.container.resolve(Status)
+        self.stats = self.container.resolve(Stats)
+        self.player = self.container.resolve(Player)
+
+        # Register the player inventory so InventoryScreen can auto-wire.
+        self.container.registerInstance(Inventory, self.player.getInventory())
+
+        # Resolve screens that can be fully auto-wired.
+        self.worldScreen = self.container.resolve(WorldScreen)
+        self.optionsScreen = self.container.resolve(OptionsScreen)
+        self.mainMenuScreen = self.container.resolve(MainMenuScreen)
+        self.statsScreen = self.container.resolve(StatsScreen)
+        self.inventoryScreen = self.container.resolve(InventoryScreen)
+        self.configScreen = self.container.resolve(ConfigScreen)
+
+        # SaveSelectionScreen needs a callback that cannot be auto-wired.
+        self.container.register(
+            SaveSelectionScreen,
+            lambda: SaveSelectionScreen(
+                self.container.resolve(Graphik),
+                self.container.resolve(Config),
+                self.initializeWorldScreen,
+            ),
         )
-        self.saveSelectionScreen = SaveSelectionScreen(
-            self.graphik, self.config, self.initializeWorldScreen
-        )
-        self.statsScreen = StatsScreen(
-            self.graphik, self.config, self.status, self.stats
-        )
-        self.inventoryScreen = InventoryScreen(
-            self.graphik, self.config, self.status, self.player.getInventory()
-        )
-        self.configScreen = ConfigScreen(self.graphik, self.config, self.status)
+        self.saveSelectionScreen = self.container.resolve(SaveSelectionScreen)
         self.currentScreen = self.mainMenuScreen
 
     def initializeGameDisplay(self):
@@ -111,4 +133,4 @@ while True:
     result = roam.run()
     if result != "restart":
         break
-    roam = Roam(config)
+    roam.restart()

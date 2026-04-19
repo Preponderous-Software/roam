@@ -1,5 +1,6 @@
 import os
 import random
+from config.config import Config
 from lib.graphik.src.graphik import Graphik
 from lib.pyenvlib.entity import Entity
 from world.roomFactory import RoomFactory
@@ -11,7 +12,9 @@ from world.room import Room
 # @author Daniel McCoy Stephenson
 # @since August 15th, 2022
 class Map:
-    def __init__(self, gridSize, graphik: Graphik, tickCounter: TickCounter, config):
+    def __init__(
+        self, gridSize, graphik: Graphik, tickCounter: TickCounter, config: Config
+    ):
         self.rooms = []
         self._roomIndex = {}
         self.gridSize = gridSize

@@ -1,11 +1,13 @@
 import os
 import pygame
+from appContainer import component
 from config.config import Config
 
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
 
 # @author Daniel McCoy Stephenson
+@component
 class MainMenuScreen:
     def __init__(self, graphik: Graphik, config: Config):
         self.graphik = graphik

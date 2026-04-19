@@ -1,5 +1,6 @@
 import datetime
 import os
+from appContainer import component
 from config.config import Config
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
@@ -8,6 +9,7 @@ from ui.status import Status
 import pygame
 
 # @author Daniel McCoy Stephenson
+@component
 class StatsScreen:
     def __init__(self, graphik: Graphik, config: Config, status: Status, stats: Stats):
         self.graphik = graphik

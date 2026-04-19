@@ -1,4 +1,5 @@
 import pygame
+from appContainer import component
 from lib.graphik.src.graphik import Graphik
 from ui.hotbarLayout import getHotbarTop
 from world.tickCounter import TickCounter
@@ -6,6 +7,7 @@ from world.tickCounter import TickCounter
 
 # @author Daniel McCoy Stephenson
 # since August 14th, 2022
+@component
 class Status:
     def __init__(self, graphik: Graphik, tickCounter: TickCounter):
         self.graphik = graphik
