@@ -1,10 +1,12 @@
 import pygame
 from bootstrap import createContainer
 from config.config import Config
+from config.keyBindings import KeyBindings
 from inventory.inventory import Inventory
 from player.player import Player
 from lib.graphik.src.graphik import Graphik
 from screen.configScreen import ConfigScreen
+from screen.controlsScreen import ControlsScreen
 from screen.inventoryScreen import InventoryScreen
 from screen.mainMenuScreen import MainMenuScreen
 from screen.optionsScreen import OptionsScreen
@@ -53,6 +55,11 @@ class Roam:
         self.stats = self.container.resolve(Stats)
         self.player = self.container.resolve(Player)
 
+        # Register KeyBindings: load overrides from config.yml.
+        keyBindings = KeyBindings()
+        keyBindings.loadFromConfig(Config.readConfigFile())
+        self.container.registerInstance(KeyBindings, keyBindings)
+
         # Register the player inventory so InventoryScreen can auto-wire.
         self.container.registerInstance(Inventory, self.player.getInventory())
 
@@ -63,6 +70,7 @@ class Roam:
         self.statsScreen = self.container.resolve(StatsScreen)
         self.inventoryScreen = self.container.resolve(InventoryScreen)
         self.configScreen = self.container.resolve(ConfigScreen)
+        self.controlsScreen = self.container.resolve(ControlsScreen)
 
         # SaveSelectionScreen needs a callback that cannot be auto-wired.
         self.container.register(
@@ -117,6 +125,8 @@ class Roam:
                 self.inventoryScreen.setInventory(self.player.getInventory())
             elif result == ScreenType.CONFIG_SCREEN:
                 self.currentScreen = self.configScreen
+            elif result == ScreenType.CONTROLS_SCREEN:
+                self.currentScreen = self.controlsScreen
             elif result == ScreenType.SAVE_SELECTION_SCREEN:
                 self.currentScreen = self.saveSelectionScreen
             elif result == ScreenType.NONE:

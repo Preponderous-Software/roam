@@ -69,6 +69,50 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-19 — Add controls screen for viewing and remapping keybindings
+- **New files:**
+  - `src/config/keyBindings.py` — `KeyBindings` class managing defaults,
+    remapping, conflict detection, save/load to `config.yml`.
+  - `src/screen/controlsScreen.py` — `ControlsScreen` UI listing all actions,
+    allowing click-to-remap, conflict flagging, reset-to-defaults, save/cancel.
+  - `tests/config/test_keyBindings.py` — 16 unit tests covering defaults,
+    set/get, conflict detection, save/load round-trip, and reset.
+- **Modified files:**
+  - `src/screen/screenType.py` — Added `CONTROLS_SCREEN`.
+  - `src/screen/optionsScreen.py` — Added "Controls" button and
+    `switchToControlsScreen()` method.
+  - `src/roam.py` — Imported `KeyBindings` and `ControlsScreen`, registered
+    `KeyBindings` instance in DI container with config overrides, resolved
+    `ControlsScreen`, handled `CONTROLS_SCREEN` in screen-switching loop.
+  - `src/screen/worldScreen.py` — Added `KeyBindings` dependency, replaced all
+    hardcoded `pygame.K_*` checks in `handleKeyDownEvent` and `handleKeyUpEvent`
+    with `keyBindings.getKey()` calls.
+  - `README.md` — Added note that keybindings are configurable in-game.
+- **Review follow-up:** Removed `gather` (E) and `place` (Q) from
+  `KeyBindings` — gathering and placing are mouse-only actions (left/right
+  click) and were never triggered by keyboard keys. Removed corresponding
+  dead-code key-up handlers from `worldScreen.py`.
+- **Review follow-up (round 2):**
+  - Removed unused `Config` import from `keyBindings.py`.
+  - Centralized conflict detection: added `getConflictsForBindings(bindings)` to
+    `KeyBindings` and refactored `ControlsScreen.getActiveConflicts()` to use it.
+  - Fixed `ControlsScreen.resetToDefaults()` to write defaults into
+    `pendingBindings` instead of mutating `self.keyBindings` directly, so Cancel
+    correctly reverts changes.
+  - Removed stray no-op `self.player` statement in `worldScreen.py`.
+  - Clarified README tip to note remapping applies only to in-world controls.
+- **Review follow-up (round 3):**
+  - Extended `KeyBindings` usage to `InventoryScreen`: inventory close key,
+    screenshot key, and all hotbar keys now respect remapped bindings.
+  - Updated inventory screen "(press I to close)" hint to dynamically show
+    the current keybinding name.
+  - Extended `KeyBindings` usage to `StatsScreen`: screenshot key now respects
+    remapped bindings.
+  - Updated `tests/screen/test_inventoryScreen_drop.py` to pass `KeyBindings`
+    to the `InventoryScreen` constructor.
+  - Updated README tip to reflect that remapping now works across all screens.
+- **Tests:** All 319 tests pass (303 original + 16 new).
+
 ### 2026-04-19 — Refactor restart mechanism to use `restart()` method
 - **Changes:**
   - Refactored `src/roam.py`: extracted shared DI initialization logic into
@@ -595,3 +639,8 @@ about this repository, add it here so the next agent benefits.
   go in `src/bootstrap.py`. The container is a module-level singleton
   that persists across game restarts; `createContainer()` calls
   `resetSingletons()` to clear cached instances on each restart.
+- 2026-04-19: `[not yet integrated]` The `KeyBindings` instance is registered
+  via `registerInstance()` in `roam.py` rather than using `@component`,
+  because it needs to call `loadFromConfig()` with runtime config values
+  before being injected. Classes that depend on `KeyBindings` (e.g.,
+  `WorldScreen`, `ControlsScreen`) receive it via DI auto-wiring.

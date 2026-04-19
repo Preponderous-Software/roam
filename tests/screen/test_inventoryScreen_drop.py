@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock
 
+from src.config.keyBindings import KeyBindings
 from src.inventory.inventory import Inventory
 from src.entity.grass import Grass
 from src.lib.graphik.src.graphik import Graphik
@@ -15,7 +16,8 @@ def createInventoryScreen():
     config = MagicMock()
     status = MagicMock()
     inventory = Inventory()
-    return InventoryScreen(graphik, config, status, inventory)
+    keyBindings = KeyBindings()
+    return InventoryScreen(graphik, config, status, inventory, keyBindings)
 
 
 def createGrass():
