@@ -658,3 +658,13 @@ about this repository, add it here so the next agent benefits.
   because it needs to call `loadFromConfig()` with runtime config values
   before being injected. Classes that depend on `KeyBindings` (e.g.,
   `WorldScreen`, `ControlsScreen`) receive it via DI auto-wiring.
+- 2026-04-19: `[not yet integrated]` When saving room state to JSON on a
+  background thread, the JSON dict must be prepared on the main thread
+  first (`generateJsonForRoom()`) to avoid `RuntimeError: dictionary
+  changed size during iteration`. Only the file write should happen
+  in the background.
+- 2026-04-19: `[not yet integrated]` The `MapImageUpdater.roompngsLock`
+  is shared between the map image updater (background compositing) and
+  `WorldScreen._saveSurfaceToDisk()` (background PNG writes) to prevent
+  `clearRoomImages()` from racing with concurrent PNG writes to the
+  same directory.

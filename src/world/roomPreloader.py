@@ -5,7 +5,6 @@ from concurrent.futures import ThreadPoolExecutor
 from config.config import Config
 from lib.graphik.src.graphik import Graphik
 from world.map import Map
-from world.roomJsonReaderWriter import RoomJsonReaderWriter
 from world.tickCounter import TickCounter
 
 
@@ -23,11 +22,13 @@ class RoomPreloader:
         graphik: Graphik,
         tickCounter: TickCounter,
         config: Config,
+        roomJsonReaderWriterFactory=None,
     ):
         self.gridSize = gridSize
         self.graphik = graphik
         self.tickCounter = tickCounter
         self.config = config
+        self._roomJsonReaderWriterFactory = roomJsonReaderWriterFactory
         self._executor = ThreadPoolExecutor(max_workers=2)  # balance responsiveness with resource usage
         self._pending = set()
         self._pendingLock = threading.Lock()
@@ -73,12 +74,7 @@ class RoomPreloader:
                 + ".json"
             )
             if os.path.exists(nextRoomPath):
-                roomJsonReaderWriter = RoomJsonReaderWriter(
-                    self.gridSize,
-                    self.graphik,
-                    self.tickCounter,
-                    self.config,
-                )
+                roomJsonReaderWriter = self._roomJsonReaderWriterFactory()
                 room = roomJsonReaderWriter.loadRoom(nextRoomPath)
                 gameMap.addRoom(room)
             else:

@@ -71,6 +71,7 @@ def createContainer(config):
             container.resolve(Graphik),
             container.resolve(TickCounter),
             container.resolve(Config),
+            roomJsonReaderWriterFactory=lambda: container.resolve(RoomJsonReaderWriter),
         ),
     )
 

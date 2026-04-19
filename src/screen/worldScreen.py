@@ -307,7 +307,9 @@ class WorldScreen:
         self.roomJsonReaderWriter.saveRoom(room, roomPath)
 
     def saveRoomToFileAsync(self, room: Room):
-        """Save a room to file on the background thread (non-blocking)."""
+        """Save a room to file on the background thread (non-blocking).
+        Prepares the JSON snapshot on the main thread to avoid dict-iteration
+        races, then writes the file in the background."""
         roomPath = (
             self.config.pathToSaveDirectory
             + "/rooms/room_"
@@ -316,14 +318,23 @@ class WorldScreen:
             + str(room.getY())
             + ".json"
         )
-        self._saveExecutor.submit(self._doSaveRoomToFile, room, roomPath)
-
-    def _doSaveRoomToFile(self, room, path):
-        """Write room JSON to disk. Runs on background thread."""
         try:
-            self.roomJsonReaderWriter.saveRoom(room, path)
+            roomJson = self.roomJsonReaderWriter.generateJsonForRoom(room)
         except Exception as e:
-            print("Error saving room to file: " + str(e))
+            print("Error preparing room snapshot: " + str(e))
+            return
+        self._saveExecutor.submit(self._writeJsonToFile, roomJson, roomPath)
+
+    def _writeJsonToFile(self, data, path):
+        """Write a pre-built JSON dict to disk. Runs on background thread."""
+        try:
+            dirPath = os.path.dirname(path)
+            if not os.path.exists(dirPath):
+                os.makedirs(dirPath, exist_ok=True)
+            with open(path, "w") as outfile:
+                json.dump(data, outfile, indent=4)
+        except Exception as e:
+            print("Error writing JSON file: " + str(e))
 
     def changeRooms(self):
         x, y = self.getCoordinatesForNewRoomBasedOnPlayerLocationAndDirection()
@@ -1004,7 +1015,7 @@ class WorldScreen:
         size = (int(gameArea.width), int(gameArea.height))
         # capture surface on main thread (pygame requirement), save to disk async
         image = pygame.Surface(size)
-        image.blit(self.graphik.getGameDisplay(), (0, 0), ((0, 0), size))
+        image.blit(self.graphik.getGameDisplay(), (0, 0), ((int(gameArea.x), int(gameArea.y)), size))
         self._pngSavePending.add(roomKey)
         self._saveExecutor.submit(self._saveSurfaceToDisk, image, path, roomKey)
 
@@ -1012,9 +1023,11 @@ class WorldScreen:
         self.currentRoom.addEntityToLocation(self.player, locationOfPlayer)
 
     def _saveSurfaceToDisk(self, surface, path, roomKey):
-        """Save a pygame surface to disk. Runs on a background thread."""
+        """Save a pygame surface to disk. Runs on a background thread.
+        Acquires roompngsLock to avoid racing with clearRoomImages()."""
         try:
-            pygame.image.save(surface, path)
+            with self.mapImageUpdater.roompngsLock:
+                pygame.image.save(surface, path)
         except Exception as e:
             print("Error saving room PNG: " + str(e))
         finally:
@@ -1723,12 +1736,28 @@ class WorldScreen:
 
     def save(self):
         """Submit save operations to the background thread.
+        Prepares room JSON snapshot on the main thread to avoid dict-iteration
+        races, then writes files in the background.
         Skips if a save is already in progress to avoid stacking."""
         with self._saveLock:
             if self._saveInProgress:
                 return
             self._saveInProgress = True
-        self._saveExecutor.submit(self._doSave)
+        # snapshot room JSON on the main thread (safe dict iteration)
+        try:
+            roomJson = self.roomJsonReaderWriter.generateJsonForRoom(self.currentRoom)
+        except Exception as e:
+            print("Error preparing room snapshot for save: " + str(e))
+            roomJson = None
+        roomPath = (
+            self.config.pathToSaveDirectory
+            + "/rooms/room_"
+            + str(self.currentRoom.getX())
+            + "_"
+            + str(self.currentRoom.getY())
+            + ".json"
+        )
+        self._saveExecutor.submit(self._doSave, roomJson, roomPath)
 
     def saveSynchronous(self):
         """Run save operations synchronously (used on exit to ensure data is persisted)."""
@@ -1742,12 +1771,21 @@ class WorldScreen:
         if self.config.showMiniMap:
             if not self.isCurrentRoomSavedAsPNG():
                 self.saveCurrentRoomAsPNG()
+            # flush pending PNG writes so the map image update reads complete files
+            self._saveExecutor.shutdown(wait=True)
+            self._saveExecutor = ThreadPoolExecutor(max_workers=1)
             self.mapImageUpdater.updateMapImage()
 
-    def _doSave(self):
-        """Perform save operations. Runs on a background thread."""
+    def _doSave(self, roomJson, roomPath):
+        """Perform save operations. Runs on a background thread.
+        roomJson is a pre-built dict snapshot prepared on the main thread."""
         try:
-            self.saveCurrentRoomToFile()
+            if roomJson is not None:
+                dirPath = os.path.dirname(roomPath)
+                if not os.path.exists(dirPath):
+                    os.makedirs(dirPath, exist_ok=True)
+                with open(roomPath, "w") as outfile:
+                    json.dump(roomJson, outfile, indent=4)
             self.savePlayerLocationToFile()
             self.savePlayerAttributesToFile()
             self.savePlayerInventoryToFile()

@@ -1,3 +1,4 @@
+import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
@@ -20,6 +21,7 @@ class MapImageUpdater:
         self._executor = ThreadPoolExecutor(max_workers=1)  # serialize map updates to avoid concurrent Pillow operations
         self._updateInProgress = False
         self._lock = threading.Lock()
+        self.roompngsLock = threading.Lock()  # shared with WorldScreen to synchronize roompngs access
 
     def updateIfCooldownOver(self):
         if (
@@ -45,9 +47,10 @@ class MapImageUpdater:
     def _doUpdateMapImage(self):
         """Perform the actual map image generation. Runs on a background thread."""
         try:
-            image = self.mapImageGenerator.generate()
-            image.save(self.mapImageGenerator.mapImagePath)
-            self.mapImageGenerator.clearRoomImages()
+            with self.roompngsLock:
+                image = self.mapImageGenerator.generate()
+                image.save(self.mapImageGenerator.mapImagePath)
+                self.mapImageGenerator.clearRoomImages()
         except Exception as e:
             print("Error updating map image: " + str(e))
         finally:

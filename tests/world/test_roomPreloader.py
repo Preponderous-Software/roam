@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 
 from src.world.map import Map
 from src.world.roomPreloader import RoomPreloader
+from src.world.roomJsonReaderWriter import RoomJsonReaderWriter
 
 
 def _createDependencies(tmp_path):
@@ -15,9 +16,14 @@ def _createDependencies(tmp_path):
     return graphik, tickCounter, config
 
 
+def _createRoomJsonReaderWriterFactory(graphik, tickCounter, config):
+    return lambda: RoomJsonReaderWriter(3, graphik, tickCounter, config)
+
+
 def _createPreloaderAndMap(tmp_path):
     graphik, tickCounter, config = _createDependencies(tmp_path)
-    preloader = RoomPreloader(3, graphik, tickCounter, config)
+    factory = _createRoomJsonReaderWriterFactory(graphik, tickCounter, config)
+    preloader = RoomPreloader(3, graphik, tickCounter, config, roomJsonReaderWriterFactory=factory)
     gameMap = Map(3, graphik, tickCounter, config)
     return preloader, gameMap
 
@@ -26,8 +32,11 @@ def test_initialization(tmp_path):
     graphik, tickCounter, config = _createDependencies(tmp_path)
     preloader = RoomPreloader(3, graphik, tickCounter, config)
 
-    assert preloader.gridSize == 3
-    assert preloader._pending == set()
+    try:
+        assert preloader.gridSize == 3
+        assert preloader._pending == set()
+    finally:
+        preloader.shutdown(wait=True)
 
 
 def test_preload_generates_adjacent_rooms(tmp_path):
@@ -72,7 +81,8 @@ def test_preload_respects_world_border(tmp_path):
     graphik, tickCounter, config = _createDependencies(tmp_path)
     config.worldBorder = 1  # border at 1 means rooms at abs(x/y) > 1 are blocked
 
-    preloader = RoomPreloader(3, graphik, tickCounter, config)
+    factory = _createRoomJsonReaderWriterFactory(graphik, tickCounter, config)
+    preloader = RoomPreloader(3, graphik, tickCounter, config, roomJsonReaderWriterFactory=factory)
     gameMap = Map(3, graphik, tickCounter, config)
 
     # Player at (1, 1) — all neighbors are at abs >= 2, which exceeds border
@@ -107,7 +117,8 @@ def test_shutdown(tmp_path):
 
 
 def test_has_room_on_map(tmp_path):
-    _, gameMap = _createPreloaderAndMap(tmp_path)
+    graphik, tickCounter, config = _createDependencies(tmp_path)
+    gameMap = Map(3, graphik, tickCounter, config)
 
     assert not gameMap.hasRoom(0, 0)
     gameMap.generateNewRoom(0, 0)

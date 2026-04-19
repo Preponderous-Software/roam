@@ -53,8 +53,7 @@ class Map:
                 self.gridSize, self.graphik, self.tickCounter, self.config
             )
             room = roomJsonReaderWriter.loadRoom(nextRoomPath)
-            self.addRoom(room)
-            return room
+            return self.addRoom(room)
 
         return -1
 
