@@ -83,6 +83,7 @@ class WorldScreen:
         self.minimapScaleFactor = 0.10
         self.minimapX = 5
         self.minimapY = 5
+        self._cachedMiniMapImage = None
         self.cursorSlot = InventorySlot()
         self.clock = pygame.time.Clock()
         self.showHelp = False
@@ -991,11 +992,16 @@ class WorldScreen:
             return
 
         # get mapImage.png for current save — the background map updater may
-        # be writing the file concurrently, so guard against load failures.
+        # be writing the file concurrently, so guard against load failures
+        # and fall back to the last successfully loaded image.
         try:
             mapImage = pygame.image.load(mapImagePath)
+            self._cachedMiniMapImage = mapImage
         except (FileNotFoundError, pygame.error):
-            return
+            if self._cachedMiniMapImage is not None:
+                mapImage = self._cachedMiniMapImage
+            else:
+                return
 
         # scale as a square using the game area size
         gameArea = self.graphik.getGameAreaRect()
