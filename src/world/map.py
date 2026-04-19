@@ -64,6 +64,9 @@ class Map:
         return grid.getLocation(locationID)
 
     def generateNewRoom(self, x, y):
+        with self._lock:
+            if (x, y) in self._roomIndex:
+                return self._roomIndex[(x, y)]
         # 50% chance to generate last room type
         newRoom = None
         if random.randrange(1, 101) > 50:
@@ -73,6 +76,8 @@ class Map:
         else:
             newRoom = self.roomFactory.createRandomRoom(x, y)
         with self._lock:
+            if (x, y) in self._roomIndex:
+                return self._roomIndex[(x, y)]
             self.rooms.append(newRoom)
             self._roomIndex[(x, y)] = newRoom
 

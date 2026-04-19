@@ -1,4 +1,3 @@
-import time
 from unittest.mock import MagicMock
 
 from src.world.map import Map
@@ -41,8 +40,7 @@ def test_preload_generates_adjacent_rooms(tmp_path):
     preloader.preloadNearbyRooms(0, 0, gameMap)
 
     # Wait for background tasks to complete
-    preloader.shutdown()
-    preloader._executor.shutdown(wait=True)
+    preloader.shutdown(wait=True)
 
     # All four adjacent rooms should now be loaded
     assert gameMap.hasRoom(0, -1)
@@ -60,8 +58,7 @@ def test_preload_skips_already_loaded_rooms(tmp_path):
 
     # Preload from (0, 0) — (1, 0) already exists
     preloader.preloadNearbyRooms(0, 0, gameMap)
-    preloader.shutdown()
-    preloader._executor.shutdown(wait=True)
+    preloader.shutdown(wait=True)
 
     # (1, 0) should still be the original room object
     assert gameMap.getRoom(1, 0) == existingRoom
@@ -80,8 +77,7 @@ def test_preload_respects_world_border(tmp_path):
 
     # Player at (1, 1) — all neighbors are at abs >= 2, which exceeds border
     preloader.preloadNearbyRooms(1, 1, gameMap)
-    preloader.shutdown()
-    preloader._executor.shutdown(wait=True)
+    preloader.shutdown(wait=True)
 
     # Only (0, 1) and (1, 0) are within border, (2, 1) and (1, 2) are outside
     assert gameMap.hasRoom(0, 1)
@@ -97,8 +93,7 @@ def test_preload_does_not_duplicate_pending_work(tmp_path):
     preloader.preloadNearbyRooms(0, 0, gameMap)
     preloader.preloadNearbyRooms(0, 0, gameMap)
 
-    preloader.shutdown()
-    preloader._executor.shutdown(wait=True)
+    preloader.shutdown(wait=True)
 
     # Should still have exactly 4 rooms, no duplicates
     assert len(gameMap.getRooms()) == 4
@@ -107,9 +102,8 @@ def test_preload_does_not_duplicate_pending_work(tmp_path):
 def test_shutdown(tmp_path):
     preloader, gameMap = _createPreloaderAndMap(tmp_path)
 
-    preloader.shutdown()
+    preloader.shutdown(wait=True)
     # Should not raise
-    preloader._executor.shutdown(wait=True)
 
 
 def test_has_room_on_map(tmp_path):

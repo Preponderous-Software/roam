@@ -72,7 +72,6 @@ def createContainer(config):
             container.resolve(TickCounter),
             container.resolve(Config),
         ),
-        lifetime="transient",
     )
 
     return container

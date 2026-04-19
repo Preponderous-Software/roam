@@ -87,6 +87,6 @@ class RoomPreloader:
             with self._pendingLock:
                 self._pending.discard((x, y))
 
-    def shutdown(self):
+    def shutdown(self, wait=False):
         """Cleanly shut down the background thread pool."""
-        self._executor.shutdown(wait=False)
+        self._executor.shutdown(wait=wait)
