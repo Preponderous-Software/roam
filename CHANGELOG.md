@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-04-19 | 9 | feat: Add lightweight DI container (`src/di/`) with auto-wiring, singleton/transient lifetimes, `@component` decorator, circular dependency detection, and factory function support; feat: Create container singleton (`src/appContainer.py`) and centralized bootstrap (`src/bootstrap.py`); refactor: Migrate `roam.py`, `worldScreen.py`, `map.py` to resolve dependencies via container; fix: Remove dead EnergyBar fallback branch in WorldScreen; fix: Add `resetSingletons()` to prevent stale cached instances across game restarts; docs: Document DI strategy in `copilot-instructions.md` for contributors; test: Add 15 DI test cases |
 | 2026-04-18 | 9 | fix: Status text no longer overlaps with the hotbar — repositioned above the hotbar at all display sizes; fix: Keep minimap square by using game area dimensions instead of full display dimensions; fix: Preserve window dimensions when returning to main menu so maximized windows stay maximized; fix: Room PNG captures for minimap now use game area dimensions and draw unclipped to avoid black letterbox bars in minimap; feat: Allow players to drop item stacks from inventory screen; feat: Make window size persistent across sessions — saved to config.yml and restored on launch; ux: Usability audit applying Nielsen's 10 heuristics — standardized button labels to Title Case, replaced jargon in config/debug text, improved all status messages, added F1 help overlay, added crafting feedback, updated README controls table; feat: Add draggable HUD elements — hotbar, status text, energy bar, and minimap can be repositioned via middle-click drag with screen-edge clamping |
 | 2026-04-17 | 2 | feat: Keep game world square and centered upon window resizing — render the game world as a centered square within any-sized window using `Graphik.getGameAreaRect()`; the window itself can be freely resized; test: Add unit tests for getGameAreaRect |
 | 2026-04-16 | 5 | feat: Add excrement spawning by living entities that decays into grass over time; test: Add unit tests for world package (RoomType, TickCounter, Room, RoomFactory, Map); feat: Allow player to push stone entities (configurable via `pushableStone` setting) including cross-room pushing; fix: Persist adjacent room after cross-room stone push, re-check solidity after pushing when stacked entities present, remove unused import |
@@ -560,18 +561,25 @@ about this repository, add it here so the next agent benefits.
   that returns its default `pygame.Rect`. Offsets are stored per
   element and applied at draw time. Position clamping ensures at least
   20 % of an element remains visible on screen.
-- 2026-04-18: `[not yet integrated]` Many constructor parameters in the
+- 2026-04-18: `[integrated]` Many constructor parameters in the
   codebase lack type hints (e.g., `config` in `TickCounter`, `Stats`,
   `MapImageUpdater`, and `Map`). When adding DI or auto-wiring, type
   hints must be added to enable automatic resolution. Adding type hints
   is considered a wiring-only change, not a business-logic change.
-- 2026-04-18: `[not yet integrated]` Several classes require primitive
+- 2026-04-18: `[integrated]` Several classes require primitive
   values or runtime state in their constructors (e.g., `Player` needs
   `tickCounter.getTick()`, `Map`/`RoomFactory` need `config.gridSize`,
   `SaveSelectionScreen` needs a callback). These cannot be auto-wired
   and require factory functions or explicit instance registration.
-- 2026-04-18: `[not yet integrated]` The `test_worldScreen_pushStone.py`
+- 2026-04-18: `[integrated]` The `test_worldScreen_pushStone.py`
   test creates `WorldScreen` using `__new__` (bypassing `__init__`) and
   manually sets attributes. This pattern means constructor changes to
   `WorldScreen` won't break those tests, but it also means those tests
   don't exercise the constructor or DI wiring.
+- 2026-04-19: `[integrated]` The project uses a lightweight DI container
+  (`src/di/`) for dependency management. New classes should use the
+  `@component` decorator (from `src/appContainer.py`) instead of being
+  manually constructed. Factory registrations for types needing primitives
+  go in `src/bootstrap.py`. The container is a module-level singleton
+  that persists across game restarts; `createContainer()` calls
+  `resetSingletons()` to clear cached instances on each restart.

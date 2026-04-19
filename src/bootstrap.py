@@ -19,7 +19,12 @@ from world.tickCounter import TickCounter
 
 
 def createContainer(config):
-    """Configure the shared DI container with instance and factory registrations."""
+    """Configure the shared DI container with instance and factory registrations.
+
+    Clears cached singletons first so that each ``Roam`` restart gets
+    fresh instances rather than stale objects from the previous run.
+    """
+    container.resetSingletons()
     container.registerInstance(Container, container)
     container.registerInstance(Config, config)
 

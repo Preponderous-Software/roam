@@ -117,10 +117,7 @@ class WorldScreen:
         self.initializeLocationWidthAndHeight()
 
         self.status.set("Entered the world")
-        if self.container is not None:
-            self.energyBar = self.container.resolve(EnergyBar)
-        else:
-            self.energyBar = EnergyBar(self.graphik, self.player)
+        self.energyBar = self.container.resolve(EnergyBar)
 
         self.hudDragManager.register("hotbar", self._getHotbarDefaultRect)
         self.hudDragManager.register("status", lambda: self.status.getDefaultRect())

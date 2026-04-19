@@ -166,3 +166,24 @@ def test_factory_function_autowiring():
     b = container.resolve(ServiceB)
     assert isinstance(b, ServiceB)
     assert isinstance(b.a, ServiceA)
+
+
+def test_reset_singletons_clears_cached_instances():
+    container = Container()
+    container.register(ServiceA, ServiceA)
+    first = container.resolve(ServiceA)
+    assert first is container.resolve(ServiceA)
+    container.resetSingletons()
+    second = container.resolve(ServiceA)
+    assert second is not first
+    assert isinstance(second, ServiceA)
+
+
+def test_reset_singletons_preserves_explicit_instances():
+    container = Container()
+    prebuilt = ServiceA()
+    container.registerInstance(ServiceA, prebuilt)
+    assert container.resolve(ServiceA) is prebuilt
+    container.resetSingletons()
+    # Explicit instances (factory=None) survive the reset.
+    assert container.resolve(ServiceA) is prebuilt

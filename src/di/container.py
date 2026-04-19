@@ -23,6 +23,19 @@ class Container:
         self._registrations = {}
         self._lock = threading.Lock()
 
+    def resetSingletons(self):
+        """Clear all cached singleton instances.
+
+        Existing registrations (including ``@component`` decorators that
+        ran at import time) are preserved. The next ``resolve()`` call
+        for each type will create a fresh instance. Call this when the
+        application restarts to avoid leaking state from the previous run.
+        """
+        with self._lock:
+            for reg in self._registrations.values():
+                if reg.factory is not None:
+                    reg.instance = None
+
     def register(self, abstractType, concreteType, lifetime="singleton"):
         """Register a concrete type or factory callable against an abstract type.
 
