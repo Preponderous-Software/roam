@@ -117,6 +117,7 @@ class Roam:
                 self.config.displayWidth = w
                 self.config.displayHeight = h
                 self.config.saveWindowSize(w, h)
+                _logger.info("returning to main menu")
                 return "restart"
             if result == ScreenType.WORLD_SCREEN:
                 self.currentScreen = self.worldScreen
@@ -134,10 +135,12 @@ class Roam:
             elif result == ScreenType.SAVE_SELECTION_SCREEN:
                 self.currentScreen = self.saveSelectionScreen
             elif result == ScreenType.NONE:
+                _logger.info("shutting down")
                 self.quitApplication()
             else:
                 _logger.error("unrecognized screen", screen=result)
                 self.quitApplication()
+            _logger.info("screen transition", screen=str(result))
 
 
 pygame.init()

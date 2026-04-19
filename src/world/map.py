@@ -2,12 +2,15 @@ import os
 import random
 import threading
 from config.config import Config
+from gameLogging.logger import getLogger
 from lib.graphik.src.graphik import Graphik
 from lib.pyenvlib.entity import Entity
 from world.roomFactory import RoomFactory
 from world.roomJsonReaderWriter import RoomJsonReaderWriter
 from world.tickCounter import TickCounter
 from world.room import Room
+
+_logger = getLogger(__name__)
 
 
 # @author Daniel McCoy Stephenson
@@ -53,6 +56,7 @@ class Map:
                 self.gridSize, self.graphik, self.tickCounter, self.config
             )
             room = roomJsonReaderWriter.loadRoom(nextRoomPath)
+            _logger.info("room loaded from file", roomX=x, roomY=y, path=nextRoomPath)
             return self.addRoom(room)
 
         return -1
@@ -80,6 +84,7 @@ class Map:
             self.rooms.append(newRoom)
             self._roomIndex[(x, y)] = newRoom
 
+        _logger.info("room generated", roomX=x, roomY=y)
         return newRoom
 
     def addRoom(self, room):

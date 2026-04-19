@@ -11,10 +11,13 @@ from entity.living.bear import Bear
 from entity.living.chicken import Chicken
 from entity.stone import Stone
 from entity.oakWood import OakWood
+from gameLogging.logger import getLogger
 from lib.pyenvlib.entity import Entity
 
 from world.room import Room
 from world.roomType import RoomType
+
+_logger = getLogger(__name__)
 
 
 class RoomFactory:
@@ -27,19 +30,28 @@ class RoomFactory:
     def createRoom(self, roomType, x, y):
         if roomType == RoomType.EMPTY:
             self.lastRoomTypeCreated = RoomType.EMPTY
-            return self.createEmptyRoom((0, 0, 0), x, y)
+            room = self.createEmptyRoom((0, 0, 0), x, y)
         elif roomType == RoomType.GRASSLAND:
             self.lastRoomTypeCreated = RoomType.GRASSLAND
-            return self.createGrassRoom(x, y)
+            room = self.createGrassRoom(x, y)
         elif roomType == RoomType.FOREST:
             self.lastRoomTypeCreated = RoomType.FOREST
-            return self.createForestRoom(x, y)
+            room = self.createForestRoom(x, y)
         elif roomType == RoomType.JUNGLE:
             self.lastRoomTypeCreated = RoomType.JUNGLE
-            return self.createJungleRoom(x, y)
+            room = self.createJungleRoom(x, y)
         elif roomType == RoomType.MOUNTAIN:
             self.lastRoomTypeCreated = RoomType.MOUNTAIN
-            return self.createMountainRoom(x, y)
+            room = self.createMountainRoom(x, y)
+        else:
+            room = None
+        _logger.debug(
+            "room created",
+            roomType=str(roomType),
+            roomX=x,
+            roomY=y,
+        )
+        return room
 
     def createRandomRoom(self, x, y):
         number = random.randrange(0, 4)
@@ -188,18 +200,26 @@ class RoomFactory:
                 room.addEntityToLocation(Banana(), bananaSpawnLocation)
 
     def spawnChickens(self, room: Room):
+        count = 0
         for i in range(0, 5):
             if random.randrange(1, 101) > 75:
                 newChicken = Chicken(self.tickCounter.getTick())
                 room.addEntity(newChicken)
                 room.addLivingEntity(newChicken)
+                count += 1
+        if count > 0:
+            _logger.debug("spawned chickens", count=count, roomName=room.getName())
 
     def spawnBears(self, room: Room):
+        count = 0
         for i in range(0, 2):
             if random.randrange(1, 101) > 90:
                 newBear = Bear(self.tickCounter.getTick())
                 room.addEntity(newBear)
                 room.addLivingEntity(newBear)
+                count += 1
+        if count > 0:
+            _logger.debug("spawned bears", count=count, roomName=room.getName())
 
     def spawnLeaves(self, room: Room):
         for locationId in room.getGrid().getLocations():

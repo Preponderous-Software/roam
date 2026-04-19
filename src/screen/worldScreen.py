@@ -154,6 +154,12 @@ class WorldScreen:
         )
         self.hudDragManager.register("minimap", self._getMinimapDefaultRect)
 
+        _logger.info(
+            "world screen initialized",
+            roomX=self.currentRoom.getX(),
+            roomY=self.currentRoom.getY(),
+        )
+
     def initializeLocationWidthAndHeight(self):
         gameArea = self.graphik.getGameAreaRect()
         locationWidth = gameArea.width / self.currentRoom.getGrid().getRows()
@@ -412,6 +418,12 @@ class WorldScreen:
         )
         self.currentRoom.addEntityToLocation(self.player, targetLocation)
         self.initializeLocationWidthAndHeight()
+
+        _logger.info(
+            "room transition",
+            roomX=self.currentRoom.getX(),
+            roomY=self.currentRoom.getY(),
+        )
 
         # pre-load nearby rooms in the background
         self.roomPreloader.preloadNearbyRooms(
@@ -1656,7 +1668,7 @@ class WorldScreen:
         for livingEntityId in self.currentRoom.getLivingEntities():
             livingEntity = self.currentRoom.getEntity(livingEntityId)
             if livingEntity is None:
-                _logger.error(
+                _logger.debug(
                     "living entity not found in room",
                     entityId=str(livingEntityId),
                     roomName=self.currentRoom.getName(),
@@ -1871,7 +1883,7 @@ class WorldScreen:
                     )
 
                     if newLocation == -1:
-                        _logger.error(
+                        _logger.debug(
                             "could not find new location for entity",
                             entityName=entityToMove.getName(),
                         )
