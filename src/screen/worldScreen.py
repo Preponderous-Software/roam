@@ -1772,8 +1772,8 @@ class WorldScreen:
             if not self.isCurrentRoomSavedAsPNG():
                 self.saveCurrentRoomAsPNG()
             # flush pending PNG writes so the map image update reads complete files
-            self._saveExecutor.shutdown(wait=True)
-            self._saveExecutor = ThreadPoolExecutor(max_workers=1)
+            future = self._saveExecutor.submit(lambda: None)
+            future.result()  # block until all prior tasks are done
             self.mapImageUpdater.updateMapImage()
 
     def _doSave(self, roomJson, roomPath):
