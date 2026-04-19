@@ -3,7 +3,9 @@ import json
 import math
 from math import ceil
 import os
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 import jsonschema
 import pygame
 from appContainer import component
@@ -84,6 +86,11 @@ class WorldScreen:
         self.minimapX = 5
         self.minimapY = 5
         self._cachedMiniMapImage = None
+        self._miniMapLastLoadTick = 0
+        self._saveExecutor = ThreadPoolExecutor(max_workers=1)  # serialize save operations off main thread
+        self._saveInProgress = False
+        self._saveLock = threading.Lock()
+        self._pngSavePending = set()
         self.cursorSlot = InventorySlot()
         self.clock = pygame.time.Clock()
         self.showHelp = False
@@ -295,6 +302,25 @@ class WorldScreen:
             + ".json"
         )
         self.roomJsonReaderWriter.saveRoom(room, roomPath)
+
+    def saveRoomToFileAsync(self, room: Room):
+        """Save a room to file on the background thread (non-blocking)."""
+        roomPath = (
+            self.config.pathToSaveDirectory
+            + "/rooms/room_"
+            + str(room.getX())
+            + "_"
+            + str(room.getY())
+            + ".json"
+        )
+        self._saveExecutor.submit(self._doSaveRoomToFile, room, roomPath)
+
+    def _doSaveRoomToFile(self, room, path):
+        """Write room JSON to disk. Runs on background thread."""
+        try:
+            self.roomJsonReaderWriter.saveRoom(room, path)
+        except Exception as e:
+            print("Error saving room to file: " + str(e))
 
     def changeRooms(self):
         x, y = self.getCoordinatesForNewRoomBasedOnPlayerLocationAndDirection()
@@ -674,7 +700,7 @@ class WorldScreen:
         # push stone into adjacent room
         location.removeEntity(stoneEntity)
         targetLocation.addEntity(stoneEntity)
-        self.saveRoomToFile(adjacentRoom)
+        self.saveRoomToFileAsync(adjacentRoom)
         return True
 
     def executePlaceAction(self):
@@ -956,6 +982,10 @@ class WorldScreen:
         return os.path.isfile(path)
 
     def saveCurrentRoomAsPNG(self):
+        roomKey = (self.currentRoom.getX(), self.currentRoom.getY())
+        if roomKey in self._pngSavePending:
+            return
+
         if not os.path.exists(self.config.pathToSaveDirectory + "/roompngs"):
             os.makedirs(self.config.pathToSaveDirectory + "/roompngs")
 
@@ -976,32 +1006,51 @@ class WorldScreen:
         )
         # capture only the square room area (location sizes are based on game area)
         gameArea = self.graphik.getGameAreaRect()
-        self.captureScreen(
-            path,
-            (0, 0),
-            (int(gameArea.width), int(gameArea.height)),
-        )
+        size = (int(gameArea.width), int(gameArea.height))
+        # capture surface on main thread (pygame requirement), save to disk async
+        image = pygame.Surface(size)
+        image.blit(self.graphik.getGameDisplay(), (0, 0), ((0, 0), size))
+        self._pngSavePending.add(roomKey)
+        self._saveExecutor.submit(self._saveSurfaceToDisk, image, path, roomKey)
 
         # add player back
         self.currentRoom.addEntityToLocation(self.player, locationOfPlayer)
 
+    def _saveSurfaceToDisk(self, surface, path, roomKey):
+        """Save a pygame surface to disk. Runs on a background thread."""
+        try:
+            pygame.image.save(surface, path)
+        except Exception as e:
+            print("Error saving room PNG: " + str(e))
+        finally:
+            self._pngSavePending.discard(roomKey)
+
     def drawMiniMap(self):
-        # if map image doesn't exist, return
+        # if map image doesn't exist, use cache or skip
         mapImagePath = self.config.pathToSaveDirectory + "/mapImage.png"
         if not os.path.isfile(mapImagePath):
-            return
-
-        # get mapImage.png for current save — the background map updater may
-        # be writing the file concurrently, so guard against load failures
-        # and fall back to the last successfully loaded image.
-        try:
-            mapImage = pygame.image.load(mapImagePath)
-            self._cachedMiniMapImage = mapImage
-        except (FileNotFoundError, pygame.error):
             if self._cachedMiniMapImage is not None:
                 mapImage = self._cachedMiniMapImage
             else:
                 return
+        else:
+            # only reload from disk every 60 ticks to avoid I/O every frame
+            currentTick = self.tickCounter.getTick()
+            if (
+                self._cachedMiniMapImage is None
+                or currentTick - self._miniMapLastLoadTick >= 60
+            ):
+                try:
+                    mapImage = pygame.image.load(mapImagePath)
+                    self._cachedMiniMapImage = mapImage
+                    self._miniMapLastLoadTick = currentTick
+                except (FileNotFoundError, pygame.error):
+                    if self._cachedMiniMapImage is not None:
+                        mapImage = self._cachedMiniMapImage
+                    else:
+                        return
+            else:
+                mapImage = self._cachedMiniMapImage
 
         # scale as a square using the game area size
         gameArea = self.graphik.getGameAreaRect()
@@ -1678,6 +1727,16 @@ class WorldScreen:
                 )
 
     def save(self):
+        """Submit save operations to the background thread.
+        Skips if a save is already in progress to avoid stacking."""
+        with self._saveLock:
+            if self._saveInProgress:
+                return
+            self._saveInProgress = True
+        self._saveExecutor.submit(self._doSave)
+
+    def saveSynchronous(self):
+        """Run save operations synchronously (used on exit to ensure data is persisted)."""
         self.saveCurrentRoomToFile()
         self.savePlayerLocationToFile()
         self.savePlayerAttributesToFile()
@@ -1689,6 +1748,30 @@ class WorldScreen:
             if not self.isCurrentRoomSavedAsPNG():
                 self.saveCurrentRoomAsPNG()
             self.mapImageUpdater.updateMapImage()
+
+    def _doSave(self):
+        """Perform save operations. Runs on a background thread."""
+        try:
+            self.saveCurrentRoomToFile()
+            self.savePlayerLocationToFile()
+            self.savePlayerAttributesToFile()
+            self.savePlayerInventoryToFile()
+            self.stats.save()
+            self.tickCounter.save()
+        except Exception as e:
+            print("Error during save: " + str(e))
+        finally:
+            with self._saveLock:
+                self._saveInProgress = False
+
+        if self.config.showMiniMap:
+            self.mapImageUpdater.updateMapImage()
+
+    def shutdown(self):
+        """Cleanly shut down background thread pools."""
+        self._saveExecutor.shutdown(wait=True)
+        self.roomPreloader.shutdown(wait=True)
+        self.mapImageUpdater.shutdown(wait=True)
 
     def run(self):
         while not self.changeScreen:
@@ -1803,7 +1886,7 @@ class WorldScreen:
                     newRoom.addLivingEntity(entityToMove)
 
                     # save new room
-                    self.saveRoomToFile(newRoom)
+                    self.saveRoomToFileAsync(newRoom)
 
             self.currentRoom.reproduceLivingEntities(self.tickCounter.getTick())
 
@@ -1838,7 +1921,8 @@ class WorldScreen:
             os.makedirs(self.config.pathToSaveDirectory)
 
         self.returnCursorSlotToInventory()
-        self.save()
+        self.saveSynchronous()
+        self.shutdown()
 
         self.changeScreen = False
         return self.nextScreen

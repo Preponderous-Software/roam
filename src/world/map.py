@@ -86,6 +86,8 @@ class Map:
     def addRoom(self, room):
         key = (room.getX(), room.getY())
         with self._lock:
-            if key not in self._roomIndex:
-                self.rooms.append(room)
+            if key in self._roomIndex:
+                return self._roomIndex[key]
+            self.rooms.append(room)
             self._roomIndex[key] = room
+        return room
