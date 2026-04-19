@@ -15,6 +15,7 @@ from player.player import Player
 from world.map import Map
 from world.roomFactory import RoomFactory
 from world.roomJsonReaderWriter import RoomJsonReaderWriter
+from world.roomPreloader import RoomPreloader
 from world.tickCounter import TickCounter
 
 
@@ -62,6 +63,16 @@ def createContainer(config):
             container.resolve(Config),
         ),
         lifetime="transient",
+    )
+    container.register(
+        RoomPreloader,
+        lambda: RoomPreloader(
+            container.resolve(Config).gridSize,
+            container.resolve(Graphik),
+            container.resolve(TickCounter),
+            container.resolve(Config),
+            roomJsonReaderWriterFactory=lambda: container.resolve(RoomJsonReaderWriter),
+        ),
     )
 
     return container

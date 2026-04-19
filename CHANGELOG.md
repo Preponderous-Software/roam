@@ -8,7 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
-| 2026-04-19 | 10 | feat: Add lightweight DI container (`src/di/`) with auto-wiring, singleton/transient lifetimes, `@component` decorator, circular dependency detection, and factory function support; feat: Create container singleton (`src/appContainer.py`) and centralized bootstrap (`src/bootstrap.py`); refactor: Migrate `roam.py`, `worldScreen.py`, `map.py` to resolve dependencies via container; fix: Remove dead EnergyBar fallback branch in WorldScreen; fix: Add `resetSingletons()` to prevent stale cached instances across game restarts; refactor: Replace new-instance restart with `Roam.restart()` method that resets state on the existing instance; docs: Document DI strategy in `copilot-instructions.md` for contributors; test: Add 15 DI test cases |
+| 2026-04-19 | 10 | feat: Add lightweight DI container (`src/di/`) with auto-wiring, singleton/transient lifetimes, `@component` decorator, circular dependency detection, and factory function support; feat: Create container singleton (`src/appContainer.py`) and centralized bootstrap (`src/bootstrap.py`); refactor: Migrate `roam.py`, `worldScreen.py`, `map.py` to resolve dependencies via container; fix: Remove dead EnergyBar fallback branch in WorldScreen; fix: Add `resetSingletons()` to prevent stale cached instances across game restarts; refactor: Replace new-instance restart with `Roam.restart()` method that resets state on the existing instance; docs: Document DI strategy in `copilot-instructions.md` for contributors; test: Add 15 DI test cases; perf: Asynchronous room pre-loading to eliminate lag on room transitions — new `RoomPreloader` class using `ThreadPoolExecutor`, thread-safe `Map` with locking, registered in DI container; test: Add 7 `RoomPreloader` test cases; perf: Background map image updates — `MapImageUpdater` now runs Pillow-based map compositing in a background thread to avoid blocking the game loop when the minimap is enabled; test: Add 9 `MapImageUpdater` test cases; fix: Cache last loaded minimap surface so the minimap renders a stale frame instead of flickering when the background thread is writing the map image; perf: Move save() and room file writes to background thread so room transitions are non-blocking; perf: Room PNG capture defers disk I/O to background thread (surface captured on main thread, saved async); perf: Add 60-tick cooldown on minimap image reloads from disk to reduce I/O; fix: Make Map.addRoom() a no-op when key exists to prevent inconsistency between rooms list and index during concurrent preloading; feat: Add WorldScreen.shutdown() to cleanly stop all background thread pools on exit |
 | 2026-04-18 | 9 | fix: Status text no longer overlaps with the hotbar — repositioned above the hotbar at all display sizes; fix: Keep minimap square by using game area dimensions instead of full display dimensions; fix: Preserve window dimensions when returning to main menu so maximized windows stay maximized; fix: Room PNG captures for minimap now use game area dimensions and draw unclipped to avoid black letterbox bars in minimap; feat: Allow players to drop item stacks from inventory screen; feat: Make window size persistent across sessions — saved to config.yml and restored on launch; ux: Usability audit applying Nielsen's 10 heuristics — standardized button labels to Title Case, replaced jargon in config/debug text, improved all status messages, added F1 help overlay, added crafting feedback, updated README controls table; feat: Add draggable HUD elements — hotbar, status text, energy bar, and minimap can be repositioned via middle-click drag with screen-edge clamping |
 | 2026-04-17 | 2 | feat: Keep game world square and centered upon window resizing — render the game world as a centered square within any-sized window using `Graphik.getGameAreaRect()`; the window itself can be freely resized; test: Add unit tests for getGameAreaRect |
 | 2026-04-16 | 5 | feat: Add excrement spawning by living entities that decays into grass over time; test: Add unit tests for world package (RoomType, TickCounter, Room, RoomFactory, Map); feat: Allow player to push stone entities (configurable via `pushableStone` setting) including cross-room pushing; fix: Persist adjacent room after cross-room stone push, re-check solidity after pushing when stacked entities present, remove unused import |
@@ -639,8 +639,32 @@ about this repository, add it here so the next agent benefits.
   go in `src/bootstrap.py`. The container is a module-level singleton
   that persists across game restarts; `createContainer()` calls
   `resetSingletons()` to clear cached instances on each restart.
+- 2026-04-19: `[not yet integrated]` The `Map` class uses a
+  `threading.Lock` (`_lock`) to protect concurrent access to `rooms` and
+  `_roomIndex`. Any code that reads or mutates these collections (including
+  `getRoom`, `addRoom`, `generateNewRoom`, and `hasRoom`) acquires the lock.
+  Background room pre-loading via `RoomPreloader` relies on this thread
+  safety. Future modifications to `Map` that touch `_roomIndex` or `rooms`
+  should also acquire `_lock`.
+- 2026-04-19: `[not yet integrated]` The `MapImageUpdater` uses a
+  background `ThreadPoolExecutor` (max 1 worker) to run Pillow-based map
+  compositing off the main thread. A `_updateInProgress` flag prevents
+  concurrent updates from piling up. The public `updateMapImage()` method
+  is now non-blocking — it delegates to `updateMapImageAsync()`. The
+  `saveCurrentRoomAsPNG()` method in `worldScreen.py` still runs on the
+  main thread because it uses pygame rendering, which is not thread-safe.
 - 2026-04-19: `[not yet integrated]` The `KeyBindings` instance is registered
   via `registerInstance()` in `roam.py` rather than using `@component`,
   because it needs to call `loadFromConfig()` with runtime config values
   before being injected. Classes that depend on `KeyBindings` (e.g.,
   `WorldScreen`, `ControlsScreen`) receive it via DI auto-wiring.
+- 2026-04-19: `[not yet integrated]` When saving room state to JSON on a
+  background thread, the JSON dict must be prepared on the main thread
+  first (`generateJsonForRoom()`) to avoid `RuntimeError: dictionary
+  changed size during iteration`. Only the file write should happen
+  in the background.
+- 2026-04-19: `[not yet integrated]` The `MapImageUpdater.roompngsLock`
+  is shared between the map image updater (background compositing) and
+  `WorldScreen._saveSurfaceToDisk()` (background PNG writes) to prevent
+  `clearRoomImages()` from racing with concurrent PNG writes to the
+  same directory.

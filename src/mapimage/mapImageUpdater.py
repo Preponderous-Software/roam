@@ -1,3 +1,6 @@
+import threading
+from concurrent.futures import ThreadPoolExecutor
+
 from appContainer import component
 from config.config import Config
 from mapimage.mapImageGenerator import MapImageGenerator
@@ -14,16 +17,45 @@ class MapImageUpdater:
         self.mapImageGenerator = MapImageGenerator(self.config)
         self.tickLastUpdated = self.tickCounter.getTick()
         self.updateCooldownInTicks = 300
+        self._executor = ThreadPoolExecutor(max_workers=1)  # serialize map updates to avoid concurrent Pillow operations
+        self._updateInProgress = False
+        self._lock = threading.Lock()
+        self.roompngsLock = threading.Lock()  # shared with WorldScreen to synchronize roompngs access
 
     def updateIfCooldownOver(self):
         if (
             self.tickCounter.getTick() - self.tickLastUpdated
             > self.updateCooldownInTicks
         ):
-            self.updateMapImage()
+            self.updateMapImageAsync()
+
+    def updateMapImageAsync(self):
+        """Submit a map image update to run in the background.
+        Skips if an update is already in progress."""
+        with self._lock:
+            if self._updateInProgress:
+                return
+            self._updateInProgress = True
+        self.tickLastUpdated = self.tickCounter.getTick()
+        self._executor.submit(self._doUpdateMapImage)
 
     def updateMapImage(self):
-        image = self.mapImageGenerator.generate()
-        image.save(self.mapImageGenerator.mapImagePath)
-        self.mapImageGenerator.clearRoomImages()
-        self.tickLastUpdated = self.tickCounter.getTick()
+        """Run a map image update in the background (non-blocking)."""
+        self.updateMapImageAsync()
+
+    def _doUpdateMapImage(self):
+        """Perform the actual map image generation. Runs on a background thread."""
+        try:
+            with self.roompngsLock:
+                image = self.mapImageGenerator.generate()
+                image.save(self.mapImageGenerator.mapImagePath)
+                self.mapImageGenerator.clearRoomImages()
+        except Exception as e:
+            print("Error updating map image: " + str(e))
+        finally:
+            with self._lock:
+                self._updateInProgress = False
+
+    def shutdown(self, wait=False):
+        """Cleanly shut down the background thread pool."""
+        self._executor.shutdown(wait=wait)
