@@ -14,6 +14,7 @@ from entity.apple import Apple
 from entity.bed import Bed
 from entity.campfire import Campfire
 from config.config import Config
+from config.keyBindings import KeyBindings
 from entity.banana import Banana
 from entity.bearMeat import BearMeat
 from entity.chickenMeat import ChickenMeat
@@ -66,6 +67,7 @@ class WorldScreen:
         stats: Stats,
         player: Player,
         container: Container,
+        keyBindings: KeyBindings,
     ):
         self.graphik = graphik
         self.config = config
@@ -74,6 +76,7 @@ class WorldScreen:
         self.stats = stats
         self.player = player
         self.container = container
+        self.keyBindings = keyBindings
         self.running = True
         self.showInventory = False
         self.nextScreen = ScreenType.OPTIONS_SCREEN
@@ -757,27 +760,27 @@ class WorldScreen:
         self.status.set("Selected " + item.getName())
 
     def handleKeyDownEvent(self, key):
+        kb = self.keyBindings
         if key == pygame.K_ESCAPE:
             self.nextScreen = ScreenType.OPTIONS_SCREEN
             self.changeScreen = True
-        elif key == pygame.K_w or key == pygame.K_UP:
+        elif key == kb.getKey("move_up") or key == kb.getKey("alt_move_up"):
             self.player.setDirection(0)
-            self.player
             if self.checkPlayerMovementCooldown(self.player.getTickLastMoved()):
                 self.movePlayer(self.player.direction)
-        elif key == pygame.K_a or key == pygame.K_LEFT:
+        elif key == kb.getKey("move_left") or key == kb.getKey("alt_move_left"):
             self.player.setDirection(1)
             if self.checkPlayerMovementCooldown(self.player.getTickLastMoved()):
                 self.movePlayer(self.player.direction)
-        elif key == pygame.K_s or key == pygame.K_DOWN:
+        elif key == kb.getKey("move_down") or key == kb.getKey("alt_move_down"):
             self.player.setDirection(2)
             if self.checkPlayerMovementCooldown(self.player.getTickLastMoved()):
                 self.movePlayer(self.player.direction)
-        elif key == pygame.K_d or key == pygame.K_RIGHT:
+        elif key == kb.getKey("move_right") or key == kb.getKey("alt_move_right"):
             self.player.setDirection(3)
             if self.checkPlayerMovementCooldown(self.player.getTickLastMoved()):
                 self.movePlayer(self.player.direction)
-        elif key == pygame.K_PRINTSCREEN:
+        elif key == kb.getKey("screenshot"):
             screenshotsFolder = "screenshots"
             if not os.path.exists(screenshotsFolder):
                 os.makedirs(screenshotsFolder)
@@ -791,84 +794,76 @@ class WorldScreen:
                 (x, y),
             )
             self.status.set("Screenshot saved")
-        elif key == pygame.K_LSHIFT:
+        elif key == kb.getKey("run"):
             self.player.setMovementSpeed(
                 self.player.getMovementSpeed() * self.config.runSpeedFactor
             )
-        elif key == pygame.K_LCTRL:
+        elif key == kb.getKey("crouch"):
             self.player.setCrouching(True)
-        elif key == pygame.K_i:
+        elif key == kb.getKey("inventory"):
             self.switchToInventoryScreen()
             if self.player.isGathering():
                 self.player.setGathering(False)
             if self.player.isPlacing():
                 self.player.setPlacing(False)
-        elif key == pygame.K_1:
+        elif key == kb.getKey("hotbar_1"):
             self.changeSelectedInventorySlot(0)
-        elif key == pygame.K_2:
+        elif key == kb.getKey("hotbar_2"):
             self.changeSelectedInventorySlot(1)
-        elif key == pygame.K_3:
+        elif key == kb.getKey("hotbar_3"):
             self.changeSelectedInventorySlot(2)
-        elif key == pygame.K_4:
+        elif key == kb.getKey("hotbar_4"):
             self.changeSelectedInventorySlot(3)
-        elif key == pygame.K_5:
+        elif key == kb.getKey("hotbar_5"):
             self.changeSelectedInventorySlot(4)
-        elif key == pygame.K_6:
+        elif key == kb.getKey("hotbar_6"):
             self.changeSelectedInventorySlot(5)
-        elif key == pygame.K_7:
+        elif key == kb.getKey("hotbar_7"):
             self.changeSelectedInventorySlot(6)
-        elif key == pygame.K_8:
+        elif key == kb.getKey("hotbar_8"):
             self.changeSelectedInventorySlot(7)
-        elif key == pygame.K_9:
+        elif key == kb.getKey("hotbar_9"):
             self.changeSelectedInventorySlot(8)
-        elif key == pygame.K_0:
+        elif key == kb.getKey("hotbar_0"):
             self.changeSelectedInventorySlot(9)
-        elif key == pygame.K_F3:
-            # toggle debug mode
+        elif key == kb.getKey("toggle_debug"):
             self.config.debug = not self.config.debug
-        elif key == pygame.K_m:
-            # toggle minimap
+        elif key == kb.getKey("toggle_minimap"):
             self.config.showMiniMap = not self.config.showMiniMap
-        elif key == pygame.K_EQUALS:
-            # increase minimap scale factor
+        elif key == kb.getKey("minimap_zoom_in"):
             if self.minimapScaleFactor < 1.0:
                 self.minimapScaleFactor += 0.1
-        elif key == pygame.K_MINUS:
-            # decrease minimap scale factor
+        elif key == kb.getKey("minimap_zoom_out"):
             if self.minimapScaleFactor > 0:
                 self.minimapScaleFactor -= 0.1
-        elif key == pygame.K_c:
-            # toggle camera follow mode
+        elif key == kb.getKey("toggle_camera_follow"):
             self.config.cameraFollowPlayer = not self.config.cameraFollowPlayer
-        elif key == pygame.K_F1:
+        elif key == kb.getKey("toggle_help"):
             self.showHelp = not self.showHelp
 
     def handleKeyUpEvent(self, key):
+        kb = self.keyBindings
         if (
-            key == pygame.K_w or key == pygame.K_UP
+            key == kb.getKey("move_up") or key == kb.getKey("alt_move_up")
         ) and self.player.getDirection() == 0:
             self.player.setDirection(-1)
         elif (
-            key == pygame.K_a or key == pygame.K_LEFT
+            key == kb.getKey("move_left") or key == kb.getKey("alt_move_left")
         ) and self.player.getDirection() == 1:
             self.player.setDirection(-1)
         elif (
-            key == pygame.K_s or key == pygame.K_DOWN
+            key == kb.getKey("move_down") or key == kb.getKey("alt_move_down")
         ) and self.player.getDirection() == 2:
             self.player.setDirection(-1)
         elif (
-            key == pygame.K_d or key == pygame.K_RIGHT
+            key == kb.getKey("move_right") or key == kb.getKey("alt_move_right")
         ) and self.player.getDirection() == 3:
             self.player.setDirection(-1)
-        elif key == pygame.K_e:
-            self.player.setGathering(False)
-        elif key == pygame.K_q:
-            self.player.setPlacing(False)
-        elif key == pygame.K_LSHIFT:
+        elif key == kb.getKey("run"):
             self.player.setMovementSpeed(
                 self.player.getMovementSpeed() / self.config.runSpeedFactor
             )
-        elif key == pygame.K_LCTRL:
+        elif key == kb.getKey("crouch"):
             self.player.setCrouching(False)
 
     # @source https://stackoverflow.com/questions/63342477/how-to-take-screenshot-of-entire-display-pygame

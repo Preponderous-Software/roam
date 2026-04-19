@@ -7,4 +7,5 @@ class ScreenType:
     INVENTORY_SCREEN = "inventory_screen"
     CONFIG_SCREEN = "config_screen"
     SAVE_SELECTION_SCREEN = "save_selection_screen"
+    CONTROLS_SCREEN = "controls_screen"
     NONE = "none_screen"

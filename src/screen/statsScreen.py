@@ -2,6 +2,7 @@ import datetime
 import os
 from appContainer import component
 from config.config import Config
+from config.keyBindings import KeyBindings
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
 from stats.stats import Stats
@@ -11,11 +12,19 @@ import pygame
 # @author Daniel McCoy Stephenson
 @component
 class StatsScreen:
-    def __init__(self, graphik: Graphik, config: Config, status: Status, stats: Stats):
+    def __init__(
+        self,
+        graphik: Graphik,
+        config: Config,
+        status: Status,
+        stats: Stats,
+        keyBindings: KeyBindings,
+    ):
         self.graphik = graphik
         self.config = config
         self.status = status
         self.stats = stats
+        self.keyBindings = keyBindings
         self.nextScreen = ScreenType.OPTIONS_SCREEN
         self.changeScreen = False
 
@@ -30,7 +39,7 @@ class StatsScreen:
     def handleKeyDownEvent(self, key):
         if key == pygame.K_ESCAPE:
             self.switchToOptionsScreen()
-        elif key == pygame.K_PRINTSCREEN:
+        elif key == self.keyBindings.getKey("screenshot"):
             screenshotsFolder = "screenshots"
             if not os.path.exists(screenshotsFolder):
                 os.makedirs(screenshotsFolder)
