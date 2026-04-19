@@ -61,5 +61,7 @@ class MapImageUpdater:
                 self._updateInProgress = False
 
     def shutdown(self, wait=False):
-        """Cleanly shut down the background thread pool."""
+        """Cleanly shut down the background thread pool and recreate it so the
+        same MapImageUpdater instance can be reused after a screen transition."""
         self._executor.shutdown(wait=wait)
+        self._executor = ThreadPoolExecutor(max_workers=1)

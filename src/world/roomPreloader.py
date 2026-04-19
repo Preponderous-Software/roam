@@ -85,5 +85,7 @@ class RoomPreloader:
                 self._pending.discard((x, y))
 
     def shutdown(self, wait=False):
-        """Cleanly shut down the background thread pool."""
+        """Cleanly shut down the background thread pool and recreate it so the
+        same RoomPreloader instance can be reused after a screen transition."""
         self._executor.shutdown(wait=wait)
+        self._executor = ThreadPoolExecutor(max_workers=2)

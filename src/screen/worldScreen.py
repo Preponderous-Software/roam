@@ -1769,8 +1769,10 @@ class WorldScreen:
             self.mapImageUpdater.updateMapImage()
 
     def shutdown(self):
-        """Cleanly shut down background thread pools."""
+        """Cleanly shut down background thread pools and recreate them so the
+        same WorldScreen instance can be reused when the player returns."""
         self._saveExecutor.shutdown(wait=True)
+        self._saveExecutor = ThreadPoolExecutor(max_workers=1)
         self.roomPreloader.shutdown(wait=True)
         self.mapImageUpdater.shutdown(wait=True)
 
