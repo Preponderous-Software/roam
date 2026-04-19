@@ -30,9 +30,9 @@ class Roam:
     def restart(self):
         """Reset all state for a new game session.
 
-        Reuses the existing pygame display and DI container singleton.
-        Clears cached singleton instances so all services are freshly
-        constructed, then re-resolves everything.
+        Re-initializes the pygame display with the current config dimensions
+        and clears cached singleton instances so all services are freshly
+        constructed via the DI container.
         """
         self.gameDisplay = self.initializeGameDisplay()
         self._initializeDependencies()
