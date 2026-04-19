@@ -89,6 +89,10 @@ class WorldScreen:
         self.map = self.container.resolve(Map)
         self.visitedRooms = set()
 
+        # load visited rooms if possible
+        if os.path.exists(self.config.pathToSaveDirectory + "/visitedRooms.json"):
+            self.loadVisitedRoomsFromFile()
+
         # load player location if possible
         if os.path.exists(self.config.pathToSaveDirectory + "/playerLocation.json"):
             self.loadPlayerLocationFromFile()
@@ -1573,6 +1577,28 @@ class WorldScreen:
         if inventory is not None:
             self.player.setInventory(inventory)
 
+    def saveVisitedRoomsToFile(self):
+        rooms = [{"x": x, "y": y} for x, y in self.visitedRooms]
+        data = {"rooms": rooms}
+
+        schema = json.load(open("schemas/visitedRooms.json"))
+        jsonschema.validate(data, schema)
+
+        path = self.config.pathToSaveDirectory + "/visitedRooms.json"
+        json.dump(data, open(path, "w"), indent=4)
+
+    def loadVisitedRoomsFromFile(self):
+        path = self.config.pathToSaveDirectory + "/visitedRooms.json"
+        if not os.path.exists(path):
+            return
+        data = json.load(open(path))
+
+        schema = json.load(open("schemas/visitedRooms.json"))
+        jsonschema.validate(data, schema)
+
+        for room in data["rooms"]:
+            self.visitedRooms.add((room["x"], room["y"]))
+
     def getNewLocationCoordinatesForLivingEntityBasedOnLocation(self, currentLocation):
         newLocationX = None
         newLocationY = None
@@ -1666,6 +1692,7 @@ class WorldScreen:
         self.savePlayerLocationToFile()
         self.savePlayerAttributesToFile()
         self.savePlayerInventoryToFile()
+        self.saveVisitedRoomsToFile()
         self.stats.save()
         self.tickCounter.save()
 

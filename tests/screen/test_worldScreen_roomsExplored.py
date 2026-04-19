@@ -2,6 +2,7 @@ import os
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
+import json
 import pygame
 import pytest
 from unittest.mock import MagicMock, patch
@@ -124,3 +125,62 @@ def test_changeRooms_increments_for_pregenerated_but_unvisited_room():
     # should still increment because the player hasn't visited (0, -1) yet
     ws.stats.incrementRoomsExplored.assert_called_once()
     assert (0, -1) in ws.visitedRooms
+
+
+def test_saveVisitedRoomsToFile(tmp_path):
+    ws = createWorldScreen()
+    ws.config.pathToSaveDirectory = str(tmp_path)
+    ws.visitedRooms = {(0, 0), (1, 0), (0, -1)}
+
+    ws.saveVisitedRoomsToFile()
+
+    path = tmp_path / "visitedRooms.json"
+    assert path.exists()
+    data = json.loads(path.read_text())
+    loaded = {(r["x"], r["y"]) for r in data["rooms"]}
+    assert loaded == {(0, 0), (1, 0), (0, -1)}
+
+
+def test_loadVisitedRoomsFromFile(tmp_path):
+    ws = createWorldScreen()
+    ws.config.pathToSaveDirectory = str(tmp_path)
+
+    data = {"rooms": [{"x": 0, "y": 0}, {"x": 2, "y": 3}, {"x": -1, "y": 5}]}
+    (tmp_path / "visitedRooms.json").write_text(json.dumps(data))
+
+    ws.loadVisitedRoomsFromFile()
+
+    assert ws.visitedRooms == {(0, 0), (2, 3), (-1, 5)}
+
+
+def test_visitedRooms_persisted_prevents_double_counting(tmp_path):
+    """After save/load, revisiting a room should not increment the stat."""
+    ws = createWorldScreen()
+    ws.config.pathToSaveDirectory = str(tmp_path)
+    gridSize = ws.config.gridSize
+
+    # simulate having visited (0, 0) and (0, -1) in a prior session
+    ws.visitedRooms = {(0, 0), (0, -1)}
+    ws.saveVisitedRoomsToFile()
+
+    # new session: load visited rooms
+    ws2 = createWorldScreen()
+    ws2.config.pathToSaveDirectory = str(tmp_path)
+    ws2.loadVisitedRoomsFromFile()
+
+    currentRoom = createMockRoom(gridSize, 0, 0)
+    ws2.currentRoom = currentRoom
+    ws2.player.getDirection.return_value = 0
+    loc = currentRoom.getGrid().getLocationByCoordinates(0, 0)
+    currentRoom.addEntity(ws2.player)
+    currentRoom.addEntityToLocation(ws2.player, loc)
+
+    existingRoom = createMockRoom(gridSize, 0, -1)
+    ws2.map = MagicMock()
+    ws2.map.getRoom.return_value = existingRoom
+    ws2.map.getLocationOfEntity.return_value = loc
+
+    with patch("os.path.exists", return_value=False):
+        ws2.changeRooms()
+
+    ws2.stats.incrementRoomsExplored.assert_not_called()

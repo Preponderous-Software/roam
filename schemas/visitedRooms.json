@@ -1,0 +1,21 @@
+{
+    "type": "object",
+    "properties": {
+        "rooms": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "x": {
+                        "type": "integer"
+                    },
+                    "y": {
+                        "type": "integer"
+                    }
+                },
+                "required": ["x", "y"]
+            }
+        }
+    },
+    "required": ["rooms"]
+}
