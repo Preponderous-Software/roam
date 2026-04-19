@@ -3,6 +3,7 @@ from bootstrap import createContainer
 from config.config import Config
 from config.keyBindings import KeyBindings
 from inventory.inventory import Inventory
+from gameLogging.logger import getLogger
 from player.player import Player
 from lib.graphik.src.graphik import Graphik
 from screen.configScreen import ConfigScreen
@@ -18,6 +19,8 @@ from ui.status import Status
 from screen.worldScreen import WorldScreen
 from world.tickCounter import TickCounter
 
+_logger = getLogger(__name__)
+
 
 # @author Daniel McCoy Stephenson
 # @since August 8th, 2022
@@ -28,6 +31,7 @@ class Roam:
         self.config = config
         self.gameDisplay = self.initializeGameDisplay()
         self._initializeDependencies()
+        _logger.info("game initialized", savePath=config.pathToSaveDirectory)
 
     def restart(self):
         """Reset all state for a new game session.
@@ -132,7 +136,7 @@ class Roam:
             elif result == ScreenType.NONE:
                 self.quitApplication()
             else:
-                print("unrecognized screen: " + result)
+                _logger.error("unrecognized screen", screen=result)
                 self.quitApplication()
 
 

@@ -25,6 +25,9 @@ from entity.stoneBed import StoneBed
 from entity.stoneFloor import StoneFloor
 from entity.woodFloor import WoodFloor
 from inventory.inventory import Inventory
+from gameLogging.logger import getLogger
+
+_logger = getLogger(__name__)
 
 # Entity registries — must be kept in sync with roomJsonReaderWriter.py
 # when adding new entity types.
@@ -65,7 +68,7 @@ class InventoryJsonReaderWriter:
         self.config = config
 
     def saveInventory(self, inventory: Inventory, path):
-        print("Saving inventory to " + path)
+        _logger.info("saving inventory", path=path)
         toReturn = {"inventorySlots": []}
         slotIndex = 0
         for slot in inventory.getInventorySlots():
@@ -95,7 +98,7 @@ class InventoryJsonReaderWriter:
         try:
             jsonschema.validate(toReturn, inventorySchema)
         except jsonschema.exceptions.ValidationError as e:
-            print(e)
+            _logger.error("inventory validation error", error=str(e))
 
         if not os.path.exists(self.config.pathToSaveDirectory):
             os.makedirs(self.config.pathToSaveDirectory)
@@ -104,7 +107,7 @@ class InventoryJsonReaderWriter:
             json.dump(toReturn, f, indent=4)
 
     def loadInventory(self, path):
-        print("Loading inventory from " + path)
+        _logger.info("loading inventory", path=path)
         inventory = Inventory()
         if not os.path.exists(path):
             return inventory

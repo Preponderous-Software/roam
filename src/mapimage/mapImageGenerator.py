@@ -3,6 +3,10 @@
 import os
 from PIL import Image
 
+from gameLogging.logger import getLogger
+
+_logger = getLogger(__name__)
+
 
 # @author Daniel McCoy Stephenson
 # @since February 2nd, 2023
@@ -37,13 +41,11 @@ class MapImageGenerator:
         return os.path.exists(self.mapImagePath)
 
     def getExistingMapImage(self):
-        if self.config.debug:
-            print("Loading existing map image")
+        _logger.debug("loading existing map image", path=self.mapImagePath)
         return Image.open(self.mapImagePath)
 
     def createNewMapImage(self):
-        if self.config.debug:
-            print("Creating new map image")
+        _logger.debug("creating new map image")
         return Image.new(
             "RGB", (self.mapImageSizeInPixels, self.mapImageSizeInPixels), "white"
         )
@@ -87,13 +89,11 @@ class MapImageGenerator:
             else:
                 numOutOfBounds += 1
 
-        if self.config.debug:
-            print("Images pasted: " + str(numPasted))
-            print("Images out of bounds: " + str(numOutOfBounds))
-            print(
-                "Percent of map updated: "
-                + str(
-                    int(numPasted / (self.numRoomsInEachDirection * 2 + 1) ** 2 * 100)
-                )
-                + "%"
-            )
+        _logger.debug(
+            "map image paste complete",
+            imagesPasted=numPasted,
+            imagesOutOfBounds=numOutOfBounds,
+            percentUpdated=int(
+                numPasted / (self.numRoomsInEachDirection * 2 + 1) ** 2 * 100
+            ),
+        )

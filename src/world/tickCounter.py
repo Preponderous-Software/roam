@@ -5,6 +5,9 @@ import jsonschema
 
 from appContainer import component
 from config.config import Config
+from gameLogging.logger import getLogger
+
+_logger = getLogger(__name__)
 
 
 @component
@@ -27,12 +30,10 @@ class TickCounter:
         millisecondsSinceLastTick = (time.time() - self.lastTimestamp) * 1000
         warningThreshold = 500
         if millisecondsSinceLastTick > warningThreshold:
-            print(
-                "WARNING: Tick took "
-                + str(int(millisecondsSinceLastTick))
-                + " milliseconds to complete. (tick="
-                + str(self.tick)
-                + ")"
+            _logger.warning(
+                "tick took too long",
+                durationMs=int(millisecondsSinceLastTick),
+                tickCount=self.tick,
             )
         currentTimestamp = time.time()
         timeElapsed = currentTimestamp - self.lastTimestamp
@@ -59,6 +60,7 @@ class TickCounter:
         path = self.config.pathToSaveDirectory + "/tick.json"
         with open(path, "w") as f:
             json.dump(jsonTick, f, indent=4)
+        _logger.info("tick counter saved", path=path, tickCount=self.tick)
 
     def load(self):
         path = self.config.pathToSaveDirectory + "/tick.json"
@@ -70,3 +72,4 @@ class TickCounter:
         jsonschema.validate(jsonTick, tickSchema)
 
         self.tick = int(jsonTick["tick"])
+        _logger.info("tick counter loaded", path=path, tickCount=self.tick)

@@ -25,3 +25,7 @@ removeDeadEntities: true
 showMiniMap: true
 cameraFollowPlayer: true
 limitTps: true
+
+# logging
+# logLevel: INFO        # TRACE, DEBUG, INFO, WARN, ERROR, CRITICAL
+# logFormat: pretty     # pretty or json

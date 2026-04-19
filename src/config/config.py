@@ -1,5 +1,6 @@
 # @author Daniel McCoy Stephenson
 # @since August 6th, 2022
+import os
 from pathlib import Path
 
 import pygame
@@ -196,6 +197,16 @@ class Config:
         )  # 2 minutes at 30 tps
         self.pathToSaveDirectory = self.getStringValue(
             configValues, "pathToSaveDirectory", "saves/defaultsavefile"
+        )
+
+        # logging
+        self.logLevel = os.environ.get(
+            "LOG_LEVEL",
+            self.getStringValue(configValues, "logLevel", "INFO"),
+        )
+        self.logFormat = os.environ.get(
+            "LOG_FORMAT",
+            self.getStringValue(configValues, "logFormat", "pretty"),
         )
 
         # dynamic (can be changed in game)

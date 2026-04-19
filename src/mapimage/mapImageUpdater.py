@@ -3,8 +3,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 from appContainer import component
 from config.config import Config
+from gameLogging.logger import getLogger
 from mapimage.mapImageGenerator import MapImageGenerator
 from world.tickCounter import TickCounter
+
+_logger = getLogger(__name__)
 
 
 # @author Daniel McCoy Stephenson
@@ -42,6 +45,7 @@ class MapImageUpdater:
             self._updateInProgress = True
         self.tickLastUpdated = self.tickCounter.getTick()
         self._executor.submit(self._doUpdateMapImage)
+        _logger.info("map image update started")
 
     def updateMapImage(self):
         """Run a map image update in the background (non-blocking)."""
@@ -54,8 +58,9 @@ class MapImageUpdater:
                 image = self.mapImageGenerator.generate()
                 image.save(self.mapImageGenerator.mapImagePath)
                 self.mapImageGenerator.clearRoomImages()
+            _logger.info("map image update completed")
         except Exception as e:
-            print("Error updating map image: " + str(e))
+            _logger.error("error updating map image", error=str(e))
         finally:
             with self._lock:
                 self._updateInProgress = False

@@ -55,6 +55,9 @@ from ui.hotbarLayout import (
 from ui.hudDragManager import HudDragManager
 from entity.oakWood import OakWood
 from entity.woodFloor import WoodFloor
+from gameLogging.logger import getLogger
+
+_logger = getLogger(__name__)
 
 MIDDLE_MOUSE_BUTTON = 2
 
@@ -182,13 +185,13 @@ class WorldScreen:
         return room
 
     def printStatsToConsole(self):
-        print("=== Statistics ===")
-        print("Score: " + str(self.stats.getScore()))
-        print("Rooms Explored: " + str(self.stats.getRoomsExplored()))
-        print("Food Eaten: " + str(self.stats.getFoodEaten()))
-        print("Deaths: " + str(self.stats.getNumberOfDeaths()))
-        print("==================")
-
+        _logger.info(
+            "statistics",
+            score=self.stats.getScore(),
+            roomsExplored=self.stats.getRoomsExplored(),
+            foodEaten=self.stats.getFoodEaten(),
+            deaths=self.stats.getNumberOfDeaths(),
+        )
     def getLocationOfPlayer(self):
         return self.map.getLocationOfEntity(self.player, self.currentRoom)
 
@@ -304,7 +307,7 @@ class WorldScreen:
         try:
             roomJson = self.roomJsonReaderWriter.generateJsonForRoom(room)
         except Exception as e:
-            print("Error preparing room snapshot: " + str(e))
+            _logger.error("error preparing room snapshot", error=str(e))
             return
         self._saveExecutor.submit(self._writeJsonToFile, roomJson, roomPath)
 
@@ -317,7 +320,7 @@ class WorldScreen:
             with open(path, "w") as outfile:
                 json.dump(data, outfile, indent=4)
         except Exception as e:
-            print("Error writing JSON file: " + str(e))
+            _logger.error("error writing JSON file", error=str(e), path=path)
 
     def changeRooms(self):
         x, y = self.getCoordinatesForNewRoomBasedOnPlayerLocationAndDirection()
@@ -987,7 +990,7 @@ class WorldScreen:
             with self.mapImageUpdater.roompngsLock:
                 pygame.image.save(surface, path)
         except Exception as e:
-            print("Error saving room PNG: " + str(e))
+            _logger.error("error saving room PNG", error=str(e), path=path)
         finally:
             self._pngSavePending.discard(roomKey)
 
@@ -1545,7 +1548,7 @@ class WorldScreen:
         jsonschema.validate(jsonPlayerLocation, playerLocationSchema)
 
         path = self.config.pathToSaveDirectory + "/playerLocation.json"
-        print("Saving player location to " + path)
+        _logger.info("saving player location", path=path)
         with open(path, "w") as f:
             json.dump(jsonPlayerLocation, f, indent=4)
 
@@ -1554,7 +1557,7 @@ class WorldScreen:
         if not os.path.exists(path):
             return
 
-        print("Loading player location from " + path)
+        _logger.info("loading player location", path=path)
         with open(path) as f:
             jsonPlayerLocation = json.load(f)
 
@@ -1579,7 +1582,7 @@ class WorldScreen:
         jsonschema.validate(jsonPlayerAttributes, playerAttributesSchema)
 
         path = self.config.pathToSaveDirectory + "/playerAttributes.json"
-        print("Saving player attributes to " + path)
+        _logger.info("saving player attributes", path=path)
         with open(path, "w") as f:
             json.dump(jsonPlayerAttributes, f, indent=4)
 
@@ -1588,7 +1591,7 @@ class WorldScreen:
         if not os.path.exists(path):
             return
 
-        print("Loading player attributes from " + path)
+        _logger.info("loading player attributes", path=path)
         with open(path) as f:
             jsonPlayerAttributes = json.load(f)
 
@@ -1653,10 +1656,10 @@ class WorldScreen:
         for livingEntityId in self.currentRoom.getLivingEntities():
             livingEntity = self.currentRoom.getEntity(livingEntityId)
             if livingEntity is None:
-                print(
-                    "Error: living entity with id "
-                    + str(livingEntityId)
-                    + " not found in room. Removing from living entities list."
+                _logger.error(
+                    "living entity not found in room",
+                    entityId=str(livingEntityId),
+                    roomName=self.currentRoom.getName(),
                 )
                 toRemove.append(livingEntityId)
                 continue
@@ -1681,26 +1684,20 @@ class WorldScreen:
                         meat = BearMeat()
                         self.currentRoom.addEntityToLocation(meat, location)
                 except KeyError as ex:
-                    if self.config.debug:
-                        print(
-                            "ERROR: Could not spawn meat for "
-                            + livingEntity.getName()
-                            + " at location "
-                            + str(locationId)
-                            + ": "
-                            + str(ex)
-                        )
+                    _logger.debug(
+                        "could not spawn meat for entity",
+                        entityName=livingEntity.getName(),
+                        locationId=str(locationId),
+                        error=str(ex),
+                    )
 
             self.currentRoom.removeEntity(livingEntity)
             self.currentRoom.removeLivingEntity(livingEntity)
-            if self.config.debug:
-                print(
-                    "Removed "
-                    + livingEntity.getName()
-                    + " from room "
-                    + self.currentRoom.getName()
-                    + " because it had 0 energy"
-                )
+            _logger.debug(
+                "living entity died",
+                entityName=livingEntity.getName(),
+                roomName=self.currentRoom.getName(),
+            )
 
     def save(self):
         """Submit save operations to the background thread.
@@ -1715,7 +1712,7 @@ class WorldScreen:
         try:
             roomJson = self.roomJsonReaderWriter.generateJsonForRoom(self.currentRoom)
         except Exception as e:
-            print("Error preparing room snapshot for save: " + str(e))
+            _logger.error("error preparing room snapshot for save", error=str(e))
             roomJson = None
         roomPath = (
             self.config.pathToSaveDirectory
@@ -1760,7 +1757,7 @@ class WorldScreen:
             self.stats.save()
             self.tickCounter.save()
         except Exception as e:
-            print("Error during save: " + str(e))
+            _logger.error("error during save", error=str(e))
         finally:
             with self._saveLock:
                 self._saveInProgress = False
@@ -1818,7 +1815,7 @@ class WorldScreen:
                         )
                     except Exception as e:
                         if self.config.debug:
-                            print("Error: " + str(e))
+                            _logger.debug("error moving entity to new room", error=str(e))
                         continue
                     newRoom = self.map.getRoom(newRoomX, newRoomY)
                     if newRoom == -1:
@@ -1867,16 +1864,16 @@ class WorldScreen:
                         )
                     except Exception as e:
                         if self.config.debug:
-                            print("Error: " + str(e))
+                            _logger.debug("error getting new location for entity", error=str(e))
                         continue
                     newLocation = newRoom.getGrid().getLocationByCoordinates(
                         newLocationX, newLocationY
                     )
 
                     if newLocation == -1:
-                        print(
-                            "Error: could not find new location for entity "
-                            + entityToMove.getName()
+                        _logger.error(
+                            "could not find new location for entity",
+                            entityName=entityToMove.getName(),
                         )
                         continue
 

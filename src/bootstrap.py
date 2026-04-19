@@ -11,6 +11,7 @@ from di import Container
 
 from config.config import Config
 from lib.graphik.src.graphik import Graphik
+from gameLogging.logger import LoggerFactory
 from player.player import Player
 from world.map import Map
 from world.roomFactory import RoomFactory
@@ -28,6 +29,9 @@ def createContainer(config):
     container.resetSingletons()
     container.registerInstance(Container, container)
     container.registerInstance(Config, config)
+
+    # Logger factory as a singleton service.
+    container.registerInstance(LoggerFactory, LoggerFactory())
 
     # Player requires a tick value from TickCounter, so use a factory.
     container.register(Player, lambda: Player(container.resolve(TickCounter).getTick()))
