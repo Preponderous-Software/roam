@@ -88,10 +88,16 @@ class WorldScreen:
     def initialize(self):
         self.map = self.container.resolve(Map)
         self.visitedRooms = set()
+        self._visitedRoomsDirty = False
 
         # load visited rooms if possible
         if os.path.exists(self.config.pathToSaveDirectory + "/visitedRooms.json"):
             self.loadVisitedRoomsFromFile()
+        elif os.path.exists(
+            self.config.pathToSaveDirectory + "/playerLocation.json"
+        ):
+            # legacy save — seed visitedRooms from existing room files
+            self._migrateVisitedRoomsFromRoomFiles()
 
         # load player location if possible
         if os.path.exists(self.config.pathToSaveDirectory + "/playerLocation.json"):
@@ -337,6 +343,7 @@ class WorldScreen:
 
         if (x, y) not in self.visitedRooms:
             self.visitedRooms.add((x, y))
+            self._visitedRoomsDirty = True
             self.stats.incrementRoomsExplored()
 
         targetX = playerLocation.getX()
@@ -1578,26 +1585,48 @@ class WorldScreen:
             self.player.setInventory(inventory)
 
     def saveVisitedRoomsToFile(self):
-        rooms = [{"x": x, "y": y} for x, y in self.visitedRooms]
+        rooms = [{"x": x, "y": y} for x, y in sorted(self.visitedRooms)]
         data = {"rooms": rooms}
 
-        schema = json.load(open("schemas/visitedRooms.json"))
+        with open("schemas/visitedRooms.json") as schemaFile:
+            schema = json.load(schemaFile)
         jsonschema.validate(data, schema)
 
         path = self.config.pathToSaveDirectory + "/visitedRooms.json"
-        json.dump(data, open(path, "w"), indent=4)
+        with open(path, "w") as visitedRoomsFile:
+            json.dump(data, visitedRoomsFile, indent=4)
+        self._visitedRoomsDirty = False
 
     def loadVisitedRoomsFromFile(self):
         path = self.config.pathToSaveDirectory + "/visitedRooms.json"
         if not os.path.exists(path):
             return
-        data = json.load(open(path))
 
-        schema = json.load(open("schemas/visitedRooms.json"))
+        with open(path) as visitedRoomsFile:
+            data = json.load(visitedRoomsFile)
+
+        with open("schemas/visitedRooms.json") as schemaFile:
+            schema = json.load(schemaFile)
         jsonschema.validate(data, schema)
 
         for room in data["rooms"]:
             self.visitedRooms.add((room["x"], room["y"]))
+
+    def _migrateVisitedRoomsFromRoomFiles(self):
+        """Seed visitedRooms from existing room_<x>_<y>.json files for legacy saves."""
+        roomsDir = self.config.pathToSaveDirectory + "/rooms"
+        if not os.path.isdir(roomsDir):
+            return
+        import re
+
+        pattern = re.compile(r"^room_(-?\d+)_(-?\d+)\.json$")
+        for filename in os.listdir(roomsDir):
+            match = pattern.match(filename)
+            if match:
+                x, y = int(match.group(1)), int(match.group(2))
+                self.visitedRooms.add((x, y))
+        if self.visitedRooms:
+            self._visitedRoomsDirty = True
 
     def getNewLocationCoordinatesForLivingEntityBasedOnLocation(self, currentLocation):
         newLocationX = None
@@ -1692,7 +1721,8 @@ class WorldScreen:
         self.savePlayerLocationToFile()
         self.savePlayerAttributesToFile()
         self.savePlayerInventoryToFile()
-        self.saveVisitedRoomsToFile()
+        if getattr(self, "_visitedRoomsDirty", True):
+            self.saveVisitedRoomsToFile()
         self.stats.save()
         self.tickCounter.save()
 
@@ -1767,14 +1797,9 @@ class WorldScreen:
                             self.map.addRoom(newRoom)
                             self.status.set("Area loaded")
                         else:
-                            (
-                                x,
-                                y,
-                            ) = (
-                                self.getCoordinatesForNewRoomBasedOnPlayerLocationAndDirection()
+                            newRoom = self.map.generateNewRoom(
+                                newRoomX, newRoomY
                             )
-                            newRoom = self.map.generateNewRoom(x, y)
-                            self.status.set("New area discovered")
 
                     # get new location
                     currentLocationId = entityToMove.getLocationID()

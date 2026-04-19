@@ -47,6 +47,8 @@ def createMockRoom(gridSize, x=0, y=0):
 
 
 def test_changeRooms_increments_roomsExplored_for_new_room():
+    """When the room does not exist in the map and must be generated,
+    entering it should still increment roomsExplored."""
     ws = createWorldScreen()
     gridSize = ws.config.gridSize
 
@@ -62,12 +64,14 @@ def test_changeRooms_increments_roomsExplored_for_new_room():
 
     newRoom = createMockRoom(gridSize, 0, -1)
     ws.map = MagicMock()
-    ws.map.getRoom.return_value = newRoom
+    ws.map.getRoom.return_value = -1
+    ws.map.generateNewRoom.return_value = newRoom
     ws.map.getLocationOfEntity.return_value = loc
 
     with patch("os.path.exists", return_value=False):
         ws.changeRooms()
 
+    ws.map.generateNewRoom.assert_called_once()
     ws.stats.incrementRoomsExplored.assert_called_once()
 
 
@@ -184,3 +188,41 @@ def test_visitedRooms_persisted_prevents_double_counting(tmp_path):
         ws2.changeRooms()
 
     ws2.stats.incrementRoomsExplored.assert_not_called()
+
+
+def test_migrateVisitedRoomsFromRoomFiles(tmp_path):
+    """Legacy saves without visitedRooms.json should seed from room files."""
+    ws = createWorldScreen()
+    ws.config.pathToSaveDirectory = str(tmp_path)
+
+    rooms_dir = tmp_path / "rooms"
+    rooms_dir.mkdir()
+    (rooms_dir / "room_0_0.json").write_text("{}")
+    (rooms_dir / "room_1_0.json").write_text("{}")
+    (rooms_dir / "room_-2_3.json").write_text("{}")
+    (rooms_dir / "not_a_room.txt").write_text("{}")
+
+    ws._migrateVisitedRoomsFromRoomFiles()
+
+    assert ws.visitedRooms == {(0, 0), (1, 0), (-2, 3)}
+    assert ws._visitedRoomsDirty is True
+
+
+def test_save_skips_visitedRooms_when_not_dirty(tmp_path):
+    """When visitedRooms hasn't changed, save() should not write it."""
+    ws = createWorldScreen()
+    ws.config.pathToSaveDirectory = str(tmp_path)
+    ws.config.showMiniMap = False
+    ws.visitedRooms = {(0, 0)}
+    ws._visitedRoomsDirty = False
+    ws.currentRoom = MagicMock()
+    ws.roomJsonReaderWriter = MagicMock()
+    ws.tickCounter = MagicMock()
+    ws.saveCurrentRoomToFile = MagicMock()
+    ws.savePlayerLocationToFile = MagicMock()
+    ws.savePlayerAttributesToFile = MagicMock()
+    ws.savePlayerInventoryToFile = MagicMock()
+
+    ws.save()
+
+    assert not (tmp_path / "visitedRooms.json").exists()
