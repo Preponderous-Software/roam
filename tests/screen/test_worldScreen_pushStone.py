@@ -46,7 +46,6 @@ def test_tryPushStone_success():
     ws.config.pushableStone = True
 
     grid = Grid(3, 1)
-    grid.getLocationByCoordinates(0, 0)
     loc1 = grid.getLocationByCoordinates(1, 0)
     loc2 = grid.getLocationByCoordinates(2, 0)
 

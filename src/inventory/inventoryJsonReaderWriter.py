@@ -26,6 +26,9 @@ from entity.stoneFloor import StoneFloor
 from entity.woodFloor import WoodFloor
 from inventory.inventory import Inventory
 
+# Entity registries — must be kept in sync with roomJsonReaderWriter.py
+# when adding new entity types.
+
 # Simple entity classes that require no special constructor arguments
 _SIMPLE_ENTITY_CONSTRUCTORS = {
     "Apple": Apple,
