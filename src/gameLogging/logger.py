@@ -33,9 +33,9 @@ _VALID_LEVELS = {
     "CRITICAL": logging.CRITICAL,
 }
 
-_LOG_LEVEL_NAME = os.environ.get("LOG_LEVEL", "INFO").upper()
+_LOG_LEVEL_NAME = os.environ.get("LOG_LEVEL", "INFO").strip().upper()
 _LOG_LEVEL = _VALID_LEVELS.get(_LOG_LEVEL_NAME, logging.INFO)
-_LOG_FORMAT = os.environ.get("LOG_FORMAT", "pretty").lower()
+_LOG_FORMAT = os.environ.get("LOG_FORMAT", "pretty").strip().lower()
 
 # ---------------------------------------------------------------------------
 # Redaction helper

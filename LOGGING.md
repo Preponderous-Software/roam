@@ -12,6 +12,34 @@ Logging behaviour is controlled by two environment variables:
 | `LOG_LEVEL` | `INFO` | Minimum log level to emit |
 | `LOG_FORMAT` | `pretty` | Output format (`pretty` or `json`) |
 
+### Setting environment variables by platform
+
+**Linux / macOS (bash):**
+```bash
+# Inline (preferred — scoped to a single command)
+LOG_LEVEL=DEBUG LOG_FORMAT=json python src/roam.py
+
+# Or export for the current shell session
+export LOG_LEVEL=DEBUG
+python src/roam.py
+```
+
+**Windows — Command Prompt (cmd.exe):**
+```cmd
+set LOG_LEVEL=DEBUG
+python src\roam.py
+```
+> ⚠️ `set` in cmd.exe requires the `=` sign with **no spaces** around it.
+> `set LOG_LEVEL DEBUG` (without `=`) will **not** work.
+
+**Windows — PowerShell:**
+```powershell
+$env:LOG_LEVEL = "DEBUG"
+python src\roam.py
+```
+> ⚠️ PowerShell's `Set-Variable` (aliased as `set`) creates a *PowerShell*
+> variable, not a process environment variable. Always use the `$env:` prefix.
+
 ### Accepted log levels
 
 | Level | Numeric | Use |
