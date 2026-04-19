@@ -87,6 +87,7 @@ class WorldScreen:
 
     def initialize(self):
         self.map = self.container.resolve(Map)
+        self.visitedRooms = set()
 
         # load player location if possible
         if os.path.exists(self.config.pathToSaveDirectory + "/playerLocation.json"):
@@ -97,6 +98,9 @@ class WorldScreen:
                 self.currentRoom = self.map.generateNewRoom(0, 0)
             self.currentRoom.addEntity(self.player)
             self.stats.incrementRoomsExplored()
+        self.visitedRooms.add(
+            (self.currentRoom.getX(), self.currentRoom.getY())
+        )
 
         # load player attributes if possible
         if os.path.exists(self.config.pathToSaveDirectory + "/playerAttributes.json"):
@@ -324,9 +328,12 @@ class WorldScreen:
                 self.currentRoom = self.map.generateNewRoom(x, y)
                 self.status.set("New area discovered")
                 self.stats.incrementScore()
-                self.stats.incrementRoomsExplored()
         else:
             self.currentRoom = room
+
+        if (x, y) not in self.visitedRooms:
+            self.visitedRooms.add((x, y))
+            self.stats.incrementRoomsExplored()
 
         targetX = playerLocation.getX()
         targetY = playerLocation.getY()
@@ -1741,8 +1748,6 @@ class WorldScreen:
                             )
                             newRoom = self.map.generateNewRoom(x, y)
                             self.status.set("New area discovered")
-                            self.stats.incrementScore()
-                            self.stats.incrementRoomsExplored()
 
                     # get new location
                     currentLocationId = entityToMove.getLocationID()
