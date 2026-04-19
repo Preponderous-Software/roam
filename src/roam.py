@@ -23,14 +23,30 @@ class Roam:
     def __init__(self, config: Config):
         pygame.init()
         pygame.display.set_icon(pygame.image.load("assets/images/player_down.png"))
-        self.running = True
         self.config = config
-        pygame.display.set_caption("Roam" + " (" + config.pathToSaveDirectory + ")")
+        self.gameDisplay = self.initializeGameDisplay()
+        self._initializeDependencies()
+
+    def restart(self):
+        """Reset all state for a new game session.
+
+        Reuses the existing pygame display and DI container singleton.
+        Clears cached singleton instances so all services are freshly
+        constructed, then re-resolves everything.
+        """
+        self.gameDisplay = self.initializeGameDisplay()
+        self._initializeDependencies()
+
+    def _initializeDependencies(self):
+        """Wire up the DI container and resolve all services and screens."""
+        self.running = True
+        pygame.display.set_caption(
+            "Roam" + " (" + self.config.pathToSaveDirectory + ")"
+        )
 
         # Create the DI container and register runtime dependencies.
-        self.container = createContainer(config)
+        self.container = createContainer(self.config)
         self.tickCounter = self.container.resolve(TickCounter)
-        self.gameDisplay = self.initializeGameDisplay()
         self.container.registerInstance(Graphik, Graphik(self.gameDisplay))
         self.graphik = self.container.resolve(Graphik)
         self.status = self.container.resolve(Status)
@@ -117,4 +133,4 @@ while True:
     result = roam.run()
     if result != "restart":
         break
-    roam = Roam(config)
+    roam.restart()

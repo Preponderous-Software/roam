@@ -106,7 +106,7 @@ service = container.resolve(MyNewService)
 
 ### Restart Safety
 
-The module-level container singleton persists across game restarts. `bootstrap.createContainer()` calls `container.resetSingletons()` at the start of each `Roam` initialization to clear cached singleton instances, ensuring each run gets fresh objects. Explicit instance registrations (via `registerInstance`) are preserved until re-registered.
+The module-level container singleton persists across game restarts. Rather than constructing a new `Roam(config)` to restart, the module-level loop calls `roam.restart()`, which resets state on the existing instance. Internally, `restart()` calls `_initializeDependencies()` which invokes `bootstrap.createContainer()` — this calls `container.resetSingletons()` to clear cached singleton instances, then re-registers and re-resolves everything. This plays naturally with the singleton container and avoids the risk of stale cached instances leaking across sessions. Explicit instance registrations (via `registerInstance`) are preserved until re-registered.
 
 ### Rules for Contributors
 
