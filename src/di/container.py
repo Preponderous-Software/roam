@@ -114,17 +114,21 @@ class Container:
             return reg.instance
 
         # Circular dependency guard.
-        if abstractType in {t for t in resolutionPath}:
+        if abstractType in resolutionPath:
             chain = " -> ".join(str(t) for t in resolutionPath)
             chain += " -> " + str(abstractType)
             raise DIError("Circular dependency detected: " + chain)
 
         resolutionPath = resolutionPath + (abstractType,)
 
-        # Build the instance via auto-wiring.
+        # Build the instance via auto-wiring.  Instance creation must stay
+        # outside the lock because _createInstance recursively calls _resolve
+        # for dependencies, and threading.Lock is not reentrant — holding it
+        # here would deadlock on the first nested resolve.  Roam is
+        # single-threaded so concurrent duplicate creation cannot occur.
         instance = self._createInstance(reg.factory, resolutionPath)
 
-        # Cache singletons.
+        # Cache singletons (double-checked locking).
         if reg.lifetime == "singleton":
             with self._lock:
                 if reg.instance is None:
