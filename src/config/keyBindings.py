@@ -1,5 +1,4 @@
 import pygame
-from config.config import Config
 
 
 # @author Copilot
@@ -95,8 +94,12 @@ class KeyBindings:
 
     def getConflicts(self):
         """Return a set of actions that share a key with another action."""
+        return self.getConflictsForBindings(self.bindings)
+
+    def getConflictsForBindings(self, bindings):
+        """Return a set of actions that share a key with another action in the given bindings dict."""
         keyToActions = {}
-        for action, key in self.bindings.items():
+        for action, key in bindings.items():
             keyToActions.setdefault(key, []).append(action)
         conflicting = set()
         for actions in keyToActions.values():

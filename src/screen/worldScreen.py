@@ -727,7 +727,6 @@ class WorldScreen:
             self.changeScreen = True
         elif key == kb.getKey("move_up") or key == kb.getKey("alt_move_up"):
             self.player.setDirection(0)
-            self.player
             if self.checkPlayerMovementCooldown(self.player.getTickLastMoved()):
                 self.movePlayer(self.player.direction)
         elif key == kb.getKey("move_left") or key == kb.getKey("alt_move_left"):

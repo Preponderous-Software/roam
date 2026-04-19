@@ -92,6 +92,15 @@ logged in detail below.
   `KeyBindings` — gathering and placing are mouse-only actions (left/right
   click) and were never triggered by keyboard keys. Removed corresponding
   dead-code key-up handlers from `worldScreen.py`.
+- **Review follow-up (round 2):**
+  - Removed unused `Config` import from `keyBindings.py`.
+  - Centralized conflict detection: added `getConflictsForBindings(bindings)` to
+    `KeyBindings` and refactored `ControlsScreen.getActiveConflicts()` to use it.
+  - Fixed `ControlsScreen.resetToDefaults()` to write defaults into
+    `pendingBindings` instead of mutating `self.keyBindings` directly, so Cancel
+    correctly reverts changes.
+  - Removed stray no-op `self.player` statement in `worldScreen.py`.
+  - Clarified README tip to note remapping applies only to in-world controls.
 - **Tests:** All 319 tests pass (303 original + 16 new).
 
 ### 2026-04-19 — Refactor restart mechanism to use `restart()` method

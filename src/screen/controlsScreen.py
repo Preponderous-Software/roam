@@ -40,9 +40,7 @@ class ControlsScreen:
         self.switchToOptionsScreen()
 
     def resetToDefaults(self):
-        self.keyBindings.resetToDefaults()
-        if self.pendingBindings is not None:
-            self.pendingBindings = dict(self.keyBindings.bindings)
+        self.pendingBindings = dict(self.keyBindings.DEFAULT_BINDINGS)
 
     def getActiveBindings(self):
         if self.pendingBindings is not None:
@@ -50,15 +48,7 @@ class ControlsScreen:
         return self.keyBindings.bindings
 
     def getActiveConflicts(self):
-        bindings = self.getActiveBindings()
-        keyToActions = {}
-        for action, key in bindings.items():
-            keyToActions.setdefault(key, []).append(action)
-        conflicting = set()
-        for actions in keyToActions.values():
-            if len(actions) > 1:
-                conflicting.update(actions)
-        return conflicting
+        return self.keyBindings.getConflictsForBindings(self.getActiveBindings())
 
     def drawTitle(self):
         x, y = self.graphik.getGameDisplay().get_size()
