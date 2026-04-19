@@ -3,6 +3,7 @@ import json
 import math
 from math import ceil
 import os
+import re
 import time
 import jsonschema
 import pygame
@@ -1617,7 +1618,6 @@ class WorldScreen:
         roomsDir = self.config.pathToSaveDirectory + "/rooms"
         if not os.path.isdir(roomsDir):
             return
-        import re
 
         pattern = re.compile(r"^room_(-?\d+)_(-?\d+)\.json$")
         for filename in os.listdir(roomsDir):
