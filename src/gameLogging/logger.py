@@ -7,7 +7,7 @@ Environment variables
 ---------------------
 LOG_LEVEL : str
     Minimum log level (default: ``INFO``).
-    Accepted values: TRACE, DEBUG, INFO, WARN, WARNING, ERROR, CRITICAL.
+    Accepted values: DEBUG, INFO, WARN, WARNING, ERROR, CRITICAL.
 LOG_FORMAT : str
     Output format — ``json`` for machine-readable output or ``pretty``
     for human-readable coloured output (default: ``pretty``).
@@ -22,16 +22,9 @@ import structlog
 
 
 # ---------------------------------------------------------------------------
-# Custom TRACE level (below DEBUG)
-# ---------------------------------------------------------------------------
-TRACE_LEVEL = 5
-logging.addLevelName(TRACE_LEVEL, "TRACE")
-
-# ---------------------------------------------------------------------------
 # Configuration from environment
 # ---------------------------------------------------------------------------
 _VALID_LEVELS = {
-    "TRACE": TRACE_LEVEL,
     "DEBUG": logging.DEBUG,
     "INFO": logging.INFO,
     "WARN": logging.WARNING,
@@ -70,8 +63,16 @@ def redact(value):
 # structlog configuration
 # ---------------------------------------------------------------------------
 def _configureStructlog():
-    """Configure structlog processors and output format."""
+    """Configure structlog processors and output format.
+
+    Uses stdlib logging as the backend so that ``_LOG_LEVEL`` is respected
+    for filtering.
+    """
+    # Configure stdlib root logger so the level gate works.
+    logging.basicConfig(format="%(message)s", stream=sys.stderr, level=_LOG_LEVEL)
+
     shared_processors = [
+        structlog.stdlib.filter_by_level,
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
         structlog.processors.TimeStamper(fmt="iso"),
@@ -85,12 +86,22 @@ def _configureStructlog():
         renderer = structlog.dev.ConsoleRenderer()
 
     structlog.configure(
-        processors=shared_processors + [renderer],
+        processors=shared_processors + [
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+        ],
         wrapper_class=structlog.stdlib.BoundLogger,
         context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(file=sys.stderr),
+        logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
+
+    # Install a ProcessorFormatter on the root handler so structlog
+    # processors render the final output.
+    formatter = structlog.stdlib.ProcessorFormatter(
+        processor=renderer,
+    )
+    for handler in logging.root.handlers:
+        handler.setFormatter(formatter)
 
 
 _configureStructlog()

@@ -59,8 +59,8 @@ class MapImageUpdater:
                 image.save(self.mapImageGenerator.mapImagePath)
                 self.mapImageGenerator.clearRoomImages()
             _logger.info("map image update completed")
-        except Exception as e:
-            _logger.error("error updating map image", error=str(e))
+        except Exception:
+            _logger.exception("error updating map image")
         finally:
             with self._lock:
                 self._updateInProgress = False

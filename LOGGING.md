@@ -5,21 +5,17 @@ across the codebase.
 
 ## Configuration
 
-Logging behaviour is controlled by two environment variables (and/or
-corresponding entries in `config.yml`):
+Logging behaviour is controlled by two environment variables:
 
-| Variable | Config key | Default | Description |
-|---|---|---|---|
-| `LOG_LEVEL` | `logLevel` | `INFO` | Minimum log level to emit |
-| `LOG_FORMAT` | `logFormat` | `pretty` | Output format (`pretty` or `json`) |
-
-Environment variables take precedence over `config.yml` values.
+| Variable | Default | Description |
+|---|---|---|
+| `LOG_LEVEL` | `INFO` | Minimum log level to emit |
+| `LOG_FORMAT` | `pretty` | Output format (`pretty` or `json`) |
 
 ### Accepted log levels
 
 | Level | Numeric | Use |
 |---|---|---|
-| `TRACE` | 5 | Function entry/exit, game loop iterations, full entity state |
 | `DEBUG` | 10 | Room generation decisions, movement/collision, inventory ops, AI behaviour |
 | `INFO` | 20 | Game start/stop, room transitions, save/load, major state changes |
 | `WARN` | 30 | Slow ticks, missing assets with fallback, recoverable save issues |

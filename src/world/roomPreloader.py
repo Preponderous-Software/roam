@@ -85,8 +85,8 @@ class RoomPreloader:
             else:
                 gameMap.generateNewRoom(x, y)
                 _logger.debug("preloaded room via generation", roomX=x, roomY=y)
-        except Exception as e:
-            _logger.error("room preload failed", roomX=x, roomY=y, error=str(e))
+        except Exception:
+            _logger.exception("room preload failed", roomX=x, roomY=y)
         finally:
             with self._pendingLock:
                 self._pending.discard((x, y))
