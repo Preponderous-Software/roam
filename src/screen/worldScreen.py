@@ -6,7 +6,7 @@ import os
 import time
 import jsonschema
 import pygame
-from di import Container
+from di import Container, DIError
 from entity.apple import Apple
 from entity.bed import Bed
 from entity.campfire import Campfire
@@ -60,7 +60,7 @@ class WorldScreen:
         tickCounter: TickCounter,
         stats: Stats,
         player: Player,
-        container: Container = None,
+        container: Container,
     ):
         self.graphik = graphik
         self.config = config
@@ -73,16 +73,14 @@ class WorldScreen:
         self.showInventory = False
         self.nextScreen = ScreenType.OPTIONS_SCREEN
         self.changeScreen = False
-        if self.container is not None:
-            self.roomJsonReaderWriter = self.container.resolve(RoomJsonReaderWriter)
-            self.mapImageUpdater = self.container.resolve(MapImageUpdater)
-            self.hudDragManager = self.container.resolve(HudDragManager)
-        else:
-            self.roomJsonReaderWriter = RoomJsonReaderWriter(
-                self.config.gridSize, self.graphik, self.tickCounter, self.config
+        if self.container is None:
+            raise DIError(
+                "WorldScreen requires a DI container. "
+                "Pass a configured Container instance."
             )
-            self.mapImageUpdater = MapImageUpdater(self.tickCounter, self.config)
-            self.hudDragManager = HudDragManager()
+        self.roomJsonReaderWriter = self.container.resolve(RoomJsonReaderWriter)
+        self.mapImageUpdater = self.container.resolve(MapImageUpdater)
+        self.hudDragManager = self.container.resolve(HudDragManager)
         self.minimapScaleFactor = 0.10
         self.minimapX = 5
         self.minimapY = 5
@@ -91,12 +89,7 @@ class WorldScreen:
         self.showHelp = False
 
     def initialize(self):
-        if self.container is not None:
-            self.map = self.container.resolve(Map)
-        else:
-            self.map = Map(
-                self.config.gridSize, self.graphik, self.tickCounter, self.config
-            )
+        self.map = self.container.resolve(Map)
 
         # load player location if possible
         if os.path.exists(self.config.pathToSaveDirectory + "/playerLocation.json"):

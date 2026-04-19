@@ -68,6 +68,18 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-19 — Third round: split container module, remove manual fallback
+- **Changes:**
+  - Split `src/di/container.py` into three modules per Clean Code principles:
+    `src/di/error.py` (`DIError`), `src/di/registration.py` (`_Registration`),
+    and `src/di/container.py` (`Container`). Updated `src/di/__init__.py` to
+    re-export from the new locations. Public API unchanged.
+  - Removed manual dependency fallback from `WorldScreen.__init__` and
+    `WorldScreen.initialize()`. The `container` parameter is now required
+    (no default value); if missing, a `DIError` is raised instead of
+    silently reverting to manual construction.
+- **Tests:** All 301 tests pass.
+
 ### 2026-04-19 — Address second round of DI PR review comments
 - **Changes:**
   - Moved `tests/test_di.py` → `tests/di/test_container.py` to follow
