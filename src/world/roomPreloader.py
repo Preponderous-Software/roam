@@ -28,7 +28,7 @@ class RoomPreloader:
         self.graphik = graphik
         self.tickCounter = tickCounter
         self.config = config
-        self._executor = ThreadPoolExecutor(max_workers=2)
+        self._executor = ThreadPoolExecutor(max_workers=2)  # balance responsiveness with resource usage
         self._pending = set()
         self._pendingLock = threading.Lock()
 
