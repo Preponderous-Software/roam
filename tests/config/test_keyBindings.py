@@ -28,6 +28,10 @@ def test_defaults():
     assert kb.getKey("move_left") == pygame.K_a
     assert kb.getKey("move_down") == pygame.K_s
     assert kb.getKey("move_right") == pygame.K_d
+    assert kb.getKey("alt_move_up") == pygame.K_UP
+    assert kb.getKey("alt_move_left") == pygame.K_LEFT
+    assert kb.getKey("alt_move_down") == pygame.K_DOWN
+    assert kb.getKey("alt_move_right") == pygame.K_RIGHT
     assert kb.getKey("run") == pygame.K_LSHIFT
     assert kb.getKey("crouch") == pygame.K_LCTRL
     assert kb.getKey("gather") == pygame.K_e

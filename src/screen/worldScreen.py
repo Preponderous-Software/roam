@@ -725,20 +725,20 @@ class WorldScreen:
         if key == pygame.K_ESCAPE:
             self.nextScreen = ScreenType.OPTIONS_SCREEN
             self.changeScreen = True
-        elif key == kb.getKey("move_up") or key == pygame.K_UP:
+        elif key == kb.getKey("move_up") or key == kb.getKey("alt_move_up"):
             self.player.setDirection(0)
             self.player
             if self.checkPlayerMovementCooldown(self.player.getTickLastMoved()):
                 self.movePlayer(self.player.direction)
-        elif key == kb.getKey("move_left") or key == pygame.K_LEFT:
+        elif key == kb.getKey("move_left") or key == kb.getKey("alt_move_left"):
             self.player.setDirection(1)
             if self.checkPlayerMovementCooldown(self.player.getTickLastMoved()):
                 self.movePlayer(self.player.direction)
-        elif key == kb.getKey("move_down") or key == pygame.K_DOWN:
+        elif key == kb.getKey("move_down") or key == kb.getKey("alt_move_down"):
             self.player.setDirection(2)
             if self.checkPlayerMovementCooldown(self.player.getTickLastMoved()):
                 self.movePlayer(self.player.direction)
-        elif key == kb.getKey("move_right") or key == pygame.K_RIGHT:
+        elif key == kb.getKey("move_right") or key == kb.getKey("alt_move_right"):
             self.player.setDirection(3)
             if self.checkPlayerMovementCooldown(self.player.getTickLastMoved()):
                 self.movePlayer(self.player.direction)
@@ -806,19 +806,19 @@ class WorldScreen:
     def handleKeyUpEvent(self, key):
         kb = self.keyBindings
         if (
-            key == kb.getKey("move_up") or key == pygame.K_UP
+            key == kb.getKey("move_up") or key == kb.getKey("alt_move_up")
         ) and self.player.getDirection() == 0:
             self.player.setDirection(-1)
         elif (
-            key == kb.getKey("move_left") or key == pygame.K_LEFT
+            key == kb.getKey("move_left") or key == kb.getKey("alt_move_left")
         ) and self.player.getDirection() == 1:
             self.player.setDirection(-1)
         elif (
-            key == kb.getKey("move_down") or key == pygame.K_DOWN
+            key == kb.getKey("move_down") or key == kb.getKey("alt_move_down")
         ) and self.player.getDirection() == 2:
             self.player.setDirection(-1)
         elif (
-            key == kb.getKey("move_right") or key == pygame.K_RIGHT
+            key == kb.getKey("move_right") or key == kb.getKey("alt_move_right")
         ) and self.player.getDirection() == 3:
             self.player.setDirection(-1)
         elif key == kb.getKey("gather"):
