@@ -56,10 +56,11 @@ class MapImageGenerator:
         numOutOfBounds = 0
 
         for roomImageFilename in roomImages:
-            image = Image.open(self.roomImagesDirectoryPath + "/" + roomImageFilename)
-
-            roomSize = 100
-            image = image.resize((roomSize, roomSize))
+            with Image.open(
+                self.roomImagesDirectoryPath + "/" + roomImageFilename
+            ) as image:
+                roomSize = 100
+                resizedImage = image.resize((roomSize, roomSize))
 
             roomCoordinates = roomImageFilename.split(".")[0].split("_")
             roomX = int(roomCoordinates[0])
@@ -81,7 +82,7 @@ class MapImageGenerator:
                 and picX < self.mapImageSizeInPixels
                 and picY < self.mapImageSizeInPixels
             ):
-                self.mapImage.paste(image, (picX, picY))
+                self.mapImage.paste(resizedImage, (picX, picY))
                 numPasted += 1
             else:
                 numOutOfBounds += 1

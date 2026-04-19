@@ -17,7 +17,7 @@ def test_initialization():
 def test_loadInventory():
     inventoryJsonReaderWriterInstance = createInventoryJsonReaderWriterInstance()
     inventoryInstance = inventoryJsonReaderWriterInstance.loadInventory(
-        "tests\inventory\inventory.json"
+        "tests/inventory/inventory.json"
     )
     assert inventoryInstance != None
     assert inventoryInstance.getNumInventorySlots() == 25
@@ -28,13 +28,13 @@ def test_loadInventory():
 def test_saveInventory():
     inventoryJsonReaderWriterInstance = createInventoryJsonReaderWriterInstance()
     inventoryInstance = inventoryJsonReaderWriterInstance.loadInventory(
-        "tests\inventory\inventory.json"
+        "tests/inventory/inventory.json"
     )
     inventoryJsonReaderWriterInstance.saveInventory(
-        inventoryInstance, "tests\inventory\inventory2.json"
+        inventoryInstance, "tests/inventory/inventory2.json"
     )
     inventoryInstance2 = inventoryJsonReaderWriterInstance.loadInventory(
-        "tests\inventory\inventory2.json"
+        "tests/inventory/inventory2.json"
     )
     assert inventoryInstance2 != None
     assert inventoryInstance2.getNumInventorySlots() == 25
