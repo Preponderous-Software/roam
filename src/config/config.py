@@ -4,6 +4,10 @@ from pathlib import Path
 
 import pygame
 
+from gameLogging.logger import getLogger
+
+_logger = getLogger(__name__)
+
 
 class Config:
     @staticmethod
@@ -213,6 +217,17 @@ class Config:
         )
         self.limitTps = self.getBoolValue(configValues, "limitTps", True)
         self.pushableStone = self.getBoolValue(configValues, "pushableStone", True)
+
+        _logger.debug(
+            "config loaded",
+            displayWidth=self.displayWidth,
+            displayHeight=self.displayHeight,
+            ticksPerSecond=self.ticksPerSecond,
+            gridSize=self.gridSize,
+            worldBorder=self.worldBorder,
+            fullscreen=self.fullscreen,
+            debug=self.debug,
+        )
 
     def saveWindowSize(self, width, height):
         width = max(int(width), self.MIN_WINDOW_SIZE)

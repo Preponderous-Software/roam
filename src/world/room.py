@@ -10,6 +10,9 @@ from entity.stoneFloor import StoneFloor
 from entity.woodFloor import WoodFloor
 from lib.pyenvlib.environment import Environment
 from lib.graphik.src.graphik import Graphik
+from gameLogging.logger import getLogger
+
+_logger = getLogger(__name__)
 
 
 # @author Daniel McCoy Stephenson
@@ -93,18 +96,18 @@ class Room(Environment):
 
     def removeLivingEntity(self, entity):
         if entity.getID() not in self.livingEntities:
-            print(
-                "Entity was not found in living entities list when trying to remove it. Entity ID: "
-                + str(entity.getID())
+            _logger.warning(
+                "entity not found in living entities list when removing",
+                entityId=str(entity.getID()),
             )
             return
         del self.livingEntities[entity.getID()]
 
     def removeLivingEntityById(self, entityId):
         if entityId not in self.livingEntities:
-            print(
-                "Entity was not found in living entities list when trying to remove it. Entity ID: "
-                + str(entityId)
+            _logger.warning(
+                "entity not found in living entities list when removing by id",
+                entityId=str(entityId),
             )
             return
         del self.livingEntities[entityId]
@@ -293,13 +296,11 @@ class Room(Environment):
         try:
             return self.getGrid().getLocation(locationId)
         except KeyError:
-            print(
-                "ERROR: Location not found when trying to "
-                + actionName
-                + ". Entity ID: "
-                + str(entityId)
-                + ", Location ID: "
-                + str(locationId)
+            _logger.error(
+                "location not found",
+                action=actionName,
+                entityId=str(entityId),
+                locationId=str(locationId),
             )
             return None
 

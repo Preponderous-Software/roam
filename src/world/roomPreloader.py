@@ -3,9 +3,12 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 
 from config.config import Config
+from gameLogging.logger import getLogger
 from lib.graphik.src.graphik import Graphik
 from world.map import Map
 from world.tickCounter import TickCounter
+
+_logger = getLogger(__name__)
 
 
 # @author Copilot
@@ -78,8 +81,12 @@ class RoomPreloader:
                 roomJsonReaderWriter = self._roomJsonReaderWriterFactory()
                 room = roomJsonReaderWriter.loadRoom(nextRoomPath)
                 gameMap.addRoom(room)
+                _logger.debug("preloaded room from file", roomX=x, roomY=y)
             else:
                 gameMap.generateNewRoom(x, y)
+                _logger.debug("preloaded room via generation", roomX=x, roomY=y)
+        except Exception:
+            _logger.exception("room preload failed", roomX=x, roomY=y)
         finally:
             with self._pendingLock:
                 self._pending.discard((x, y))

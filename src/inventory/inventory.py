@@ -1,4 +1,7 @@
+from gameLogging.logger import getLogger
 from inventory.inventorySlot import InventorySlot
+
+_logger = getLogger(__name__)
 
 
 # @author Daniel McCoy Stephenson
@@ -21,6 +24,7 @@ class Inventory:
             if inventorySlot.isEmpty():
                 # set the item
                 inventorySlot.add(item)
+                _logger.debug("item placed in inventory", itemName=item.getName())
                 return True
             elif (
                 inventorySlot.getContents()[0].getName() == item.getName()
@@ -28,7 +32,9 @@ class Inventory:
             ):
                 # increment the amount
                 inventorySlot.add(item)
+                _logger.debug("item stacked in inventory", itemName=item.getName())
                 return True
+        _logger.debug("inventory full", itemName=item.getName())
         return False
 
     def removeByItem(self, item):

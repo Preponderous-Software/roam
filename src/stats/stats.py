@@ -5,6 +5,9 @@ import jsonschema
 
 from appContainer import component
 from config.config import Config
+from gameLogging.logger import getLogger
+
+_logger = getLogger(__name__)
 
 
 @component
@@ -67,6 +70,7 @@ class Stats:
         path = self.config.pathToSaveDirectory + "/stats.json"
         with open(path, "w") as f:
             json.dump(jsonStats, f, indent=4)
+        _logger.info("stats saved", path=path)
 
     def load(self):
         path = self.config.pathToSaveDirectory + "/stats.json"
@@ -84,3 +88,4 @@ class Stats:
         self.setRoomsExplored(int(jsonStats["roomsExplored"]))
         self.setFoodEaten(int(jsonStats["foodEaten"]))
         self.setNumberOfDeaths(int(jsonStats["numberOfDeaths"]))
+        _logger.info("stats loaded", path=path)

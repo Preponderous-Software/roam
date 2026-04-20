@@ -3,8 +3,11 @@ import shutil
 import datetime
 import pygame
 from config.config import Config
+from gameLogging.logger import getLogger
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
+
+_logger = getLogger(__name__)
 
 
 # @author Copilot
@@ -66,6 +69,7 @@ class SaveSelectionScreen:
         pygame.display.set_caption("Roam" + " (" + savePath + ")")
         self.nextScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = True
+        _logger.info("save selected", savePath=savePath)
 
     def startNamingNewSave(self):
         self.namingNewSave = True
@@ -92,6 +96,7 @@ class SaveSelectionScreen:
             return
         os.makedirs(newSavePath)
         self.refreshSaveCache()
+        _logger.info("new save created", savePath=newSavePath)
         self.selectSave(newSavePath)
 
     def confirmNewSaveName(self):
@@ -126,6 +131,7 @@ class SaveSelectionScreen:
             return
         if os.path.isdir(savePath):
             shutil.rmtree(savePath)
+            _logger.info("save deleted", savePath=savePath)
         self.confirmingDelete = None
         self.refreshSaveCache()
         saves = self.getSaveDirectories()

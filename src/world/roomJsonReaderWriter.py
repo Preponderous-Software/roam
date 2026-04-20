@@ -29,9 +29,12 @@ from entity.woodFloor import WoodFloor
 from lib.graphik.src.graphik import Graphik
 from lib.pyenvlib.grid import Grid
 from lib.pyenvlib.location import Location
+from gameLogging.logger import getLogger
 
 from world.room import Room
 from world.tickCounter import TickCounter
+
+_logger = getLogger(__name__)
 
 
 class RoomJsonReaderWriter:
@@ -66,7 +69,7 @@ class RoomJsonReaderWriter:
         }
 
     def saveRoom(self, room, path):
-        print("Saving room to " + path)
+        _logger.info("saving room", path=path, roomX=room.getX(), roomY=room.getY())
         roomJson = self.generateJsonForRoom(room)
         if not os.path.exists(self.config.pathToSaveDirectory + "/rooms"):
             os.makedirs(self.config.pathToSaveDirectory + "/rooms")
@@ -74,7 +77,7 @@ class RoomJsonReaderWriter:
             json.dump(roomJson, outfile, indent=4)
 
     def loadRoom(self, path):
-        print("Loading room from " + path)
+        _logger.info("loading room", path=path)
         with open(path) as json_file:
             roomJson = json.load(json_file)
             return self.generateRoomFromJson(roomJson)
