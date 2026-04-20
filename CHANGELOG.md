@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-04-20 | 4+ | refactor: Clean Code refactoring of worldScreen.py — Extract helper classes (`WorldScreenPersistence`, `pickupableEntities`) and decompose long methods (`draw`, `run`, `changeRooms`, `executePlaceAction`, `handleKeyDownEvent`, `handleMouseDownEvent`); consolidate cooldown methods; simplify mouse wheel with modulo; remove 14 unused entity imports and `jsonschema` import |
 | 2026-04-20 | 3+ | feat: Add day/night cycle with craftable light sources — `DayNightCycle` class with sine-curve overlay opacity, phase detection, and radial light mask caching; `Torch` entity (craftable from OakWood + CoalOre, yields 2) with `lightRadius=6`; `Campfire` updated with `lightRadius=8`; per-pixel alpha overlay with opacity-scaled `BLEND_RGBA_MIN` light halos in `WorldScreen.draw()` for smooth dusk/dawn lighting; light source collection iterates all entities per location; configurable `dayNightCycleEnabled` and `dayNightCycleLengthTicks` (default 54000 = 30 min at 30 tps); toggle in `ConfigScreen`; debug info; Torch registered in entity registries; 23 new unit tests |
 | 2026-04-20 | 2+ | feat: Add Codex screen — records living entities the player has encountered; `Codex` class with discover/hasDiscovered/getDiscoveredEntities registered as `@component`; `CodexJsonReaderWriter` for JSON persistence with `schemas/codex.json` schema; discovery triggered on room transitions and initialization; status message on first discovery; `CodexScreen` with scrollable list showing discovered entities with textures and `???` for undiscovered; configurable `L` keybinding via `KeyBindings`; `CODEX_SCREEN` added to `ScreenType`; integrated in `Roam.run()` and `WorldScreen`; codex saved/loaded alongside stats and tick count; README updated with `L` keybinding; 18 new unit tests |
 | 2026-04-20 | 1+ | feat: Add farming system — WheatSeed, YoungCrop, MatureCrop, Wheat entities; crop growth via tickCrops; planting seeds on grass via right-click; harvesting mature crops via left-click; crafting recipe (Grass → WheatSeed ×3); persistence for crop tickPlanted; all entity types registered in room and inventory JSON reader/writers; cropGrowthTicks config option; unit tests for entities, growth, crafting, and serialization |
@@ -73,6 +74,39 @@ logged in detail below.
 | 2022-08-08 | 21 | Create version.txt; Update README.md; Modified README. (+9 more) |
 
 ## AI Agent Sessions
+
+### 2026-04-20 — Clean Code refactoring of worldScreen.py
+- **Refactored:** `src/screen/worldScreen.py` (2122 → 1963 lines, -159 lines)
+- **Persistence delegation:** Replaced inline save/load methods
+  (`savePlayerLocationToFile`, `loadPlayerLocationFromFile`,
+  `savePlayerAttributesToFile`, `loadPlayerAttributesFromFile`,
+  `savePlayerInventoryToFile`, `loadPlayerInventoryFromFile`, `saveRoomToFile`)
+  with thin wrappers delegating to `WorldScreenPersistence` (`self.persistence`).
+- **pickupableEntities delegation:** Replaced 30-line `canBePickedUp` method with
+  call to imported `canBePickedUp()` function from `pickupableEntities.py`.
+- **Method extractions from `draw()`:** `_drawDayNightOverlay(gameArea)`,
+  `_drawHotbar()`, `_drawDebugInfo()`.
+- **Method extractions from `run()`:** `_processEvents()`,
+  `_updateLivingEntities()`, `_updateGameState()`.
+- **Method extractions from `changeRooms()`:** `_loadOrGenerateRoom(x, y)`,
+  `_calculateTargetLocationForRoomTransition(playerLocation)`.
+  `_loadOrGenerateRoom` is also reused by `_updateLivingEntities()`, eliminating
+  duplicated room-loading logic that was previously inlined in `run()`.
+- **Method extraction from `executePlaceAction()`:**
+  `_plantWheatSeed(targetLocation, targetRoom)`.
+- **Method extractions from `handleKeyDownEvent()`:**
+  `_handleMovementKey(direction)`, `_handleHotbarKey(key)`.
+- **Method extractions from `handleMouseDownEvent()`:**
+  `_handleHotbarClick(hotbarIndex)`, `_handleWorldClick()`.
+- **Cooldown consolidation:** Three near-identical cooldown checkers consolidated
+  into `_checkCooldown(tickToCheck, speed)` with thin wrappers preserved.
+- **Mouse wheel simplification:** Replaced two 7-line branches with modulo
+  arithmetic: `(current + delta) % 10`.
+- **Import cleanup:** Removed `jsonschema` and 14 entity imports that were only
+  used in the old `canBePickedUp` method (Apple, Banana, Bed, Campfire, CoalOre,
+  Fence, IronOre, JungleWood, Leaves, OakWood, StoneBed, StoneFloor, Torch,
+  WoodFloor).
+- **All 409 existing tests pass.**
 
 ### 2026-04-20 — Add day/night cycle
 - **New file:** `src/world/dayNightCycle.py` — `DayNightCycle` class registered as
@@ -811,3 +845,10 @@ about this repository, add it here so the next agent benefits.
   `location = grid.getLocation(locationId)`. Iterating with
   `for location in grid.getLocations()` yields UUID keys, not Locations,
   and will crash when calling Location methods.
+- 2026-04-20: `[not yet integrated]` `worldScreen.py` now delegates
+  save/load operations to `WorldScreenPersistence` (in
+  `src/screen/worldScreenPersistence.py`) and entity pickup checks to
+  `canBePickedUp()` (in `src/screen/pickupableEntities.py`). When adding
+  new pickupable entity types, add them to `PICKUPABLE_TYPES` in
+  `pickupableEntities.py` instead of modifying worldScreen.py. When
+  modifying save/load logic, edit `worldScreenPersistence.py`.
