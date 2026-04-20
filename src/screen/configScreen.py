@@ -62,6 +62,10 @@ class ConfigScreen:
         self.config.pushableStone = not self.config.pushableStone
         sleep(0.1)
 
+    def toggleDayNightCycle(self):
+        self.config.dayNightCycleEnabled = not self.config.dayNightCycleEnabled
+        sleep(0.1)
+
     def drawTitle(self):
         x, y = self.graphik.getGameDisplay().get_size()
         self.graphik.drawText("Settings", x / 2, 25, 36, (255, 255, 255))
@@ -179,6 +183,20 @@ class ConfigScreen:
             30,
             "Pushable Stone",
             self.togglePushableStone,
+        )
+
+        ypos = ypos + height + margin
+        color = (0, 255, 0) if self.config.dayNightCycleEnabled else (255, 0, 0)
+        self.graphik.drawButton(
+            xpos,
+            ypos,
+            width,
+            height,
+            (255, 255, 255),
+            color,
+            30,
+            "Day/Night Cycle",
+            self.toggleDayNightCycle,
         )
 
         self.drawBackButton()

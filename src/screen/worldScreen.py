@@ -45,6 +45,7 @@ from world.room import Room
 from world.roomJsonReaderWriter import RoomJsonReaderWriter
 from world.roomPreloader import RoomPreloader
 from world.tickCounter import TickCounter
+from world.dayNightCycle import DayNightCycle
 from world.map import Map
 from player.player import Player
 from ui.status import Status
@@ -56,6 +57,7 @@ from ui.hotbarLayout import (
 )
 from ui.hudDragManager import HudDragManager
 from entity.oakWood import OakWood
+from entity.torch import Torch
 from entity.wheat import Wheat
 from entity.wheatSeed import WheatSeed
 from entity.woodFloor import WoodFloor
@@ -100,6 +102,12 @@ class WorldScreen:
         self.mapImageUpdater = self.container.resolve(MapImageUpdater)
         self.hudDragManager = self.container.resolve(HudDragManager)
         self.codex = self.container.resolve(Codex)
+        self.dayNightCycle = self.container.resolve(DayNightCycle)
+        self._dayNightOverlay = None
+        self._dayNightOverlaySize = (0, 0)
+        self._scaledMaskCache = {}
+        self._lastScaledOpacity = -1
+        self._frameLightSources = []
         self.minimapScaleFactor = 0.10
         self.minimapX = 5
         self.minimapY = 5
@@ -211,6 +219,7 @@ class WorldScreen:
             foodEaten=self.stats.getFoodEaten(),
             deaths=self.stats.getNumberOfDeaths(),
         )
+
     def getLocationOfPlayer(self):
         return self.map.getLocationOfEntity(self.player, self.currentRoom)
 
@@ -517,6 +526,7 @@ class WorldScreen:
             StoneBed,
             Fence,
             Campfire,
+            Torch,
             WheatSeed,
             YoungCrop,
             MatureCrop,
@@ -610,8 +620,10 @@ class WorldScreen:
                 return
             if isinstance(entity, MatureCrop):
                 wheat = Wheat()
-                result = self.player.getInventory().placeIntoFirstAvailableInventorySlot(
-                    wheat
+                result = (
+                    self.player.getInventory().placeIntoFirstAvailableInventorySlot(
+                        wheat
+                    )
                 )
                 if result == False:
                     self.status.set("Inventory full")
@@ -1045,7 +1057,19 @@ class WorldScreen:
             self.player.getLocationID()
         )
         self.currentRoom.removeEntity(self.player)
-        self.currentRoom.draw(self.locationWidth, self.locationHeight)
+
+        # render the room onto a clean off-screen surface so the day/night
+        # overlay (and any other display artefacts) are not captured
+        gameArea = self.graphik.getGameAreaRect()
+        size = (int(gameArea.width), int(gameArea.height))
+        offscreen = pygame.Surface(size)
+        originalDisplay = self.graphik.gameDisplay
+        try:
+            self.graphik.gameDisplay = offscreen
+            offscreen.fill(self.currentRoom.getBackgroundColor())
+            self.currentRoom.draw(self.locationWidth, self.locationHeight)
+        finally:
+            self.graphik.gameDisplay = originalDisplay
 
         path = (
             self.config.pathToSaveDirectory
@@ -1055,18 +1079,8 @@ class WorldScreen:
             + str(self.currentRoom.getY())
             + ".png"
         )
-        # capture only the square room area (location sizes are based on game area)
-        gameArea = self.graphik.getGameAreaRect()
-        size = (int(gameArea.width), int(gameArea.height))
-        # capture surface on main thread (pygame requirement), save to disk async
-        image = pygame.Surface(size)
-        image.blit(
-            self.graphik.getGameDisplay(),
-            (0, 0),
-            ((int(gameArea.x), int(gameArea.y)), size),
-        )
         self._pngSavePending.add(roomKey)
-        self._saveExecutor.submit(self._saveSurfaceToDisk, image, path, roomKey)
+        self._saveExecutor.submit(self._saveSurfaceToDisk, offscreen, path, roomKey)
 
         # add player back
         self.currentRoom.addEntityToLocation(self.player, locationOfPlayer)
@@ -1137,60 +1151,37 @@ class WorldScreen:
         # blit in top left corner with 10px padding
         self.graphik.getGameDisplay().blit(mapImage, (drawX + 10, drawY + 10))
 
-    def drawFollowMode(self):
-        gameArea = self.graphik.getGameAreaRect()
-
-        # get player position in current room grid
+    def _iterateVisibleRoomOffsets(self, gameArea):
+        """Yield (roomX, roomY, roomOffsetX, roomOffsetY) for visible rooms."""
         playerLocation = self.getLocationOfPlayer()
         playerGridX = playerLocation.getX()
         playerGridY = playerLocation.getY()
         gridSize = self.config.gridSize
-
-        # calculate the pixel size of a single room
         roomPixelWidth = gridSize * self.locationWidth
         roomPixelHeight = gridSize * self.locationHeight
-
-        # calculate center of the game area on screen
         centerX = gameArea.x + gameArea.width / 2
         centerY = gameArea.y + gameArea.height / 2
-
-        # world-pixel position of the player within the current room
         playerPixelX = playerGridX * self.locationWidth + self.locationWidth / 2
         playerPixelY = playerGridY * self.locationHeight + self.locationHeight / 2
-
-        # offset to center the current room's player on the game area center
         baseOffsetX = centerX - playerPixelX
         baseOffsetY = centerY - playerPixelY
-
-        # determine which neighboring rooms are visible
         currentRoomX = self.currentRoom.getX()
         currentRoomY = self.currentRoom.getY()
-
-        # calculate how many rooms could be visible in each direction
         halfWidth = gameArea.width / 2
         halfHeight = gameArea.height / 2
-        roomsLeft = int(halfWidth / roomPixelWidth) + 1
-        roomsRight = int(halfWidth / roomPixelWidth) + 1
-        roomsUp = int(halfHeight / roomPixelHeight) + 1
-        roomsDown = int(halfHeight / roomPixelHeight) + 1
-
-        for dx in range(-roomsLeft, roomsRight + 1):
-            for dy in range(-roomsUp, roomsDown + 1):
+        roomsH = int(halfWidth / roomPixelWidth) + 1
+        roomsV = int(halfHeight / roomPixelHeight) + 1
+        for dx in range(-roomsH, roomsH + 1):
+            for dy in range(-roomsV, roomsV + 1):
                 roomX = currentRoomX + dx
                 roomY = currentRoomY + dy
-
-                # check world border
                 if self.config.worldBorder != 0 and (
                     abs(roomX) > self.config.worldBorder
                     or abs(roomY) > self.config.worldBorder
                 ):
                     continue
-
-                # calculate screen offset for this room
                 roomOffsetX = baseOffsetX + dx * roomPixelWidth
                 roomOffsetY = baseOffsetY + dy * roomPixelHeight
-
-                # skip if the room is entirely outside the game area
                 if (
                     roomOffsetX + roomPixelWidth < gameArea.x
                     or roomOffsetX > gameArea.right
@@ -1198,15 +1189,49 @@ class WorldScreen:
                     or roomOffsetY > gameArea.bottom
                 ):
                     continue
+                yield roomX, roomY, roomOffsetX, roomOffsetY
 
-                room = self.getOrLoadRoom(roomX, roomY)
-                room.drawWithOffset(
-                    self.locationWidth,
-                    self.locationHeight,
-                    roomOffsetX,
-                    roomOffsetY,
-                    gameArea.right,
-                    gameArea.bottom,
+    def _collectLightSourcesFromRoom(self, room, offsetX, offsetY, sources):
+        grid = room.getGrid()
+        locWidth = self.locationWidth
+        locHeight = self.locationHeight
+        halfW = locWidth / 2
+        halfH = locHeight / 2
+        for locationId in grid.getLocations():
+            location = grid.getLocation(locationId)
+            if location.getNumEntities() == 0:
+                continue
+            for entity in location.getEntities().values():
+                if hasattr(entity, "getLightRadius"):
+                    sources.append(
+                        (
+                            offsetX + location.getX() * locWidth + halfW,
+                            offsetY + location.getY() * locHeight + halfH,
+                            entity.getLightRadius(),
+                        )
+                    )
+
+    def drawFollowMode(self):
+        gameArea = self.graphik.getGameAreaRect()
+        collectLights = self.config.dayNightCycleEnabled
+        if collectLights:
+            self._frameLightSources = []
+
+        for roomX, roomY, roomOffsetX, roomOffsetY in self._iterateVisibleRoomOffsets(
+            gameArea
+        ):
+            room = self.getOrLoadRoom(roomX, roomY)
+            room.drawWithOffset(
+                self.locationWidth,
+                self.locationHeight,
+                roomOffsetX,
+                roomOffsetY,
+                gameArea.right,
+                gameArea.bottom,
+            )
+            if collectLights:
+                self._collectLightSourcesFromRoom(
+                    room, roomOffsetX, roomOffsetY, self._frameLightSources
                 )
 
     def drawHelpOverlay(self):
@@ -1293,6 +1318,52 @@ class WorldScreen:
             self.currentRoom.drawWithOffset(
                 self.locationWidth, self.locationHeight, gameArea.x, gameArea.y
             )
+            if self.config.dayNightCycleEnabled:
+                self._frameLightSources = []
+                self._collectLightSourcesFromRoom(
+                    self.currentRoom, gameArea.x, gameArea.y, self._frameLightSources
+                )
+
+        # day/night cycle overlay (clipped to game area)
+        if self.config.dayNightCycleEnabled:
+            opacity = self.dayNightCycle.getOverlayOpacity(self.tickCounter.getTick())
+            if opacity > 0:
+                overlaySize = (gameArea.width, gameArea.height)
+                if (
+                    self._dayNightOverlay is None
+                    or self._dayNightOverlaySize != overlaySize
+                ):
+                    self._dayNightOverlay = pygame.Surface(overlaySize, pygame.SRCALPHA)
+                    self._dayNightOverlaySize = overlaySize
+                    self.dayNightCycle.clearLightMaskCache()
+                    self._scaledMaskCache.clear()
+                self._dayNightOverlay.fill((0, 0, 0, opacity))
+                if opacity != self._lastScaledOpacity:
+                    self._scaledMaskCache.clear()
+                    self._lastScaledOpacity = opacity
+                for screenX, screenY, radiusTiles in self._frameLightSources:
+                    overlayX = screenX - gameArea.x
+                    overlayY = screenY - gameArea.y
+                    radiusPx = int(radiusTiles * self.locationWidth)
+                    if radiusPx <= 0:
+                        continue
+                    cacheKey = (radiusPx, opacity)
+                    if cacheKey not in self._scaledMaskCache:
+                        mask = self.dayNightCycle.getLightMask(radiusPx)
+                        scaledMask = mask.copy()
+                        scaledMask.fill(
+                            (255, 255, 255, opacity),
+                            special_flags=pygame.BLEND_RGBA_MULT,
+                        )
+                        self._scaledMaskCache[cacheKey] = scaledMask
+                    self._dayNightOverlay.blit(
+                        self._scaledMaskCache[cacheKey],
+                        (overlayX - radiusPx, overlayY - radiusPx),
+                        special_flags=pygame.BLEND_RGBA_MIN,
+                    )
+                self.graphik.getGameDisplay().blit(
+                    self._dayNightOverlay, (gameArea.x, gameArea.y)
+                )
 
         # remove clip so UI draws over the full display
         self.graphik.getGameDisplay().set_clip(None)
@@ -1415,6 +1486,20 @@ class WorldScreen:
                 # move to bottom left
                 ypos = self.graphik.getGameDisplay().get_height() - 40
             self.graphik.drawText(coordinatesText, 30, ypos, 20, (255, 255, 255))
+
+            # display day/night cycle phase and opacity
+            if self.config.dayNightCycleEnabled:
+                cyclePhase = self.dayNightCycle.getPhase(tickValue)
+                cycleOpacity = self.dayNightCycle.getOverlayOpacity(tickValue)
+                xpos = self.graphik.getGameDisplay().get_width() - 100
+                ypos = 60
+                self.graphik.drawText(
+                    "Cycle: " + cyclePhase + " (" + str(cycleOpacity) + ")",
+                    xpos,
+                    ypos,
+                    20,
+                    (255, 255, 255),
+                )
 
         if self.config.showMiniMap and self.minimapScaleFactor > 0:
             self.drawMiniMap()
@@ -1921,7 +2006,9 @@ class WorldScreen:
                         )
                     except Exception as e:
                         if self.config.debug:
-                            _logger.debug("error moving entity to new room", error=str(e))
+                            _logger.debug(
+                                "error moving entity to new room", error=str(e)
+                            )
                         continue
                     newRoom = self.map.getRoom(newRoomX, newRoomY)
                     if newRoom == -1:
@@ -1970,7 +2057,9 @@ class WorldScreen:
                         )
                     except Exception as e:
                         if self.config.debug:
-                            _logger.debug("error getting new location for entity", error=str(e))
+                            _logger.debug(
+                                "error getting new location for entity", error=str(e)
+                            )
                         continue
                     newLocation = newRoom.getGrid().getLocationByCoordinates(
                         newLocationX, newLocationY

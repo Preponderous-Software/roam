@@ -25,3 +25,5 @@ removeDeadEntities: true
 showMiniMap: true
 cameraFollowPlayer: true
 limitTps: true
+dayNightCycleEnabled: true
+dayNightCycleLengthTicks: 54000

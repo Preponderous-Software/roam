@@ -33,6 +33,8 @@ def test_defaults():
     assert config.showMiniMap == True
     assert config.cameraFollowPlayer == True
     assert config.limitTps == True
+    assert config.dayNightCycleEnabled == True
+    assert config.dayNightCycleLengthTicks == 54000
     assert config.pushableStone == True
 
 
