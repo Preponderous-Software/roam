@@ -45,6 +45,7 @@ from world.room import Room
 from world.roomJsonReaderWriter import RoomJsonReaderWriter
 from world.roomPreloader import RoomPreloader
 from world.tickCounter import TickCounter
+from world.dayNightCycle import DayNightCycle
 from world.map import Map
 from player.player import Player
 from ui.status import Status
@@ -100,6 +101,9 @@ class WorldScreen:
         self.mapImageUpdater = self.container.resolve(MapImageUpdater)
         self.hudDragManager = self.container.resolve(HudDragManager)
         self.codex = self.container.resolve(Codex)
+        self.dayNightCycle = self.container.resolve(DayNightCycle)
+        self._dayNightOverlay = None
+        self._dayNightOverlaySize = (0, 0)
         self.minimapScaleFactor = 0.10
         self.minimapX = 5
         self.minimapY = 5
@@ -211,6 +215,7 @@ class WorldScreen:
             foodEaten=self.stats.getFoodEaten(),
             deaths=self.stats.getNumberOfDeaths(),
         )
+
     def getLocationOfPlayer(self):
         return self.map.getLocationOfEntity(self.player, self.currentRoom)
 
@@ -610,8 +615,10 @@ class WorldScreen:
                 return
             if isinstance(entity, MatureCrop):
                 wheat = Wheat()
-                result = self.player.getInventory().placeIntoFirstAvailableInventorySlot(
-                    wheat
+                result = (
+                    self.player.getInventory().placeIntoFirstAvailableInventorySlot(
+                        wheat
+                    )
                 )
                 if result == False:
                     self.status.set("Inventory full")
@@ -1294,6 +1301,23 @@ class WorldScreen:
                 self.locationWidth, self.locationHeight, gameArea.x, gameArea.y
             )
 
+        # day/night cycle overlay (clipped to game area)
+        if self.config.dayNightCycleEnabled:
+            opacity = self.dayNightCycle.getOverlayOpacity(self.tickCounter.getTick())
+            if opacity > 0:
+                overlaySize = (gameArea.width, gameArea.height)
+                if (
+                    self._dayNightOverlay is None
+                    or self._dayNightOverlaySize != overlaySize
+                ):
+                    self._dayNightOverlay = pygame.Surface(overlaySize)
+                    self._dayNightOverlay.fill((0, 0, 0))
+                    self._dayNightOverlaySize = overlaySize
+                self._dayNightOverlay.set_alpha(opacity)
+                self.graphik.getGameDisplay().blit(
+                    self._dayNightOverlay, (gameArea.x, gameArea.y)
+                )
+
         # remove clip so UI draws over the full display
         self.graphik.getGameDisplay().set_clip(None)
 
@@ -1415,6 +1439,20 @@ class WorldScreen:
                 # move to bottom left
                 ypos = self.graphik.getGameDisplay().get_height() - 40
             self.graphik.drawText(coordinatesText, 30, ypos, 20, (255, 255, 255))
+
+            # display day/night cycle phase and opacity
+            if self.config.dayNightCycleEnabled:
+                cyclePhase = self.dayNightCycle.getPhase(tickValue)
+                cycleOpacity = self.dayNightCycle.getOverlayOpacity(tickValue)
+                xpos = self.graphik.getGameDisplay().get_width() - 100
+                ypos = 60
+                self.graphik.drawText(
+                    "Cycle: " + cyclePhase + " (" + str(cycleOpacity) + ")",
+                    xpos,
+                    ypos,
+                    20,
+                    (255, 255, 255),
+                )
 
         if self.config.showMiniMap and self.minimapScaleFactor > 0:
             self.drawMiniMap()
@@ -1921,7 +1959,9 @@ class WorldScreen:
                         )
                     except Exception as e:
                         if self.config.debug:
-                            _logger.debug("error moving entity to new room", error=str(e))
+                            _logger.debug(
+                                "error moving entity to new room", error=str(e)
+                            )
                         continue
                     newRoom = self.map.getRoom(newRoomX, newRoomY)
                     if newRoom == -1:
@@ -1970,7 +2010,9 @@ class WorldScreen:
                         )
                     except Exception as e:
                         if self.config.debug:
-                            _logger.debug("error getting new location for entity", error=str(e))
+                            _logger.debug(
+                                "error getting new location for entity", error=str(e)
+                            )
                         continue
                     newLocation = newRoom.getGrid().getLocationByCoordinates(
                         newLocationX, newLocationY

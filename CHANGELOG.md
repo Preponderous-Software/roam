@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-04-20 | 1+ | feat: Add day/night cycle — `DayNightCycle` class with sine-curve overlay opacity and phase detection, registered as `@component`; configurable `dayNightCycleEnabled` and `dayNightCycleLengthTicks` in `config.yml` and `Config`; cached overlay surface blitted to game area in `WorldScreen.draw()`; toggle button in `ConfigScreen`; debug info showing cycle phase and opacity; 15 new unit tests |
 | 2026-04-20 | 2+ | feat: Add Codex screen — records living entities the player has encountered; `Codex` class with discover/hasDiscovered/getDiscoveredEntities registered as `@component`; `CodexJsonReaderWriter` for JSON persistence with `schemas/codex.json` schema; discovery triggered on room transitions and initialization; status message on first discovery; `CodexScreen` with scrollable list showing discovered entities with textures and `???` for undiscovered; configurable `L` keybinding via `KeyBindings`; `CODEX_SCREEN` added to `ScreenType`; integrated in `Roam.run()` and `WorldScreen`; codex saved/loaded alongside stats and tick count; README updated with `L` keybinding; 18 new unit tests |
 | 2026-04-20 | 1+ | feat: Add farming system — WheatSeed, YoungCrop, MatureCrop, Wheat entities; crop growth via tickCrops; planting seeds on grass via right-click; harvesting mature crops via left-click; crafting recipe (Grass → WheatSeed ×3); persistence for crop tickPlanted; all entity types registered in room and inventory JSON reader/writers; cropGrowthTicks config option; unit tests for entities, growth, crafting, and serialization |
 | 2026-04-19 | 12+ | feat: Add structured logging with structlog — create `src/gameLogging/logger.py` with `getLogger()` and `redact()` helpers, register `LoggerFactory` singleton in DI container, add `LOG_LEVEL`/`LOG_FORMAT` config support, replace all `print()` calls in source files with structured logger calls, expand instrumentation to config.py (startup config values at DEBUG), roam.py (screen transitions, shutdown at INFO), worldScreen.py (room transitions, initialization at INFO), map.py (room loading/generation at INFO), roomFactory.py (room creation, entity spawning at DEBUG), roomPreloader.py (background preloading at DEBUG, failures at ERROR), stats.py (save/load at INFO), saveSelectionScreen.py (save selection/creation/deletion at INFO), inventory.py (item operations at DEBUG); fix incorrect log levels in worldScreen.py (entity edge cases from ERROR to DEBUG); docs: Create `LOGGING.md` documenting log levels, env vars, field conventions, and redaction policy |
@@ -72,6 +73,24 @@ logged in detail below.
 | 2022-08-08 | 21 | Create version.txt; Update README.md; Modified README. (+9 more) |
 
 ## AI Agent Sessions
+
+### 2026-04-20 — Add day/night cycle
+- **New file:** `src/world/dayNightCycle.py` — `DayNightCycle` class registered as
+  `@component`; exposes `getOverlayOpacity(tick)` (sine-curve mapping 0–200) and
+  `getPhase(tick)` returning `day`/`dusk`/`night`/`dawn`.
+- **Config:** Added `dayNightCycleEnabled` (default `true`) and
+  `dayNightCycleLengthTicks` (default `43200`) to `config.yml` and `Config` class.
+- **Rendering (`src/screen/worldScreen.py`):** After rooms are drawn and before
+  the clip is removed, a cached black `pygame.Surface` is blitted at the computed
+  opacity onto the game area rect. Surface is only reallocated when the game area
+  size changes.
+- **Debug info:** When `config.debug` is `True` and the cycle is enabled, the
+  current phase and overlay opacity are shown in the top-right debug text area.
+- **Settings (`src/screen/configScreen.py`):** Added "Day/Night Cycle" toggle
+  button consistent with existing toggles.
+- **Tests:** Added 15 unit tests in `tests/world/test_dayNightCycle.py` covering
+  midday, midnight, dusk, dawn, wrapping, edge cases, and range validation.
+  Updated `tests/config/test_config.py` defaults assertion.
 
 ### 2026-04-20 — Add farming system (planting, growing, harvesting)
 - **New entity files:**
@@ -739,3 +758,9 @@ about this repository, add it here so the next agent benefits.
   should follow the `ControlsScreen` pattern: `@component` class with
   `graphik`, `config` constructor params, a `run()` loop, and
   `changeScreen`/`nextScreen` flow control.
+- 2026-04-20: `[not yet integrated]` The `WorldScreen.draw()` method uses
+  `set_clip(gameArea)` / `set_clip(None)` to restrict rendering to the game
+  area square. Overlays that should only affect the game area (like the
+  day/night cycle) must be blitted while the clip is still active. HUD
+  elements drawn after `set_clip(None)` are unaffected by the clip and
+  render over the full display including letterbox bars.

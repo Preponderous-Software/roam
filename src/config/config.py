@@ -219,6 +219,12 @@ class Config:
             configValues, "cameraFollowPlayer", True
         )
         self.limitTps = self.getBoolValue(configValues, "limitTps", True)
+        self.dayNightCycleEnabled = self.getBoolValue(
+            configValues, "dayNightCycleEnabled", True
+        )
+        self.dayNightCycleLengthTicks = self.getIntValue(
+            configValues, "dayNightCycleLengthTicks", 43200
+        )  # 30 minutes at 30 tps
         self.pushableStone = self.getBoolValue(configValues, "pushableStone", True)
 
         _logger.debug(
