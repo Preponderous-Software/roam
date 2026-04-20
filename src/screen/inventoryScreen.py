@@ -87,7 +87,6 @@ class InventoryScreen:
         quit()
 
     def drawPlayerInventory(self):
-        # draw inventory background that is 50% size of screen and centered
         backgroundX = self.graphik.getGameDisplay().get_width() / 4
         backgroundY = self.graphik.getGameDisplay().get_height() / 4
         backgroundWidth = self.graphik.getGameDisplay().get_width() / 2
@@ -96,7 +95,6 @@ class InventoryScreen:
             backgroundX, backgroundY, backgroundWidth, backgroundHeight, (0, 0, 0)
         )
 
-        # draw contents inside inventory background
         itemsPerRow = 5
         row = 0
         column = 0
@@ -115,7 +113,6 @@ class InventoryScreen:
                     row * itemsPerRow + column
                     == self.inventory.getSelectedInventorySlotIndex()
                 ):
-                    # draw yellow square in the middle of the selected inventory slot (may be on any row)
                     self.graphik.drawRectangle(
                         itemX + itemWidth / 2 - 5,
                         itemY + itemHeight / 2 - 5,
@@ -138,7 +135,6 @@ class InventoryScreen:
                 row * itemsPerRow + column
                 == self.inventory.getSelectedInventorySlotIndex()
             ):
-                # draw yellow square in the middle of the selected inventory slot
                 self.graphik.drawRectangle(
                     itemX + itemWidth / 2 - 5,
                     itemY + itemHeight / 2 - 5,
@@ -147,7 +143,6 @@ class InventoryScreen:
                     (255, 255, 0),
                 )
 
-            # draw item amount in bottom right corner of inventory slot
             self.graphik.drawText(
                 str(inventorySlot.getNumItems()),
                 itemX + itemWidth - 20,
@@ -161,7 +156,6 @@ class InventoryScreen:
                 column = 0
                 row += 1
 
-        # draw close hint text below inventory
         closeKeyName = self.keyBindings.getKeyName("inventory").upper()
         self.graphik.drawText(
             "(press " + closeKeyName + " to close)",
@@ -370,7 +364,6 @@ class InventoryScreen:
             self.cursorSlot.pop()
 
     def handleMouseClickEvent(self, pos, button=1):
-        # get inventory slot that was clicked
         backgroundX = self.graphik.getGameDisplay().get_width() / 4
         backgroundY = self.graphik.getGameDisplay().get_height() / 4
         backgroundWidth = self.graphik.getGameDisplay().get_width() / 2
@@ -386,7 +379,6 @@ class InventoryScreen:
             itemWidth = backgroundWidth / itemsPerRow - 2 * margin
             itemHeight = backgroundHeight / itemsPerRow - 2 * margin
 
-            # if mouse click was inside inventory slot
             if (
                 pos[0] > itemX
                 and pos[0] < itemX + itemWidth
@@ -461,7 +453,6 @@ class InventoryScreen:
             self.status.draw()
             pygame.display.update()
 
-        # empty cursor slot when exiting inventory screen
         if not self.cursorSlot.isEmpty():
             for item in self.cursorSlot.getContents():
                 self.inventory.placeIntoFirstAvailableInventorySlot(item)

@@ -77,7 +77,6 @@ class Room(Environment):
         # transparent images require the background color to be drawn first
         self.graphik.drawRectangle(xPos, yPos, width, height, self.backgroundColor)
         if location.getNumEntities() > 0:
-            # draw texture
             topEntityId = list(location.getEntities().keys())[-1]
             topEntity = location.getEntities()[topEntityId]
             imagePath = topEntity.getImagePath()
@@ -154,12 +153,10 @@ class Room(Environment):
             if self.locationContainsSolidEntity(newLocation):
                 continue
 
-            # move entity
             location.removeEntity(entity)
             newLocation.addEntity(entity)
             entity.setLocationID(newLocation.getID())
 
-            # decrease energy
             entity.removeEnergy(1)
 
             self._feedLivingEntityIfNeeded(entity, newLocation)

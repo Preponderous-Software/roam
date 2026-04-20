@@ -116,7 +116,6 @@ class WorldScreen:
     def initialize(self):
         self.map = self.container.resolve(Map)
 
-        # load player location if possible
         if os.path.exists(self.config.pathToSaveDirectory + "/playerLocation.json"):
             self.loadPlayerLocationFromFile()
         else:
@@ -126,29 +125,23 @@ class WorldScreen:
             self.currentRoom.addEntity(self.player)
             self.stats.incrementRoomsExplored()
 
-        # load player attributes if possible
         if os.path.exists(self.config.pathToSaveDirectory + "/playerAttributes.json"):
             self.loadPlayerAttributesFromFile()
 
-        # load stats if possible
         if os.path.exists(self.config.pathToSaveDirectory + "/stats.json"):
             self.stats.load()
 
-        # load tick if possible
         if os.path.exists(self.config.pathToSaveDirectory + "/tick.json"):
             self.tickCounter.load()
 
-        # load player inventory if possible
         if os.path.exists(self.config.pathToSaveDirectory + "/playerInventory.json"):
             self.loadPlayerInventoryFromFile()
 
-        # load codex if possible
         if os.path.exists(self.config.pathToSaveDirectory + "/codex.json"):
             self.loadCodexFromFile()
 
         self.initializeLocationWidthAndHeight()
 
-        # pre-load nearby rooms in the background
         self.roomPreloader.preloadNearbyRooms(
             self.currentRoom.getX(), self.currentRoom.getY(), self.map
         )
@@ -376,8 +369,7 @@ class WorldScreen:
                 elif playerDirection == 1:
                     targetX = maxCoord
             elif (
-                playerLocation.getX() == maxCoord
-                and playerLocation.getY() == maxCoord
+                playerLocation.getX() == maxCoord and playerLocation.getY() == maxCoord
             ):
                 if playerDirection == 2:
                     targetY = minCoord
@@ -435,7 +427,6 @@ class WorldScreen:
         )
 
         if newLocation == -1:
-            # we're at a border
             self.changeRooms()
             self.save()
             return
@@ -447,7 +438,6 @@ class WorldScreen:
             else:
                 return
 
-        # if bear is in the new location, kill the player
         for entityId in list(newLocation.getEntities().keys()):
             entity = newLocation.getEntity(entityId)
             if isinstance(entity, Bear):
@@ -455,7 +445,6 @@ class WorldScreen:
                 return
 
         if self.player.needsEnergy():
-            # search for food to eat
             for entityId in list(newLocation.getEntities().keys()):
                 entity = newLocation.getEntity(entityId)
                 if self.player.canEat(entity):
@@ -468,11 +457,9 @@ class WorldScreen:
 
                     self.stats.incrementScore()
 
-        # move player
         location.removeEntity(self.player)
         newLocation.addEntity(self.player)
 
-        # decrease energy
         self.player.removeEnergy(self.config.playerMovementEnergyCost)
         self.player.setTickLastMoved(self.tickCounter.getTick())
 
@@ -543,6 +530,27 @@ class WorldScreen:
             or abs(worldTargetY - worldPlayerY) > distanceLimit
         )
 
+    def _tryHarvestCrop(self, targetLocation, targetRoom):
+        """Check for crop interactions. Returns True if a crop was found (harvested or not ready)."""
+        for entityId in list(reversed(targetLocation.getEntities())):
+            entity = targetLocation.getEntity(entityId)
+            if isinstance(entity, YoungCrop):
+                self.status.set("Crop is not ready")
+                return True
+            if isinstance(entity, MatureCrop):
+                wheat = Wheat()
+                if not self.player.getInventory().placeIntoFirstAvailableInventorySlot(
+                    wheat
+                ):
+                    self.status.set("Inventory full")
+                    return True
+                targetRoom.removeEntity(entity)
+                self.status.set("Harvested Wheat")
+                self.player.removeEnergy(self.config.playerInteractionEnergyCost)
+                self.player.setTickLastGathered(self.tickCounter.getTick())
+                return True
+        return False
+
     def executeGatherAction(self):
         targetLocation, targetRoom = self.getLocationAndRoomAtMousePosition()
 
@@ -554,49 +562,28 @@ class WorldScreen:
             self.status.set("Too far away")
             return
 
-        # Check for crop interactions first
-        for entityId in list(reversed(targetLocation.getEntities())):
-            entity = targetLocation.getEntity(entityId)
-            if isinstance(entity, YoungCrop):
-                self.status.set("Crop is not ready")
-                return
-            if isinstance(entity, MatureCrop):
-                wheat = Wheat()
-                result = (
-                    self.player.getInventory().placeIntoFirstAvailableInventorySlot(
-                        wheat
-                    )
-                )
-                if result == False:
-                    self.status.set("Inventory full")
-                    return
-                targetRoom.removeEntity(entity)
-                self.status.set("Harvested Wheat")
-                self.player.removeEnergy(self.config.playerInteractionEnergyCost)
-                self.player.setTickLastGathered(self.tickCounter.getTick())
-                return
+        if self._tryHarvestCrop(targetLocation, targetRoom):
+            return
 
-        toRemove = -1
-        reversedEntityIdList = list(reversed(targetLocation.getEntities()))
-        for entityId in reversedEntityIdList:
+        toRemove = None
+        for entityId in list(reversed(targetLocation.getEntities())):
             entity = targetLocation.getEntity(entityId)
             if self.canBePickedUp(entity):
                 toRemove = entity
                 break
 
-        if toRemove == -1:
+        if toRemove is None:
             return
 
-        result = self.player.getInventory().placeIntoFirstAvailableInventorySlot(
+        if not self.player.getInventory().placeIntoFirstAvailableInventorySlot(
             toRemove
-        )
-        if result == False:
+        ):
             self.status.set("Inventory full")
             return
         targetRoom.removeEntity(toRemove)
         if isinstance(toRemove, LivingEntity):
             targetRoom.removeLivingEntity(toRemove)
-        self.status.set("Picked up " + entity.getName())
+        self.status.set("Picked up " + toRemove.getName())
         self.player.removeEnergy(self.config.playerInteractionEnergyCost)
         self.player.setTickLastGathered(self.tickCounter.getTick())
 
@@ -620,7 +607,6 @@ class WorldScreen:
         return False
 
     def tryPushStone(self, location, direction):
-        # find a Stone entity in the location
         stoneEntity = None
         for entityId in list(location.getEntities().keys()):
             entity = location.getEntity(entityId)
@@ -631,7 +617,6 @@ class WorldScreen:
         if stoneEntity is None:
             return False
 
-        # get the location beyond the stone in the same direction
         pushDestination = self.getLocationDirection(
             direction, self.currentRoom.getGrid(), location
         )
@@ -643,13 +628,11 @@ class WorldScreen:
         if self.locationContainsSolidEntity(pushDestination):
             return False
 
-        # push the stone
         location.removeEntity(stoneEntity)
         pushDestination.addEntity(stoneEntity)
         return True
 
     def tryPushStoneToAdjacentRoom(self, stoneEntity, location, direction):
-        # compute adjacent room coordinates based on push direction
         roomX = self.currentRoom.getX()
         roomY = self.currentRoom.getY()
         if direction == 0:
@@ -661,7 +644,6 @@ class WorldScreen:
         elif direction == 3:
             roomX += 1
 
-        # check world border
         if self.config.worldBorder != 0 and (
             abs(roomX) > self.config.worldBorder or abs(roomY) > self.config.worldBorder
         ):
@@ -669,7 +651,6 @@ class WorldScreen:
 
         adjacentRoom = self.getOrLoadRoom(roomX, roomY)
 
-        # compute entry location on the opposite side of the adjacent room
         maxCoord = self.config.gridSize - 1
         targetX = location.getX()
         targetY = location.getY()
@@ -692,7 +673,6 @@ class WorldScreen:
         if self.locationContainsSolidEntity(targetLocation):
             return False
 
-        # push stone into adjacent room
         location.removeEntity(stoneEntity)
         targetLocation.addEntity(stoneEntity)
         self.saveRoomToFileAsync(adjacentRoom)
@@ -718,7 +698,6 @@ class WorldScreen:
             self.status.set("Too far away")
             return
 
-        # if living entity is in the location, don't place
         for entityId in list(targetLocation.getEntities().keys()):
             entity = targetLocation.getEntity(entityId)
             if isinstance(entity, LivingEntity):
@@ -882,7 +861,6 @@ class WorldScreen:
             self.player.setCrouching(False)
 
     def respawnPlayer(self):
-        # drop all items and clear inventory
         playerLocationId = self.player.getLocationID()
         playerLocation = self.currentRoom.getGrid().getLocation(playerLocationId)
         for inventorySlot in self.player.getInventory().getInventorySlots():
@@ -983,7 +961,6 @@ class WorldScreen:
         if not os.path.exists(self.config.pathToSaveDirectory + "/roompngs"):
             os.makedirs(self.config.pathToSaveDirectory + "/roompngs")
 
-        # remove player
         locationOfPlayer = self.currentRoom.getGrid().getLocation(
             self.player.getLocationID()
         )
@@ -1013,7 +990,6 @@ class WorldScreen:
         self._pngSavePending.add(roomKey)
         self._saveExecutor.submit(self._saveSurfaceToDisk, offscreen, path, roomKey)
 
-        # add player back
         self.currentRoom.addEntityToLocation(self.player, locationOfPlayer)
 
     def _saveSurfaceToDisk(self, surface, path, roomKey):
@@ -1028,7 +1004,6 @@ class WorldScreen:
             self._pngSavePending.discard(roomKey)
 
     def drawMiniMap(self):
-        # if map image doesn't exist, use cache or skip
         mapImagePath = self.config.pathToSaveDirectory + "/mapImage.png"
         if not os.path.isfile(mapImagePath):
             if self._cachedMiniMapImage is not None:
@@ -1054,7 +1029,6 @@ class WorldScreen:
             else:
                 mapImage = self._cachedMiniMapImage
 
-        # scale as a square using the game area size
         gameArea = self.graphik.getGameAreaRect()
         minimapSize = gameArea.width * self.minimapScaleFactor
         mapImage = pygame.transform.scale(
@@ -1069,7 +1043,6 @@ class WorldScreen:
         drawX = self.minimapX + minimapOx
         drawY = self.minimapY + minimapOy
 
-        # draw rectangle
         backgroundColor = (200, 200, 200)
         self.graphik.drawRectangle(
             drawX,
@@ -1172,7 +1145,6 @@ class WorldScreen:
         overlayX = x / 2 - overlayWidth / 2
         overlayY = y / 2 - overlayHeight / 2
 
-        # dark background
         self.graphik.drawRectangle(
             overlayX, overlayY, overlayWidth, overlayHeight, (30, 30, 30)
         )
@@ -1234,10 +1206,7 @@ class WorldScreen:
         if opacity <= 0:
             return
         overlaySize = (gameArea.width, gameArea.height)
-        if (
-            self._dayNightOverlay is None
-            or self._dayNightOverlaySize != overlaySize
-        ):
+        if self._dayNightOverlay is None or self._dayNightOverlaySize != overlaySize:
             self._dayNightOverlay = pygame.Surface(overlaySize, pygame.SRCALPHA)
             self._dayNightOverlaySize = overlaySize
             self.dayNightCycle.clearLightMaskCache()
@@ -1270,146 +1239,104 @@ class WorldScreen:
             self._dayNightOverlay, (gameArea.x, gameArea.y)
         )
 
+    def _drawHotbarSelectionIndicator(self, xPos, yPos, slotWidth, slotHeight):
+        self.graphik.drawRectangle(
+            xPos + slotWidth / 2 - 5,
+            yPos + slotHeight / 2 - 5,
+            10,
+            10,
+            (255, 255, 0),
+        )
+
     def _drawHotbar(self):
         hotbarOx, hotbarOy = self.hudDragManager.getOffset("hotbar")
-        itemPreviewXPos = (
+        slotStartX = (
             self.graphik.getGameDisplay().get_width() / 2
             - HOTBAR_SLOT_SIZE * 5
             - HOTBAR_SLOT_SIZE / 2
         ) + hotbarOx
-        itemPreviewYPos = (
+        slotY = (
             self.graphik.getGameDisplay().get_height() - HOTBAR_BOTTOM_OFFSET + hotbarOy
         )
-        itemPreviewWidth = HOTBAR_SLOT_SIZE
-        itemPreviewHeight = HOTBAR_SLOT_SIZE
 
-        barXPos = itemPreviewXPos - HOTBAR_PADDING
-        barYPos = itemPreviewYPos - HOTBAR_PADDING
-        barWidth = itemPreviewWidth * 11 + HOTBAR_PADDING
-        barHeight = itemPreviewHeight + HOTBAR_PADDING * 2
-
-        # draw rectangle slightly bigger than item images
+        barXPos = slotStartX - HOTBAR_PADDING
+        barYPos = slotY - HOTBAR_PADDING
+        barWidth = HOTBAR_SLOT_SIZE * 11 + HOTBAR_PADDING
+        barHeight = HOTBAR_SLOT_SIZE + HOTBAR_PADDING * 2
         self.graphik.drawRectangle(barXPos, barYPos, barWidth, barHeight, (0, 0, 0))
 
-        # draw first 10 items in player inventory in bottom center
+        selectedIndex = self.player.getInventory().getSelectedInventorySlotIndex()
         firstTenInventorySlots = self.player.getInventory().getFirstTenInventorySlots()
-        for i in range(len(firstTenInventorySlots)):
-            inventorySlot = firstTenInventorySlots[i]
+        slotX = slotStartX
+        for i, inventorySlot in enumerate(firstTenInventorySlots):
             if inventorySlot.isEmpty():
-                # draw white square if item slot is empty
                 self.graphik.drawRectangle(
-                    itemPreviewXPos,
-                    itemPreviewYPos,
-                    itemPreviewWidth,
-                    itemPreviewHeight,
+                    slotX, slotY, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE, (255, 255, 255)
+                )
+            else:
+                item = inventorySlot.getContents()[0]
+                scaledImage = pygame.transform.scale(
+                    item.getImage(), (HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE)
+                )
+                self.graphik.gameDisplay.blit(scaledImage, (slotX, slotY))
+                self.graphik.drawText(
+                    str(inventorySlot.getNumItems()),
+                    slotX + HOTBAR_SLOT_SIZE - 20,
+                    slotY + HOTBAR_SLOT_SIZE - 20,
+                    20,
                     (255, 255, 255),
                 )
-                if i == self.player.getInventory().getSelectedInventorySlotIndex():
-                    # draw yellow square in the middle of the selected inventory slot
-                    self.graphik.drawRectangle(
-                        itemPreviewXPos + itemPreviewWidth / 2 - 5,
-                        itemPreviewYPos + itemPreviewHeight / 2 - 5,
-                        10,
-                        10,
-                        (255, 255, 0),
-                    )
-                itemPreviewXPos += HOTBAR_SLOT_SIZE + HOTBAR_SLOT_GAP
-                continue
-            item = inventorySlot.getContents()[0]
-            image = item.getImage()
-            scaledImage = pygame.transform.scale(
-                image, (HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE)
-            )
-            self.graphik.gameDisplay.blit(
-                scaledImage, (itemPreviewXPos, itemPreviewYPos)
-            )
 
-            if i == self.player.getInventory().getSelectedInventorySlotIndex():
-                # draw yellow square in the middle of the selected inventory slot
-                self.graphik.drawRectangle(
-                    itemPreviewXPos + itemPreviewWidth / 2 - 5,
-                    itemPreviewYPos + itemPreviewHeight / 2 - 5,
-                    10,
-                    10,
-                    (255, 255, 0),
+            if i == selectedIndex:
+                self._drawHotbarSelectionIndicator(
+                    slotX, slotY, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE
                 )
 
-            # draw item amount in bottom right corner of inventory slot
-            self.graphik.drawText(
-                str(inventorySlot.getNumItems()),
-                itemPreviewXPos + itemPreviewWidth - 20,
-                itemPreviewYPos + itemPreviewHeight - 20,
-                20,
-                (255, 255, 255),
-            )
-
-            itemPreviewXPos += HOTBAR_SLOT_SIZE + HOTBAR_SLOT_GAP
+            slotX += HOTBAR_SLOT_SIZE + HOTBAR_SLOT_GAP
 
     def _drawDebugInfo(self):
-        # display tick count in top right corner
+        displayWidth = self.graphik.getGameDisplay().get_width()
+        displayHeight = self.graphik.getGameDisplay().get_height()
         tickValue = self.tickCounter.getTick()
-        measuredTicksPerSecond = self.tickCounter.getMeasuredTicksPerSecond()
-        xpos = self.graphik.getGameDisplay().get_width() - 100
-        ypos = 20
+        measuredTps = int(self.tickCounter.getMeasuredTicksPerSecond())
+        peakTps = int(self.tickCounter.getHighestMeasuredTicksPerSecond())
+        rightX = displayWidth - 100
+        white = (255, 255, 255)
+
         self.graphik.drawText(
-            "Tick: "
-            + str(tickValue)
-            + " ("
-            + str(int(measuredTicksPerSecond))
-            + " TPS)",
-            xpos,
-            ypos,
+            "Tick: " + str(tickValue) + " (" + str(measuredTps) + " TPS)",
+            rightX,
             20,
-            (255, 255, 255),
+            20,
+            white,
         )
+        self.graphik.drawText("Peak TPS: " + str(peakTps), rightX, 40, 20, white)
 
-        # display max measured ticks per second in top right corner
-        highestmtps = self.tickCounter.getHighestMeasuredTicksPerSecond()
-        xpos = self.graphik.getGameDisplay().get_width() - 100
-        ypos = 40
-        self.graphik.drawText(
-            "Peak TPS: " + str(int(highestmtps)), xpos, ypos, 20, (255, 255, 255)
-        )
+        roomX = self.currentRoom.getX()
+        roomY = self.currentRoom.getY() * -1
+        coordinatesText = "(" + str(roomX) + ", " + str(roomY) + ")"
+        coordY = displayHeight - 40 if self.config.showMiniMap else 20
+        self.graphik.drawText(coordinatesText, 30, coordY, 20, white)
 
-        # draw room coordinates in top left corner
-        coordinatesText = (
-            "("
-            + str(self.currentRoom.getX())
-            + ", "
-            + str(self.currentRoom.getY() * -1)
-            + ")"
-        )
-        ypos = 20
-        if self.config.showMiniMap:
-            # move to bottom left
-            ypos = self.graphik.getGameDisplay().get_height() - 40
-        self.graphik.drawText(coordinatesText, 30, ypos, 20, (255, 255, 255))
-
-        # display day/night cycle phase and opacity
         if self.config.dayNightCycleEnabled:
             cyclePhase = self.dayNightCycle.getPhase(tickValue)
             cycleOpacity = self.dayNightCycle.getOverlayOpacity(tickValue)
-            xpos = self.graphik.getGameDisplay().get_width() - 100
-            ypos = 60
             self.graphik.drawText(
                 "Cycle: " + cyclePhase + " (" + str(cycleOpacity) + ")",
-                xpos,
-                ypos,
+                rightX,
+                60,
                 20,
-                (255, 255, 255),
+                white,
             )
 
     def draw(self):
         gameArea = self.graphik.getGameAreaRect()
 
-        # save room PNG if needed (before clipping, so it draws unclipped)
         if self.config.showMiniMap and not self.isCurrentRoomSavedAsPNG():
             self.saveCurrentRoomAsPNG()
 
-        # fill entire display with black (letterbox bars)
         self.graphik.getGameDisplay().fill((0, 0, 0))
 
-        # clip drawing to the game area and fill with room background
         self.graphik.getGameDisplay().set_clip(gameArea)
         self.graphik.getGameDisplay().fill(self.currentRoom.getBackgroundColor())
 
@@ -1428,7 +1355,6 @@ class WorldScreen:
         if self.config.dayNightCycleEnabled:
             self._drawDayNightOverlay(gameArea)
 
-        # remove clip so UI draws over the full display
         self.graphik.getGameDisplay().set_clip(None)
 
         statusOx, statusOy = self.hudDragManager.getOffset("status")
@@ -1444,7 +1370,6 @@ class WorldScreen:
         if self.config.showMiniMap and self.minimapScaleFactor > 0:
             self.drawMiniMap()
 
-        # show help hint in bottom-right corner
         if not self.showHelp:
             hintX = self.graphik.getGameDisplay().get_width() - 50
             hintY = self.graphik.getGameDisplay().get_height() - 20
@@ -1679,38 +1604,23 @@ class WorldScreen:
                 self.saveCodexToFile()
 
     def getNewLocationCoordinatesForLivingEntityBasedOnLocation(self, currentLocation):
-        newLocationX = None
-        newLocationY = None
-
-        # get current location coordinates
         currentLocationX = currentLocation.getX()
         currentLocationY = currentLocation.getY()
+        gridEdge = self.currentRoom.getGrid().getRows() - 1
 
-        # if corner
         if self.ifCorner(currentLocation):
             raise Exception("corner movement not supported yet")
+
+        if currentLocationX == 0:
+            return gridEdge, currentLocationY
+        elif currentLocationX == gridEdge:
+            return 0, currentLocationY
+        elif currentLocationY == 0:
+            return currentLocationX, gridEdge
+        elif currentLocationY == gridEdge:
+            return currentLocationX, 0
         else:
-            # if left
-            if currentLocationX == 0:
-                newLocationX = self.currentRoom.getGrid().getRows() - 1
-                newLocationY = currentLocationY
-            # if right
-            elif currentLocationX == self.currentRoom.getGrid().getRows() - 1:
-                newLocationX = 0
-                newLocationY = currentLocationY
-            # if top
-            elif currentLocationY == 0:
-                newLocationX = currentLocationX
-                newLocationY = self.currentRoom.getGrid().getRows() - 1
-            # if bottom
-            elif currentLocationY == self.currentRoom.getGrid().getRows() - 1:
-                newLocationX = currentLocationX
-                newLocationY = 0
-            # if middle
-            else:
-                # throw error
-                raise Exception("Living entity is not on the edge of the room")
-        return newLocationX, newLocationY
+            raise Exception("Living entity is not on the edge of the room")
 
     def checkForLivingEntityDeaths(self):
         toRemove = []
@@ -1875,9 +1785,7 @@ class WorldScreen:
                     )
                 except Exception as e:
                     if self.config.debug:
-                        _logger.debug(
-                            "error moving entity to new room", error=str(e)
-                        )
+                        _logger.debug("error moving entity to new room", error=str(e))
                     continue
                 newRoom = self._loadOrGenerateRoom(newRoomX, newRoomY)
 
@@ -1951,7 +1859,6 @@ class WorldScreen:
             self._updateLivingEntities()
             self._updateGameState()
 
-        # create save directory if it doesn't exist
         if not os.path.exists(self.config.pathToSaveDirectory):
             os.makedirs(self.config.pathToSaveDirectory)
 

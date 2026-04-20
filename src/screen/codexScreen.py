@@ -43,7 +43,11 @@ class CodexScreen:
                     img = pygame.image.load(imagePath)
                     self._imageCache[entityName] = pygame.transform.scale(img, (32, 32))
                 except (pygame.error, FileNotFoundError) as e:
-                    _logger.error("failed to load codex entity image", entity=entityName, error=str(e))
+                    _logger.error(
+                        "failed to load codex entity image",
+                        entity=entityName,
+                        error=str(e),
+                    )
                     self._imageCache[entityName] = None
             else:
                 self._imageCache[entityName] = None

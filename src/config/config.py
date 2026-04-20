@@ -278,4 +278,4 @@ class Config:
         try:
             configFilePath.write_text("\n".join(newLines) + "\n", encoding="utf-8")
         except OSError:
-            pass
+            _logger.warning("failed to save window size to config file")

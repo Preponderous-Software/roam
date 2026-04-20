@@ -59,9 +59,7 @@ class ConfigScreen:
         ]
 
         for label, attribute in toggleButtons:
-            color = (
-                (0, 255, 0) if getattr(self.config, attribute) else (255, 0, 0)
-            )
+            color = (0, 255, 0) if getattr(self.config, attribute) else (255, 0, 0)
             self.graphik.drawButton(
                 xpos,
                 ypos,
@@ -78,7 +76,6 @@ class ConfigScreen:
         self.drawBackButton()
 
     def drawBackButton(self):
-        # draw in bottom right corner
         x, y = self.graphik.getGameDisplay().get_size()
         width = x / 3
         height = y / 10

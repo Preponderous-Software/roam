@@ -86,7 +86,6 @@ class OptionsScreen:
         self.drawBackButton()
 
     def drawBackButton(self):
-        # draw in bottom right corner
         x, y = self.graphik.getGameDisplay().get_size()
         width = x / 3
         height = y / 10

@@ -20,7 +20,6 @@ import sys
 
 import structlog
 
-
 # ---------------------------------------------------------------------------
 # Configuration from environment
 # ---------------------------------------------------------------------------
@@ -41,7 +40,9 @@ _LOG_FORMAT = os.environ.get("LOG_FORMAT", "pretty").strip().lower()
 # Redaction helper
 # ---------------------------------------------------------------------------
 _REDACT_PATTERNS = [
-    re.compile(r"(token|password|secret|api_key|private_key)\s*[:=]\s*\S+", re.IGNORECASE),
+    re.compile(
+        r"(token|password|secret|api_key|private_key)\s*[:=]\s*\S+", re.IGNORECASE
+    ),
     re.compile(r"[A-Za-z0-9+/]{40,}", re.IGNORECASE),
 ]
 
@@ -86,7 +87,8 @@ def _configureStructlog():
         renderer = structlog.dev.ConsoleRenderer()
 
     structlog.configure(
-        processors=shared_processors + [
+        processors=shared_processors
+        + [
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
         wrapper_class=structlog.stdlib.BoundLogger,

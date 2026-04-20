@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-04-20 | 5+ | refactor: Comprehensive Clean Code refactoring — DRY entity hierarchy (move `isSolid`/`solid` to `DrawableEntity` base, remove duplication from 20+ subclasses); DRY `ConfigScreen` (replace 9 toggle methods with data-driven `_toggleConfigAttribute`); DRY `OptionsScreen` (add `_switchToScreen` helper, data-driven menu buttons); extract `WorldScreenPersistence` and `pickupableEntities` modules; decompose 14 long methods into focused helpers; consolidate 3 cooldown methods; extract `_tryHarvestCrop` from gather action; DRY hotbar selection indicator; remove ~40 redundant comments; add logging to silent `except` blocks; rename cryptic `highestmtps` variable; run Black/autoflake; all 409 tests pass |
 | 2026-04-20 | 4+ | refactor: Clean Code refactoring of worldScreen.py — Extract helper classes (`WorldScreenPersistence`, `pickupableEntities`) and decompose long methods (`draw`, `run`, `changeRooms`, `executePlaceAction`, `handleKeyDownEvent`, `handleMouseDownEvent`); consolidate cooldown methods; simplify mouse wheel with modulo; remove 14 unused entity imports and `jsonschema` import |
 | 2026-04-20 | 3+ | feat: Add day/night cycle with craftable light sources — `DayNightCycle` class with sine-curve overlay opacity, phase detection, and radial light mask caching; `Torch` entity (craftable from OakWood + CoalOre, yields 2) with `lightRadius=6`; `Campfire` updated with `lightRadius=8`; per-pixel alpha overlay with opacity-scaled `BLEND_RGBA_MIN` light halos in `WorldScreen.draw()` for smooth dusk/dawn lighting; light source collection iterates all entities per location; configurable `dayNightCycleEnabled` and `dayNightCycleLengthTicks` (default 54000 = 30 min at 30 tps); toggle in `ConfigScreen`; debug info; Torch registered in entity registries; 23 new unit tests |
 | 2026-04-20 | 2+ | feat: Add Codex screen — records living entities the player has encountered; `Codex` class with discover/hasDiscovered/getDiscoveredEntities registered as `@component`; `CodexJsonReaderWriter` for JSON persistence with `schemas/codex.json` schema; discovery triggered on room transitions and initialization; status message on first discovery; `CodexScreen` with scrollable list showing discovered entities with textures and `???` for undiscovered; configurable `L` keybinding via `KeyBindings`; `CODEX_SCREEN` added to `ScreenType`; integrated in `Roam.run()` and `WorldScreen`; codex saved/loaded alongside stats and tick count; README updated with `L` keybinding; 18 new unit tests |
@@ -852,3 +853,14 @@ about this repository, add it here so the next agent benefits.
   new pickupable entity types, add them to `PICKUPABLE_TYPES` in
   `pickupableEntities.py` instead of modifying worldScreen.py. When
   modifying save/load logic, edit `worldScreenPersistence.py`.
+- 2026-04-20: `[not yet integrated]` The `DrawableEntity` base class now accepts
+  an optional `solid` parameter (default `False`) and provides `isSolid()`. Entity
+  subclasses no longer need to define `self.solid` or `isSolid()` unless they need
+  non-default solid behavior. Solid entities should pass `True` as the third argument
+  to `DrawableEntity.__init__()`. Non-solid entities can omit it entirely since the
+  default is `False`.
+- 2026-04-20: `[not yet integrated]` The `ConfigScreen` uses a data-driven approach
+  for toggle buttons: a list of `(label, configAttribute)` tuples drives both rendering
+  and toggling via `_toggleConfigAttribute(attributeName)`. When adding new toggleable
+  config options, add a tuple to the `toggleButtons` list in `drawMenuButtons()` rather
+  than creating a new method.
