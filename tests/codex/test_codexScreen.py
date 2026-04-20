@@ -1,9 +1,9 @@
 import pygame
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-from src.codex.codex import Codex
-from src.screen.codexScreen import CodexScreen, ALL_LIVING_ENTITY_TYPES
+from src.codex.codex import Codex, ALL_LIVING_ENTITY_TYPES
+from src.screen.codexScreen import CodexScreen
 
 
 @pytest.fixture

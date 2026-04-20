@@ -1,19 +1,12 @@
 import pygame
 from appContainer import component
-from codex.codex import Codex
+from codex.codex import Codex, ALL_LIVING_ENTITY_TYPES, ENTITY_IMAGE_PATHS
 from config.config import Config
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
+from gameLogging.logger import getLogger
 
-
-# All known living entity types for the codex display.
-ALL_LIVING_ENTITY_TYPES = ["Bear", "Chicken"]
-
-# Maps entity class names to their asset image paths.
-ENTITY_IMAGE_PATHS = {
-    "Bear": "assets/images/bear.png",
-    "Chicken": "assets/images/chicken.png",
-}
+_logger = getLogger(__name__)
 
 
 # @author Copilot
@@ -44,7 +37,8 @@ class CodexScreen:
                 try:
                     img = pygame.image.load(imagePath)
                     self._imageCache[entityName] = pygame.transform.scale(img, (32, 32))
-                except Exception:
+                except (pygame.error, FileNotFoundError) as e:
+                    _logger.error("failed to load codex entity image", entity=entityName, error=str(e))
                     self._imageCache[entityName] = None
             else:
                 self._imageCache[entityName] = None
@@ -59,7 +53,7 @@ class CodexScreen:
         imageX = x * 0.25
         nameX = x * 0.25 + 45
 
-        visibleRows = int((y - startY - 80) / rowHeight)
+        visibleRows = max(1, int((y - startY - 80) / rowHeight))
         maxOffset = max(0, len(entries) - visibleRows)
         self.scrollOffset = max(0, min(self.scrollOffset, maxOffset))
 

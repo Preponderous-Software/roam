@@ -19,7 +19,10 @@ class CodexJsonReaderWriter:
 
         with open("schemas/codex.json") as f:
             schema = json.load(f)
-        jsonschema.validate(data, schema)
+        try:
+            jsonschema.validate(data, schema)
+        except jsonschema.exceptions.ValidationError as e:
+            _logger.error("codex validation error on save", error=str(e))
 
         if not os.path.exists(self.config.pathToSaveDirectory):
             os.makedirs(self.config.pathToSaveDirectory)
@@ -34,12 +37,16 @@ class CodexJsonReaderWriter:
         if not os.path.exists(path):
             return None
 
-        with open(path) as f:
-            data = json.load(f)
+        try:
+            with open(path) as f:
+                data = json.load(f)
 
-        with open("schemas/codex.json") as f:
-            schema = json.load(f)
-        jsonschema.validate(data, schema)
+            with open("schemas/codex.json") as f:
+                schema = json.load(f)
+            jsonschema.validate(data, schema)
+        except (json.JSONDecodeError, jsonschema.exceptions.ValidationError) as e:
+            _logger.error("codex validation error on load", error=str(e), path=path)
+            return None
 
         _logger.info("codex loaded", path=path)
         return data["discoveredEntities"]
