@@ -57,6 +57,8 @@ class DayNightCycle:
         blitted onto the overlay with ``BLEND_RGBA_MIN`` this punches a
         smooth circular hole.
         """
+        if radiusPx <= 0:
+            radiusPx = 1
         if radiusPx in self._lightMaskCache:
             return self._lightMaskCache[radiusPx]
         size = radiusPx * 2

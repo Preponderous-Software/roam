@@ -1064,10 +1064,12 @@ class WorldScreen:
         size = (int(gameArea.width), int(gameArea.height))
         offscreen = pygame.Surface(size)
         originalDisplay = self.graphik.gameDisplay
-        self.graphik.gameDisplay = offscreen
-        offscreen.fill(self.currentRoom.getBackgroundColor())
-        self.currentRoom.draw(self.locationWidth, self.locationHeight)
-        self.graphik.gameDisplay = originalDisplay
+        try:
+            self.graphik.gameDisplay = offscreen
+            offscreen.fill(self.currentRoom.getBackgroundColor())
+            self.currentRoom.draw(self.locationWidth, self.locationHeight)
+        finally:
+            self.graphik.gameDisplay = originalDisplay
 
         path = (
             self.config.pathToSaveDirectory
