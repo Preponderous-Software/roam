@@ -186,3 +186,30 @@ def test_reset_singletons_preserves_explicit_instances():
     container.resetSingletons()
     # Explicit instances (factory=None) survive the reset.
     assert container.resolve(ServiceA) is prebuilt
+
+
+def test_get_and_restore_registration_round_trip():
+    container = Container()
+    original = container.getRegistration(ServiceA)
+    assert original is None
+
+    container.register(ServiceA, ServiceA)
+    saved = container.getRegistration(ServiceA)
+    assert saved is not None
+
+    container.registerInstance(ServiceA, ServiceA())
+    replaced = container.getRegistration(ServiceA)
+    assert replaced is not None
+    assert replaced is not saved
+
+    container.restoreRegistration(ServiceA, saved)
+    restored = container.getRegistration(ServiceA)
+    assert restored is saved
+
+
+def test_restore_registration_none_removes_registration():
+    container = Container()
+    container.register(ServiceA, ServiceA)
+    assert container.getRegistration(ServiceA) is not None
+    container.restoreRegistration(ServiceA, None)
+    assert container.getRegistration(ServiceA) is None

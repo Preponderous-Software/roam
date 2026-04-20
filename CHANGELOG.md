@@ -76,6 +76,16 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-20 — Resolve PR review threads for test-DI refactor
+- Added thread-safe public registration snapshot/restore APIs to the DI container:
+  `Container.getRegistration(...)` and `Container.restoreRegistration(...)`.
+- Updated `tests/conftest.py` override fixture to use those APIs instead of direct
+  mutation of `container._registrations`.
+- Normalized `tests/ui/test_status.py` imports to consistently use `ui.*`
+  module paths (`ui.hotbarLayout`).
+- Added unit tests for the new container APIs in `tests/di/test_container.py`.
+- Validation: full suite passed (`411 passed`).
+
 ### 2026-04-20 — Clean Code refactoring of worldScreen.py
 - **Refactored:** `src/screen/worldScreen.py` (2122 → 1963 lines, -159 lines)
 - **Persistence delegation:** Replaced inline save/load methods

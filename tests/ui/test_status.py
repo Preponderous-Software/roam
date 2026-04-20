@@ -4,7 +4,7 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 from unittest.mock import MagicMock
 
-from src.ui.hotbarLayout import getHotbarTop
+from ui.hotbarLayout import getHotbarTop
 from ui.status import Status
 from world.tickCounter import TickCounter
 from lib.graphik.src.graphik import Graphik

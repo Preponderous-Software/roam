@@ -55,7 +55,7 @@ def test_di_container(test_config, test_graphik):
 
     def overrideDependency(dependencyType, instance):
         if dependencyType not in previousRegistrations:
-            previousRegistrations[dependencyType] = container._registrations.get(
+            previousRegistrations[dependencyType] = container.getRegistration(
                 dependencyType
             )
         container.registerInstance(dependencyType, instance)
@@ -64,10 +64,7 @@ def test_di_container(test_config, test_graphik):
     yield container, overrideDependency
 
     for dependencyType, registration in previousRegistrations.items():
-        if registration is None:
-            container._registrations.pop(dependencyType, None)
-        else:
-            container._registrations[dependencyType] = registration
+        container.restoreRegistration(dependencyType, registration)
 
 
 @pytest.fixture(autouse=True)
