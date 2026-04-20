@@ -9,7 +9,3 @@ class Banana(Food):
         Food.__init__(
             self, "Banana", "assets/images/banana.png", random.randrange(10, 20)
         )
-        self.solid = False
-
-    def isSolid(self):
-        return self.solid

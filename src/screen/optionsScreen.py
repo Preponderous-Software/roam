@@ -21,37 +21,33 @@ class OptionsScreen:
         if key == pygame.K_ESCAPE:
             self.switchToWorldScreen()
 
-    def switchToWorldScreen(self):
-        self.nextScreen = ScreenType.WORLD_SCREEN
+    def _switchToScreen(self, screenType):
+        self.nextScreen = screenType
         self.changeScreen = True
+
+    def switchToWorldScreen(self):
+        self._switchToScreen(ScreenType.WORLD_SCREEN)
 
     def switchToStatsScreen(self):
-        self.nextScreen = ScreenType.STATS_SCREEN
-        self.changeScreen = True
+        self._switchToScreen(ScreenType.STATS_SCREEN)
 
     def switchToInventoryScreen(self):
-        self.nextScreen = ScreenType.INVENTORY_SCREEN
-        self.changeScreen = True
+        self._switchToScreen(ScreenType.INVENTORY_SCREEN)
 
     def switchToMainMenuScreen(self):
-        self.nextScreen = ScreenType.MAIN_MENU_SCREEN
-        self.changeScreen = True
+        self._switchToScreen(ScreenType.MAIN_MENU_SCREEN)
 
     def switchToConfigScreen(self):
-        self.nextScreen = ScreenType.CONFIG_SCREEN
-        self.changeScreen = True
+        self._switchToScreen(ScreenType.CONFIG_SCREEN)
 
     def switchToControlsScreen(self):
-        self.nextScreen = ScreenType.CONTROLS_SCREEN
-        self.changeScreen = True
+        self._switchToScreen(ScreenType.CONTROLS_SCREEN)
 
     def switchToCodexScreen(self):
-        self.nextScreen = ScreenType.CODEX_SCREEN
-        self.changeScreen = True
+        self._switchToScreen(ScreenType.CODEX_SCREEN)
 
     def quitApplication(self):
-        self.nextScreen = ScreenType.NONE
-        self.changeScreen = True
+        self._switchToScreen(ScreenType.NONE)
 
     def drawTitle(self):
         x, y = self.graphik.getGameDisplay().get_size()
@@ -61,69 +57,32 @@ class OptionsScreen:
         x, y = self.graphik.getGameDisplay().get_size()
         width = x / 3
         height = y / 10
-        # start below title with enough margin to avoid overlap
         xpos = x / 2 - width / 2
         ypos = 70
         margin = 10
-        self.graphik.drawButton(
-            xpos,
-            ypos,
-            width,
-            height,
-            (255, 255, 255),
-            (0, 0, 0),
-            30,
-            "Main Menu",
-            self.switchToMainMenuScreen,
-        )
-        ypos = ypos + height + margin
-        self.graphik.drawButton(
-            xpos,
-            ypos,
-            width,
-            height,
-            (255, 255, 255),
-            (0, 0, 0),
-            30,
-            "Stats",
-            self.switchToStatsScreen,
-        )
-        ypos = ypos + height + margin
-        self.graphik.drawButton(
-            xpos,
-            ypos,
-            width,
-            height,
-            (255, 255, 255),
-            (0, 0, 0),
-            30,
-            "Inventory",
-            self.switchToInventoryScreen,
-        )
-        ypos = ypos + height + margin
-        self.graphik.drawButton(
-            xpos,
-            ypos,
-            width,
-            height,
-            (255, 255, 255),
-            (0, 0, 0),
-            30,
-            "Controls",
-            self.switchToControlsScreen,
-        )
-        ypos = ypos + height + margin
-        self.graphik.drawButton(
-            xpos,
-            ypos,
-            width,
-            height,
-            (255, 255, 255),
-            (0, 0, 0),
-            30,
-            "Codex",
-            self.switchToCodexScreen,
-        )
+
+        menuItems = [
+            ("Main Menu", self.switchToMainMenuScreen),
+            ("Stats", self.switchToStatsScreen),
+            ("Inventory", self.switchToInventoryScreen),
+            ("Controls", self.switchToControlsScreen),
+            ("Codex", self.switchToCodexScreen),
+        ]
+
+        for label, callback in menuItems:
+            self.graphik.drawButton(
+                xpos,
+                ypos,
+                width,
+                height,
+                (255, 255, 255),
+                (0, 0, 0),
+                30,
+                label,
+                callback,
+            )
+            ypos = ypos + height + margin
+
         self.drawBackButton()
 
     def drawBackButton(self):

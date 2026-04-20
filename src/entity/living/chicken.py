@@ -15,7 +15,3 @@ class Chicken(LivingEntity):
             [Grass],
             tickCreated,
         )
-        self.solid = False
-
-    def isSolid(self):
-        return self.solid

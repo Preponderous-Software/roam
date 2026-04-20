@@ -5,8 +5,4 @@ from entity.drawableEntity import DrawableEntity
 # @since August 8th, 2022
 class OakWood(DrawableEntity):
     def __init__(self):
-        DrawableEntity.__init__(self, "Oak Wood", "assets/images/oakWood.png")
-        self.solid = True
-
-    def isSolid(self):
-        return self.solid
+        DrawableEntity.__init__(self, "Oak Wood", "assets/images/oakWood.png", True)

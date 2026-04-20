@@ -7,9 +7,13 @@ from lib.pyenvlib.entity import Entity
 class DrawableEntity(Entity):
     _imageCache = {}
 
-    def __init__(self, name, imagePath):
+    def __init__(self, name, imagePath, solid=False):
         Entity.__init__(self, name)
         self.imagePath = imagePath
+        self.solid = solid
+
+    def isSolid(self):
+        return self.solid
 
     def getImage(self):
         if self.imagePath not in DrawableEntity._imageCache:
