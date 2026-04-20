@@ -59,8 +59,9 @@ class WorldScreenPersistence:
             return None
 
         locationId = jsonPlayerLocation["locationId"]
-        location = currentRoom.getGrid().getLocation(locationId)
-        if location is None:
+        try:
+            location = currentRoom.getGrid().getLocation(locationId)
+        except KeyError:
             _logger.warning(
                 "saved location not found in room, falling back to spawn",
                 locationId=locationId,

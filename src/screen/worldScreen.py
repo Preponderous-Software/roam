@@ -115,10 +115,12 @@ class WorldScreen:
 
     def initialize(self):
         self.map = self.container.resolve(Map)
+        self.currentRoom = None
 
         if os.path.exists(self.config.pathToSaveDirectory + "/playerLocation.json"):
             self.loadPlayerLocationFromFile()
-        else:
+
+        if self.currentRoom is None:
             self.currentRoom = self.map.getRoom(0, 0)
             if self.currentRoom == -1:
                 self.currentRoom = self.map.generateNewRoom(0, 0)
@@ -326,16 +328,11 @@ class WorldScreen:
             _logger.error("error writing JSON file", error=str(e), path=path)
 
     def _loadOrGenerateRoom(self, x, y):
-        if self.map.hasRoom(x, y):
-            return self.map.getRoom(x, y)
-        nextRoomPath = self.persistence.buildRoomPath(x, y)
-        if os.path.exists(nextRoomPath):
-            roomJsonReaderWriter = RoomJsonReaderWriter(
-                self.config.gridSize, self.graphik, self.tickCounter, self.config
-            )
-            room = roomJsonReaderWriter.loadRoom(nextRoomPath)
-            self.map.addRoom(room)
-            self.status.set("Area loaded")
+        wasCached = self.map.hasRoom(x, y)
+        room = self.map.getRoom(x, y)
+        if room != -1:
+            if not wasCached:
+                self.status.set("Area loaded")
             return room
         room = self.map.generateNewRoom(x, y)
         self.status.set("New area discovered")
