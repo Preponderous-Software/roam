@@ -11,7 +11,3 @@ class BearMeat(Food):
             "assets/images/bearMeat.png",
             random.randrange(25, 36),
         )
-        self.solid = False
-
-    def isSolid(self):
-        return self.solid

@@ -16,7 +16,3 @@ class Bear(LivingEntity):
             [Chicken, Player],
             tickCreated,
         )
-        self.solid = False
-
-    def isSolid(self):
-        return self.solid

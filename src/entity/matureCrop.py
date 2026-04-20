@@ -6,11 +6,7 @@ from entity.drawableEntity import DrawableEntity
 class MatureCrop(DrawableEntity):
     def __init__(self, tickPlanted):
         DrawableEntity.__init__(self, "Mature Crop", "assets/images/matureCrop.png")
-        self.solid = False
         self.tickPlanted = tickPlanted
-
-    def isSolid(self):
-        return self.solid
 
     def getTickPlanted(self):
         return self.tickPlanted

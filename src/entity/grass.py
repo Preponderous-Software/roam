@@ -6,7 +6,3 @@ from entity.drawableEntity import DrawableEntity
 class Grass(DrawableEntity):
     def __init__(self):
         DrawableEntity.__init__(self, "Grass", "assets/images/grass.png")
-        self.solid = False
-
-    def isSolid(self):
-        return self.solid
