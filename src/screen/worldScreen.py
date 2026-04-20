@@ -1202,22 +1202,22 @@ class WorldScreen:
         grid = room.getGrid()
         for locationId in grid.getLocations():
             location = grid.getLocation(locationId)
-            entityIds = list(location.getEntities().keys())
-            if len(entityIds) == 0:
+            entities = list(location.getEntities().values())
+            if len(entities) == 0:
                 continue
-            entity = location.getEntity(entityIds[-1])
-            if hasattr(entity, "getLightRadius"):
-                screenX = (
-                    offsetX
-                    + location.getX() * self.locationWidth
-                    + self.locationWidth / 2
-                )
-                screenY = (
-                    offsetY
-                    + location.getY() * self.locationHeight
-                    + self.locationHeight / 2
-                )
-                sources.append((screenX, screenY, entity.getLightRadius()))
+            for entity in entities:
+                if hasattr(entity, "getLightRadius"):
+                    screenX = (
+                        offsetX
+                        + location.getX() * self.locationWidth
+                        + self.locationWidth / 2
+                    )
+                    screenY = (
+                        offsetY
+                        + location.getY() * self.locationHeight
+                        + self.locationHeight / 2
+                    )
+                    sources.append((screenX, screenY, entity.getLightRadius()))
 
     def drawFollowMode(self):
         gameArea = self.graphik.getGameAreaRect()
@@ -1396,8 +1396,13 @@ class WorldScreen:
                     if radiusPx <= 0:
                         continue
                     mask = self.dayNightCycle.getLightMask(radiusPx)
+                    scaledMask = mask.copy()
+                    scaledMask.fill(
+                        (255, 255, 255, opacity),
+                        special_flags=pygame.BLEND_RGBA_MULT,
+                    )
                     self._dayNightOverlay.blit(
-                        mask,
+                        scaledMask,
                         (overlayX - radiusPx, overlayY - radiusPx),
                         special_flags=pygame.BLEND_RGBA_MIN,
                     )
