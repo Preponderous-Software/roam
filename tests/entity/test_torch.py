@@ -10,4 +10,4 @@ def test_initialization():
 
 def test_light_radius():
     torch = Torch()
-    assert torch.getLightRadius() == 3
+    assert torch.getLightRadius() == 6

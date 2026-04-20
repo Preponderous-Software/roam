@@ -3,4 +3,4 @@ from src.entity.campfire import Campfire
 
 def test_light_radius():
     campfire = Campfire()
-    assert campfire.getLightRadius() == 4
+    assert campfire.getLightRadius() == 8
