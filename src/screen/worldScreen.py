@@ -338,7 +338,6 @@ class WorldScreen:
             self.map.addRoom(room)
             self.status.set("Area loaded")
             return room
-        x, y = self.getCoordinatesForNewRoomBasedOnPlayerLocationAndDirection()
         room = self.map.generateNewRoom(x, y)
         self.status.set("New area discovered")
         self.stats.incrementScore()
@@ -815,9 +814,11 @@ class WorldScreen:
                 self.player.setGathering(False)
             if self.player.isPlacing():
                 self.player.setPlacing(False)
-        elif self._handleHotbarKey(key):
-            pass
-        elif key == kb.getKey("toggle_debug"):
+        elif not self._handleHotbarKey(key):
+            self._handleUtilityKey(key, kb)
+
+    def _handleUtilityKey(self, key, kb):
+        if key == kb.getKey("toggle_debug"):
             self.config.debug = not self.config.debug
         elif key == kb.getKey("toggle_minimap"):
             self.config.showMiniMap = not self.config.showMiniMap
