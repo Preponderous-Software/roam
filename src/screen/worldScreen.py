@@ -768,6 +768,12 @@ class WorldScreen:
         # Handle wheat seed planting
         selectedItem = inventorySlot.getContents()[0]
         if isinstance(selectedItem, WheatSeed):
+            # Prevent planting on a location that already has a crop
+            for entityId in list(targetLocation.getEntities().keys()):
+                entity = targetLocation.getEntity(entityId)
+                if isinstance(entity, (YoungCrop, MatureCrop)):
+                    self.status.set("A crop is already growing here")
+                    return
             hasGrass = False
             for entityId in list(targetLocation.getEntities().keys()):
                 entity = targetLocation.getEntity(entityId)
