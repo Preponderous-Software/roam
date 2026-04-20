@@ -123,3 +123,46 @@ def test_get_light_mask_is_cached():
         assert mask1 is mask2
     finally:
         pygame.quit()
+
+
+def test_get_light_mask_center_is_transparent():
+    """Center of the light mask should have alpha near 0 (lit area)."""
+    cycle = createDayNightCycle(1000)
+    import pygame
+
+    pygame.init()
+    try:
+        mask = cycle.getLightMask(50)
+        centerAlpha = mask.get_at((50, 50))[3]
+        assert centerAlpha <= 5
+    finally:
+        pygame.quit()
+
+
+def test_get_light_mask_corner_is_opaque():
+    """Corners of the light mask (outside radius) should stay at alpha 255."""
+    cycle = createDayNightCycle(1000)
+    import pygame
+
+    pygame.init()
+    try:
+        mask = cycle.getLightMask(50)
+        cornerAlpha = mask.get_at((0, 0))[3]
+        assert cornerAlpha == 255
+    finally:
+        pygame.quit()
+
+
+def test_get_light_mask_edge_approaches_opaque():
+    """A pixel just inside the radius edge should have high alpha."""
+    cycle = createDayNightCycle(1000)
+    import pygame
+
+    pygame.init()
+    try:
+        mask = cycle.getLightMask(50)
+        # pixel at (50, 2) is ~48 pixels from center → distance/radius ≈ 0.96
+        edgeAlpha = mask.get_at((50, 2))[3]
+        assert edgeAlpha >= 200
+    finally:
+        pygame.quit()

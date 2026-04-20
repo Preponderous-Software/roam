@@ -104,6 +104,14 @@ logged in detail below.
 - **Tests:** 17 unit tests in `tests/world/test_dayNightCycle.py`, plus
   `tests/entity/test_torch.py`, `tests/entity/test_campfire_light.py`,
   `tests/crafting/test_torchRecipe.py`. Updated config defaults test.
+- **Bug fix:** Fixed inverted light mask — `getLightMask()` was creating alpha=0
+  background with filled circles, causing square bright areas when blitted via
+  `BLEND_RGBA_MIN`. Rewrote to use per-pixel distance field: background alpha=255,
+  centre alpha=0, smooth radial gradient to edge.
+- **Optimization:** `_collectLightSourcesFromRoom` now only checks the top entity
+  per location instead of iterating all entities, reducing per-frame cost.
+- **Test improvement:** Added alpha profile assertions to light mask tests: center
+  transparency, corner opacity, and edge opacity checks.
 
 ### 2026-04-20 — Add farming system (planting, growing, harvesting)
 - **New entity files:**

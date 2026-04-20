@@ -1202,20 +1202,22 @@ class WorldScreen:
         grid = room.getGrid()
         for locationId in grid.getLocations():
             location = grid.getLocation(locationId)
-            for entityId in list(location.getEntities().keys()):
-                entity = location.getEntity(entityId)
-                if hasattr(entity, "getLightRadius"):
-                    screenX = (
-                        offsetX
-                        + location.getX() * self.locationWidth
-                        + self.locationWidth / 2
-                    )
-                    screenY = (
-                        offsetY
-                        + location.getY() * self.locationHeight
-                        + self.locationHeight / 2
-                    )
-                    sources.append((screenX, screenY, entity.getLightRadius()))
+            entityIds = list(location.getEntities().keys())
+            if len(entityIds) == 0:
+                continue
+            entity = location.getEntity(entityIds[-1])
+            if hasattr(entity, "getLightRadius"):
+                screenX = (
+                    offsetX
+                    + location.getX() * self.locationWidth
+                    + self.locationWidth / 2
+                )
+                screenY = (
+                    offsetY
+                    + location.getY() * self.locationHeight
+                    + self.locationHeight / 2
+                )
+                sources.append((screenX, screenY, entity.getLightRadius()))
 
     def drawFollowMode(self):
         gameArea = self.graphik.getGameAreaRect()

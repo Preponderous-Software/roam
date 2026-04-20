@@ -45,15 +45,27 @@ class DayNightCycle:
             return "dawn"
 
     def getLightMask(self, radiusPx):
-        """Return a cached radial light mask surface for the given pixel radius."""
+        """Return a cached radial light mask surface for the given pixel radius.
+
+        The mask is filled with (0,0,0,255) and the light area uses a
+        per-pixel distance field so that the centre is alpha 0 (fully
+        transparent → lit) and the edge is alpha 255 (fully dark).  When
+        blitted onto the overlay with ``BLEND_RGBA_MIN`` this punches a
+        smooth circular hole.
+        """
         if radiusPx in self._lightMaskCache:
             return self._lightMaskCache[radiusPx]
         size = radiusPx * 2
         mask = pygame.Surface((size, size), pygame.SRCALPHA)
-        mask.fill((0, 0, 0, 0))
+        mask.fill((0, 0, 0, 255))
         center = radiusPx
-        for r in range(radiusPx, 0, -1):
-            alpha = int(255 * (r / radiusPx))
-            pygame.draw.circle(mask, (0, 0, 0, alpha), (center, center), r)
+        for y in range(size):
+            dy = y - center
+            for x in range(size):
+                dx = x - center
+                distance = math.hypot(dx, dy)
+                if distance < radiusPx:
+                    alpha = int(round(255 * (distance / radiusPx)))
+                    mask.set_at((x, y), (0, 0, 0, alpha))
         self._lightMaskCache[radiusPx] = mask
         return mask
