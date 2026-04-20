@@ -223,8 +223,10 @@ class Config:
             configValues, "dayNightCycleEnabled", True
         )
         self.dayNightCycleLengthTicks = self.getIntValue(
-            configValues, "dayNightCycleLengthTicks", 43200
-        )  # 30 minutes at 30 tps
+            configValues,
+            "dayNightCycleLengthTicks",
+            self.ticksPerSecond * 30 * 60,
+        )  # 30 minutes at the configured ticksPerSecond
         self.pushableStone = self.getBoolValue(configValues, "pushableStone", True)
 
         _logger.debug(

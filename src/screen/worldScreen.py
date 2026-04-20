@@ -57,6 +57,7 @@ from ui.hotbarLayout import (
 )
 from ui.hudDragManager import HudDragManager
 from entity.oakWood import OakWood
+from entity.torch import Torch
 from entity.wheat import Wheat
 from entity.wheatSeed import WheatSeed
 from entity.woodFloor import WoodFloor
@@ -522,6 +523,7 @@ class WorldScreen:
             StoneBed,
             Fence,
             Campfire,
+            Torch,
             WheatSeed,
             YoungCrop,
             MatureCrop,
@@ -1144,6 +1146,76 @@ class WorldScreen:
         # blit in top left corner with 10px padding
         self.graphik.getGameDisplay().blit(mapImage, (drawX + 10, drawY + 10))
 
+    def _collectLightSources(self, gameArea):
+        """Return list of (screenX, screenY, radiusTiles) for light-emitting entities."""
+        sources = []
+        if self.config.cameraFollowPlayer:
+            playerLocation = self.getLocationOfPlayer()
+            playerGridX = playerLocation.getX()
+            playerGridY = playerLocation.getY()
+            gridSize = self.config.gridSize
+            roomPixelWidth = gridSize * self.locationWidth
+            roomPixelHeight = gridSize * self.locationHeight
+            centerX = gameArea.x + gameArea.width / 2
+            centerY = gameArea.y + gameArea.height / 2
+            playerPixelX = playerGridX * self.locationWidth + self.locationWidth / 2
+            playerPixelY = playerGridY * self.locationHeight + self.locationHeight / 2
+            baseOffsetX = centerX - playerPixelX
+            baseOffsetY = centerY - playerPixelY
+            currentRoomX = self.currentRoom.getX()
+            currentRoomY = self.currentRoom.getY()
+            halfWidth = gameArea.width / 2
+            halfHeight = gameArea.height / 2
+            roomsH = int(halfWidth / roomPixelWidth) + 1
+            roomsV = int(halfHeight / roomPixelHeight) + 1
+            for dx in range(-roomsH, roomsH + 1):
+                for dy in range(-roomsV, roomsV + 1):
+                    roomX = currentRoomX + dx
+                    roomY = currentRoomY + dy
+                    if self.config.worldBorder != 0 and (
+                        abs(roomX) > self.config.worldBorder
+                        or abs(roomY) > self.config.worldBorder
+                    ):
+                        continue
+                    roomOffsetX = baseOffsetX + dx * roomPixelWidth
+                    roomOffsetY = baseOffsetY + dy * roomPixelHeight
+                    if (
+                        roomOffsetX + roomPixelWidth < gameArea.x
+                        or roomOffsetX > gameArea.right
+                        or roomOffsetY + roomPixelHeight < gameArea.y
+                        or roomOffsetY > gameArea.bottom
+                    ):
+                        continue
+                    room = self.map.getRoom(roomX, roomY)
+                    if room == -1:
+                        continue
+                    self._collectLightSourcesFromRoom(
+                        room, roomOffsetX, roomOffsetY, sources
+                    )
+        else:
+            self._collectLightSourcesFromRoom(
+                self.currentRoom, gameArea.x, gameArea.y, sources
+            )
+        return sources
+
+    def _collectLightSourcesFromRoom(self, room, offsetX, offsetY, sources):
+        grid = room.getGrid()
+        for location in grid.getLocations():
+            for entityId in list(location.getEntities().keys()):
+                entity = location.getEntity(entityId)
+                if hasattr(entity, "getLightRadius"):
+                    screenX = (
+                        offsetX
+                        + location.getX() * self.locationWidth
+                        + self.locationWidth / 2
+                    )
+                    screenY = (
+                        offsetY
+                        + location.getY() * self.locationHeight
+                        + self.locationHeight / 2
+                    )
+                    sources.append((screenX, screenY, entity.getLightRadius()))
+
     def drawFollowMode(self):
         gameArea = self.graphik.getGameAreaRect()
 
@@ -1310,10 +1382,22 @@ class WorldScreen:
                     self._dayNightOverlay is None
                     or self._dayNightOverlaySize != overlaySize
                 ):
-                    self._dayNightOverlay = pygame.Surface(overlaySize)
-                    self._dayNightOverlay.fill((0, 0, 0))
+                    self._dayNightOverlay = pygame.Surface(overlaySize, pygame.SRCALPHA)
                     self._dayNightOverlaySize = overlaySize
-                self._dayNightOverlay.set_alpha(opacity)
+                self._dayNightOverlay.fill((0, 0, 0, opacity))
+                lightPositions = self._collectLightSources(gameArea)
+                for screenX, screenY, radiusTiles in lightPositions:
+                    overlayX = screenX - gameArea.x
+                    overlayY = screenY - gameArea.y
+                    radiusPx = int(radiusTiles * self.locationWidth)
+                    if radiusPx <= 0:
+                        continue
+                    mask = self.dayNightCycle.getLightMask(radiusPx)
+                    self._dayNightOverlay.blit(
+                        mask,
+                        (overlayX - radiusPx, overlayY - radiusPx),
+                        special_flags=pygame.BLEND_RGBA_MIN,
+                    )
                 self.graphik.getGameDisplay().blit(
                     self._dayNightOverlay, (gameArea.x, gameArea.y)
                 )

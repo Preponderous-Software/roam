@@ -24,6 +24,7 @@ from entity.oakWood import OakWood
 from entity.stone import Stone
 from entity.stoneBed import StoneBed
 from entity.stoneFloor import StoneFloor
+from entity.torch import Torch
 from entity.wheat import Wheat
 from entity.wheatSeed import WheatSeed
 from entity.woodFloor import WoodFloor
@@ -55,6 +56,7 @@ _SIMPLE_ENTITY_CONSTRUCTORS = {
     "StoneBed": StoneBed,
     "Fence": Fence,
     "Campfire": Campfire,
+    "Torch": Torch,
     "WheatSeed": WheatSeed,
     "Wheat": Wheat,
 }

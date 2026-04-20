@@ -1,5 +1,7 @@
 import math
 
+import pygame
+
 from appContainer import component
 from config.config import Config
 
@@ -10,6 +12,7 @@ from config.config import Config
 class DayNightCycle:
     def __init__(self, config: Config):
         self.config = config
+        self._lightMaskCache = {}
 
     def getOverlayOpacity(self, tick):
         """Return overlay opacity (0–200) for the given tick.
@@ -40,3 +43,17 @@ class DayNightCycle:
             return "night"
         else:
             return "dawn"
+
+    def getLightMask(self, radiusPx):
+        """Return a cached radial light mask surface for the given pixel radius."""
+        if radiusPx in self._lightMaskCache:
+            return self._lightMaskCache[radiusPx]
+        size = radiusPx * 2
+        mask = pygame.Surface((size, size), pygame.SRCALPHA)
+        mask.fill((0, 0, 0, 0))
+        center = radiusPx
+        for r in range(radiusPx, 0, -1):
+            alpha = int(255 * (r / radiusPx))
+            pygame.draw.circle(mask, (0, 0, 0, alpha), (center, center), r)
+        self._lightMaskCache[radiusPx] = mask
+        return mask

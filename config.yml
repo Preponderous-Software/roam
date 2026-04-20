@@ -26,4 +26,4 @@ showMiniMap: true
 cameraFollowPlayer: true
 limitTps: true
 dayNightCycleEnabled: true
-dayNightCycleLengthTicks: 43200
+dayNightCycleLengthTicks: 54000

@@ -34,7 +34,7 @@ def test_defaults():
     assert config.cameraFollowPlayer == True
     assert config.limitTps == True
     assert config.dayNightCycleEnabled == True
-    assert config.dayNightCycleLengthTicks == 43200
+    assert config.dayNightCycleLengthTicks == 54000
     assert config.pushableStone == True
 
 

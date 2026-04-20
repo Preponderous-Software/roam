@@ -94,6 +94,32 @@ def test_phase_zero_cycle_length():
 
 
 def test_default_cycle_length():
-    cycle = createDayNightCycle(43200)
+    cycle = createDayNightCycle(54000)
     assert cycle.getOverlayOpacity(0) == 0
-    assert cycle.getOverlayOpacity(21600) == 200
+    assert cycle.getOverlayOpacity(27000) == 200
+
+
+def test_get_light_mask_returns_surface():
+    cycle = createDayNightCycle(1000)
+    import pygame
+
+    pygame.init()
+    try:
+        mask = cycle.getLightMask(50)
+        assert mask.get_width() == 100
+        assert mask.get_height() == 100
+    finally:
+        pygame.quit()
+
+
+def test_get_light_mask_is_cached():
+    cycle = createDayNightCycle(1000)
+    import pygame
+
+    pygame.init()
+    try:
+        mask1 = cycle.getLightMask(50)
+        mask2 = cycle.getLightMask(50)
+        assert mask1 is mask2
+    finally:
+        pygame.quit()

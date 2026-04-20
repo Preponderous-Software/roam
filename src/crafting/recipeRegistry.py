@@ -9,6 +9,7 @@ from entity.oakWood import OakWood
 from entity.stone import Stone
 from entity.stoneBed import StoneBed
 from entity.stoneFloor import StoneFloor
+from entity.torch import Torch
 from entity.wheatSeed import WheatSeed
 from entity.woodFloor import WoodFloor
 
@@ -73,6 +74,15 @@ class RecipeRegistry:
                 WheatSeed,
                 "assets/images/wheatSeed.png",
                 3,
+            )
+        )
+        self.recipes.append(
+            Recipe(
+                "Torch",
+                {OakWood: 1, CoalOre: 1},
+                Torch,
+                "assets/images/torch.png",
+                2,
             )
         )
 

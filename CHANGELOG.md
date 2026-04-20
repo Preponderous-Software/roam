@@ -8,7 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
-| 2026-04-20 | 1+ | feat: Add day/night cycle — `DayNightCycle` class with sine-curve overlay opacity and phase detection, registered as `@component`; configurable `dayNightCycleEnabled` and `dayNightCycleLengthTicks` in `config.yml` and `Config`; cached overlay surface blitted to game area in `WorldScreen.draw()`; toggle button in `ConfigScreen`; debug info showing cycle phase and opacity; 15 new unit tests |
+| 2026-04-20 | 3+ | feat: Add day/night cycle with craftable light sources — `DayNightCycle` class with sine-curve overlay opacity, phase detection, and radial light mask caching; `Torch` entity (craftable from OakWood + CoalOre, yields 2) with `lightRadius=3`; `Campfire` updated with `lightRadius=4`; per-pixel alpha overlay with `BLEND_RGBA_MIN` light halos in `WorldScreen.draw()`; configurable `dayNightCycleEnabled` and `dayNightCycleLengthTicks` (default 54000 = 30 min at 30 tps); toggle in `ConfigScreen`; debug info; Torch registered in entity registries; 22 new unit tests |
 | 2026-04-20 | 2+ | feat: Add Codex screen — records living entities the player has encountered; `Codex` class with discover/hasDiscovered/getDiscoveredEntities registered as `@component`; `CodexJsonReaderWriter` for JSON persistence with `schemas/codex.json` schema; discovery triggered on room transitions and initialization; status message on first discovery; `CodexScreen` with scrollable list showing discovered entities with textures and `???` for undiscovered; configurable `L` keybinding via `KeyBindings`; `CODEX_SCREEN` added to `ScreenType`; integrated in `Roam.run()` and `WorldScreen`; codex saved/loaded alongside stats and tick count; README updated with `L` keybinding; 18 new unit tests |
 | 2026-04-20 | 1+ | feat: Add farming system — WheatSeed, YoungCrop, MatureCrop, Wheat entities; crop growth via tickCrops; planting seeds on grass via right-click; harvesting mature crops via left-click; crafting recipe (Grass → WheatSeed ×3); persistence for crop tickPlanted; all entity types registered in room and inventory JSON reader/writers; cropGrowthTicks config option; unit tests for entities, growth, crafting, and serialization |
 | 2026-04-19 | 12+ | feat: Add structured logging with structlog — create `src/gameLogging/logger.py` with `getLogger()` and `redact()` helpers, register `LoggerFactory` singleton in DI container, add `LOG_LEVEL`/`LOG_FORMAT` config support, replace all `print()` calls in source files with structured logger calls, expand instrumentation to config.py (startup config values at DEBUG), roam.py (screen transitions, shutdown at INFO), worldScreen.py (room transitions, initialization at INFO), map.py (room loading/generation at INFO), roomFactory.py (room creation, entity spawning at DEBUG), roomPreloader.py (background preloading at DEBUG, failures at ERROR), stats.py (save/load at INFO), saveSelectionScreen.py (save selection/creation/deletion at INFO), inventory.py (item operations at DEBUG); fix incorrect log levels in worldScreen.py (entity edge cases from ERROR to DEBUG); docs: Create `LOGGING.md` documenting log levels, env vars, field conventions, and redaction policy |
@@ -76,21 +76,31 @@ logged in detail below.
 
 ### 2026-04-20 — Add day/night cycle
 - **New file:** `src/world/dayNightCycle.py` — `DayNightCycle` class registered as
-  `@component`; exposes `getOverlayOpacity(tick)` (sine-curve mapping 0–200) and
-  `getPhase(tick)` returning `day`/`dusk`/`night`/`dawn`.
+  `@component`; exposes `getOverlayOpacity(tick)` (sine-curve mapping 0–200),
+  `getPhase(tick)` returning `day`/`dusk`/`night`/`dawn`, and `getLightMask(radiusPx)`
+  for cached radial light masks.
 - **Config:** Added `dayNightCycleEnabled` (default `true`) and
-  `dayNightCycleLengthTicks` (default `43200`) to `config.yml` and `Config` class.
+  `dayNightCycleLengthTicks` (default `54000` — 30 min at 30 tps) to `config.yml`
+  and `Config` class. Default derived from `ticksPerSecond * 30 * 60`.
 - **Rendering (`src/screen/worldScreen.py`):** After rooms are drawn and before
-  the clip is removed, a cached black `pygame.Surface` is blitted at the computed
-  opacity onto the game area rect. Surface is only reallocated when the game area
-  size changes.
+  the clip is removed, a per-pixel alpha overlay (`pygame.SRCALPHA`) is filled at
+  the computed opacity and blitted onto the game area rect. Light-emitting entities
+  (Torch, Campfire) punch radial gradient holes in the overlay via
+  `BLEND_RGBA_MIN`. Overlay surface is only reallocated when the game area size
+  changes.
+- **Light sources:** New `Torch` entity (`src/entity/torch.py`) with `lightRadius=3`,
+  craftable from 1× OakWood + 1× CoalOre (yields 2). Campfire (`src/entity/campfire.py`)
+  updated with `lightRadius=4`. Both entities reduce day/night darkness in a
+  circular area when placed.
 - **Debug info:** When `config.debug` is `True` and the cycle is enabled, the
   current phase and overlay opacity are shown in the top-right debug text area.
 - **Settings (`src/screen/configScreen.py`):** Added "Day/Night Cycle" toggle
   button consistent with existing toggles.
-- **Tests:** Added 15 unit tests in `tests/world/test_dayNightCycle.py` covering
-  midday, midnight, dusk, dawn, wrapping, edge cases, and range validation.
-  Updated `tests/config/test_config.py` defaults assertion.
+- **Entity registries:** Torch registered in `roomJsonReaderWriter.py`,
+  `inventoryJsonReaderWriter.py`, `canBePickedUp()`, and `recipeRegistry.py`.
+- **Tests:** 17 unit tests in `tests/world/test_dayNightCycle.py`, plus
+  `tests/entity/test_torch.py`, `tests/entity/test_campfire_light.py`,
+  `tests/crafting/test_torchRecipe.py`. Updated config defaults test.
 
 ### 2026-04-20 — Add farming system (planting, growing, harvesting)
 - **New entity files:**
