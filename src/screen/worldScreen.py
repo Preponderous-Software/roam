@@ -1200,7 +1200,8 @@ class WorldScreen:
 
     def _collectLightSourcesFromRoom(self, room, offsetX, offsetY, sources):
         grid = room.getGrid()
-        for location in grid.getLocations():
+        for locationId in grid.getLocations():
+            location = grid.getLocation(locationId)
             for entityId in list(location.getEntities().keys()):
                 entity = location.getEntity(entityId)
                 if hasattr(entity, "getLightRadius"):

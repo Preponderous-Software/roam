@@ -92,6 +92,9 @@ logged in detail below.
   craftable from 1× OakWood + 1× CoalOre (yields 2). Campfire (`src/entity/campfire.py`)
   updated with `lightRadius=4`. Both entities reduce day/night darkness in a
   circular area when placed.
+- **Bug fix:** Fixed `_collectLightSourcesFromRoom` crash — `grid.getLocations()`
+  returns a dict; iteration must use `for locationId in grid.getLocations()`
+  followed by `grid.getLocation(locationId)` (matching existing codebase pattern).
 - **Debug info:** When `config.debug` is `True` and the cycle is enabled, the
   current phase and overlay opacity are shown in the top-right debug text area.
 - **Settings (`src/screen/configScreen.py`):** Added "Day/Night Cycle" toggle
@@ -774,3 +777,10 @@ about this repository, add it here so the next agent benefits.
   day/night cycle) must be blitted while the clip is still active. HUD
   elements drawn after `set_clip(None)` are unaffected by the clip and
   render over the full display including letterbox bars.
+- 2026-04-20: `[not yet integrated]` `grid.getLocations()` (from
+  `src/lib/pyenvlib/grid.py`) returns a **dict** keyed by UUID, not a
+  list of Location objects. The codebase convention is
+  `for locationId in grid.getLocations():` followed by
+  `location = grid.getLocation(locationId)`. Iterating with
+  `for location in grid.getLocations()` yields UUID keys, not Locations,
+  and will crash when calling Location methods.
