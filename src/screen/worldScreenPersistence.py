@@ -50,8 +50,25 @@ class WorldScreenPersistence:
         roomY = jsonPlayerLocation["roomY"]
         currentRoom = mapInstance.getRoom(roomX, roomY)
 
+        if currentRoom == -1:
+            _logger.warning(
+                "saved room not found, falling back to spawn",
+                roomX=roomX,
+                roomY=roomY,
+            )
+            return None
+
         locationId = jsonPlayerLocation["locationId"]
         location = currentRoom.getGrid().getLocation(locationId)
+        if location is None:
+            _logger.warning(
+                "saved location not found in room, falling back to spawn",
+                locationId=locationId,
+                roomX=roomX,
+                roomY=roomY,
+            )
+            return None
+
         currentRoom.addEntityToLocation(self.player, location)
         return currentRoom
 

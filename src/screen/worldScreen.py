@@ -326,9 +326,8 @@ class WorldScreen:
             _logger.error("error writing JSON file", error=str(e), path=path)
 
     def _loadOrGenerateRoom(self, x, y):
-        room = self.map.getRoom(x, y)
-        if room != -1:
-            return room
+        if self.map.hasRoom(x, y):
+            return self.map.getRoom(x, y)
         nextRoomPath = self.persistence.buildRoomPath(x, y)
         if os.path.exists(nextRoomPath):
             roomJsonReaderWriter = RoomJsonReaderWriter(

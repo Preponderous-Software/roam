@@ -162,5 +162,9 @@ class KeyBindings:
 
         try:
             configFilePath.write_text("\n".join(newLines) + "\n", encoding="utf-8")
-        except OSError:
-            _logger.warning("failed to save key bindings to config file")
+        except OSError as e:
+            _logger.warning(
+                "failed to save key bindings to config file",
+                error=str(e),
+                path=str(configFilePath),
+            )
