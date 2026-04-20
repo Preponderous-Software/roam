@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock
 
+import pygame
 
 from src.world.dayNightCycle import DayNightCycle
 
@@ -101,8 +102,6 @@ def test_default_cycle_length():
 
 def test_get_light_mask_returns_surface():
     cycle = createDayNightCycle(1000)
-    import pygame
-
     pygame.init()
     try:
         mask = cycle.getLightMask(50)
@@ -114,8 +113,6 @@ def test_get_light_mask_returns_surface():
 
 def test_get_light_mask_is_cached():
     cycle = createDayNightCycle(1000)
-    import pygame
-
     pygame.init()
     try:
         mask1 = cycle.getLightMask(50)
@@ -128,8 +125,6 @@ def test_get_light_mask_is_cached():
 def test_get_light_mask_center_is_transparent():
     """Center of the light mask should have alpha near 0 (lit area)."""
     cycle = createDayNightCycle(1000)
-    import pygame
-
     pygame.init()
     try:
         mask = cycle.getLightMask(50)
@@ -142,8 +137,6 @@ def test_get_light_mask_center_is_transparent():
 def test_get_light_mask_corner_is_opaque():
     """Corners of the light mask (outside radius) should stay at alpha 255."""
     cycle = createDayNightCycle(1000)
-    import pygame
-
     pygame.init()
     try:
         mask = cycle.getLightMask(50)
@@ -156,8 +149,6 @@ def test_get_light_mask_corner_is_opaque():
 def test_get_light_mask_edge_approaches_opaque():
     """A pixel just inside the radius edge should have high alpha."""
     cycle = createDayNightCycle(1000)
-    import pygame
-
     pygame.init()
     try:
         mask = cycle.getLightMask(50)
