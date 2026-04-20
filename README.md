@@ -10,8 +10,8 @@ Key | Action
 W / A / S / D (or Arrow Keys) | Move up / left / down / right
 Shift | Run
 Ctrl | Crouch
-Left Mouse | Gather / Pick up
-Right Mouse | Place item
+Left Mouse | Gather / Pick up / Harvest mature crop
+Right Mouse | Place item / Plant seed on grass
 1-0 | Select hotbar slot
 Scroll Wheel | Cycle through hotbar
 I | Open / Close inventory

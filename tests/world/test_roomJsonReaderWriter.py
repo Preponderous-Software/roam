@@ -17,11 +17,15 @@ from entity.jungleWood import JungleWood
 from entity.leaves import Leaves
 from entity.living.bear import Bear
 from entity.living.chicken import Chicken
+from entity.matureCrop import MatureCrop
 from entity.oakWood import OakWood
 from entity.stone import Stone
 from entity.stoneBed import StoneBed
 from entity.stoneFloor import StoneFloor
+from entity.wheat import Wheat
+from entity.wheatSeed import WheatSeed
 from entity.woodFloor import WoodFloor
+from entity.youngCrop import YoungCrop
 from src.world.roomJsonReaderWriter import RoomJsonReaderWriter
 
 
@@ -40,7 +44,7 @@ def createEntityJson(entityClass):
         "gridId": str(uuid4()),
         "locationId": str(uuid4()),
     }
-    if entityClass in ["Apple", "Banana", "ChickenMeat", "BearMeat"]:
+    if entityClass in ["Apple", "Banana", "ChickenMeat", "BearMeat", "Wheat"]:
         entityJson["energy"] = 25
     if entityClass in ["Bear", "Chicken"]:
         entityJson["energy"] = 80
@@ -49,6 +53,8 @@ def createEntityJson(entityClass):
         entityJson["imagePath"] = "assets/images/test.png"
     if entityClass == "Excrement":
         entityJson["tickCreated"] = 100
+    if entityClass in ["YoungCrop", "MatureCrop"]:
+        entityJson["tickPlanted"] = 100
     return entityJson
 
 
@@ -75,6 +81,10 @@ def createEntityJson(entityClass):
         ("Bear", Bear),
         ("Chicken", Chicken),
         ("Excrement", Excrement),
+        ("WheatSeed", WheatSeed),
+        ("Wheat", Wheat),
+        ("YoungCrop", YoungCrop),
+        ("MatureCrop", MatureCrop),
     ],
 )
 def test_generate_entity_from_json_supports_all_known_entity_classes(
@@ -121,3 +131,45 @@ def test_generate_room_from_json_parses_background_color_string():
     room = roomJsonReaderWriter.generateRoomFromJson(roomJson)
 
     assert room.getBackgroundColor() == (15, 30, 45)
+
+
+def test_young_crop_preserves_tick_planted():
+    roomJsonReaderWriter = createRoomJsonReaderWriter()
+    entityJson = createEntityJson("YoungCrop")
+    entityJson["tickPlanted"] = 500
+
+    entity = roomJsonReaderWriter.generateEntityFromJson(entityJson)
+
+    assert isinstance(entity, YoungCrop)
+    assert entity.getTickPlanted() == 500
+
+
+def test_mature_crop_preserves_tick_planted():
+    roomJsonReaderWriter = createRoomJsonReaderWriter()
+    entityJson = createEntityJson("MatureCrop")
+    entityJson["tickPlanted"] = 750
+
+    entity = roomJsonReaderWriter.generateEntityFromJson(entityJson)
+
+    assert isinstance(entity, MatureCrop)
+    assert entity.getTickPlanted() == 750
+
+
+def test_generate_json_for_young_crop_includes_tick_planted():
+    roomJsonReaderWriter = createRoomJsonReaderWriter()
+    crop = YoungCrop(300)
+
+    entityJson = roomJsonReaderWriter.generateJsonForEntity(crop)
+
+    assert entityJson["entityClass"] == "YoungCrop"
+    assert entityJson["tickPlanted"] == 300
+
+
+def test_generate_json_for_mature_crop_includes_tick_planted():
+    roomJsonReaderWriter = createRoomJsonReaderWriter()
+    crop = MatureCrop(400)
+
+    entityJson = roomJsonReaderWriter.generateJsonForEntity(crop)
+
+    assert entityJson["entityClass"] == "MatureCrop"
+    assert entityJson["tickPlanted"] == 400

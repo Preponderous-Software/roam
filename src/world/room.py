@@ -3,6 +3,8 @@ import random
 import pygame
 from entity.excrement import Excrement
 from entity.grass import Grass
+from entity.matureCrop import MatureCrop
+from entity.youngCrop import YoungCrop
 from entity.living.bear import Bear
 from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
@@ -291,6 +293,24 @@ class Room(Environment):
             if shouldPlaceGrass:
                 grass = Grass()
                 self.addEntityToLocation(grass, location)
+
+    def tickCrops(self, tick, config):
+        replacements = []
+        for locationId in self.getGrid().getLocations():
+            location = self.getGrid().getLocation(locationId)
+            for entityId in list(location.getEntities().keys()):
+                entity = location.getEntity(entityId)
+                if isinstance(entity, YoungCrop):
+                    if tick - entity.getTickPlanted() >= config.cropGrowthTicks:
+                        replacements.append((location, entity, "mature"))
+                elif isinstance(entity, MatureCrop):
+                    pass  # MatureCrop waits for player harvest
+
+        for location, oldEntity, stage in replacements:
+            location.removeEntity(oldEntity)
+            if stage == "mature":
+                matureCrop = MatureCrop(oldEntity.getTickPlanted())
+                self.addEntityToLocation(matureCrop, location)
 
     def _getLocationOrNone(self, locationId, actionName, entityId):
         try:

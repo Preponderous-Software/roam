@@ -54,7 +54,11 @@ from ui.hotbarLayout import (
 )
 from ui.hudDragManager import HudDragManager
 from entity.oakWood import OakWood
+from entity.wheat import Wheat
+from entity.wheatSeed import WheatSeed
 from entity.woodFloor import WoodFloor
+from entity.youngCrop import YoungCrop
+from entity.matureCrop import MatureCrop
 from gameLogging.logger import getLogger
 
 _logger = getLogger(__name__)
@@ -502,6 +506,10 @@ class WorldScreen:
             StoneBed,
             Fence,
             Campfire,
+            WheatSeed,
+            YoungCrop,
+            MatureCrop,
+            Wheat,
         ]
         for itemType in itemTypes:
             if isinstance(entity, itemType):
@@ -582,6 +590,26 @@ class WorldScreen:
         if self.isLocationTooFar(targetLocation, targetRoom):
             self.status.set("Too far away")
             return
+
+        # Check for crop interactions first
+        for entityId in list(reversed(targetLocation.getEntities())):
+            entity = targetLocation.getEntity(entityId)
+            if isinstance(entity, YoungCrop):
+                self.status.set("Crop is not ready")
+                return
+            if isinstance(entity, MatureCrop):
+                wheat = Wheat()
+                result = self.player.getInventory().placeIntoFirstAvailableInventorySlot(
+                    wheat
+                )
+                if result == False:
+                    self.status.set("Inventory full")
+                    return
+                targetRoom.removeEntity(entity)
+                self.status.set("Harvested Wheat")
+                self.player.removeEnergy(self.config.playerInteractionEnergyCost)
+                self.player.setTickLastGathered(self.tickCounter.getTick())
+                return
 
         toRemove = -1
         reversedEntityIdList = list(reversed(targetLocation.getEntities()))
@@ -738,6 +766,34 @@ class WorldScreen:
         if inventorySlot.isEmpty():
             self.status.set("Select an item first (1-0)")
             return
+
+        # Handle wheat seed planting
+        selectedItem = inventorySlot.getContents()[0]
+        if isinstance(selectedItem, WheatSeed):
+            hasGrass = False
+            for entityId in list(targetLocation.getEntities().keys()):
+                entity = targetLocation.getEntity(entityId)
+                if isinstance(entity, Grass):
+                    hasGrass = True
+                    break
+            if not hasGrass:
+                self.status.set("Must plant on grass")
+                return
+            # Remove grass from location
+            for entityId in list(targetLocation.getEntities().keys()):
+                entity = targetLocation.getEntity(entityId)
+                if isinstance(entity, Grass):
+                    targetLocation.removeEntity(entity)
+                    break
+            # Consume seed from inventory
+            self.player.getInventory().removeSelectedItem()
+            # Place young crop
+            youngCrop = YoungCrop(self.tickCounter.getTick())
+            targetRoom.addEntityToLocation(youngCrop, targetLocation)
+            self.status.set("Planted Wheat Seed")
+            self.player.setTickLastPlaced(self.tickCounter.getTick())
+            return
+
         toPlace = self.player.getInventory().removeSelectedItem()
 
         if toPlace == -1:
@@ -1903,6 +1959,7 @@ class WorldScreen:
             self.currentRoom.reproduceLivingEntities(self.tickCounter.getTick())
 
             self.currentRoom.tickExcrement(self.tickCounter.getTick(), self.config)
+            self.currentRoom.tickCrops(self.tickCounter.getTick(), self.config)
 
             self.handleMouseOver()
 

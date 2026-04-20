@@ -3,11 +3,13 @@ from entity.bed import Bed
 from entity.campfire import Campfire
 from entity.coalOre import CoalOre
 from entity.fence import Fence
+from entity.grass import Grass
 from entity.jungleWood import JungleWood
 from entity.oakWood import OakWood
 from entity.stone import Stone
 from entity.stoneBed import StoneBed
 from entity.stoneFloor import StoneFloor
+from entity.wheatSeed import WheatSeed
 from entity.woodFloor import WoodFloor
 
 
@@ -62,6 +64,15 @@ class RecipeRegistry:
                 {OakWood: 2, CoalOre: 1},
                 Campfire,
                 "assets/images/campfire.png",
+            )
+        )
+        self.recipes.append(
+            Recipe(
+                "Wheat Seed",
+                {Grass: 1},
+                WheatSeed,
+                "assets/images/wheatSeed.png",
+                3,
             )
         )
 

@@ -44,7 +44,8 @@ def test_craft_deducts_materials_and_returns_item():
     )
     result = recipe.craft(inventory)
     assert result is not None
-    assert isinstance(result, WoodFloor)
+    assert len(result) == 1
+    assert isinstance(result[0], WoodFloor)
     assert inventory.getNumItemsByType(OakWood) == 0
 
 

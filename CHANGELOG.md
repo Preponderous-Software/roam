@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-04-20 | 1+ | feat: Add farming system — WheatSeed, YoungCrop, MatureCrop, Wheat entities; crop growth via tickCrops; planting seeds on grass via right-click; harvesting mature crops via left-click; crafting recipe (Grass → WheatSeed ×3); persistence for crop tickPlanted; all entity types registered in room and inventory JSON reader/writers; cropGrowthTicks config option; unit tests for entities, growth, crafting, and serialization |
 | 2026-04-19 | 12+ | feat: Add structured logging with structlog — create `src/gameLogging/logger.py` with `getLogger()` and `redact()` helpers, register `LoggerFactory` singleton in DI container, add `LOG_LEVEL`/`LOG_FORMAT` config support, replace all `print()` calls in source files with structured logger calls, expand instrumentation to config.py (startup config values at DEBUG), roam.py (screen transitions, shutdown at INFO), worldScreen.py (room transitions, initialization at INFO), map.py (room loading/generation at INFO), roomFactory.py (room creation, entity spawning at DEBUG), roomPreloader.py (background preloading at DEBUG, failures at ERROR), stats.py (save/load at INFO), saveSelectionScreen.py (save selection/creation/deletion at INFO), inventory.py (item operations at DEBUG); fix incorrect log levels in worldScreen.py (entity edge cases from ERROR to DEBUG); docs: Create `LOGGING.md` documenting log levels, env vars, field conventions, and redaction policy |
 | 2026-04-19 | 11 | refactor: Clean Code refactoring — fix resource leaks (unclosed file handles in stats.py, tickCounter.py, worldScreen.py), remove duplicate player.py methods, refactor 106-line if/elif chain in inventoryJsonReaderWriter.py into entity registry pattern, fix `bool`/`min`/`max` built-in shadowing, remove dead code (unused expressions and assignments in statsScreen.py, dead method calls in worldScreen.py), consolidate duplicate captureScreen/screenshot logic across 3 screen classes into shared screenshotHelper.py, remove redundant comments across roomFactory.py/roomJsonReaderWriter.py/mapImageGenerator.py/worldScreen.py/room.py, rename inconsistent snake_case variables in mapImageGenerator.py, run Black formatter and autoflake; fix: Recreate ThreadPoolExecutors after shutdown() drains them so singleton WorldScreen/RoomPreloader/MapImageUpdater instances survive screen transitions (fixes RuntimeError: cannot schedule new futures after shutdown) |
 | 2026-04-19 | 10 | feat: Add lightweight DI container (`src/di/`) with auto-wiring, singleton/transient lifetimes, `@component` decorator, circular dependency detection, and factory function support; feat: Create container singleton (`src/appContainer.py`) and centralized bootstrap (`src/bootstrap.py`); refactor: Migrate `roam.py`, `worldScreen.py`, `map.py` to resolve dependencies via container; fix: Remove dead EnergyBar fallback branch in WorldScreen; fix: Add `resetSingletons()` to prevent stale cached instances across game restarts; refactor: Replace new-instance restart with `Roam.restart()` method that resets state on the existing instance; docs: Document DI strategy in `copilot-instructions.md` for contributors; test: Add 15 DI test cases; perf: Asynchronous room pre-loading to eliminate lag on room transitions — new `RoomPreloader` class using `ThreadPoolExecutor`, thread-safe `Map` with locking, registered in DI container; test: Add 7 `RoomPreloader` test cases; perf: Background map image updates — `MapImageUpdater` now runs Pillow-based map compositing in a background thread to avoid blocking the game loop when the minimap is enabled; test: Add 9 `MapImageUpdater` test cases; fix: Cache last loaded minimap surface so the minimap renders a stale frame instead of flickering when the background thread is writing the map image; perf: Move save() and room file writes to background thread so room transitions are non-blocking; perf: Room PNG capture defers disk I/O to background thread (surface captured on main thread, saved async); perf: Add 60-tick cooldown on minimap image reloads from disk to reduce I/O; fix: Make Map.addRoom() a no-op when key exists to prevent inconsistency between rooms list and index during concurrent preloading; feat: Add WorldScreen.shutdown() to cleanly stop all background thread pools on exit |
@@ -70,6 +71,33 @@ logged in detail below.
 | 2022-08-08 | 21 | Create version.txt; Update README.md; Modified README. (+9 more) |
 
 ## AI Agent Sessions
+
+### 2026-04-20 — Add farming system (planting, growing, harvesting)
+- **New entity files:**
+  - `src/entity/wheatSeed.py` — `WheatSeed` (DrawableEntity, solid=False)
+  - `src/entity/youngCrop.py` — `YoungCrop` (DrawableEntity, solid=False, stores `tickPlanted`)
+  - `src/entity/matureCrop.py` — `MatureCrop` (DrawableEntity, solid=False, stores `tickPlanted`)
+  - `src/entity/wheat.py` — `Wheat` (Food, solid=False, energy 10–20)
+- **New placeholder assets:** `assets/images/wheatSeed.png`, `youngCrop.png`, `matureCrop.png`, `wheat.png` (32×32 RGBA)
+- **Config:** Added `cropGrowthTicks` (default 1800) to `src/config/config.py`
+- **Growth logic:** Added `tickCrops(tick, config)` to `src/world/room.py` — YoungCrop → MatureCrop after `cropGrowthTicks` ticks
+- **World screen (`src/screen/worldScreen.py`):**
+  - Called `tickCrops` from the tick loop alongside `tickExcrement`
+  - Added planting logic to `executePlaceAction()` — WheatSeed on Grass → YoungCrop
+  - Added harvesting logic to `executeGatherAction()` — MatureCrop → Wheat in inventory
+  - Added all four new entities to `canBePickedUp()`
+- **Crafting:** Added Wheat Seed recipe (1× Grass → 3× WheatSeed) to `recipeRegistry.py`;
+  extended `Recipe` class with `resultCount` parameter and updated `craft()` to return a list
+- **Persistence:**
+  - Added WheatSeed, Wheat, YoungCrop, MatureCrop to `roomJsonReaderWriter.py` and `inventoryJsonReaderWriter.py`
+  - YoungCrop/MatureCrop serialize/deserialize `tickPlanted`
+- **README:** Updated Controls table with farming actions
+- **Tests:** Added 21 new tests across 6 test files:
+  - `tests/entity/test_wheatSeed.py`, `test_youngCrop.py`, `test_matureCrop.py`, `test_wheat.py`
+  - `tests/crafting/test_wheatSeedRecipe.py`
+  - `tests/world/test_cropGrowth.py`
+  - Updated `tests/world/test_roomJsonReaderWriter.py` with crop entity serialization tests
+  - Updated `tests/crafting/test_recipe.py` for list return from `craft()`
 
 ### 2026-04-19 — Add controls screen for viewing and remapping keybindings
 - **New files:**
@@ -693,3 +721,13 @@ about this repository, add it here so the next agent benefits.
   structured logging module was renamed to `src/gameLogging/` to avoid
   shadowing the stdlib. Future agents should avoid naming packages after
   standard library modules.
+- 2026-04-20: `[not yet integrated]` The `Recipe.craft()` method now
+  returns a list of result entities (to support multi-item output like
+  1× Grass → 3× WheatSeed). Callers (e.g., `inventoryScreen.craftRecipe`)
+  must iterate the list and add each item individually.
+- 2026-04-20: `[not yet integrated]` Entities with tick-based state
+  (like `tickPlanted` on `YoungCrop`/`MatureCrop` or `tickCreated` on
+  `Excrement`) must be handled specially in both JSON reader/writers:
+  they need custom constructor calls in `_createEntity`, serialization
+  in `generateJsonForEntity`, and a separate registry in the inventory
+  reader/writer.

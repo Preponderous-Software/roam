@@ -275,10 +275,10 @@ class InventoryScreen:
         if not self.inventory.hasAvailableSlotFor(recipe.getResultClass()):
             self.status.set("Inventory full")
             return
-        result = recipe.craft(self.inventory)
-        if result is not None:
-            # Placement is guaranteed by the hasAvailableSlotFor check above
-            self.inventory.placeIntoFirstAvailableInventorySlot(result)
+        results = recipe.craft(self.inventory)
+        if results is not None:
+            for result in results:
+                self.inventory.placeIntoFirstAvailableInventorySlot(result)
             self.status.set("Crafted " + recipe.getName())
 
     def drawBackButton(self):

@@ -19,11 +19,15 @@ from entity.leaves import Leaves
 from entity.living.bear import Bear
 from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
+from entity.matureCrop import MatureCrop
 from entity.oakWood import OakWood
 from entity.stone import Stone
 from entity.stoneBed import StoneBed
 from entity.stoneFloor import StoneFloor
+from entity.wheat import Wheat
+from entity.wheatSeed import WheatSeed
 from entity.woodFloor import WoodFloor
+from entity.youngCrop import YoungCrop
 from inventory.inventory import Inventory
 from gameLogging.logger import getLogger
 
@@ -51,15 +55,23 @@ _SIMPLE_ENTITY_CONSTRUCTORS = {
     "StoneBed": StoneBed,
     "Fence": Fence,
     "Campfire": Campfire,
+    "WheatSeed": WheatSeed,
+    "Wheat": Wheat,
 }
 
 # Food entity classes that have a restorable energy value
-_FOOD_ENTITY_CLASSES = {"Apple", "Banana", "ChickenMeat", "BearMeat"}
+_FOOD_ENTITY_CLASSES = {"Apple", "Banana", "ChickenMeat", "BearMeat", "Wheat"}
 
 # Living entity classes that need a tickCreated constructor argument
 _LIVING_ENTITY_CONSTRUCTORS = {
     "Bear": Bear,
     "Chicken": Chicken,
+}
+
+# Crop entity classes that need a tickPlanted constructor argument
+_CROP_ENTITY_CONSTRUCTORS = {
+    "YoungCrop": YoungCrop,
+    "MatureCrop": MatureCrop,
 }
 
 
@@ -87,6 +99,8 @@ class InventoryJsonReaderWriter:
                     entityData["tickCreated"] = entity.getTickCreated()
                     entityData["tickLastReproduced"] = entity.getTickLastReproduced()
                     entityData["imagePath"] = entity.getImagePath()
+                if isinstance(entity, (YoungCrop, MatureCrop)):
+                    entityData["tickPlanted"] = entity.getTickPlanted()
                 slotContents.append(entityData)
             toReturn["inventorySlots"].append(
                 {"slotIndex": slotIndex, "slotContents": slotContents}
@@ -125,6 +139,9 @@ class InventoryJsonReaderWriter:
         if entityClass in _LIVING_ENTITY_CONSTRUCTORS:
             return self._createLivingEntity(entityClass, entityJson)
 
+        if entityClass in _CROP_ENTITY_CONSTRUCTORS:
+            return self._createCropEntity(entityClass, entityJson)
+
         if entityClass in _SIMPLE_ENTITY_CONSTRUCTORS:
             return self._createSimpleEntity(entityClass, entityJson)
 
@@ -145,4 +162,10 @@ class InventoryJsonReaderWriter:
         entity.setEnergy(entityJson["energy"])
         entity.setTickLastReproduced(entityJson["tickLastReproduced"])
         entity.setImagePath(entityJson["imagePath"])
+        return entity
+
+    def _createCropEntity(self, entityClass, entityJson):
+        constructor = _CROP_ENTITY_CONSTRUCTORS[entityClass]
+        entity = constructor(entityJson["tickPlanted"])
+        entity.setID(UUID(entityJson["entityId"]))
         return entity

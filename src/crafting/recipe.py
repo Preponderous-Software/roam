@@ -1,11 +1,12 @@
 # @author Copilot
 # @since April 14th, 2026
 class Recipe:
-    def __init__(self, name, ingredients, resultClass, resultImagePath):
+    def __init__(self, name, ingredients, resultClass, resultImagePath, resultCount=1):
         self.name = name
         self.ingredients = ingredients
         self.resultClass = resultClass
         self.resultImagePath = resultImagePath
+        self.resultCount = resultCount
 
     def getName(self):
         return self.name
@@ -15,6 +16,9 @@ class Recipe:
 
     def getResultClass(self):
         return self.resultClass
+
+    def getResultCount(self):
+        return self.resultCount
 
     def getResultImagePath(self):
         return self.resultImagePath
@@ -49,4 +53,7 @@ class Recipe:
                 if removed >= requiredCount:
                     break
 
-        return self.resultClass()
+        results = []
+        for _ in range(self.resultCount):
+            results.append(self.resultClass())
+        return results
