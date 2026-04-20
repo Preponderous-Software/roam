@@ -12,6 +12,7 @@ from di import Container
 from config.config import Config
 from lib.graphik.src.graphik import Graphik
 from gameLogging.logger import LoggerFactory
+from inventory.inventoryJsonReaderWriter import InventoryJsonReaderWriter
 from player.player import Player
 from world.map import Map
 from world.roomFactory import RoomFactory
@@ -77,6 +78,13 @@ def createContainer(config):
             container.resolve(Config),
             roomJsonReaderWriterFactory=lambda: container.resolve(RoomJsonReaderWriter),
         ),
+    )
+
+    # InventoryJsonReaderWriter needs Config primitive.
+    container.register(
+        InventoryJsonReaderWriter,
+        lambda: InventoryJsonReaderWriter(container.resolve(Config)),
+        lifetime="transient",
     )
 
     return container
