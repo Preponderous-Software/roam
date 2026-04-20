@@ -67,6 +67,7 @@ The project uses a lightweight, stdlib-only DI container (`src/di/`) to manage o
 - **Transient** — A new instance on every resolve call.
 - **`@component` decorator** — Registers a class with the container at import time. Exported from `src/appContainer.py`.
 - **`bootstrap.py`** — Centralized site for factory-based and instance registrations that cannot use `@component` (e.g., types needing runtime primitives).
+- **Factory-callback pattern** — Types like `Map` can receive optional callback/factory constructor args (e.g., `roomJsonReaderWriterFactory`) so DI can provide fresh runtime-created dependencies without manual construction inside the class.
 
 ### How to Register a New Class
 
@@ -126,6 +127,7 @@ The module-level container singleton persists across game restarts. Rather than 
 - **pytest configuration:** `pytest.ini` adds `.`, `src`, and `src/entity` to `pythonpath` — imports in tests resolve against these roots.
 - **Coverage:** pytest-cov generates a terminal and XML coverage report via `test.sh`.
 - **Headless Pygame:** CI sets `SDL_VIDEODRIVER=dummy` and `SDL_AUDIODRIVER=dummy`. Tests that call `pygame.init()` should use a pytest fixture to ensure `pygame.quit()` is called after the test, avoiding leaked global state.
+- **Test DI container:** `tests/conftest.py` initializes a shared test DI container per test (autouse). For DI-managed classes, prefer `resolve(Type)` in tests instead of manual construction. Use `override_dependency(Type, mock)` for test-specific mocks; overrides are restored after each test for isolation.
 
 ## CI/CD
 

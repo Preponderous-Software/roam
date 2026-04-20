@@ -67,8 +67,7 @@ def test_get_highest_measured_ticks_per_second(resolve, test_config, tmp_path):
 
 
 def test_save_and_load(resolve, di_container, test_config, tmp_path):
-    test_config.pathToSaveDirectory = str(tmp_path)
-    tickCounter = resolve(TickCounter)
+    tickCounter = createTickCounter(resolve, test_config, tmp_path)
 
     tickCounter.incrementTick()
     tickCounter.incrementTick()
@@ -77,7 +76,7 @@ def test_save_and_load(resolve, di_container, test_config, tmp_path):
 
     # load into a new tick counter
     di_container.resetSingletons()
-    tickCounter2 = resolve(TickCounter)
+    tickCounter2 = createTickCounter(resolve, test_config, tmp_path)
     tickCounter2.load()
 
     assert tickCounter2.getTick() == 3

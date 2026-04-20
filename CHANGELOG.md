@@ -899,7 +899,7 @@ about this repository, add it here so the next agent benefits.
   (e.g., in tests), `Map` falls back to manual construction for backward compatibility.
   New code that needs a `RoomJsonReaderWriter` inside a DI-wired class should follow
   this factory-callback pattern rather than importing and instantiating the class directly.
-- 2026-04-20: `[not yet integrated]` The test suite now has a shared DI container
+- 2026-04-20: `[integrated]` The test suite now has a shared DI container
   bootstrap in `tests/conftest.py` with an autouse fixture. Prefer `resolve(...)`
   in tests for DI-managed classes and use `override_dependency(...)` for test-specific
   mocks; the fixture restores overridden registrations after each test to avoid state

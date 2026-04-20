@@ -94,7 +94,7 @@ def test_get_location_of_entity(resolve, test_config, tmp_path):
     mapInstance = createMap(resolve, test_config, tmp_path)
     room = mapInstance.generateNewRoom(0, 0)
 
-    from src.entity.apple import Apple
+    from entity.apple import Apple
 
     entity = Apple()
     room.addEntity(entity)
