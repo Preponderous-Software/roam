@@ -21,11 +21,15 @@ from entity.leaves import Leaves
 from entity.living.bear import Bear
 from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
+from entity.matureCrop import MatureCrop
 from entity.oakWood import OakWood
 from entity.stone import Stone
 from entity.stoneBed import StoneBed
 from entity.stoneFloor import StoneFloor
+from entity.wheat import Wheat
+from entity.wheatSeed import WheatSeed
 from entity.woodFloor import WoodFloor
+from entity.youngCrop import YoungCrop
 from lib.graphik.src.graphik import Graphik
 from lib.pyenvlib.grid import Grid
 from lib.pyenvlib.location import Location
@@ -66,6 +70,8 @@ class RoomJsonReaderWriter:
             "StoneBed": StoneBed,
             "Fence": Fence,
             "Campfire": Campfire,
+            "WheatSeed": WheatSeed,
+            "Wheat": Wheat,
         }
 
     def saveRoom(self, room, path):
@@ -147,6 +153,8 @@ class RoomJsonReaderWriter:
             entityJson["imagePath"] = entity.getImagePath()
         elif isinstance(entity, Excrement):
             entityJson["tickCreated"] = entity.getTickCreated()
+        elif isinstance(entity, (YoungCrop, MatureCrop)):
+            entityJson["tickPlanted"] = entity.getTickPlanted()
         return entityJson
 
     def generateRoomFromJson(self, roomJson):
@@ -237,6 +245,10 @@ class RoomJsonReaderWriter:
             return Chicken(entityJson["tickCreated"])
         if entityClass == "Excrement":
             return Excrement(entityJson["tickCreated"])
+        if entityClass == "YoungCrop":
+            return YoungCrop(entityJson["tickPlanted"])
+        if entityClass == "MatureCrop":
+            return MatureCrop(entityJson["tickPlanted"])
 
         constructor = self.entityConstructors.get(entityClass)
         if constructor is None:

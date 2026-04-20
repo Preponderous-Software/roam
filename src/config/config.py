@@ -198,6 +198,9 @@ class Config:
         self.excrementDecayTicks = self.getIntValue(
             configValues, "excrementDecayTicks", 30 * 60 * 2
         )  # 2 minutes at 30 tps
+        self.cropGrowthTicks = self.getIntValue(
+            configValues, "cropGrowthTicks", 1800
+        )  # 1 minute per stage at 30 tps
         self.pathToSaveDirectory = self.getStringValue(
             configValues, "pathToSaveDirectory", "saves/defaultsavefile"
         )
