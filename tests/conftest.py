@@ -112,25 +112,3 @@ def resolve(di_container):
 def override_dependency(test_di_container):
     _, overrideDependency = test_di_container
     return overrideDependency
-
-
-@pytest.fixture(autouse=True)
-def _initialize_test_di_container(test_di_container):
-    return test_di_container
-
-
-@pytest.fixture
-def di_container(test_di_container):
-    configuredContainer, _ = test_di_container
-    return configuredContainer
-
-
-@pytest.fixture
-def resolve(di_container):
-    return di_container.resolve
-
-
-@pytest.fixture
-def override_dependency(test_di_container):
-    _, overrideDependency = test_di_container
-    return overrideDependency

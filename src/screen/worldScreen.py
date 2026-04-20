@@ -51,6 +51,9 @@ from entity.wheatSeed import WheatSeed
 from entity.youngCrop import YoungCrop
 from entity.matureCrop import MatureCrop
 from gameLogging.logger import getLogger
+from services.worldService import WorldService
+from services.entityService import EntityService
+from repositories.worldRepository import WorldRepository
 
 _logger = getLogger(__name__)
 
@@ -71,6 +74,9 @@ class WorldScreen:
         player: Player,
         container: Container,
         keyBindings: KeyBindings,
+        worldService: WorldService,
+        entityService: EntityService,
+        worldRepository: WorldRepository,
     ):
         self.graphik = graphik
         self.config = config
@@ -80,6 +86,9 @@ class WorldScreen:
         self.player = player
         self.container = container
         self.keyBindings = keyBindings
+        self.worldService = worldService
+        self.entityService = entityService
+        self.worldRepository = worldRepository
         self.running = True
         self.showInventory = False
         self.nextScreen = ScreenType.OPTIONS_SCREEN
@@ -189,10 +198,7 @@ class WorldScreen:
         self.config.displayHeight = max(h, minSize)
 
     def getOrLoadRoom(self, x, y):
-        room = self.map.getRoom(x, y)
-        if room == -1:
-            room = self.map.generateNewRoom(x, y)
-        return room
+        return self.worldService.getOrLoadRoom(x, y, self.map)
 
     def printStatsToConsole(self):
         _logger.info(
@@ -293,7 +299,7 @@ class WorldScreen:
         self.saveRoomToFile(self.currentRoom)
 
     def saveRoomToFile(self, room: Room):
-        self.persistence.saveRoomToFile(room)
+        self.worldRepository.saveRoom(room)
 
     def saveRoomToFileAsync(self, room: Room):
         """Save a room to file on the background thread (non-blocking).
@@ -326,17 +332,7 @@ class WorldScreen:
             _logger.error("error writing JSON file", error=str(e), path=path)
 
     def _loadOrGenerateRoom(self, x, y):
-        wasCached = self.map.hasRoom(x, y)
-        room = self.map.getRoom(x, y)
-        if room != -1:
-            if not wasCached:
-                self.status.set("Area loaded")
-            return room
-        room = self.map.generateNewRoom(x, y)
-        self.status.set("New area discovered")
-        self.stats.incrementScore()
-        self.stats.incrementRoomsExplored()
-        return room
+        return self.worldService.loadOrGenerateRoom(x, y, self.map)
 
     def _calculateTargetLocationForRoomTransition(self, playerLocation):
         targetX = playerLocation.getX()
@@ -1592,11 +1588,7 @@ class WorldScreen:
             self.codex.setDiscovered(entities)
 
     def discoverLivingEntitiesInRoom(self):
-        for entityId, entity in self.currentRoom.getLivingEntities().items():
-            entityClassName = entity.__class__.__name__
-            if self.codex.discover(entityClassName):
-                self.status.set("New codex entry: " + entityClassName)
-                self.saveCodexToFile()
+        self.entityService.discoverLivingEntitiesInRoom(self.currentRoom)
 
     def getNewLocationCoordinatesForLivingEntityBasedOnLocation(self, currentLocation):
         currentLocationX = currentLocation.getX()
@@ -1618,52 +1610,7 @@ class WorldScreen:
             raise Exception("Living entity is not on the edge of the room")
 
     def checkForLivingEntityDeaths(self):
-        toRemove = []
-        for livingEntityId in self.currentRoom.getLivingEntities():
-            livingEntity = self.currentRoom.getEntity(livingEntityId)
-            if livingEntity is None:
-                _logger.debug(
-                    "living entity not found in room",
-                    entityId=str(livingEntityId),
-                    roomName=self.currentRoom.getName(),
-                )
-                toRemove.append(livingEntityId)
-                continue
-            if livingEntity.getEnergy() == 0:
-                toRemove.append(livingEntityId)
-
-        for livingEntityId in toRemove:
-            livingEntity = self.currentRoom.getEntity(livingEntityId)
-            if livingEntity is None:
-                self.currentRoom.removeLivingEntityById(livingEntityId)
-                continue
-
-            # spawn meat at the living entity's location before removing it
-            locationId = livingEntity.getLocationID()
-            if str(locationId) != "-1":
-                try:
-                    location = self.currentRoom.getGrid().getLocation(locationId)
-                    if isinstance(livingEntity, Chicken):
-                        meat = ChickenMeat()
-                        self.currentRoom.addEntityToLocation(meat, location)
-                    elif isinstance(livingEntity, Bear):
-                        meat = BearMeat()
-                        self.currentRoom.addEntityToLocation(meat, location)
-                except KeyError as ex:
-                    _logger.debug(
-                        "could not spawn meat for entity",
-                        entityName=livingEntity.getName(),
-                        locationId=str(locationId),
-                        error=str(ex),
-                    )
-
-            self.currentRoom.removeEntity(livingEntity)
-            self.currentRoom.removeLivingEntity(livingEntity)
-            _logger.debug(
-                "living entity died",
-                entityName=livingEntity.getName(),
-                roomName=self.currentRoom.getName(),
-            )
+        self.entityService.checkForLivingEntityDeaths(self.currentRoom)
 
     def save(self):
         """Submit save operations to the background thread.

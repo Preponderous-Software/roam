@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-04-20 | 8+ | refactor: MVC architecture — add Controllers (`src/controllers/`), Services (`src/services/`), and Repositories (`src/repositories/`) layers; update `Stats`, `WorldScreen` to delegate to new classes; 54 new tests; all 465 tests pass |
 | 2026-04-20 | 7+ | refactor: Comprehensive Clean Code refactoring — DRY entity hierarchy (move `isSolid`/`solid` to `DrawableEntity` base, remove duplication from 20+ subclasses); DRY `ConfigScreen` (replace 9 toggle methods with data-driven `_toggleConfigAttribute`); DRY `OptionsScreen` (add `_switchToScreen` helper, data-driven menu buttons); extract `WorldScreenPersistence` and `pickupableEntities` modules; decompose 14 long methods into focused helpers; consolidate 3 cooldown methods; extract `_tryHarvestCrop` from gather action; DRY hotbar selection indicator; remove ~40 redundant comments; add logging to silent `except` blocks; rename cryptic `highestmtps` variable; DI audit — register `WorldScreenPersistence` with `@component`, inject `RoomFactory` and `RoomJsonReaderWriter` factory into `Map` via DI instead of manual instantiation; run Black/autoflake; all 409 tests pass |
 | 2026-04-20 | 4+ | refactor: Clean Code refactoring of worldScreen.py — Extract helper classes (`WorldScreenPersistence`, `pickupableEntities`) and decompose long methods (`draw`, `run`, `changeRooms`, `executePlaceAction`, `handleKeyDownEvent`, `handleMouseDownEvent`); consolidate cooldown methods; simplify mouse wheel with modulo; remove 14 unused entity imports and `jsonschema` import |
 | 2026-04-20 | 3+ | feat: Add day/night cycle with craftable light sources — `DayNightCycle` class with sine-curve overlay opacity, phase detection, and radial light mask caching; `Torch` entity (craftable from OakWood + CoalOre, yields 2) with `lightRadius=6`; `Campfire` updated with `lightRadius=8`; per-pixel alpha overlay with opacity-scaled `BLEND_RGBA_MIN` light halos in `WorldScreen.draw()` for smooth dusk/dawn lighting; light source collection iterates all entities per location; configurable `dayNightCycleEnabled` and `dayNightCycleLengthTicks` (default 54000 = 30 min at 30 tps); toggle in `ConfigScreen`; debug info; Torch registered in entity registries; 23 new unit tests |
@@ -76,7 +77,40 @@ logged in detail below.
 
 ## AI Agent Sessions
 
-### 2026-04-20 — Resolve PR review threads for test-DI refactor
+### 2026-04-20 — MVC Architecture Refactoring (Controllers, Services, Repositories)
+- **New directories and files:**
+  - `src/repositories/` — Repository layer for all data persistence:
+    - `statsRepository.py` (`StatsRepository`) — save/load stats JSON; `Stats.save()`/`Stats.load()` delegate here
+    - `codexRepository.py` (`CodexRepository`) — save/load codex JSON
+    - `playerRepository.py` (`PlayerRepository`) — player location, attributes, inventory persistence
+    - `worldRepository.py` (`WorldRepository`) — room JSON persistence
+    - `configRepository.py` (`ConfigRepository`) — save window size via Config
+  - `src/services/` — Service layer for business logic:
+    - `movementService.py` (`MovementService`) — player movement, cooldowns, room transitions, stone pushing
+    - `inventoryService.py` (`InventoryService`) — eat from inventory, change selected slot
+    - `craftingService.py` (`CraftingService`) — recipe validation and crafting execution
+    - `worldService.py` (`WorldService`) — room loading/generation with status and stats updates
+    - `entityService.py` (`EntityService`) — entity interactions, living entity death/discovery, crop harvesting
+    - `saveService.py` (`SaveService`) — coordinates save/load across all repositories
+  - `src/controllers/` — Controller layer for input routing:
+    - `playerController.py` (`PlayerController`) — routes player movement/hotbar key events
+    - `inventoryController.py` (`InventoryController`) — routes inventory interactions, crafting
+    - `worldController.py` (`WorldController`) — routes world save/load, room discovery
+    - `menuController.py` (`MenuController`) — routes main menu navigation
+- **Updated existing classes:**
+  - `src/stats/stats.py` — `Stats.__init__` now accepts `statsRepository: StatsRepository`; `save()` and `load()` delegate to repository
+  - `src/screen/worldScreen.py` — injected `WorldService`, `EntityService`, `WorldRepository` via DI; `getOrLoadRoom()`, `_loadOrGenerateRoom()` delegate to `WorldService`; `discoverLivingEntitiesInRoom()`, `checkForLivingEntityDeaths()` delegate to `EntityService`; `saveRoomToFile()` delegates to `WorldRepository`
+- **DI integration:**
+  - All new classes use `@component` decorator for auto-wiring
+  - `bootstrap.py` updated to register `InventoryJsonReaderWriter` as transient
+  - `tests/conftest.py` imports all new modules at module level to trigger `@component` registration; explicit `sys.path` insertion to resolve pytest import ordering issue
+- **Tests:** Added 54 new tests across 3 new test directories:
+  - `tests/repositories/` — stats, codex, config, world, player repository tests
+  - `tests/services/` — crafting, world, inventory, entity service tests
+  - `tests/controllers/` — menu, world, inventory controller tests
+- **Validation:** All 465 tests pass (411 original + 54 new).
+
+
 - Added thread-safe public registration snapshot/restore APIs to the DI container:
   `Container.getRegistration(...)` and `Container.restoreRegistration(...)`.
 - Updated `tests/conftest.py` override fixture to use those APIs instead of direct
@@ -914,3 +948,22 @@ about this repository, add it here so the next agent benefits.
   in tests for DI-managed classes and use `override_dependency(...)` for test-specific
   mocks; the fixture restores overridden registrations after each test to avoid state
   leakage between tests.
+- 2026-04-20: `[not yet integrated]` When adding new `@component`-decorated
+  classes in subdirectories (e.g., `src/repositories/`, `src/services/`,
+  `src/controllers/`), the modules must be explicitly imported somewhere before
+  the DI container tries to resolve them, because the `@component` decorator only
+  runs when the module is imported. In the test suite, import them at the top level
+  of `tests/conftest.py`. In the main application, import them in `bootstrap.py`
+  or where they are first used.
+- 2026-04-20: `[not yet integrated]` pytest's `pythonpath` setting in `pytest.ini`
+  is processed after `conftest.py` is initially loaded (for test collection), which
+  can cause `ModuleNotFoundError` if `conftest.py` does top-level imports from
+  packages inside `src/`. The workaround used in `tests/conftest.py` is to
+  explicitly insert `os.path.join(os.path.dirname(__file__), "..", "src")` into
+  `sys.path` before any such imports.
+- 2026-04-20: `[not yet integrated]` New test directories should NOT have
+  `__init__.py` files. The existing test directories (`tests/entity/`, `tests/world/`,
+  etc.) omit `__init__.py` intentionally. Adding `__init__.py` to a test directory
+  whose name matches a source package (e.g., `tests/controllers/` matches
+  `src/controllers`) causes pytest to try to import test files as submodules of
+  the source package, resulting in `ModuleNotFoundError`.
