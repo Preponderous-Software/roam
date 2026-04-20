@@ -660,6 +660,34 @@ logged in detail below.
   feedback loop process.
 - Added Learning Log section to `CHANGELOG.md` with initial entries.
 
+### 2026-04-20 — Test DI container for pytest suite
+- Added shared test DI setup in `tests/conftest.py`:
+  - autouse container initialization per test via `bootstrap.createContainer()`
+  - standardized headless SDL env defaults for tests
+  - common fixtures: `test_config`, `test_graphik`, `di_container`, `resolve`,
+    `override_dependency`
+  - test-only transient registrations for `InventoryJsonReaderWriter` and
+    `CodexJsonReaderWriter`
+  - override restoration logic to prevent dependency registration leakage
+    across tests.
+- Refactored tests to resolve DI-managed classes through the container instead
+  of manual construction in:
+  - `tests/inventory/test_inventoryJsonReaderWriter.py`
+  - `tests/stats/test_stats.py`
+  - `tests/mapimage/test_mapImageUpdater.py`
+  - `tests/player/test_player.py`
+  - `tests/world/test_map.py`
+  - `tests/world/test_roomFactory.py`
+  - `tests/world/test_roomJsonReaderWriter.py`
+  - `tests/world/test_roomPreloader.py`
+  - `tests/world/test_tickCounter.py`
+  - `tests/world/test_dayNightCycle.py`
+  - `tests/codex/test_codex.py`
+  - `tests/codex/test_codexScreen.py`
+  - `tests/ui/test_status.py`
+  - `tests/ui/test_hudDragManager.py`
+- Validation: full suite still passes (`409 passed`).
+
 ### 2026-04-12 — Initial Copilot instructions created
 - Created `.github/copilot-instructions.md` with project context gathered
   from repository inspection.
@@ -864,10 +892,15 @@ about this repository, add it here so the next agent benefits.
   and toggling via `_toggleConfigAttribute(attributeName)`. When adding new toggleable
   config options, add a tuple to the `toggleButtons` list in `drawMenuButtons()` rather
   than creating a new method.
-- 2026-04-20: `[not yet integrated]` The `Map` class accepts optional `roomFactory` and
+- 2026-04-20: `[integrated]` The `Map` class accepts optional `roomFactory` and
   `roomJsonReaderWriterFactory` constructor parameters (both default to `None`). When
   provided via DI (see `bootstrap.py`), these prevent manual instantiation of
   `RoomFactory` and `RoomJsonReaderWriter` inside `Map`. Without these parameters
   (e.g., in tests), `Map` falls back to manual construction for backward compatibility.
   New code that needs a `RoomJsonReaderWriter` inside a DI-wired class should follow
   this factory-callback pattern rather than importing and instantiating the class directly.
+- 2026-04-20: `[not yet integrated]` The test suite now has a shared DI container
+  bootstrap in `tests/conftest.py` with an autouse fixture. Prefer `resolve(...)`
+  in tests for DI-managed classes and use `override_dependency(...)` for test-specific
+  mocks; the fixture restores overridden registrations after each test to avoid state
+  leakage between tests.

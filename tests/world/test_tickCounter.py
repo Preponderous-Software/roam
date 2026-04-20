@@ -44,7 +44,7 @@ def test_increment_tick_multiple(resolve, test_config, tmp_path):
 def test_get_measured_ticks_per_second(resolve, test_config, tmp_path):
     tickCounter = createTickCounter(resolve, test_config, tmp_path)
 
-    with patch("src.world.tickCounter.time") as mock_time:
+    with patch("world.tickCounter.time") as mock_time:
         mock_time.time.side_effect = [100.1, 100.1]
         tickCounter.lastTimestamp = 100.0
         tickCounter.incrementTick()
@@ -55,7 +55,7 @@ def test_get_measured_ticks_per_second(resolve, test_config, tmp_path):
 def test_get_highest_measured_ticks_per_second(resolve, test_config, tmp_path):
     tickCounter = createTickCounter(resolve, test_config, tmp_path)
 
-    with patch("src.world.tickCounter.time") as mock_time:
+    with patch("world.tickCounter.time") as mock_time:
         # First tick: 0.1s elapsed -> 10 TPS
         # Second tick: 0.1s elapsed -> 10 TPS
         mock_time.time.side_effect = [100.1, 100.1, 100.2, 100.2]
