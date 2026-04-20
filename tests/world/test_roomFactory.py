@@ -1,26 +1,23 @@
 import random
-from unittest.mock import MagicMock
 
-from src.world.roomFactory import RoomFactory
-from src.world.roomType import RoomType
-
-
-def createRoomFactory():
-    graphik = MagicMock()
-    tickCounter = MagicMock()
-    tickCounter.getTick.return_value = 0
-    return RoomFactory(3, graphik, tickCounter)
+from world.roomFactory import RoomFactory
+from world.roomType import RoomType
 
 
-def test_initialization():
-    factory = createRoomFactory()
+def createRoomFactory(resolve, test_config):
+    test_config.gridSize = 3
+    return resolve(RoomFactory)
+
+
+def test_initialization(resolve, test_config):
+    factory = createRoomFactory(resolve, test_config)
 
     assert factory.gridSize == 3
     assert factory.lastRoomTypeCreated == RoomType.GRASSLAND
 
 
-def test_create_empty_room():
-    factory = createRoomFactory()
+def test_create_empty_room(resolve, test_config):
+    factory = createRoomFactory(resolve, test_config)
 
     room = factory.createRoom(RoomType.EMPTY, 0, 0)
 
@@ -30,8 +27,8 @@ def test_create_empty_room():
     assert factory.lastRoomTypeCreated == RoomType.EMPTY
 
 
-def test_create_grassland_room():
-    factory = createRoomFactory()
+def test_create_grassland_room(resolve, test_config):
+    factory = createRoomFactory(resolve, test_config)
 
     room = factory.createRoom(RoomType.GRASSLAND, 1, 2)
 
@@ -41,8 +38,8 @@ def test_create_grassland_room():
     assert factory.lastRoomTypeCreated == RoomType.GRASSLAND
 
 
-def test_create_forest_room():
-    factory = createRoomFactory()
+def test_create_forest_room(resolve, test_config):
+    factory = createRoomFactory(resolve, test_config)
 
     room = factory.createRoom(RoomType.FOREST, 3, 4)
 
@@ -52,8 +49,8 @@ def test_create_forest_room():
     assert factory.lastRoomTypeCreated == RoomType.FOREST
 
 
-def test_create_jungle_room():
-    factory = createRoomFactory()
+def test_create_jungle_room(resolve, test_config):
+    factory = createRoomFactory(resolve, test_config)
 
     room = factory.createRoom(RoomType.JUNGLE, 5, 6)
 
@@ -63,8 +60,8 @@ def test_create_jungle_room():
     assert factory.lastRoomTypeCreated == RoomType.JUNGLE
 
 
-def test_create_mountain_room():
-    factory = createRoomFactory()
+def test_create_mountain_room(resolve, test_config):
+    factory = createRoomFactory(resolve, test_config)
 
     room = factory.createRoom(RoomType.MOUNTAIN, 7, 8)
 
@@ -74,8 +71,8 @@ def test_create_mountain_room():
     assert factory.lastRoomTypeCreated == RoomType.MOUNTAIN
 
 
-def test_create_random_room():
-    factory = createRoomFactory()
+def test_create_random_room(resolve, test_config):
+    factory = createRoomFactory(resolve, test_config)
 
     room = factory.createRandomRoom(0, 0)
 
@@ -84,25 +81,25 @@ def test_create_random_room():
     assert room.getY() == 0
 
 
-def test_create_empty_room_color():
-    factory = createRoomFactory()
+def test_create_empty_room_color(resolve, test_config):
+    factory = createRoomFactory(resolve, test_config)
 
     room = factory.createEmptyRoom((255, 0, 0), 0, 0)
 
     assert room.getBackgroundColor() == (255, 0, 0)
 
 
-def test_create_room_name():
-    factory = createRoomFactory()
+def test_create_room_name(resolve, test_config):
+    factory = createRoomFactory(resolve, test_config)
 
     room = factory.createRoom(RoomType.EMPTY, 5, 10)
 
     assert room.getName() == "(5, 10)"
 
 
-def test_spawn_grass():
+def test_spawn_grass(resolve, test_config):
     random.seed(42)
-    factory = createRoomFactory()
+    factory = createRoomFactory(resolve, test_config)
     room = factory.createEmptyRoom((0, 0, 0), 0, 0)
 
     factory.spawnGrass(room)
@@ -110,8 +107,8 @@ def test_spawn_grass():
     assert room.getNumEntities() > 0
 
 
-def test_fill_with_rocks():
-    factory = createRoomFactory()
+def test_fill_with_rocks(resolve, test_config):
+    factory = createRoomFactory(resolve, test_config)
     room = factory.createEmptyRoom((0, 0, 0), 0, 0)
 
     factory.fillWithRocks(room)
@@ -120,8 +117,8 @@ def test_fill_with_rocks():
     assert room.getNumEntities() >= room.getGrid().getSize()
 
 
-def test_last_room_type_updated():
-    factory = createRoomFactory()
+def test_last_room_type_updated(resolve, test_config):
+    factory = createRoomFactory(resolve, test_config)
 
     factory.createRoom(RoomType.MOUNTAIN, 0, 0)
     assert factory.lastRoomTypeCreated == RoomType.MOUNTAIN
@@ -136,9 +133,9 @@ def test_last_room_type_updated():
     assert factory.lastRoomTypeCreated == RoomType.GRASSLAND
 
 
-def test_create_grass_room_has_entities():
+def test_create_grass_room_has_entities(resolve, test_config):
     random.seed(42)
-    factory = createRoomFactory()
+    factory = createRoomFactory(resolve, test_config)
 
     room = factory.createGrassRoom(0, 0)
 
@@ -146,8 +143,8 @@ def test_create_grass_room_has_entities():
     assert room.getNumEntities() > 0
 
 
-def test_create_mountain_room_has_entities():
-    factory = createRoomFactory()
+def test_create_mountain_room_has_entities(resolve, test_config):
+    factory = createRoomFactory(resolve, test_config)
 
     room = factory.createMountainRoom(0, 0)
 

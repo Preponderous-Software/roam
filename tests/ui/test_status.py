@@ -4,8 +4,10 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 from unittest.mock import MagicMock
 
-from src.ui.hotbarLayout import getHotbarTop
-from src.ui.status import Status
+from ui.hotbarLayout import getHotbarTop
+from ui.status import Status
+from world.tickCounter import TickCounter
+from lib.graphik.src.graphik import Graphik
 
 
 def createMockGraphik(width, height):
@@ -20,10 +22,21 @@ def createMockTickCounter(tick=0):
     return tickCounter
 
 
-def test_status_text_does_not_overlap_hotbar_at_720():
+def createStatus(resolve, override_dependency, width, height, tick=0):
+    graphik = createMockGraphik(width, height)
+    tickCounter = createMockTickCounter(tick)
+    override_dependency(Graphik, graphik)
+    override_dependency(TickCounter, tickCounter)
+    status = resolve(Status)
+    return status, graphik
+
+
+def test_status_text_does_not_overlap_hotbar_at_720(resolve, override_dependency):
     graphik = createMockGraphik(1280, 720)
     tickCounter = createMockTickCounter()
-    status = Status(graphik, tickCounter)
+    override_dependency(Graphik, graphik)
+    override_dependency(TickCounter, tickCounter)
+    status = resolve(Status)
     status.set("test message")
     status.draw()
 
@@ -36,10 +49,8 @@ def test_status_text_does_not_overlap_hotbar_at_720():
     assert statusBottom <= hotbarTop
 
 
-def test_status_text_does_not_overlap_hotbar_at_1080():
-    graphik = createMockGraphik(1920, 1080)
-    tickCounter = createMockTickCounter()
-    status = Status(graphik, tickCounter)
+def test_status_text_does_not_overlap_hotbar_at_1080(resolve, override_dependency):
+    status, graphik = createStatus(resolve, override_dependency, 1920, 1080)
     status.set("test message")
     status.draw()
 
@@ -52,10 +63,8 @@ def test_status_text_does_not_overlap_hotbar_at_1080():
     assert statusBottom <= hotbarTop
 
 
-def test_status_text_does_not_overlap_hotbar_at_500():
-    graphik = createMockGraphik(800, 500)
-    tickCounter = createMockTickCounter()
-    status = Status(graphik, tickCounter)
+def test_status_text_does_not_overlap_hotbar_at_500(resolve, override_dependency):
+    status, graphik = createStatus(resolve, override_dependency, 800, 500)
     status.set("test message")
     status.draw()
 
@@ -68,28 +77,22 @@ def test_status_text_does_not_overlap_hotbar_at_500():
     assert statusBottom <= hotbarTop
 
 
-def test_status_draw_not_called_when_no_text():
-    graphik = createMockGraphik(1280, 720)
-    tickCounter = createMockTickCounter()
-    status = Status(graphik, tickCounter)
+def test_status_draw_not_called_when_no_text(resolve, override_dependency):
+    status, graphik = createStatus(resolve, override_dependency, 1280, 720)
     status.draw()
     graphik.drawButton.assert_not_called()
 
 
-def test_status_draw_not_called_after_clear():
-    graphik = createMockGraphik(1280, 720)
-    tickCounter = createMockTickCounter()
-    status = Status(graphik, tickCounter)
+def test_status_draw_not_called_after_clear(resolve, override_dependency):
+    status, graphik = createStatus(resolve, override_dependency, 1280, 720)
     status.set("test")
     status.clear()
     status.draw()
     graphik.drawButton.assert_not_called()
 
 
-def test_status_centered_horizontally():
-    graphik = createMockGraphik(1000, 800)
-    tickCounter = createMockTickCounter()
-    status = Status(graphik, tickCounter)
+def test_status_centered_horizontally(resolve, override_dependency):
+    status, graphik = createStatus(resolve, override_dependency, 1000, 800)
     status.set("hello")
     status.draw()
 
@@ -100,20 +103,16 @@ def test_status_centered_horizontally():
     assert center == 1000 / 2
 
 
-def test_check_for_expiration_clears_text():
-    graphik = createMockGraphik(1280, 720)
-    tickCounter = createMockTickCounter(tick=10)
-    status = Status(graphik, tickCounter)
+def test_check_for_expiration_clears_text(resolve, override_dependency):
+    status, _ = createStatus(resolve, override_dependency, 1280, 720, tick=10)
     status.set("expiring text")
 
     status.checkForExpiration(10 + status.durationInTicks + 1)
     assert status.text == -1
 
 
-def test_check_for_expiration_keeps_text_before_expiry():
-    graphik = createMockGraphik(1280, 720)
-    tickCounter = createMockTickCounter(tick=10)
-    status = Status(graphik, tickCounter)
+def test_check_for_expiration_keeps_text_before_expiry(resolve, override_dependency):
+    status, _ = createStatus(resolve, override_dependency, 1280, 720, tick=10)
     status.set("still here")
 
     status.checkForExpiration(10 + status.durationInTicks - 1)

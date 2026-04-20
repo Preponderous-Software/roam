@@ -63,6 +63,27 @@ class Container:
             reg.instance = instance
             self._registrations[abstractType] = reg
 
+    def getRegistration(self, abstractType):
+        """Return the current registration object for *abstractType* or ``None``.
+
+        Primarily intended for infrastructure code that needs to temporarily
+        override registrations (for example, tests) and later restore them.
+        """
+        with self._lock:
+            return self._registrations.get(abstractType)
+
+    def restoreRegistration(self, abstractType, registration):
+        """Restore a registration object for *abstractType*.
+
+        If *registration* is ``None``, removes any existing registration for
+        *abstractType*.
+        """
+        with self._lock:
+            if registration is None:
+                self._registrations.pop(abstractType, None)
+            else:
+                self._registrations[abstractType] = registration
+
     def resolve(self, abstractType):
         """Resolve an instance for the given type.
 

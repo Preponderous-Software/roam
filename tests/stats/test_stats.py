@@ -1,28 +1,23 @@
-from unittest.mock import MagicMock
-from src.stats.stats import Stats
+import pytest
+
+from stats.stats import Stats
 
 
-def createStatsInstance():
-    config = MagicMock()
-    config.pathToSaveDirectory = "tests/stats"
-    return Stats(config)
+@pytest.fixture
+def stats(resolve, test_config, tmp_path):
+    test_config.pathToSaveDirectory = str(tmp_path)
+    return resolve(Stats)
 
 
-def test_initialization():
+def test_initialization(stats):
     # call
-    stats = createStatsInstance()
-
-    # check
     assert stats.getScore() == 0
     assert stats.getRoomsExplored() == 0
     assert stats.getFoodEaten() == 0
     assert stats.getNumberOfDeaths() == 0
 
 
-def test_setScore():
-    # prepare
-    stats = createStatsInstance()
-
+def test_setScore(stats):
     # call
     stats.setScore(5)
 
@@ -30,10 +25,7 @@ def test_setScore():
     assert stats.getScore() == 5
 
 
-def test_setRoomsExplored():
-    # prepare
-    stats = createStatsInstance()
-
+def test_setRoomsExplored(stats):
     # call
     stats.setRoomsExplored(5)
 
@@ -41,10 +33,7 @@ def test_setRoomsExplored():
     assert stats.getRoomsExplored() == 5
 
 
-def test_setFoodEaten():
-    # prepare
-    stats = createStatsInstance()
-
+def test_setFoodEaten(stats):
     # call
     stats.setFoodEaten(5)
 
@@ -52,10 +41,7 @@ def test_setFoodEaten():
     assert stats.getFoodEaten() == 5
 
 
-def test_setNumberOfDeaths():
-    # prepare
-    stats = createStatsInstance()
-
+def test_setNumberOfDeaths(stats):
     # call
     stats.setNumberOfDeaths(5)
 
@@ -63,10 +49,7 @@ def test_setNumberOfDeaths():
     assert stats.getNumberOfDeaths() == 5
 
 
-def test_incrementScore():
-    # prepare
-    stats = createStatsInstance()
-
+def test_incrementScore(stats):
     # call
     stats.incrementScore()
 
@@ -74,10 +57,7 @@ def test_incrementScore():
     assert stats.getScore() == 1
 
 
-def test_incrementRoomsExplored():
-    # prepare
-    stats = createStatsInstance()
-
+def test_incrementRoomsExplored(stats):
     # call
     stats.incrementRoomsExplored()
 
@@ -85,10 +65,7 @@ def test_incrementRoomsExplored():
     assert stats.getRoomsExplored() == 1
 
 
-def test_incrementFoodEaten():
-    # prepare
-    stats = createStatsInstance()
-
+def test_incrementFoodEaten(stats):
     # call
     stats.incrementFoodEaten()
 
@@ -96,10 +73,7 @@ def test_incrementFoodEaten():
     assert stats.getFoodEaten() == 1
 
 
-def test_incrementNumberOfDeaths():
-    # prepare
-    stats = createStatsInstance()
-
+def test_incrementNumberOfDeaths(stats):
     # call
     stats.incrementNumberOfDeaths()
 
@@ -107,9 +81,7 @@ def test_incrementNumberOfDeaths():
     assert stats.getNumberOfDeaths() == 1
 
 
-def test_save():
-    # prepare
-    stats = createStatsInstance()
+def test_save(stats):
     stats.incrementScore()
     stats.incrementRoomsExplored()
     stats.incrementFoodEaten()
@@ -125,9 +97,7 @@ def test_save():
     assert stats.getNumberOfDeaths() == 1
 
 
-def test_load():
-    # prepare
-    stats = createStatsInstance()
+def test_load(stats):
     stats.incrementScore()
     stats.incrementRoomsExplored()
     stats.incrementFoodEaten()
