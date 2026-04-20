@@ -35,6 +35,7 @@ class KeyBindings:
         "toggle_camera_follow": pygame.K_c,
         "toggle_debug": pygame.K_F3,
         "toggle_help": pygame.K_F1,
+        "codex": pygame.K_l,
     }
 
     ACTION_LABELS = {
@@ -66,6 +67,7 @@ class KeyBindings:
         "toggle_camera_follow": "Camera Follow",
         "toggle_debug": "Toggle Debug",
         "toggle_help": "Toggle Help",
+        "codex": "Codex",
     }
 
     CONFIG_PREFIX = "key_"
