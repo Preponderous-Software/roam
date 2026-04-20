@@ -18,12 +18,17 @@ class CodexScreen:
         self.config = config
         self.codex = codex
         self.nextScreen = ScreenType.WORLD_SCREEN
+        self.returnScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = False
         self.scrollOffset = 0
         self._imageCache = {}
+        self._fontCache = {}
 
-    def switchToWorldScreen(self):
-        self.nextScreen = ScreenType.WORLD_SCREEN
+    def setReturnScreen(self, screenType):
+        self.returnScreen = screenType
+
+    def switchToReturnScreen(self):
+        self.nextScreen = self.returnScreen
         self.changeScreen = True
 
     def drawTitle(self):
@@ -44,14 +49,29 @@ class CodexScreen:
                 self._imageCache[entityName] = None
         return self._imageCache[entityName]
 
+    def _getFont(self, size):
+        if size not in self._fontCache:
+            self._fontCache[size] = pygame.font.Font("freesansbold.ttf", size)
+        return self._fontCache[size]
+
+    def _drawTextLeftAligned(self, text, leftX, centerY, size, color):
+        """Draw text left-aligned starting at leftX, vertically centered at centerY."""
+        font = self._getFont(size)
+        surface = font.render(text, True, color)
+        rect = surface.get_rect()
+        rect.left = int(leftX)
+        rect.centery = int(centerY)
+        self.graphik.getGameDisplay().blit(surface, rect)
+
     def drawEntries(self):
         x, y = self.graphik.getGameDisplay().get_size()
         entries = ALL_LIVING_ENTITY_TYPES
 
         rowHeight = 45
         startY = 60
+        imageSize = 32
         imageX = x * 0.25
-        nameX = x * 0.25 + 45
+        nameX = imageX + imageSize + 16
 
         visibleRows = max(1, int((y - startY - 80) / rowHeight))
         maxOffset = max(0, len(entries) - visibleRows)
@@ -70,8 +90,8 @@ class CodexScreen:
                     self.graphik.getGameDisplay().blit(
                         img, (int(imageX), int(rowY + 2))
                     )
-                # Draw entity name
-                self.graphik.drawText(
+                # Draw entity name left-aligned after the image
+                self._drawTextLeftAligned(
                     entityName,
                     nameX,
                     rowY + rowHeight / 2,
@@ -80,7 +100,7 @@ class CodexScreen:
                 )
             else:
                 # Undiscovered entry
-                self.graphik.drawText(
+                self._drawTextLeftAligned(
                     "???",
                     nameX,
                     rowY + rowHeight / 2,
@@ -113,12 +133,12 @@ class CodexScreen:
             (0, 0, 0),
             20,
             "Back",
-            self.switchToWorldScreen,
+            self.switchToReturnScreen,
         )
 
     def handleKeyDownEvent(self, key):
         if key == pygame.K_ESCAPE:
-            self.switchToWorldScreen()
+            self.switchToReturnScreen()
 
     def handleScrollEvent(self, event):
         if event.y > 0:

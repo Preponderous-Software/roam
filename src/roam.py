@@ -135,6 +135,10 @@ class Roam:
             elif result == ScreenType.CONTROLS_SCREEN:
                 self.currentScreen = self.controlsScreen
             elif result == ScreenType.CODEX_SCREEN:
+                if self.currentScreen == self.optionsScreen:
+                    self.codexScreen.setReturnScreen(ScreenType.OPTIONS_SCREEN)
+                else:
+                    self.codexScreen.setReturnScreen(ScreenType.WORLD_SCREEN)
                 self.currentScreen = self.codexScreen
             elif result == ScreenType.SAVE_SELECTION_SCREEN:
                 self.currentScreen = self.saveSelectionScreen

@@ -31,9 +31,17 @@ def test_initialization(pygame_init):
 
 def test_switch_to_world_screen(pygame_init):
     screen = createCodexScreen(pygame_init)
-    screen.switchToWorldScreen()
+    screen.switchToReturnScreen()
     assert screen.changeScreen is True
     assert screen.nextScreen == "world_screen"
+
+
+def test_set_return_screen(pygame_init):
+    screen = createCodexScreen(pygame_init)
+    screen.setReturnScreen("options_screen")
+    screen.switchToReturnScreen()
+    assert screen.changeScreen is True
+    assert screen.nextScreen == "options_screen"
 
 
 def test_handle_escape_key(pygame_init):

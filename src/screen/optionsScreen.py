@@ -45,6 +45,10 @@ class OptionsScreen:
         self.nextScreen = ScreenType.CONTROLS_SCREEN
         self.changeScreen = True
 
+    def switchToCodexScreen(self):
+        self.nextScreen = ScreenType.CODEX_SCREEN
+        self.changeScreen = True
+
     def quitApplication(self):
         self.nextScreen = ScreenType.NONE
         self.changeScreen = True
@@ -107,6 +111,18 @@ class OptionsScreen:
             30,
             "Controls",
             self.switchToControlsScreen,
+        )
+        ypos = ypos + height + margin
+        self.graphik.drawButton(
+            xpos,
+            ypos,
+            width,
+            height,
+            (255, 255, 255),
+            (0, 0, 0),
+            30,
+            "Codex",
+            self.switchToCodexScreen,
         )
         self.drawBackButton()
 
