@@ -118,6 +118,11 @@ logged in detail below.
   comparison plus pre-computed `invRadius` multiplier in mask generation.
 - **Test improvement:** Added alpha profile assertions to light mask tests: center
   transparency, corner opacity, and edge opacity checks.
+- **Bug fix:** Fixed minimap rendering black rectangles and discontinuous map
+  content — `saveCurrentRoomAsPNG()` was drawing the room onto the main display
+  (which still held the previous frame's day/night overlay) then capturing from a
+  misaligned offset. Rewrote to render onto a clean off-screen surface with the
+  room's background color, producing overlay-free minimap tiles.
 
 ### 2026-04-20 — Add farming system (planting, growing, harvesting)
 - **New entity files:**

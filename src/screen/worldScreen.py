@@ -1057,7 +1057,17 @@ class WorldScreen:
             self.player.getLocationID()
         )
         self.currentRoom.removeEntity(self.player)
+
+        # render the room onto a clean off-screen surface so the day/night
+        # overlay (and any other display artefacts) are not captured
+        gameArea = self.graphik.getGameAreaRect()
+        size = (int(gameArea.width), int(gameArea.height))
+        offscreen = pygame.Surface(size)
+        originalDisplay = self.graphik.gameDisplay
+        self.graphik.gameDisplay = offscreen
+        offscreen.fill(self.currentRoom.getBackgroundColor())
         self.currentRoom.draw(self.locationWidth, self.locationHeight)
+        self.graphik.gameDisplay = originalDisplay
 
         path = (
             self.config.pathToSaveDirectory
@@ -1067,18 +1077,8 @@ class WorldScreen:
             + str(self.currentRoom.getY())
             + ".png"
         )
-        # capture only the square room area (location sizes are based on game area)
-        gameArea = self.graphik.getGameAreaRect()
-        size = (int(gameArea.width), int(gameArea.height))
-        # capture surface on main thread (pygame requirement), save to disk async
-        image = pygame.Surface(size)
-        image.blit(
-            self.graphik.getGameDisplay(),
-            (0, 0),
-            ((int(gameArea.x), int(gameArea.y)), size),
-        )
         self._pngSavePending.add(roomKey)
-        self._saveExecutor.submit(self._saveSurfaceToDisk, image, path, roomKey)
+        self._saveExecutor.submit(self._saveSurfaceToDisk, offscreen, path, roomKey)
 
         # add player back
         self.currentRoom.addEntityToLocation(self.player, locationOfPlayer)
