@@ -2,15 +2,29 @@ import json
 import os
 import jsonschema
 from math import ceil
+from appContainer import component
+from config.config import Config
 from gameLogging.logger import getLogger
+from player.player import Player
+from stats.stats import Stats
+from world.roomJsonReaderWriter import RoomJsonReaderWriter
+from world.tickCounter import TickCounter
 
 _logger = getLogger(__name__)
 
 
+@component
 class WorldScreenPersistence:
     """Handles all save/load operations for WorldScreen."""
 
-    def __init__(self, config, player, stats, tickCounter, roomJsonReaderWriter):
+    def __init__(
+        self,
+        config: Config,
+        player: Player,
+        stats: Stats,
+        tickCounter: TickCounter,
+        roomJsonReaderWriter: RoomJsonReaderWriter,
+    ):
         self.config = config
         self.player = player
         self.stats = stats

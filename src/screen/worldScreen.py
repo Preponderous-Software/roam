@@ -85,9 +85,7 @@ class WorldScreen:
         self.nextScreen = ScreenType.OPTIONS_SCREEN
         self.changeScreen = False
         self.roomJsonReaderWriter = self.container.resolve(RoomJsonReaderWriter)
-        self.persistence = WorldScreenPersistence(
-            config, player, stats, tickCounter, self.roomJsonReaderWriter
-        )
+        self.persistence = self.container.resolve(WorldScreenPersistence)
         self.roomPreloader = self.container.resolve(RoomPreloader)
         self.mapImageUpdater = self.container.resolve(MapImageUpdater)
         self.hudDragManager = self.container.resolve(HudDragManager)

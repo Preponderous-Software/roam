@@ -63,6 +63,8 @@ def createContainer(config):
             container.resolve(Graphik),
             container.resolve(TickCounter),
             container.resolve(Config),
+            roomFactory=container.resolve(RoomFactory),
+            roomJsonReaderWriterFactory=lambda: container.resolve(RoomJsonReaderWriter),
         ),
         lifetime="transient",
     )

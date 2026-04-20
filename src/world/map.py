@@ -17,7 +17,13 @@ _logger = getLogger(__name__)
 # @since August 15th, 2022
 class Map:
     def __init__(
-        self, gridSize, graphik: Graphik, tickCounter: TickCounter, config: Config
+        self,
+        gridSize,
+        graphik: Graphik,
+        tickCounter: TickCounter,
+        config: Config,
+        roomFactory: RoomFactory = None,
+        roomJsonReaderWriterFactory=None,
     ):
         self.rooms = []
         self._roomIndex = {}
@@ -26,7 +32,10 @@ class Map:
         self.graphik = graphik
         self.tickCounter = tickCounter
         self.config = config
-        self.roomFactory = RoomFactory(self.gridSize, self.graphik, self.tickCounter)
+        self.roomFactory = roomFactory or RoomFactory(
+            self.gridSize, self.graphik, self.tickCounter
+        )
+        self._roomJsonReaderWriterFactory = roomJsonReaderWriterFactory
 
     def getRooms(self):
         return self.rooms
@@ -52,9 +61,12 @@ class Map:
             + ".json"
         )
         if os.path.exists(nextRoomPath):
-            roomJsonReaderWriter = RoomJsonReaderWriter(
-                self.gridSize, self.graphik, self.tickCounter, self.config
-            )
+            if self._roomJsonReaderWriterFactory is not None:
+                roomJsonReaderWriter = self._roomJsonReaderWriterFactory()
+            else:
+                roomJsonReaderWriter = RoomJsonReaderWriter(
+                    self.gridSize, self.graphik, self.tickCounter, self.config
+                )
             room = roomJsonReaderWriter.loadRoom(nextRoomPath)
             _logger.info("room loaded from file", roomX=x, roomY=y, path=nextRoomPath)
             return self.addRoom(room)
