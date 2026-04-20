@@ -105,6 +105,7 @@ class WorldScreen:
         self.dayNightCycle = self.container.resolve(DayNightCycle)
         self._dayNightOverlay = None
         self._dayNightOverlaySize = (0, 0)
+        self._scaledMaskCache = {}
         self.minimapScaleFactor = 0.10
         self.minimapX = 5
         self.minimapY = 5
@@ -1388,6 +1389,7 @@ class WorldScreen:
                     self._dayNightOverlay = pygame.Surface(overlaySize, pygame.SRCALPHA)
                     self._dayNightOverlaySize = overlaySize
                 self._dayNightOverlay.fill((0, 0, 0, opacity))
+                self._scaledMaskCache.clear()
                 lightPositions = self._collectLightSources(gameArea)
                 for screenX, screenY, radiusTiles in lightPositions:
                     overlayX = screenX - gameArea.x
@@ -1395,14 +1397,17 @@ class WorldScreen:
                     radiusPx = int(radiusTiles * self.locationWidth)
                     if radiusPx <= 0:
                         continue
-                    mask = self.dayNightCycle.getLightMask(radiusPx)
-                    scaledMask = mask.copy()
-                    scaledMask.fill(
-                        (255, 255, 255, opacity),
-                        special_flags=pygame.BLEND_RGBA_MULT,
-                    )
+                    cacheKey = (radiusPx, opacity)
+                    if cacheKey not in self._scaledMaskCache:
+                        mask = self.dayNightCycle.getLightMask(radiusPx)
+                        scaledMask = mask.copy()
+                        scaledMask.fill(
+                            (255, 255, 255, opacity),
+                            special_flags=pygame.BLEND_RGBA_MULT,
+                        )
+                        self._scaledMaskCache[cacheKey] = scaledMask
                     self._dayNightOverlay.blit(
-                        scaledMask,
+                        self._scaledMaskCache[cacheKey],
                         (overlayX - radiusPx, overlayY - radiusPx),
                         special_flags=pygame.BLEND_RGBA_MIN,
                     )
