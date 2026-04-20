@@ -44,6 +44,10 @@ class DayNightCycle:
         else:
             return "dawn"
 
+    def clearLightMaskCache(self):
+        """Clear the cached light mask surfaces (e.g. after a window resize)."""
+        self._lightMaskCache.clear()
+
     def getLightMask(self, radiusPx):
         """Return a cached radial light mask surface for the given pixel radius.
 

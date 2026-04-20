@@ -88,9 +88,9 @@ logged in detail below.
   (Torch, Campfire) punch radial gradient holes in the overlay via
   `BLEND_RGBA_MIN`. Overlay surface is only reallocated when the game area size
   changes.
-- **Light sources:** New `Torch` entity (`src/entity/torch.py`) with `lightRadius=3`,
+- **Light sources:** New `Torch` entity (`src/entity/torch.py`) with `lightRadius=6`,
   craftable from 1× OakWood + 1× CoalOre (yields 2). Campfire (`src/entity/campfire.py`)
-  updated with `lightRadius=4`. Both entities reduce day/night darkness in a
+  updated with `lightRadius=8`. Both entities reduce day/night darkness in a
   circular area when placed.
 - **Bug fix:** Fixed `_collectLightSourcesFromRoom` crash — `grid.getLocations()`
   returns a dict; iteration must use `for locationId in grid.getLocations()`
@@ -101,15 +101,15 @@ logged in detail below.
   button consistent with existing toggles.
 - **Entity registries:** Torch registered in `roomJsonReaderWriter.py`,
   `inventoryJsonReaderWriter.py`, `canBePickedUp()`, and `recipeRegistry.py`.
-- **Tests:** 17 unit tests in `tests/world/test_dayNightCycle.py`, plus
+- **Tests:** Added unit tests in `tests/world/test_dayNightCycle.py`, plus
   `tests/entity/test_torch.py`, `tests/entity/test_campfire_light.py`,
   `tests/crafting/test_torchRecipe.py`. Updated config defaults test.
 - **Bug fix:** Fixed inverted light mask — `getLightMask()` was creating alpha=0
   background with filled circles, causing square bright areas when blitted via
   `BLEND_RGBA_MIN`. Rewrote to use per-pixel distance field: background alpha=255,
   centre alpha=0, smooth radial gradient to edge.
-- **Optimization:** `_collectLightSourcesFromRoom` now only checks the top entity
-  per location instead of iterating all entities, reducing per-frame cost.
+- **Implementation detail:** `_collectLightSourcesFromRoom` iterates all entities
+  at each location when collecting active light sources.
 - **Test improvement:** Added alpha profile assertions to light mask tests: center
   transparency, corner opacity, and edge opacity checks.
 

@@ -1147,52 +1147,59 @@ class WorldScreen:
         # blit in top left corner with 10px padding
         self.graphik.getGameDisplay().blit(mapImage, (drawX + 10, drawY + 10))
 
+    def _iterateVisibleRoomOffsets(self, gameArea):
+        """Yield (roomX, roomY, roomOffsetX, roomOffsetY) for visible rooms."""
+        playerLocation = self.getLocationOfPlayer()
+        playerGridX = playerLocation.getX()
+        playerGridY = playerLocation.getY()
+        gridSize = self.config.gridSize
+        roomPixelWidth = gridSize * self.locationWidth
+        roomPixelHeight = gridSize * self.locationHeight
+        centerX = gameArea.x + gameArea.width / 2
+        centerY = gameArea.y + gameArea.height / 2
+        playerPixelX = playerGridX * self.locationWidth + self.locationWidth / 2
+        playerPixelY = playerGridY * self.locationHeight + self.locationHeight / 2
+        baseOffsetX = centerX - playerPixelX
+        baseOffsetY = centerY - playerPixelY
+        currentRoomX = self.currentRoom.getX()
+        currentRoomY = self.currentRoom.getY()
+        halfWidth = gameArea.width / 2
+        halfHeight = gameArea.height / 2
+        roomsH = int(halfWidth / roomPixelWidth) + 1
+        roomsV = int(halfHeight / roomPixelHeight) + 1
+        for dx in range(-roomsH, roomsH + 1):
+            for dy in range(-roomsV, roomsV + 1):
+                roomX = currentRoomX + dx
+                roomY = currentRoomY + dy
+                if self.config.worldBorder != 0 and (
+                    abs(roomX) > self.config.worldBorder
+                    or abs(roomY) > self.config.worldBorder
+                ):
+                    continue
+                roomOffsetX = baseOffsetX + dx * roomPixelWidth
+                roomOffsetY = baseOffsetY + dy * roomPixelHeight
+                if (
+                    roomOffsetX + roomPixelWidth < gameArea.x
+                    or roomOffsetX > gameArea.right
+                    or roomOffsetY + roomPixelHeight < gameArea.y
+                    or roomOffsetY > gameArea.bottom
+                ):
+                    continue
+                yield roomX, roomY, roomOffsetX, roomOffsetY
+
     def _collectLightSources(self, gameArea):
         """Return list of (screenX, screenY, radiusTiles) for light-emitting entities."""
         sources = []
         if self.config.cameraFollowPlayer:
-            playerLocation = self.getLocationOfPlayer()
-            playerGridX = playerLocation.getX()
-            playerGridY = playerLocation.getY()
-            gridSize = self.config.gridSize
-            roomPixelWidth = gridSize * self.locationWidth
-            roomPixelHeight = gridSize * self.locationHeight
-            centerX = gameArea.x + gameArea.width / 2
-            centerY = gameArea.y + gameArea.height / 2
-            playerPixelX = playerGridX * self.locationWidth + self.locationWidth / 2
-            playerPixelY = playerGridY * self.locationHeight + self.locationHeight / 2
-            baseOffsetX = centerX - playerPixelX
-            baseOffsetY = centerY - playerPixelY
-            currentRoomX = self.currentRoom.getX()
-            currentRoomY = self.currentRoom.getY()
-            halfWidth = gameArea.width / 2
-            halfHeight = gameArea.height / 2
-            roomsH = int(halfWidth / roomPixelWidth) + 1
-            roomsV = int(halfHeight / roomPixelHeight) + 1
-            for dx in range(-roomsH, roomsH + 1):
-                for dy in range(-roomsV, roomsV + 1):
-                    roomX = currentRoomX + dx
-                    roomY = currentRoomY + dy
-                    if self.config.worldBorder != 0 and (
-                        abs(roomX) > self.config.worldBorder
-                        or abs(roomY) > self.config.worldBorder
-                    ):
-                        continue
-                    roomOffsetX = baseOffsetX + dx * roomPixelWidth
-                    roomOffsetY = baseOffsetY + dy * roomPixelHeight
-                    if (
-                        roomOffsetX + roomPixelWidth < gameArea.x
-                        or roomOffsetX > gameArea.right
-                        or roomOffsetY + roomPixelHeight < gameArea.y
-                        or roomOffsetY > gameArea.bottom
-                    ):
-                        continue
-                    room = self.map.getRoom(roomX, roomY)
-                    if room == -1:
-                        continue
-                    self._collectLightSourcesFromRoom(
-                        room, roomOffsetX, roomOffsetY, sources
-                    )
+            for roomX, roomY, roomOffsetX, roomOffsetY in self._iterateVisibleRoomOffsets(
+                gameArea
+            ):
+                room = self.map.getRoom(roomX, roomY)
+                if room == -1:
+                    continue
+                self._collectLightSourcesFromRoom(
+                    room, roomOffsetX, roomOffsetY, sources
+                )
         else:
             self._collectLightSourcesFromRoom(
                 self.currentRoom, gameArea.x, gameArea.y, sources
@@ -1223,74 +1230,18 @@ class WorldScreen:
     def drawFollowMode(self):
         gameArea = self.graphik.getGameAreaRect()
 
-        # get player position in current room grid
-        playerLocation = self.getLocationOfPlayer()
-        playerGridX = playerLocation.getX()
-        playerGridY = playerLocation.getY()
-        gridSize = self.config.gridSize
-
-        # calculate the pixel size of a single room
-        roomPixelWidth = gridSize * self.locationWidth
-        roomPixelHeight = gridSize * self.locationHeight
-
-        # calculate center of the game area on screen
-        centerX = gameArea.x + gameArea.width / 2
-        centerY = gameArea.y + gameArea.height / 2
-
-        # world-pixel position of the player within the current room
-        playerPixelX = playerGridX * self.locationWidth + self.locationWidth / 2
-        playerPixelY = playerGridY * self.locationHeight + self.locationHeight / 2
-
-        # offset to center the current room's player on the game area center
-        baseOffsetX = centerX - playerPixelX
-        baseOffsetY = centerY - playerPixelY
-
-        # determine which neighboring rooms are visible
-        currentRoomX = self.currentRoom.getX()
-        currentRoomY = self.currentRoom.getY()
-
-        # calculate how many rooms could be visible in each direction
-        halfWidth = gameArea.width / 2
-        halfHeight = gameArea.height / 2
-        roomsLeft = int(halfWidth / roomPixelWidth) + 1
-        roomsRight = int(halfWidth / roomPixelWidth) + 1
-        roomsUp = int(halfHeight / roomPixelHeight) + 1
-        roomsDown = int(halfHeight / roomPixelHeight) + 1
-
-        for dx in range(-roomsLeft, roomsRight + 1):
-            for dy in range(-roomsUp, roomsDown + 1):
-                roomX = currentRoomX + dx
-                roomY = currentRoomY + dy
-
-                # check world border
-                if self.config.worldBorder != 0 and (
-                    abs(roomX) > self.config.worldBorder
-                    or abs(roomY) > self.config.worldBorder
-                ):
-                    continue
-
-                # calculate screen offset for this room
-                roomOffsetX = baseOffsetX + dx * roomPixelWidth
-                roomOffsetY = baseOffsetY + dy * roomPixelHeight
-
-                # skip if the room is entirely outside the game area
-                if (
-                    roomOffsetX + roomPixelWidth < gameArea.x
-                    or roomOffsetX > gameArea.right
-                    or roomOffsetY + roomPixelHeight < gameArea.y
-                    or roomOffsetY > gameArea.bottom
-                ):
-                    continue
-
-                room = self.getOrLoadRoom(roomX, roomY)
-                room.drawWithOffset(
-                    self.locationWidth,
-                    self.locationHeight,
-                    roomOffsetX,
-                    roomOffsetY,
-                    gameArea.right,
-                    gameArea.bottom,
-                )
+        for roomX, roomY, roomOffsetX, roomOffsetY in self._iterateVisibleRoomOffsets(
+            gameArea
+        ):
+            room = self.getOrLoadRoom(roomX, roomY)
+            room.drawWithOffset(
+                self.locationWidth,
+                self.locationHeight,
+                roomOffsetX,
+                roomOffsetY,
+                gameArea.right,
+                gameArea.bottom,
+            )
 
     def drawHelpOverlay(self):
         x, y = self.graphik.getGameDisplay().get_size()
@@ -1388,6 +1339,7 @@ class WorldScreen:
                 ):
                     self._dayNightOverlay = pygame.Surface(overlaySize, pygame.SRCALPHA)
                     self._dayNightOverlaySize = overlaySize
+                    self.dayNightCycle.clearLightMaskCache()
                 self._dayNightOverlay.fill((0, 0, 0, opacity))
                 self._scaledMaskCache.clear()
                 lightPositions = self._collectLightSources(gameArea)

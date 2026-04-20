@@ -157,3 +157,16 @@ def test_get_light_mask_edge_approaches_opaque():
         assert edgeAlpha >= 200
     finally:
         pygame.quit()
+
+
+def test_clear_light_mask_cache():
+    """clearLightMaskCache should discard cached masks so a new surface is returned."""
+    cycle = createDayNightCycle(1000)
+    pygame.init()
+    try:
+        mask1 = cycle.getLightMask(50)
+        cycle.clearLightMaskCache()
+        mask2 = cycle.getLightMask(50)
+        assert mask1 is not mask2
+    finally:
+        pygame.quit()
