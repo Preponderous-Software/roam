@@ -758,7 +758,7 @@ about this repository, add it here so the next agent benefits.
   should follow the `ControlsScreen` pattern: `@component` class with
   `graphik`, `config` constructor params, a `run()` loop, and
   `changeScreen`/`nextScreen` flow control.
-- 2026-04-20: `[not yet integrated]` The `WorldScreen.draw()` method uses
+- 2026-04-20: `[integrated]` The `WorldScreen.draw()` method uses
   `set_clip(gameArea)` / `set_clip(None)` to restrict rendering to the game
   area square. Overlays that should only affect the game area (like the
   day/night cycle) must be blitted while the clip is still active. HUD
