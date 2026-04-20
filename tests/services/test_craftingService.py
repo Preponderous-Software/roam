@@ -56,12 +56,12 @@ def test_canCraft_false_when_not_enough():
 def test_craftRecipe_inventory_full():
     service, status = makeService()
     recipe = Recipe("Wood Floor", {OakWood: 4}, WoodFloor, "assets/images/woodFloor.png")
-    inventory = makeInventoryWithOakWood(4)
-    # Fill all remaining slots
-    oak = OakWood()
+    # Fill all 25 inventory slots with one OakWood each (25 total OakWood satisfies
+    # canCraft for 4× OakWood, but leaves zero space for the WoodFloor result since
+    # no slot is empty and no slot already contains WoodFloor).
+    inventory = Inventory()
     for slot in inventory.getInventorySlots():
-        if slot.isEmpty():
-            slot.add(oak)
+        slot.add(OakWood())
     result = service.craftRecipe(recipe, inventory)
-    # Should either succeed (no real full issue with 25 slots) or fail gracefully
-    assert isinstance(result, bool)
+    assert result is False
+    status.set.assert_called_with("Inventory full")

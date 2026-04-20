@@ -1,24 +1,24 @@
 # @author Copilot
 # @since April 20th, 2026
-import pygame
-
 from appContainer import component
 from config.config import Config
 from config.keyBindings import KeyBindings
 from gameLogging.logger import getLogger
 from player.player import Player
-from screen.screenType import ScreenType
-from screen.screenshotHelper import takeScreenshot
 from services.inventoryService import InventoryService
 from services.movementService import MovementService
-from lib.graphik.src.graphik import Graphik
 
 _logger = getLogger(__name__)
 
 
 @component
 class PlayerController:
-    """Routes player input to the appropriate services."""
+    """Thin input router for player actions.
+
+    Receives key events forwarded from the screen, determines the requested
+    action, and delegates immediately to the appropriate service.  Screenshot
+    handling and any pygame/UI operations stay in the screen.
+    """
 
     def __init__(
         self,
@@ -27,14 +27,12 @@ class PlayerController:
         keyBindings: KeyBindings,
         movementService: MovementService,
         inventoryService: InventoryService,
-        graphik: Graphik,
     ):
         self.config = config
         self.player = player
         self.keyBindings = keyBindings
         self.movementService = movementService
         self.inventoryService = inventoryService
-        self.graphik = graphik
 
     def handleMovementKey(self, direction, currentRoom, map, worldService, save_callback=None):
         self.player.setDirection(direction)
@@ -67,8 +65,6 @@ class PlayerController:
             return self.handleMovementKey(
                 3, currentRoom, map, worldService, save_callback
             )
-        elif key == kb.getKey("screenshot"):
-            takeScreenshot(self.graphik.getGameDisplay())
         elif key == kb.getKey("run"):
             self.player.setMovementSpeed(
                 self.player.getMovementSpeed() * self.config.runSpeedFactor

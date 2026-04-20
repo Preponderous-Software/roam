@@ -214,13 +214,19 @@ class EntityService:
         return False
 
     def _getLocationAndRoomAtMousePosition(self, currentRoom, map):
-        """Delegate to WorldScreen helper - accessed via graphik context.
+        """Not implemented: mouse-position resolution must be performed by the
+        caller (the screen) and the resolved (location, room) passed directly
+        to gather/place methods.
 
-        This method is intentionally thin; actual pixel math stays in WorldScreen.
-        EntityService callers should pass the resolved (location, room) tuple.
-        This stub exists so callers internal to EntityService can be unit-tested.
+        Callers of `executeGatherAction` and `executePlaceAction` are
+        responsible for resolving the target location from mouse coordinates
+        before delegating to this service.
         """
-        return -1, None
+        raise NotImplementedError(
+            "Mouse-position resolution belongs in the caller (screen). "
+            "Resolve the target (location, room) there and pass it directly "
+            "to the appropriate EntityService method."
+        )
 
     def discoverLivingEntitiesInRoom(self, currentRoom):
         for entityId, entity in currentRoom.getLivingEntities().items():

@@ -3,9 +3,9 @@ import sys
 
 # Ensure src directory is in the Python path so repository/service/controller packages
 # are importable. This needs to happen before any other imports.
-_srcDir = os.path.join(os.path.dirname(__file__), "..", "src")
-if _srcDir not in sys.path:
-    sys.path.insert(0, _srcDir)
+_srcDirPath = os.path.join(os.path.dirname(__file__), "..", "src")
+if _srcDirPath not in sys.path:
+    sys.path.insert(0, _srcDirPath)
 
 from unittest.mock import MagicMock
 
@@ -33,7 +33,6 @@ import services.saveService  # noqa: F401
 import controllers.playerController  # noqa: F401
 import controllers.inventoryController  # noqa: F401
 import controllers.worldController  # noqa: F401
-import controllers.menuController  # noqa: F401
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")

@@ -29,6 +29,7 @@ class SaveService:
         playerRepository: PlayerRepository,
         worldRepository: WorldRepository,
         codexRepository: CodexRepository,
+        inventoryJsonReaderWriter: InventoryJsonReaderWriter,
     ):
         self.config = config
         self.stats = stats
@@ -37,9 +38,7 @@ class SaveService:
         self.playerRepository = playerRepository
         self.worldRepository = worldRepository
         self.codexRepository = codexRepository
-
-    def _makeInventoryReaderWriter(self):
-        return InventoryJsonReaderWriter(self.config)
+        self.inventoryJsonReaderWriter = inventoryJsonReaderWriter
 
     def saveAll(self, currentRoom):
         """Save all game state synchronously."""
@@ -48,8 +47,7 @@ class SaveService:
         self.worldRepository.saveRoom(currentRoom)
         self.playerRepository.saveLocation(currentRoom)
         self.playerRepository.saveAttributes()
-        inventoryJsonReaderWriter = self._makeInventoryReaderWriter()
-        self.playerRepository.saveInventory(inventoryJsonReaderWriter)
+        self.playerRepository.saveInventory(self.inventoryJsonReaderWriter)
         self.stats.save()
         self.tickCounter.save()
         self.codexRepository.save(self.codex)
@@ -75,8 +73,7 @@ class SaveService:
 
         invPath = self.config.pathToSaveDirectory + "/playerInventory.json"
         if os.path.exists(invPath):
-            inventoryJsonReaderWriter = self._makeInventoryReaderWriter()
-            self.playerRepository.loadInventory(inventoryJsonReaderWriter)
+            self.playerRepository.loadInventory(self.inventoryJsonReaderWriter)
 
         codexPath = self.config.pathToSaveDirectory + "/codex.json"
         if os.path.exists(codexPath):
