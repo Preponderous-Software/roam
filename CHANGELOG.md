@@ -123,6 +123,14 @@ logged in detail below.
   (which still held the previous frame's day/night overlay) then capturing from a
   misaligned offset. Rewrote to render onto a clean off-screen surface with the
   room's background color, producing overlay-free minimap tiles.
+- **Robustness:** Wrapped display swap and player removal/re-add in
+  `saveCurrentRoomAsPNG()` with `try/finally` to guarantee state restoration if
+  `Room.draw()` throws.
+- **Defensive guard:** `getLightMask()` now clamps `radiusPx <= 0` to 1,
+  preventing `ZeroDivisionError` and invalid surface sizes.
+- **Test cleanup:** Replaced repeated `pygame.init()`/`pygame.quit()` calls in
+  light mask tests with a shared `pygame_init` pytest fixture. Added edge-case
+  tests for zero and negative radius inputs with alpha profile assertions.
 
 ### 2026-04-20 — Add farming system (planting, growing, harvesting)
 - **New entity files:**

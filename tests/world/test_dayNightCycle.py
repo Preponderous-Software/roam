@@ -157,16 +157,23 @@ def test_clear_light_mask_cache(pygame_init):
 
 
 def test_get_light_mask_zero_radius(pygame_init):
-    """getLightMask with radius 0 should not crash."""
+    """getLightMask with radius 0 should not crash and return a valid mask."""
     cycle = createDayNightCycle(1000)
     mask = cycle.getLightMask(0)
     assert mask.get_width() == 2
     assert mask.get_height() == 2
+    # clamped to radius=1 so center should be transparent, corners opaque
+    centerAlpha = mask.get_at((1, 1))[3]
+    assert centerAlpha <= 5
+    cornerAlpha = mask.get_at((0, 0))[3]
+    assert cornerAlpha == 255
 
 
 def test_get_light_mask_negative_radius(pygame_init):
-    """getLightMask with negative radius should not crash."""
+    """getLightMask with negative radius should not crash and return a valid mask."""
     cycle = createDayNightCycle(1000)
     mask = cycle.getLightMask(-5)
     assert mask.get_width() == 2
     assert mask.get_height() == 2
+    centerAlpha = mask.get_at((1, 1))[3]
+    assert centerAlpha <= 5
