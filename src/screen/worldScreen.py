@@ -760,8 +760,6 @@ class WorldScreen:
                 self.status.set("Blocked by " + entity.getName())
                 return
 
-        self.player.removeEnergy(self.config.playerInteractionEnergyCost)
-
         inventorySlot = self.player.getInventory().getSelectedInventorySlot()
         if inventorySlot.isEmpty():
             self.status.set("Select an item first (1-0)")
@@ -779,6 +777,7 @@ class WorldScreen:
             if not hasGrass:
                 self.status.set("Must plant on grass")
                 return
+            self.player.removeEnergy(self.config.playerInteractionEnergyCost)
             # Remove grass from location
             for entityId in list(targetLocation.getEntities().keys()):
                 entity = targetLocation.getEntity(entityId)
@@ -794,6 +793,7 @@ class WorldScreen:
             self.player.setTickLastPlaced(self.tickCounter.getTick())
             return
 
+        self.player.removeEnergy(self.config.playerInteractionEnergyCost)
         toPlace = self.player.getInventory().removeSelectedItem()
 
         if toPlace == -1:
