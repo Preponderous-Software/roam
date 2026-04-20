@@ -110,6 +110,12 @@ logged in detail below.
   centre alpha=0, smooth radial gradient to edge.
 - **Implementation detail:** `_collectLightSourcesFromRoom` iterates all entities
   at each location when collecting active light sources.
+- **Performance:** Optimized light source rendering to reduce per-frame TPS drop:
+  merged light source collection into the existing room drawing pass (eliminates
+  duplicate room iteration), cached scaled light masks across frames keyed by
+  opacity (only regenerated when opacity changes), used `getNumEntities()` for fast
+  empty-location skipping, and replaced `math.hypot()` with squared-distance
+  comparison plus pre-computed `invRadius` multiplier in mask generation.
 - **Test improvement:** Added alpha profile assertions to light mask tests: center
   transparency, corner opacity, and edge opacity checks.
 

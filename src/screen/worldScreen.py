@@ -106,6 +106,8 @@ class WorldScreen:
         self._dayNightOverlay = None
         self._dayNightOverlaySize = (0, 0)
         self._scaledMaskCache = {}
+        self._lastScaledOpacity = -1
+        self._frameLightSources = []
         self.minimapScaleFactor = 0.10
         self.minimapX = 5
         self.minimapY = 5
@@ -1187,48 +1189,31 @@ class WorldScreen:
                     continue
                 yield roomX, roomY, roomOffsetX, roomOffsetY
 
-    def _collectLightSources(self, gameArea):
-        """Return list of (screenX, screenY, radiusTiles) for light-emitting entities."""
-        sources = []
-        if self.config.cameraFollowPlayer:
-            for roomX, roomY, roomOffsetX, roomOffsetY in self._iterateVisibleRoomOffsets(
-                gameArea
-            ):
-                room = self.map.getRoom(roomX, roomY)
-                if room == -1:
-                    continue
-                self._collectLightSourcesFromRoom(
-                    room, roomOffsetX, roomOffsetY, sources
-                )
-        else:
-            self._collectLightSourcesFromRoom(
-                self.currentRoom, gameArea.x, gameArea.y, sources
-            )
-        return sources
-
     def _collectLightSourcesFromRoom(self, room, offsetX, offsetY, sources):
         grid = room.getGrid()
+        locWidth = self.locationWidth
+        locHeight = self.locationHeight
+        halfW = locWidth / 2
+        halfH = locHeight / 2
         for locationId in grid.getLocations():
             location = grid.getLocation(locationId)
-            entities = list(location.getEntities().values())
-            if len(entities) == 0:
+            if location.getNumEntities() == 0:
                 continue
-            for entity in entities:
+            for entity in location.getEntities().values():
                 if hasattr(entity, "getLightRadius"):
-                    screenX = (
-                        offsetX
-                        + location.getX() * self.locationWidth
-                        + self.locationWidth / 2
+                    sources.append(
+                        (
+                            offsetX + location.getX() * locWidth + halfW,
+                            offsetY + location.getY() * locHeight + halfH,
+                            entity.getLightRadius(),
+                        )
                     )
-                    screenY = (
-                        offsetY
-                        + location.getY() * self.locationHeight
-                        + self.locationHeight / 2
-                    )
-                    sources.append((screenX, screenY, entity.getLightRadius()))
 
     def drawFollowMode(self):
         gameArea = self.graphik.getGameAreaRect()
+        collectLights = self.config.dayNightCycleEnabled
+        if collectLights:
+            self._frameLightSources = []
 
         for roomX, roomY, roomOffsetX, roomOffsetY in self._iterateVisibleRoomOffsets(
             gameArea
@@ -1242,6 +1227,10 @@ class WorldScreen:
                 gameArea.right,
                 gameArea.bottom,
             )
+            if collectLights:
+                self._collectLightSourcesFromRoom(
+                    room, roomOffsetX, roomOffsetY, self._frameLightSources
+                )
 
     def drawHelpOverlay(self):
         x, y = self.graphik.getGameDisplay().get_size()
@@ -1327,6 +1316,11 @@ class WorldScreen:
             self.currentRoom.drawWithOffset(
                 self.locationWidth, self.locationHeight, gameArea.x, gameArea.y
             )
+            if self.config.dayNightCycleEnabled:
+                self._frameLightSources = []
+                self._collectLightSourcesFromRoom(
+                    self.currentRoom, gameArea.x, gameArea.y, self._frameLightSources
+                )
 
         # day/night cycle overlay (clipped to game area)
         if self.config.dayNightCycleEnabled:
@@ -1340,10 +1334,12 @@ class WorldScreen:
                     self._dayNightOverlay = pygame.Surface(overlaySize, pygame.SRCALPHA)
                     self._dayNightOverlaySize = overlaySize
                     self.dayNightCycle.clearLightMaskCache()
+                    self._scaledMaskCache.clear()
                 self._dayNightOverlay.fill((0, 0, 0, opacity))
-                self._scaledMaskCache.clear()
-                lightPositions = self._collectLightSources(gameArea)
-                for screenX, screenY, radiusTiles in lightPositions:
+                if opacity != self._lastScaledOpacity:
+                    self._scaledMaskCache.clear()
+                    self._lastScaledOpacity = opacity
+                for screenX, screenY, radiusTiles in self._frameLightSources:
                     overlayX = screenX - gameArea.x
                     overlayY = screenY - gameArea.y
                     radiusPx = int(radiusTiles * self.locationWidth)

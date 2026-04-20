@@ -63,13 +63,16 @@ class DayNightCycle:
         mask = pygame.Surface((size, size), pygame.SRCALPHA)
         mask.fill((0, 0, 0, 255))
         center = radiusPx
+        radiusSq = radiusPx * radiusPx
+        invRadius = 255.0 / radiusPx
         for y in range(size):
             dy = y - center
+            dySq = dy * dy
             for x in range(size):
                 dx = x - center
-                distance = math.hypot(dx, dy)
-                if distance < radiusPx:
-                    alpha = int(round(255 * (distance / radiusPx)))
+                distSq = dx * dx + dySq
+                if distSq < radiusSq:
+                    alpha = int(math.sqrt(distSq) * invRadius + 0.5)
                     mask.set_at((x, y), (0, 0, 0, alpha))
         self._lightMaskCache[radiusPx] = mask
         return mask
