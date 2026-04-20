@@ -24,6 +24,8 @@ from entity.jungleWood import JungleWood
 from entity.living.bear import Bear
 from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
+from codex.codex import Codex
+from codex.codexJsonReaderWriter import CodexJsonReaderWriter
 from inventory.inventoryJsonReaderWriter import InventoryJsonReaderWriter
 from inventory.inventorySlot import InventorySlot
 from mapimage.mapImageUpdater import MapImageUpdater
@@ -97,6 +99,7 @@ class WorldScreen:
         self.roomPreloader = self.container.resolve(RoomPreloader)
         self.mapImageUpdater = self.container.resolve(MapImageUpdater)
         self.hudDragManager = self.container.resolve(HudDragManager)
+        self.codex = self.container.resolve(Codex)
         self.minimapScaleFactor = 0.10
         self.minimapX = 5
         self.minimapY = 5
@@ -141,6 +144,10 @@ class WorldScreen:
         if os.path.exists(self.config.pathToSaveDirectory + "/playerInventory.json"):
             self.loadPlayerInventoryFromFile()
 
+        # load codex if possible
+        if os.path.exists(self.config.pathToSaveDirectory + "/codex.json"):
+            self.loadCodexFromFile()
+
         self.initializeLocationWidthAndHeight()
 
         # pre-load nearby rooms in the background
@@ -150,6 +157,8 @@ class WorldScreen:
 
         self.status.set("Entered the world")
         self.energyBar = self.container.resolve(EnergyBar)
+
+        self.discoverLivingEntitiesInRoom()
 
         self.hudDragManager.register("hotbar", self._getHotbarDefaultRect)
         self.hudDragManager.register("status", lambda: self.status.getDefaultRect())
@@ -433,6 +442,8 @@ class WorldScreen:
         self.roomPreloader.preloadNearbyRooms(
             self.currentRoom.getX(), self.currentRoom.getY(), self.map
         )
+
+        self.discoverLivingEntitiesInRoom()
 
     def movePlayer(self, direction: int):
         if self.player.isCrouching():
@@ -890,6 +901,9 @@ class WorldScreen:
             self.config.cameraFollowPlayer = not self.config.cameraFollowPlayer
         elif key == kb.getKey("toggle_help"):
             self.showHelp = not self.showHelp
+        elif key == kb.getKey("codex"):
+            self.nextScreen = ScreenType.CODEX_SCREEN
+            self.changeScreen = True
 
     def handleKeyUpEvent(self, key):
         kb = self.keyBindings
@@ -1691,6 +1705,23 @@ class WorldScreen:
         if inventory is not None:
             self.player.setInventory(inventory)
 
+    def saveCodexToFile(self):
+        codexReaderWriter = CodexJsonReaderWriter(self.config)
+        codexReaderWriter.save(self.codex.getDiscoveredEntities())
+
+    def loadCodexFromFile(self):
+        codexReaderWriter = CodexJsonReaderWriter(self.config)
+        entities = codexReaderWriter.load()
+        if entities is not None:
+            self.codex.setDiscovered(entities)
+
+    def discoverLivingEntitiesInRoom(self):
+        for entityId, entity in self.currentRoom.getLivingEntities().items():
+            entityClassName = entity.__class__.__name__
+            if self.codex.discover(entityClassName):
+                self.status.set("New codex entry: " + entityClassName)
+                self.saveCodexToFile()
+
     def getNewLocationCoordinatesForLivingEntityBasedOnLocation(self, currentLocation):
         newLocationX = None
         newLocationY = None
@@ -1806,6 +1837,7 @@ class WorldScreen:
         self.savePlayerInventoryToFile()
         self.stats.save()
         self.tickCounter.save()
+        self.saveCodexToFile()
 
         if self.config.showMiniMap:
             if not self.isCurrentRoomSavedAsPNG():

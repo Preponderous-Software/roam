@@ -20,6 +20,7 @@ M | Toggle minimap
 C | Toggle camera follow mode
 F1 | Toggle controls help overlay
 F3 | Toggle debug info
+L | Open Codex
 Print Screen | Take screenshot
 Esc | Quit (main menu) / Open menu (world) / Go back (other screens)
 Left Mouse (outside inventory panel) | Drop entire cursor stack (inventory screen)

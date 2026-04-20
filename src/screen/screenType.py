@@ -8,4 +8,5 @@ class ScreenType:
     CONFIG_SCREEN = "config_screen"
     SAVE_SELECTION_SCREEN = "save_selection_screen"
     CONTROLS_SCREEN = "controls_screen"
+    CODEX_SCREEN = "codex_screen"
     NONE = "none_screen"

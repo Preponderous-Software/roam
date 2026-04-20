@@ -1,0 +1,12 @@
+{
+    "type": "object",
+    "properties": {
+        "discoveredEntities": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        }
+    },
+    "required": ["discoveredEntities"]
+}
