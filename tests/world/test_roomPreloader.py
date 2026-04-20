@@ -1,38 +1,18 @@
-from unittest.mock import MagicMock
-
-from src.world.map import Map
-from src.world.roomPreloader import RoomPreloader
-from src.world.roomJsonReaderWriter import RoomJsonReaderWriter
+from world.map import Map
+from world.roomPreloader import RoomPreloader
 
 
-def _createDependencies(tmp_path):
-    graphik = MagicMock()
-    tickCounter = MagicMock()
-    tickCounter.getTick.return_value = 0
-    config = MagicMock()
-    config.pathToSaveDirectory = str(tmp_path)
-    config.worldBorder = 0
-    config.gridSize = 3
-    return graphik, tickCounter, config
-
-
-def _createRoomJsonReaderWriterFactory(graphik, tickCounter, config):
-    return lambda: RoomJsonReaderWriter(3, graphik, tickCounter, config)
-
-
-def _createPreloaderAndMap(tmp_path):
-    graphik, tickCounter, config = _createDependencies(tmp_path)
-    factory = _createRoomJsonReaderWriterFactory(graphik, tickCounter, config)
-    preloader = RoomPreloader(
-        3, graphik, tickCounter, config, roomJsonReaderWriterFactory=factory
-    )
-    gameMap = Map(3, graphik, tickCounter, config)
+def _createPreloaderAndMap(resolve, test_config, tmp_path):
+    test_config.pathToSaveDirectory = str(tmp_path)
+    test_config.worldBorder = 0
+    test_config.gridSize = 3
+    preloader = resolve(RoomPreloader)
+    gameMap = resolve(Map)
     return preloader, gameMap
 
 
-def test_initialization(tmp_path):
-    graphik, tickCounter, config = _createDependencies(tmp_path)
-    preloader = RoomPreloader(3, graphik, tickCounter, config)
+def test_initialization(resolve, test_config, tmp_path):
+    preloader, _ = _createPreloaderAndMap(resolve, test_config, tmp_path)
 
     try:
         assert preloader.gridSize == 3
@@ -41,8 +21,8 @@ def test_initialization(tmp_path):
         preloader.shutdown(wait=True)
 
 
-def test_preload_generates_adjacent_rooms(tmp_path):
-    preloader, gameMap = _createPreloaderAndMap(tmp_path)
+def test_preload_generates_adjacent_rooms(resolve, test_config, tmp_path):
+    preloader, gameMap = _createPreloaderAndMap(resolve, test_config, tmp_path)
 
     # Start with a room at (0, 0)
     gameMap.generateNewRoom(0, 0)
@@ -60,8 +40,8 @@ def test_preload_generates_adjacent_rooms(tmp_path):
     assert gameMap.hasRoom(1, 0)
 
 
-def test_preload_skips_already_loaded_rooms(tmp_path):
-    preloader, gameMap = _createPreloaderAndMap(tmp_path)
+def test_preload_skips_already_loaded_rooms(resolve, test_config, tmp_path):
+    preloader, gameMap = _createPreloaderAndMap(resolve, test_config, tmp_path)
 
     # Pre-generate room at (1, 0)
     existingRoom = gameMap.generateNewRoom(1, 0)
@@ -79,15 +59,12 @@ def test_preload_skips_already_loaded_rooms(tmp_path):
     assert len(gameMap.getRooms()) == initialRoomCount + 3
 
 
-def test_preload_respects_world_border(tmp_path):
-    graphik, tickCounter, config = _createDependencies(tmp_path)
-    config.worldBorder = 1  # border at 1 means rooms at abs(x/y) > 1 are blocked
-
-    factory = _createRoomJsonReaderWriterFactory(graphik, tickCounter, config)
-    preloader = RoomPreloader(
-        3, graphik, tickCounter, config, roomJsonReaderWriterFactory=factory
-    )
-    gameMap = Map(3, graphik, tickCounter, config)
+def test_preload_respects_world_border(resolve, test_config, tmp_path):
+    test_config.pathToSaveDirectory = str(tmp_path)
+    test_config.gridSize = 3
+    test_config.worldBorder = 1  # border at 1 means rooms at abs(x/y) > 1 are blocked
+    preloader = resolve(RoomPreloader)
+    gameMap = resolve(Map)
 
     # Player at (1, 1) — all neighbors are at abs >= 2, which exceeds border
     preloader.preloadNearbyRooms(1, 1, gameMap)
@@ -100,8 +77,8 @@ def test_preload_respects_world_border(tmp_path):
     assert not gameMap.hasRoom(1, 2)
 
 
-def test_preload_does_not_duplicate_pending_work(tmp_path):
-    preloader, gameMap = _createPreloaderAndMap(tmp_path)
+def test_preload_does_not_duplicate_pending_work(resolve, test_config, tmp_path):
+    preloader, gameMap = _createPreloaderAndMap(resolve, test_config, tmp_path)
 
     # Call preload twice in quick succession for the same position
     preloader.preloadNearbyRooms(0, 0, gameMap)
@@ -113,16 +90,17 @@ def test_preload_does_not_duplicate_pending_work(tmp_path):
     assert len(gameMap.getRooms()) == 4
 
 
-def test_shutdown(tmp_path):
-    preloader, gameMap = _createPreloaderAndMap(tmp_path)
+def test_shutdown(resolve, test_config, tmp_path):
+    preloader, gameMap = _createPreloaderAndMap(resolve, test_config, tmp_path)
 
     preloader.shutdown(wait=True)
     # Should not raise
 
 
-def test_has_room_on_map(tmp_path):
-    graphik, tickCounter, config = _createDependencies(tmp_path)
-    gameMap = Map(3, graphik, tickCounter, config)
+def test_has_room_on_map(resolve, test_config, tmp_path):
+    test_config.pathToSaveDirectory = str(tmp_path)
+    test_config.gridSize = 3
+    gameMap = resolve(Map)
 
     assert not gameMap.hasRoom(0, 0)
     gameMap.generateNewRoom(0, 0)
