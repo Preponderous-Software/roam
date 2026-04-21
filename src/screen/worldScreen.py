@@ -757,17 +757,50 @@ class WorldScreen:
 
     def _interactWithGravestone(self, gravestone, targetRoom, targetLocation):
         storedInventory = gravestone.getStoredInventory()
+        # Collect all items to transfer
+        itemsToTransfer = []
         for slot in storedInventory.getInventorySlots():
             if slot.isEmpty():
                 continue
             for item in list(slot.getContents()):
-                if not self.player.getInventory().placeIntoFirstAvailableInventorySlot(
-                    item
-                ):
-                    self.status.set("Inventory full")
-                    return
+                itemsToTransfer.append(item)
+
+        # Pre-check capacity: simulate placement to ensure all items fit
+        if not self._inventoryCanFitAll(self.player.getInventory(), itemsToTransfer):
+            self.status.set("Inventory full")
+            return
+
+        # All items fit — transfer atomically
+        for item in itemsToTransfer:
+            self.player.getInventory().placeIntoFirstAvailableInventorySlot(item)
         targetRoom.removeEntity(gravestone)
         self.status.set("Retrieved items from Gravestone")
+
+    def _inventoryCanFitAll(self, inventory, items):
+        """Return True if all items can be placed into inventory without overflow."""
+        maxStack = 20
+        # Available space in existing non-empty slots keyed by item name
+        slotSpace = {}
+        freeSlots = 0
+        for slot in inventory.getInventorySlots():
+            if slot.isEmpty():
+                freeSlots += 1
+            else:
+                name = slot.getContents()[0].getName()
+                available = maxStack - slot.getNumItems()
+                if available > 0:
+                    slotSpace[name] = slotSpace.get(name, 0) + available
+        for item in items:
+            name = item.getName()
+            if slotSpace.get(name, 0) > 0:
+                slotSpace[name] -= 1
+            elif freeSlots > 0:
+                freeSlots -= 1
+                # Opening a new slot gives (maxStack - 1) additional spaces
+                slotSpace[name] = slotSpace.get(name, 0) + (maxStack - 1)
+            else:
+                return False
+        return True
 
     def changeSelectedInventorySlot(self, index):
         self.player.getInventory().setSelectedInventorySlotIndex(index)

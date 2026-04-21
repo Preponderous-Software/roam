@@ -4,13 +4,12 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 import pygame
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from entity.apple import Apple
 from entity.gravestone import Gravestone
 from entity.oakWood import OakWood
 from inventory.inventory import Inventory
-from lib.pyenvlib.grid import Grid
 from world.room import Room
 
 

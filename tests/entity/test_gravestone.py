@@ -1,6 +1,6 @@
-from src.entity.gravestone import Gravestone
-from src.entity.apple import Apple
-from src.entity.oakWood import OakWood
+from entity.gravestone import Gravestone
+from entity.apple import Apple
+from entity.oakWood import OakWood
 
 
 def test_initialization():

@@ -321,8 +321,7 @@ class RoomJsonReaderWriter:
         else:
             constructor = self.entityConstructors.get(entityClass)
             if constructor is None:
-                _logger.warning("unknown stored item class", entityClass=entityClass)
-                return None
+                raise ValueError(f"unknown stored item class: {entityClass}")
             item = constructor()
             if isinstance(item, Food) and "energy" in itemJson:
                 item.setEnergy(itemJson["energy"])
