@@ -15,6 +15,7 @@ from entity.excrement import Excrement
 from entity.fence import Fence
 from entity.food import Food
 from entity.grass import Grass
+from entity.gravestone import Gravestone
 from entity.ironOre import IronOre
 from entity.jungleWood import JungleWood
 from entity.leaves import Leaves
@@ -157,6 +158,10 @@ class RoomJsonReaderWriter:
             entityJson["tickCreated"] = entity.getTickCreated()
         elif isinstance(entity, (YoungCrop, MatureCrop)):
             entityJson["tickPlanted"] = entity.getTickPlanted()
+        elif isinstance(entity, Gravestone):
+            entityJson["storedInventory"] = self._generateJsonForStoredInventory(
+                entity.getStoredInventory()
+            )
         return entityJson
 
     def generateRoomFromJson(self, roomJson):
@@ -231,6 +236,12 @@ class RoomJsonReaderWriter:
         entity.setGridID(UUID(entityJson["gridId"]))
         entity.setLocationID(entityJson["locationId"])
         entity.setName(entityJson["name"])
+
+        if isinstance(entity, Gravestone) and "storedInventory" in entityJson:
+            self._restoreStoredInventory(
+                entity.getStoredInventory(), entityJson["storedInventory"]
+            )
+
         return entity
 
     def _parseBackgroundColor(self, backgroundColorText):
@@ -251,8 +262,70 @@ class RoomJsonReaderWriter:
             return YoungCrop(entityJson["tickPlanted"])
         if entityClass == "MatureCrop":
             return MatureCrop(entityJson["tickPlanted"])
+        if entityClass == "Gravestone":
+            return Gravestone()
 
         constructor = self.entityConstructors.get(entityClass)
         if constructor is None:
             return None
         return constructor()
+
+    def _generateJsonForStoredInventory(self, inventory):
+        slotsJson = []
+        for slotIndex, slot in enumerate(inventory.getInventorySlots()):
+            contentsJson = []
+            for item in slot.getContents():
+                itemJson = {
+                    "entityId": str(item.getID()),
+                    "entityClass": item.__class__.__name__,
+                    "name": item.getName(),
+                    "assetPath": item.getImagePath(),
+                }
+                if isinstance(item, Food):
+                    itemJson["energy"] = item.getEnergy()
+                elif isinstance(item, LivingEntity):
+                    itemJson["energy"] = item.getEnergy()
+                    itemJson["tickCreated"] = item.getTickCreated()
+                    itemJson["tickLastReproduced"] = item.getTickLastReproduced()
+                    itemJson["imagePath"] = item.getImagePath()
+                elif isinstance(item, (YoungCrop, MatureCrop)):
+                    itemJson["tickPlanted"] = item.getTickPlanted()
+                contentsJson.append(itemJson)
+            slotsJson.append({"slotIndex": slotIndex, "slotContents": contentsJson})
+        return {"inventorySlots": slotsJson}
+
+    def _restoreStoredInventory(self, inventory, storedInventoryJson):
+        for slotJson in storedInventoryJson.get("inventorySlots", []):
+            for itemJson in slotJson.get("slotContents", []):
+                item = self._createStoredItem(itemJson)
+                if item is not None:
+                    inventory.placeIntoFirstAvailableInventorySlot(item)
+
+    def _createStoredItem(self, itemJson):
+        entityClass = itemJson["entityClass"]
+
+        if entityClass == "Bear":
+            item = Bear(itemJson["tickCreated"])
+            item.setEnergy(itemJson["energy"])
+            item.setTickLastReproduced(itemJson["tickLastReproduced"])
+            item.setImagePath(itemJson["imagePath"])
+        elif entityClass == "Chicken":
+            item = Chicken(itemJson["tickCreated"])
+            item.setEnergy(itemJson["energy"])
+            item.setTickLastReproduced(itemJson["tickLastReproduced"])
+            item.setImagePath(itemJson["imagePath"])
+        elif entityClass == "YoungCrop":
+            item = YoungCrop(itemJson["tickPlanted"])
+        elif entityClass == "MatureCrop":
+            item = MatureCrop(itemJson["tickPlanted"])
+        else:
+            constructor = self.entityConstructors.get(entityClass)
+            if constructor is None:
+                _logger.warning("unknown stored item class", entityClass=entityClass)
+                return None
+            item = constructor()
+            if isinstance(item, Food) and "energy" in itemJson:
+                item.setEnergy(itemJson["energy"])
+
+        item.setID(UUID(itemJson["entityId"]))
+        return item

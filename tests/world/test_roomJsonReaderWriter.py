@@ -10,6 +10,7 @@ from entity.coalOre import CoalOre
 from entity.excrement import Excrement
 from entity.fence import Fence
 from entity.grass import Grass
+from entity.gravestone import Gravestone
 from entity.ironOre import IronOre
 from entity.jungleWood import JungleWood
 from entity.leaves import Leaves
@@ -83,6 +84,7 @@ def createEntityJson(entityClass):
         ("Wheat", Wheat),
         ("YoungCrop", YoungCrop),
         ("MatureCrop", MatureCrop),
+        ("Gravestone", Gravestone),
     ],
 )
 def test_generate_entity_from_json_supports_all_known_entity_classes(
@@ -177,3 +179,73 @@ def test_generate_json_for_mature_crop_includes_tick_planted(resolve, test_confi
 
     assert entityJson["entityClass"] == "MatureCrop"
     assert entityJson["tickPlanted"] == 400
+
+
+def test_generate_json_for_gravestone_includes_stored_inventory(resolve, test_config, tmp_path):
+    roomJsonReaderWriter = createRoomJsonReaderWriter(resolve, test_config, tmp_path)
+    gravestone = Gravestone()
+    gravestone.setEnvironmentID(uuid4())
+    gravestone.setGridID(uuid4())
+    gravestone.setLocationID(str(uuid4()))
+    gravestone.getStoredInventory().placeIntoFirstAvailableInventorySlot(Apple())
+
+    entityJson = roomJsonReaderWriter.generateJsonForEntity(gravestone)
+
+    assert entityJson["entityClass"] == "Gravestone"
+    assert "storedInventory" in entityJson
+    slots = entityJson["storedInventory"]["inventorySlots"]
+    total_items = sum(len(s["slotContents"]) for s in slots)
+    assert total_items == 1
+
+
+def test_generate_entity_from_json_restores_gravestone_stored_inventory(resolve, test_config, tmp_path):
+    roomJsonReaderWriter = createRoomJsonReaderWriter(resolve, test_config, tmp_path)
+
+    apple = Apple()
+    gravestoneJson = {
+        "id": str(uuid4()),
+        "entityClass": "Gravestone",
+        "name": "Gravestone",
+        "creationDate": "2026-01-01",
+        "environmentId": str(uuid4()),
+        "gridId": str(uuid4()),
+        "locationId": str(uuid4()),
+        "storedInventory": {
+            "inventorySlots": [
+                {
+                    "slotIndex": 0,
+                    "slotContents": [
+                        {
+                            "entityId": str(apple.getID()),
+                            "entityClass": "Apple",
+                            "name": "Apple",
+                            "assetPath": "assets/images/apple.png",
+                            "energy": 25,
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+
+    entity = roomJsonReaderWriter.generateEntityFromJson(gravestoneJson)
+
+    assert isinstance(entity, Gravestone)
+    assert entity.getStoredInventory().getNumItems() == 1
+
+
+def test_gravestone_round_trip_preserves_stored_items(resolve, test_config, tmp_path):
+    roomJsonReaderWriter = createRoomJsonReaderWriter(resolve, test_config, tmp_path)
+    gravestone = Gravestone()
+    gravestone.setEnvironmentID(uuid4())
+    gravestone.setGridID(uuid4())
+    gravestone.setLocationID(str(uuid4()))
+    gravestone.getStoredInventory().placeIntoFirstAvailableInventorySlot(Apple())
+    gravestone.getStoredInventory().placeIntoFirstAvailableInventorySlot(OakWood())
+
+    entityJson = roomJsonReaderWriter.generateJsonForEntity(gravestone)
+    restored = roomJsonReaderWriter.generateEntityFromJson(entityJson)
+
+    assert isinstance(restored, Gravestone)
+    assert restored.getStoredInventory().getNumItems() == 2
+
