@@ -778,11 +778,12 @@ class WorldScreen:
 
     def _inventoryCanFitAll(self, inventory, items):
         """Return True if all items can be placed into inventory without overflow."""
-        maxStack = 20
         # Available space in existing non-empty slots keyed by item name
         slotSpace = {}
         freeSlots = 0
+        maxStack = 20
         for slot in inventory.getInventorySlots():
+            maxStack = slot.getMaxStackSize()
             if slot.isEmpty():
                 freeSlots += 1
             else:

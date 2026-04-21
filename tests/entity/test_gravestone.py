@@ -33,13 +33,13 @@ def test_can_store_items_in_stored_inventory():
 
 
 def test_stored_inventories_are_independent_per_gravestone():
-    stone1 = Gravestone()
-    stone2 = Gravestone()
+    gravestone1 = Gravestone()
+    gravestone2 = Gravestone()
 
-    stone1.getStoredInventory().placeIntoFirstAvailableInventorySlot(Apple())
+    gravestone1.getStoredInventory().placeIntoFirstAvailableInventorySlot(Apple())
 
-    assert stone1.getStoredInventory().getNumItems() == 1
-    assert stone2.getStoredInventory().getNumItems() == 0
+    assert gravestone1.getStoredInventory().getNumItems() == 1
+    assert gravestone2.getStoredInventory().getNumItems() == 0
 
 
 def test_multiple_items_can_be_stored():

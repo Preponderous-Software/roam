@@ -299,7 +299,15 @@ class RoomJsonReaderWriter:
             for itemJson in slotJson.get("slotContents", []):
                 item = self._createStoredItem(itemJson)
                 if item is not None:
-                    inventory.placeIntoFirstAvailableInventorySlot(item)
+                    itemPlaced = inventory.placeIntoFirstAvailableInventorySlot(item)
+                    if not itemPlaced:
+                        _logger.error(
+                            "failed to restore stored inventory item %s (%s) from saved slot %s: "
+                            "no inventory space available",
+                            itemJson.get("entityClass"),
+                            itemJson.get("entityId"),
+                            slotJson.get("slotIndex"),
+                        )
 
     def _createStoredItem(self, itemJson):
         entityClass = itemJson["entityClass"]
