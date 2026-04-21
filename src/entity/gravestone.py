@@ -1,5 +1,5 @@
 from entity.drawableEntity import DrawableEntity
-from entity.storableEntity import StorableInventory
+from entity.storableInventory import StorableInventory
 
 
 # @author Copilot

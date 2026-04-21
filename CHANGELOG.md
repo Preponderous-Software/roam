@@ -77,7 +77,7 @@ logged in detail below.
 ## AI Agent Sessions
 
 ### 2026-04-21 — Add gravestone feature (issue #337)
-- **New file:** `src/entity/storableEntity.py` — `StorableInventory` mixin class that holds an `Inventory` instance and exposes `getStoredInventory()`. Designed for reuse by the future `Chest` entity.
+- **New file:** `src/entity/storableInventory.py` — `StorableInventory` mixin class that holds an `Inventory` instance and exposes `getStoredInventory()`. Designed for reuse by the future `Chest` entity.
 - **New file:** `src/entity/gravestone.py` — `Gravestone` entity extending `DrawableEntity` (solid=True) and `StorableInventory`. Not pickupable, not craftable.
 - **New asset:** `assets/images/gravestone.png` — 32×32 RGBA placeholder sprite.
 - **Modified `src/screen/worldScreen.py`**:
