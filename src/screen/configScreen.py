@@ -59,7 +59,7 @@ class ConfigScreen:
             ("Day/Night Cycle", "dayNightCycleEnabled"),
         ]
 
-        visibleRows = int((y - startY - 80) / rowHeight)  # 80px reserved for bottom Back button
+        visibleRows = max(1, int((y - startY - 80) / rowHeight))  # 80px reserved for bottom Back button
         maxOffset = max(0, len(toggleButtons) - visibleRows)
         self.scrollOffset = max(0, min(self.scrollOffset, maxOffset))
 
