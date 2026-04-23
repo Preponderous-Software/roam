@@ -76,6 +76,16 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-23 — Fix toggle buttons covering Back button in settings screen (issue)
+- **Modified `src/screen/configScreen.py`:**
+  - Added `self.scrollOffset = 0` to `__init__` to track scroll state.
+  - Refactored `drawMenuButtons()` to use the scrollable row pattern from `ControlsScreen.drawBindings()`: calculates `visibleRows` from available vertical space, clamps `scrollOffset`, renders only visible toggles, and shows a scroll indicator (`"1-N of 9"`) when content overflows.
+  - Replaced `drawBackButton()` with `drawBottomButtons()` that always draws the **Back** button at a fixed position at the bottom of the screen (`y - 45`), matching `ControlsScreen.drawBottomButtons()`.
+  - Added `handleScrollEvent(event)` method matching `ControlsScreen.handleScrollEvent()`.
+  - Updated `run()` to: reset `scrollOffset` on entry; handle `pygame.MOUSEWHEEL` events via `handleScrollEvent()`; call `drawBottomButtons()` as a separate step after `drawMenuButtons()`.
+  - Row height (35), button height (28), and bottom margin values match `ControlsScreen` for visual consistency.
+- **Validation:** All 426 tests pass.
+
 ### 2026-04-21 — Add gravestone feature (issue #337)
 - **New file:** `src/entity/storableInventory.py` — `StorableInventory` mixin class that holds an `Inventory` instance and exposes `getStoredInventory()`. Designed for reuse by the future `Chest` entity.
 - **New file:** `src/entity/gravestone.py` — `Gravestone` entity extending `DrawableEntity` (solid=True) and `StorableInventory`. Not pickupable, not craftable.
