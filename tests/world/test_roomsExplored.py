@@ -8,8 +8,6 @@ Covers the requirement that:
 """
 from unittest.mock import MagicMock
 
-import pytest
-
 from stats.stats import Stats
 from world.map import Map
 from world.roomPreloader import RoomPreloader
@@ -86,7 +84,6 @@ def test_preloaded_room_not_entered_does_not_increment(resolve, test_config, tmp
     try:
         gameMap.generateNewRoom(0, 0)
         preloader.preloadNearbyRooms(0, 0, gameMap)
-        preloader.shutdown(wait=True)
     finally:
         preloader.shutdown(wait=True)
 
@@ -106,9 +103,6 @@ def test_multiple_new_rooms_each_increment_once(resolve, test_config, tmp_path):
 
 def test_loaded_from_disk_room_does_not_increment(resolve, test_config, tmp_path):
     """A room that already exists on disk should not count as explored."""
-    import json
-    import os
-
     test_config.pathToSaveDirectory = str(tmp_path)
     test_config.gridSize = 3
 

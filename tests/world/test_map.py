@@ -125,8 +125,6 @@ def test_consume_is_new_room_false_after_consumed(resolve, test_config, tmp_path
 
 def test_consume_is_new_room_false_for_added_room(resolve, test_config, tmp_path):
     mapInstance = createMap(resolve, test_config, tmp_path)
-    from lib.graphik.src.graphik import Graphik
-    from world.room import Room
 
     graphik = resolve(Graphik)
     room = Room("Loaded", 3, (0, 0, 0), 3, 4, graphik)

@@ -981,4 +981,7 @@ about this repository, add it here so the next agent benefits.
   increment `rooms explored`; this handles both the pre-loaded (RoomPreloader background
   thread) and direct-generate paths uniformly. Pass `updateStats=False` when calling
   `_loadOrGenerateRoom` for non-player transitions (e.g., living-entity cross-room moves)
-  so the flag is not consumed and stats are not affected.
+  so the flag is not consumed and stats are not affected. This remains not yet integrated
+  because it is a localized implementation detail for `Map`/`WorldScreen` room-generation
+  and stats behavior, not a repository-wide contributor convention for
+  `.github/copilot-instructions.md`.
