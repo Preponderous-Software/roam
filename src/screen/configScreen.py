@@ -17,6 +17,7 @@ class ConfigScreen:
         self.running = True
         self.nextScreen = ScreenType.MAIN_MENU_SCREEN
         self.changeScreen = False
+        self.scrollOffset = 0
 
     def handleKeyDownEvent(self, key):
         if key == pygame.K_ESCAPE:
@@ -41,10 +42,10 @@ class ConfigScreen:
     def drawMenuButtons(self):
         x, y = self.graphik.getGameDisplay().get_size()
         width = x / 2
-        height = y / 10
         xpos = x / 2 - width / 2
-        ypos = 70
-        margin = 10
+        rowHeight = 35
+        buttonHeight = 28
+        startY = 60
 
         toggleButtons = [
             ("Debug Mode", "debug"),
@@ -58,52 +59,75 @@ class ConfigScreen:
             ("Day/Night Cycle", "dayNightCycleEnabled"),
         ]
 
-        for label, attribute in toggleButtons:
+        visibleRows = int((y - startY - 80) / rowHeight)  # 80px reserved for bottom Back button
+        maxOffset = max(0, len(toggleButtons) - visibleRows)
+        self.scrollOffset = max(0, min(self.scrollOffset, maxOffset))
+
+        visibleToggles = toggleButtons[self.scrollOffset : self.scrollOffset + visibleRows]
+
+        for i, (label, attribute) in enumerate(visibleToggles):
+            rowY = startY + i * rowHeight
             color = (0, 255, 0) if getattr(self.config, attribute) else (255, 0, 0)
             self.graphik.drawButton(
                 xpos,
-                ypos,
+                rowY,
                 width,
-                height,
+                buttonHeight,
                 (255, 255, 255),
                 color,
-                30,
+                20,
                 label,
                 lambda attr=attribute: self._toggleConfigAttribute(attr),
             )
-            ypos = ypos + height + margin
 
-        self.drawBackButton()
+        if maxOffset > 0:
+            scrollInfo = (
+                str(self.scrollOffset + 1)
+                + "-"
+                + str(min(self.scrollOffset + visibleRows, len(toggleButtons)))
+                + " of "
+                + str(len(toggleButtons))
+            )
+            self.graphik.drawText(scrollInfo, x / 2, y - 70, 16, (180, 180, 180))
 
-    def drawBackButton(self):
+    def drawBottomButtons(self):
         x, y = self.graphik.getGameDisplay().get_size()
-        width = x / 3
-        height = y / 10
-        xpos = x / 2 - width / 2
-        ypos = y / 2 - height / 2 + width
+        buttonWidth = x / 5
+        buttonHeight = 35
+        bottomY = y - 45  # 45px from the bottom edge, matching ControlsScreen
         self.graphik.drawButton(
-            xpos,
-            ypos,
-            width,
-            height,
+            x / 2 - buttonWidth / 2,
+            bottomY,
+            buttonWidth,
+            buttonHeight,
             (255, 255, 255),
             (0, 0, 0),
-            30,
+            20,
             "Back",
             self.switchToMainMenuScreen,
         )
 
+    def handleScrollEvent(self, event):
+        if event.y > 0:
+            self.scrollOffset = max(0, self.scrollOffset - 1)
+        elif event.y < 0:
+            self.scrollOffset += 1
+
     def run(self):
+        self.scrollOffset = 0
         while not self.changeScreen:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     return ScreenType.NONE
                 elif event.type == pygame.KEYDOWN:
                     self.handleKeyDownEvent(event.key)
+                elif event.type == pygame.MOUSEWHEEL:
+                    self.handleScrollEvent(event)
 
             self.graphik.getGameDisplay().fill((0, 0, 0))
             self.drawTitle()
             self.drawMenuButtons()
+            self.drawBottomButtons()
             pygame.display.update()
 
         self.changeScreen = False
