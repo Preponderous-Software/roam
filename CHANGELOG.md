@@ -76,6 +76,24 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-21 — Add gravestone feature (issue #337)
+- **New file:** `src/entity/storableInventory.py` — `StorableInventory` mixin class that holds an `Inventory` instance and exposes `getStoredInventory()`. Designed for reuse by the future `Chest` entity.
+- **New file:** `src/entity/gravestone.py` — `Gravestone` entity extending `DrawableEntity` (solid=True) and `StorableInventory`. Not pickupable, not craftable.
+- **New asset:** `assets/images/gravestone.png` — 32×32 RGBA placeholder sprite.
+- **Modified `src/screen/worldScreen.py`**:
+  - Added import for `Gravestone`.
+  - `respawnPlayer()` now creates a `Gravestone`, transfers all player inventory items into its stored inventory, and places it at the player's last location instead of scattering individual items. No gravestone is spawned if the player's inventory was empty.
+  - `executePlaceAction()` now checks for a `Gravestone` at the target location before other solid-entity guards. If found, it delegates to `_interactWithGravestone()`.
+  - New `_interactWithGravestone(gravestone, targetRoom, targetLocation)`: transfers all stored items into the player's inventory; if any item doesn't fit, sets status "Inventory full" and leaves the gravestone in place; on full retrieval, removes the gravestone and sets status "Retrieved items from Gravestone".
+- **Modified `src/world/roomJsonReaderWriter.py`**:
+  - Added `Gravestone` import.
+  - `generateJsonForEntity()` serializes `Gravestone` with a `storedInventory` field.
+  - `generateEntityFromJson()` restores the stored inventory after deserialization.
+  - `_createEntity()` handles `entityClass == "Gravestone"`.
+  - New helpers: `_generateJsonForStoredInventory()`, `_restoreStoredInventory()`, `_createStoredItem()`.
+- **New tests:** `tests/entity/test_gravestone.py` (6 tests); `tests/screen/test_worldScreen_gravestone.py` (5 tests); `tests/world/test_roomJsonReaderWriter.py` extended with 4 new gravestone tests.
+- **Validation:** All 426 tests pass (411 existing + 15 new).
+
 ### 2026-04-20 — Resolve PR review threads for test-DI refactor
 - Added thread-safe public registration snapshot/restore APIs to the DI container:
   `Container.getRegistration(...)` and `Container.restoreRegistration(...)`.
@@ -914,3 +932,18 @@ about this repository, add it here so the next agent benefits.
   in tests for DI-managed classes and use `override_dependency(...)` for test-specific
   mocks; the fixture restores overridden registrations after each test to avoid state
   leakage between tests.
+- 2026-04-21: `[not yet integrated]` When writing tests that use `isinstance` with
+  classes that are also imported by source modules without the `src.` prefix, the test
+  must use the same import path as the source. For example, if `worldScreen.py` imports
+  `from entity.gravestone import Gravestone`, and a test imports
+  `from src.entity.gravestone import Gravestone`, the `isinstance` check will fail
+  because Python treats them as distinct classes. Tests in `tests/entity/` and
+  `tests/world/` should consistently use bare imports (e.g., `from entity.gravestone
+  import Gravestone`) to match source imports.
+- 2026-04-21: `[not yet integrated]` A freshly constructed `DrawableEntity` (or
+  subclass) has default IDs of `-1` (from the `Entity` base class in `pyenvlib`).
+  Calling `str(entity.getEnvironmentID())` returns `"-1"`, which is not a valid UUID
+  string. Round-trip tests that serialize then deserialize an entity using
+  `roomJsonReaderWriter` must set proper UUID values with `entity.setEnvironmentID(uuid4())`,
+  `entity.setGridID(uuid4())`, and `entity.setLocationID(str(uuid4()))` before generating
+  JSON.

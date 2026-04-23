@@ -46,6 +46,7 @@ from ui.hotbarLayout import (
     HOTBAR_BOTTOM_OFFSET,
 )
 from ui.hudDragManager import HudDragManager
+from entity.gravestone import Gravestone
 from entity.wheat import Wheat
 from entity.wheatSeed import WheatSeed
 from entity.youngCrop import YoungCrop
@@ -672,10 +673,6 @@ class WorldScreen:
         return True
 
     def executePlaceAction(self):
-        if self.player.getInventory().getNumTakenInventorySlots() == 0:
-            self.status.set("No items to place")
-            return
-
         targetLocation, targetRoom = self.getLocationAndRoomAtMousePosition()
         if targetLocation == -1:
             self.status.set("Cannot place here")
@@ -683,12 +680,24 @@ class WorldScreen:
         if targetLocation == -2:
             self.status.set("Stop moving to place items")
             return
-        if self.locationContainsSolidEntity(targetLocation):
-            self.status.set("Location is blocked")
-            return
 
         if self.isLocationTooFar(targetLocation, targetRoom):
             self.status.set("Too far away")
+            return
+
+        # Check for gravestone interaction before checking solid/blocked
+        for entityId in list(targetLocation.getEntities().keys()):
+            entity = targetLocation.getEntity(entityId)
+            if isinstance(entity, Gravestone):
+                self._interactWithGravestone(entity, targetRoom, targetLocation)
+                return
+
+        if self.player.getInventory().getNumTakenInventorySlots() == 0:
+            self.status.set("No items to place")
+            return
+
+        if self.locationContainsSolidEntity(targetLocation):
+            self.status.set("Location is blocked")
             return
 
         for entityId in list(targetLocation.getEntities().keys()):
@@ -745,6 +754,54 @@ class WorldScreen:
         targetRoom.addEntityToLocation(youngCrop, targetLocation)
         self.status.set("Planted Wheat Seed")
         self.player.setTickLastPlaced(self.tickCounter.getTick())
+
+    def _interactWithGravestone(self, gravestone, targetRoom, targetLocation):
+        storedInventory = gravestone.getStoredInventory()
+        # Collect all items to transfer
+        itemsToTransfer = []
+        for slot in storedInventory.getInventorySlots():
+            if slot.isEmpty():
+                continue
+            for item in list(slot.getContents()):
+                itemsToTransfer.append(item)
+
+        # Pre-check capacity: simulate placement to ensure all items fit
+        if not self._inventoryCanFitAll(self.player.getInventory(), itemsToTransfer):
+            self.status.set("Inventory full")
+            return
+
+        # All items fit — transfer atomically
+        for item in itemsToTransfer:
+            self.player.getInventory().placeIntoFirstAvailableInventorySlot(item)
+        targetRoom.removeEntity(gravestone)
+        self.status.set("Retrieved items from Gravestone")
+
+    def _inventoryCanFitAll(self, inventory, items):
+        """Return True if all items can be placed into inventory without overflow."""
+        # Available space in existing non-empty slots keyed by item name
+        slotSpace = {}
+        freeSlots = 0
+        maxStack = 20
+        for slot in inventory.getInventorySlots():
+            maxStack = slot.getMaxStackSize()
+            if slot.isEmpty():
+                freeSlots += 1
+            else:
+                name = slot.getContents()[0].getName()
+                available = maxStack - slot.getNumItems()
+                if available > 0:
+                    slotSpace[name] = slotSpace.get(name, 0) + available
+        for item in items:
+            name = item.getName()
+            if slotSpace.get(name, 0) > 0:
+                slotSpace[name] -= 1
+            elif freeSlots > 0:
+                freeSlots -= 1
+                # Opening a new slot gives (maxStack - 1) additional spaces
+                slotSpace[name] = slotSpace.get(name, 0) + (maxStack - 1)
+            else:
+                return False
+        return True
 
     def changeSelectedInventorySlot(self, index):
         self.player.getInventory().setSelectedInventorySlotIndex(index)
@@ -858,14 +915,22 @@ class WorldScreen:
     def respawnPlayer(self):
         playerLocationId = self.player.getLocationID()
         playerLocation = self.currentRoom.getGrid().getLocation(playerLocationId)
+
+        # Collect all items into a gravestone at the player's location
+        gravestone = Gravestone()
+        hasItems = False
         for inventorySlot in self.player.getInventory().getInventorySlots():
             if inventorySlot.isEmpty():
                 continue
             for item in inventorySlot.getContents():
-                self.currentRoom.addEntityToLocation(item, playerLocation)
-                if isinstance(item, LivingEntity):
-                    self.currentRoom.addLivingEntity(item)
+                gravestone.getStoredInventory().placeIntoFirstAvailableInventorySlot(
+                    item
+                )
+                hasItems = True
         self.player.getInventory().clear()
+
+        if hasItems:
+            self.currentRoom.addEntityToLocation(gravestone, playerLocation)
 
         self.currentRoom.removeEntity(self.player)
         self.map.getRoom(0, 0).addEntity(self.player)
