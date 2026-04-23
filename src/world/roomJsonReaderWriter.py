@@ -104,7 +104,6 @@ class RoomJsonReaderWriter:
         roomJson["grid"] = self.generateJsonForGrid(room.getGrid())
         roomJson["creationDate"] = str(room.getCreationDate())
 
-        # validate json with schema
         jsonschema.validate(roomJson, self.roomSchema)
         return roomJson
 
@@ -176,8 +175,6 @@ class RoomJsonReaderWriter:
         )
         room.setID(roomJson["id"])
         room.setGrid(self.generateGridFromJson(roomJson["grid"]))
-
-        # add living entities
         room.setLivingEntities(self.livingEntities)
         self.livingEntities = dict()
         return room
