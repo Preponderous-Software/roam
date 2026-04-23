@@ -28,6 +28,7 @@ class Map:
         self.rooms = []
         self._roomIndex = {}
         self._lock = threading.Lock()
+        self._freshlyGeneratedRooms = set()
         self.gridSize = gridSize
         self.graphik = graphik
         self.tickCounter = tickCounter
@@ -95,9 +96,21 @@ class Map:
                 return self._roomIndex[(x, y)]
             self.rooms.append(newRoom)
             self._roomIndex[(x, y)] = newRoom
+            self._freshlyGeneratedRooms.add((x, y))
 
         _logger.info("room generated", roomX=x, roomY=y)
         return newRoom
+
+    def consumeIsNewRoom(self, x, y):
+        """Return True and clear the flag if the room at (x, y) was freshly
+        generated (never existed on disk).  Thread-safe; can be called from
+        any thread."""
+        key = (x, y)
+        with self._lock:
+            if key in self._freshlyGeneratedRooms:
+                self._freshlyGeneratedRooms.discard(key)
+                return True
+        return False
 
     def addRoom(self, room):
         key = (room.getX(), room.getY())
