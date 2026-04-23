@@ -76,6 +76,14 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-23 — Fix minimap not showing consistently on new maps
+- **Root cause:** `MapImageGenerator.getRoomImages()` and `clearRoomImages()` both call `os.listdir()` on the `roompngs` directory without checking if it exists. There is a race between the `_doSave()` background thread (which triggers `updateMapImage()` after each room-change save) and the main thread's `draw()` call (which creates the `roompngs` directory lazily via `saveCurrentRoomAsPNG()`). When `_doSave()` finishes before `draw()` has created the directory, `os.listdir()` raises `FileNotFoundError`, the exception is caught silently by `_doUpdateMapImage()`'s try/except, and `mapImage.png` is never written — leaving the minimap invisible until the next update cycle succeeds.
+- **Fix — `src/mapimage/mapImageGenerator.py`:**
+  - `getRoomImages()`: returns `[]` immediately if `roompngs` directory does not exist.
+  - `clearRoomImages()`: returns immediately (no-op) if `roompngs` directory does not exist.
+  These guards ensure `generate()` never throws on a fresh game, and `mapImage.png` is written (initially blank white) as soon as the first map update runs, so the minimap widget appears immediately and fills in as rooms are visited.
+- **Validation:** All 436 tests pass.
+
 ### 2026-04-23 — Fix 'rooms explored' statistic not updating correctly
 - **Root cause:** `RoomPreloader` generates rooms in background threads. When the player later enters a pre-loaded room, `_loadOrGenerateRoom` found the room already cached (`hasRoom` true) and skipped the `generateNewRoom` branch — so `incrementRoomsExplored()` was never called. The result: rooms explored stayed in single digits no matter how far the player explored.
 - **Fix — `src/world/map.py`:**
@@ -972,6 +980,7 @@ about this repository, add it here so the next agent benefits.
   `roomJsonReaderWriter` must set proper UUID values with `entity.setEnvironmentID(uuid4())`,
   `entity.setGridID(uuid4())`, and `entity.setLocationID(str(uuid4()))` before generating
   JSON.
+- 2026-04-23: `[not yet integrated]` `MapImageGenerator.getRoomImages()` and `clearRoomImages()` both call `os.listdir(roompngs)` and will raise `FileNotFoundError` if the directory does not yet exist. The `roompngs` directory is created lazily by `saveCurrentRoomAsPNG()` (called from `draw()` on the main thread), but `updateMapImage()` can be triggered earlier by `_doSave()` on the `_saveExecutor` background thread. Guard both methods with `os.path.isdir` to return early / return `[]` when the directory is missing.
 - 2026-04-23: `[not yet integrated]` `Map` now tracks freshly generated rooms in
   `_freshlyGeneratedRooms` (a `set` protected by `_lock`). A room is flagged when
   `generateNewRoom()` creates it for the first time; loading a room via `addRoom()` or

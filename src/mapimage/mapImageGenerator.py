@@ -34,6 +34,8 @@ class MapImageGenerator:
         return self.mapImage
 
     def clearRoomImages(self):
+        if not os.path.isdir(self.roomImagesDirectoryPath):
+            return
         for file in os.listdir(self.roomImagesDirectoryPath):
             os.remove(self.roomImagesDirectoryPath + "/" + file)
 
@@ -51,6 +53,8 @@ class MapImageGenerator:
         )
 
     def getRoomImages(self):
+        if not os.path.isdir(self.roomImagesDirectoryPath):
+            return []
         return os.listdir(self.roomImagesDirectoryPath)
 
     def pasteRoomImagesAtCorrectCoordinates(self, roomImages):
