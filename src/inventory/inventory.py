@@ -9,7 +9,7 @@ class Inventory:
     def __init__(self):
         self.inventorySlots = []
         self.size = 25
-        for i in range(self.size):
+        for _ in range(self.size):
             self.inventorySlots.append(InventorySlot())
         self.selectedInventorySlotIndex = 0
 
@@ -71,13 +71,13 @@ class Inventory:
             count += inventorySlot.getNumItems()
         return count
 
-    def getNumItemsByType(self, type):
+    def getNumItemsByType(self, itemType):
         count = 0
         for inventorySlot in self.inventorySlots:
             if inventorySlot.isEmpty():
                 continue
             item = inventorySlot.getContents()[0]
-            if isinstance(item, type):
+            if isinstance(item, itemType):
                 count += inventorySlot.getNumItems()
         return count
 

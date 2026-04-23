@@ -76,6 +76,24 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-23 — Clean Code refactoring (names, DRY, dead code)
+- **`src/screen/worldScreen.py`:**
+  - Removed duplicate `from math import ceil` import (already imported via `import math`); replaced the one `ceil()` call with `math.ceil()`.
+  - Renamed `ifCorner` → `isCorner` (predicate methods should start with `is`, not `if`); updated all 4 call sites.
+  - Extracted `_buildRoomFilePath(room)` helper — eliminates two identical string-concatenation blocks that constructed the room JSON file path in `saveRoomToFileAsync()` and `save()`.
+- **`src/inventory/inventory.py`:**
+  - Renamed `type` parameter → `itemType` in `getNumItemsByType()` to stop shadowing the Python built-in `type`.
+  - Replaced `for i in range(self.size):` with `for _ in range(self.size):` since the loop variable was unused.
+- **`src/world/roomFactory.py`:**
+  - Replaced four `for i in range(...)` loops where `i` was never used with `for _ in range(...)`. Simplified `range(0, n)` to `range(n)` for all four.
+  - Consolidated the repeated `self.lastRoomTypeCreated = roomType` assignments that appeared in every branch of `createRoom()` into a single `if room is not None: self.lastRoomTypeCreated = roomType` after the if/elif block, preserving the semantics that unknown room types do not update the field.
+  - Removed `# spawn methods` section comment (added no information beyond the method names themselves).
+- **`src/world/room.py`:**
+  - Removed `elif isinstance(entity, MatureCrop): pass  # MatureCrop waits for player harvest` dead code block in `tickCrops()`.
+- **`src/world/roomJsonReaderWriter.py`:**
+  - Removed `# validate json with schema` and `# add living entities` comments that merely restated what the immediately following line of code already expressed.
+- **Validation:** All 436 tests pass.
+
 ### 2026-04-23 — Fix minimap not showing consistently on new maps
 - **Root cause:** `MapImageGenerator.getRoomImages()` and `clearRoomImages()` both call `os.listdir()` on the `roompngs` directory without checking if it exists. There is a race between the `_doSave()` background thread (which triggers `updateMapImage()` after each room-change save) and the main thread's `draw()` call (which creates the `roompngs` directory lazily via `saveCurrentRoomAsPNG()`). When `_doSave()` finishes before `draw()` has created the directory, `os.listdir()` raises `FileNotFoundError`, the exception is caught silently by `_doUpdateMapImage()`'s try/except, and `mapImage.png` is never written — leaving the minimap invisible until the next update cycle succeeds.
 - **Fix — `src/mapimage/mapImageGenerator.py`:**
@@ -988,9 +1006,11 @@ about this repository, add it here so the next agent benefits.
   checks and clears the flag — returns `True` exactly once per newly generated room.
   `WorldScreen._loadOrGenerateRoom()` now calls `consumeIsNewRoom` to decide whether to
   increment `rooms explored`; this handles both the pre-loaded (RoomPreloader background
-  thread) and direct-generate paths uniformly. Pass `updateStats=False` when calling
+  thread) and direct-generate path uniformly. Pass `updateStats=False` when calling
   `_loadOrGenerateRoom` for non-player transitions (e.g., living-entity cross-room moves)
   so the flag is not consumed and stats are not affected. This remains not yet integrated
   because it is a localized implementation detail for `Map`/`WorldScreen` room-generation
   and stats behavior, not a repository-wide contributor convention for
   `.github/copilot-instructions.md`.
+- 2026-04-23: `[not yet integrated]` When searching for Clean Code naming issues, Python's built-in `type` is a common shadowing victim — any method parameter named `type` (as in `getNumItemsByType(self, type)`) silently hides the built-in. Rename to a descriptive name like `itemType`. Similarly, predicate methods that return bool should be named with `is`/`has` prefixes, not `if` (e.g., `ifCorner` → `isCorner`). When the same string-building expression appears in multiple methods, extract it into a single private helper rather than duplicating it.
+
