@@ -102,3 +102,50 @@ def test_get_location_of_entity(resolve, test_config, tmp_path):
     location = mapInstance.getLocationOfEntity(entity, room)
 
     assert location is not None
+
+
+def test_consume_is_new_room_true_for_generated(resolve, test_config, tmp_path):
+    mapInstance = createMap(resolve, test_config, tmp_path)
+
+    mapInstance.generateNewRoom(1, 2)
+
+    # First call returns True — room was freshly generated
+    assert mapInstance.consumeIsNewRoom(1, 2) is True
+
+
+def test_consume_is_new_room_false_after_consumed(resolve, test_config, tmp_path):
+    mapInstance = createMap(resolve, test_config, tmp_path)
+
+    mapInstance.generateNewRoom(1, 2)
+    mapInstance.consumeIsNewRoom(1, 2)
+
+    # Second call returns False — flag was already consumed
+    assert mapInstance.consumeIsNewRoom(1, 2) is False
+
+
+def test_consume_is_new_room_false_for_added_room(resolve, test_config, tmp_path):
+    mapInstance = createMap(resolve, test_config, tmp_path)
+    from lib.graphik.src.graphik import Graphik
+    from world.room import Room
+
+    graphik = resolve(Graphik)
+    room = Room("Loaded", 3, (0, 0, 0), 3, 4, graphik)
+    mapInstance.addRoom(room)
+
+    # Rooms loaded via addRoom (e.g. from disk) are NOT flagged as freshly generated
+    assert mapInstance.consumeIsNewRoom(3, 4) is False
+
+
+def test_consume_is_new_room_false_for_duplicate_generate(
+    resolve, test_config, tmp_path
+):
+    mapInstance = createMap(resolve, test_config, tmp_path)
+
+    mapInstance.generateNewRoom(0, 0)
+    # Calling generateNewRoom a second time returns the cached room without
+    # adding to _freshlyGeneratedRooms a second time
+    mapInstance.generateNewRoom(0, 0)
+    mapInstance.consumeIsNewRoom(0, 0)
+
+    # After consuming once, flag is gone
+    assert mapInstance.consumeIsNewRoom(0, 0) is False

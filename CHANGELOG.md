@@ -76,6 +76,21 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-04-23 — Fix 'rooms explored' statistic not updating correctly
+- **Root cause:** `RoomPreloader` generates rooms in background threads. When the player later enters a pre-loaded room, `_loadOrGenerateRoom` found the room already cached (`hasRoom` true) and skipped the `generateNewRoom` branch — so `incrementRoomsExplored()` was never called. The result: rooms explored stayed in single digits no matter how far the player explored.
+- **Fix — `src/world/map.py`:**
+  - Added `_freshlyGeneratedRooms: set` to `Map.__init__` (protected by the existing `_lock` for thread safety).
+  - `generateNewRoom()` now adds `(x, y)` to `_freshlyGeneratedRooms` when a room is actually created (inside the lock, after the double-checked skip).
+  - New public method `consumeIsNewRoom(x, y) -> bool`: atomically checks whether the room was freshly generated and removes it from the set in a single lock acquisition. Returns `True` only once per newly generated room.
+- **Fix — `src/screen/worldScreen.py`:**
+  - `_loadOrGenerateRoom(x, y, updateStats=True)`: replaced the old unconditional `incrementRoomsExplored` on the generate branch with a `consumeIsNewRoom` call that works for both the direct-generate path **and** the pre-loaded path (where the room is already in memory). This is the single authoritative place stats are updated for player room transitions.
+  - `initialize()`: replaced the unconditional `stats.incrementRoomsExplored()` with `if self.map.consumeIsNewRoom(0, 0):` so that the starting room only counts if it was freshly generated, and the flag is consumed to prevent double-counting when the player later returns to room (0, 0).
+  - Entity room transition at line 1851: passes `updateStats=False` so living-entity cross-room moves do not consume the new-room flag or increment statistics.
+- **New tests:**
+  - `tests/world/test_map.py`: 4 new tests for `consumeIsNewRoom` (true on generate, false after consume, false for disk-loaded rooms, false on duplicate generate).
+  - `tests/world/test_roomsExplored.py`: 6 new tests covering entering a new room increments by 1, re-entry does not re-increment, pre-loaded rooms still increment when entered, pre-loaded rooms that are never entered do not increment, multiple new rooms each count once, and loading a room from disk does not increment.
+- **Validation:** All 436 tests pass (426 existing + 10 new).
+
 ### 2026-04-23 — Fix toggle buttons covering Back button in settings screen (issue)
 - **Modified `src/screen/configScreen.py`:**
   - Added `self.scrollOffset = 0` to `__init__` to track scroll state.
@@ -957,3 +972,13 @@ about this repository, add it here so the next agent benefits.
   `roomJsonReaderWriter` must set proper UUID values with `entity.setEnvironmentID(uuid4())`,
   `entity.setGridID(uuid4())`, and `entity.setLocationID(str(uuid4()))` before generating
   JSON.
+- 2026-04-23: `[not yet integrated]` `Map` now tracks freshly generated rooms in
+  `_freshlyGeneratedRooms` (a `set` protected by `_lock`). A room is flagged when
+  `generateNewRoom()` creates it for the first time; loading a room via `addRoom()` or
+  `getRoom()` (from disk) does NOT set the flag. `consumeIsNewRoom(x, y)` atomically
+  checks and clears the flag — returns `True` exactly once per newly generated room.
+  `WorldScreen._loadOrGenerateRoom()` now calls `consumeIsNewRoom` to decide whether to
+  increment `rooms explored`; this handles both the pre-loaded (RoomPreloader background
+  thread) and direct-generate paths uniformly. Pass `updateStats=False` when calling
+  `_loadOrGenerateRoom` for non-player transitions (e.g., living-entity cross-room moves)
+  so the flag is not consumed and stats are not affected.

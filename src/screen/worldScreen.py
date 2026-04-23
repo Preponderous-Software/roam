@@ -124,7 +124,8 @@ class WorldScreen:
             if self.currentRoom == -1:
                 self.currentRoom = self.map.generateNewRoom(0, 0)
             self.currentRoom.addEntity(self.player)
-            self.stats.incrementRoomsExplored()
+            if self.map.consumeIsNewRoom(0, 0):
+                self.stats.incrementRoomsExplored()
 
         if os.path.exists(self.config.pathToSaveDirectory + "/playerAttributes.json"):
             self.loadPlayerAttributesFromFile()
@@ -326,17 +327,17 @@ class WorldScreen:
         except Exception as e:
             _logger.error("error writing JSON file", error=str(e), path=path)
 
-    def _loadOrGenerateRoom(self, x, y):
+    def _loadOrGenerateRoom(self, x, y, updateStats=True):
         wasCached = self.map.hasRoom(x, y)
         room = self.map.getRoom(x, y)
-        if room != -1:
-            if not wasCached:
-                self.status.set("Area loaded")
-            return room
-        room = self.map.generateNewRoom(x, y)
-        self.status.set("New area discovered")
-        self.stats.incrementScore()
-        self.stats.incrementRoomsExplored()
+        if room == -1:
+            room = self.map.generateNewRoom(x, y)
+        if updateStats and self.map.consumeIsNewRoom(x, y):
+            self.status.set("New area discovered")
+            self.stats.incrementScore()
+            self.stats.incrementRoomsExplored()
+        elif updateStats and not wasCached:
+            self.status.set("Area loaded")
         return room
 
     def _calculateTargetLocationForRoomTransition(self, playerLocation):
@@ -1847,7 +1848,7 @@ class WorldScreen:
                     if self.config.debug:
                         _logger.debug("error moving entity to new room", error=str(e))
                     continue
-                newRoom = self._loadOrGenerateRoom(newRoomX, newRoomY)
+                newRoom = self._loadOrGenerateRoom(newRoomX, newRoomY, updateStats=False)
 
                 currentLocationId = entityToMove.getLocationID()
                 currentLocation = self.currentRoom.getGrid().getLocation(
