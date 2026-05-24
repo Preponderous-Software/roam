@@ -38,6 +38,9 @@ class ConfigScreen:
     def drawTitle(self):
         x, y = self.graphik.getGameDisplay().get_size()
         self.graphik.drawText("Settings", x / 2, 25, 36, (255, 255, 255))
+        self.graphik.drawText(
+            "Click a setting to toggle it", x / 2, 50, 14, (180, 180, 180)
+        )
 
     def drawMenuButtons(self):
         x, y = self.graphik.getGameDisplay().get_size()
@@ -67,7 +70,9 @@ class ConfigScreen:
 
         for i, (label, attribute) in enumerate(visibleToggles):
             rowY = startY + i * rowHeight
-            color = (0, 255, 0) if getattr(self.config, attribute) else (255, 0, 0)
+            isOn = bool(getattr(self.config, attribute))
+            color = (0, 255, 0) if isOn else (255, 0, 0)
+            stateText = "ON" if isOn else "OFF"
             self.graphik.drawButton(
                 xpos,
                 rowY,
@@ -76,7 +81,7 @@ class ConfigScreen:
                 (255, 255, 255),
                 color,
                 20,
-                label,
+                label + ": " + stateText,
                 lambda attr=attribute: self._toggleConfigAttribute(attr),
             )
 
