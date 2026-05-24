@@ -121,7 +121,20 @@ class ControlsScreen:
         bottomY = y - 45
         margin = 10
 
-        hasConflicts = len(self.getActiveConflicts()) > 0
+        conflicts = self.getActiveConflicts()
+        hasConflicts = len(conflicts) > 0
+
+        if hasConflicts:
+            conflictCount = len(conflicts)
+            noun = "conflict" if conflictCount == 1 else "conflicts"
+            message = (
+                "Resolve "
+                + str(conflictCount)
+                + " key "
+                + noun
+                + " (shown in red) to enable Save"
+            )
+            self.graphik.drawText(message, x / 2, bottomY - 18, 16, (255, 120, 120))
 
         totalWidth = buttonWidth * 3 + margin * 2
         startX = (x - totalWidth) / 2
