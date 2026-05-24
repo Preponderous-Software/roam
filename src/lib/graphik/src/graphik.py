@@ -45,14 +45,32 @@ class Graphik:
     def drawButton(
         self, xpos, ypos, width, height, colorBox, colorText, sizeText, text, function
     ):
-        self.drawRectangle(xpos, ypos, width, height, colorBox)
+        mouse = pygame.mouse.get_pos()
+        hovering = xpos + width > mouse[0] > xpos and ypos + height > mouse[1] > ypos
+
+        # Lift the background slightly on hover so users can see the button is
+        # interactive. Light backgrounds darken, dark backgrounds lighten — the
+        # delta is the same direction either way so the cue reads consistently.
+        if hovering:
+            avg = (colorBox[0] + colorBox[1] + colorBox[2]) / 3
+            if avg >= 128:
+                shift = -25
+            else:
+                shift = 35
+            drawColor = (
+                max(0, min(255, colorBox[0] + shift)),
+                max(0, min(255, colorBox[1] + shift)),
+                max(0, min(255, colorBox[2] + shift)),
+            )
+        else:
+            drawColor = colorBox
+
+        self.drawRectangle(xpos, ypos, width, height, drawColor)
         self.drawText(
             text, xpos + (width // 2), ypos + (height // 2), sizeText, colorText
         )
 
-        # if clicked then do function
-        mouse = pygame.mouse.get_pos()
-        if xpos + width > mouse[0] > xpos and ypos + height > mouse[1] > ypos:
+        if hovering:
             click = pygame.mouse.get_pressed()
             if click[0] == 1:
                 function()
