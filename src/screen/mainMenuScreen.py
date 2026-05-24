@@ -36,7 +36,7 @@ class MainMenuScreen:
         self.graphik.drawText("Roam", xpos, ypos, 64, (255, 255, 255))
         ypos = y / 3
         self.graphik.drawText(
-            "press any key to start!", xpos, ypos, 32, (255, 255, 255)
+            "Explore a procedurally-generated world", xpos, ypos, 24, (200, 200, 200)
         )
 
     def drawMenuButtons(self):
@@ -100,7 +100,7 @@ class MainMenuScreen:
     def handleKeyDownEvent(self, key):
         if key == pygame.K_ESCAPE:
             self.quitApplication()
-        else:
+        elif key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
             self.switchToSaveSelectionScreen()
 
     def run(self):
