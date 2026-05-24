@@ -29,22 +29,19 @@ class RoomFactory:
 
     def createRoom(self, roomType, x, y):
         if roomType == RoomType.EMPTY:
-            self.lastRoomTypeCreated = RoomType.EMPTY
             room = self.createEmptyRoom((0, 0, 0), x, y)
         elif roomType == RoomType.GRASSLAND:
-            self.lastRoomTypeCreated = RoomType.GRASSLAND
             room = self.createGrassRoom(x, y)
         elif roomType == RoomType.FOREST:
-            self.lastRoomTypeCreated = RoomType.FOREST
             room = self.createForestRoom(x, y)
         elif roomType == RoomType.JUNGLE:
-            self.lastRoomTypeCreated = RoomType.JUNGLE
             room = self.createJungleRoom(x, y)
         elif roomType == RoomType.MOUNTAIN:
-            self.lastRoomTypeCreated = RoomType.MOUNTAIN
             room = self.createMountainRoom(x, y)
         else:
             room = None
+        if room is not None:
+            self.lastRoomTypeCreated = roomType
         _logger.debug(
             "room created",
             roomType=str(roomType),
@@ -94,7 +91,7 @@ class RoomFactory:
     def createForestRoom(self, x, y):
         newRoom = self.createGrassRoom(x, y)
         maxTrees = ceil(self.gridSize / 3)
-        for i in range(0, maxTrees):
+        for _ in range(maxTrees):
             self.spawnOakTree(newRoom)
         self.spawnBears(newRoom)
         return newRoom
@@ -103,7 +100,7 @@ class RoomFactory:
         newRoom = self.createGrassRoom(x, y)
         self.spawnLeaves(newRoom)
         maxTrees = ceil(self.gridSize / 3)
-        for i in range(0, maxTrees * 4):
+        for _ in range(maxTrees * 4):
             self.spawnJungleTree(newRoom)
         return newRoom
 
@@ -122,7 +119,6 @@ class RoomFactory:
 
         return newRoom
 
-    # spawn methods
     def spawnGrass(self, room: Room):
         for locationId in room.getGrid().getLocations():
             location = room.getGrid().getLocation(locationId)
@@ -201,7 +197,7 @@ class RoomFactory:
 
     def spawnChickens(self, room: Room):
         count = 0
-        for i in range(0, 5):
+        for _ in range(5):
             if random.randrange(1, 101) > 75:
                 newChicken = Chicken(self.tickCounter.getTick())
                 room.addEntity(newChicken)
@@ -212,7 +208,7 @@ class RoomFactory:
 
     def spawnBears(self, room: Room):
         count = 0
-        for i in range(0, 2):
+        for _ in range(2):
             if random.randrange(1, 101) > 90:
                 newBear = Bear(self.tickCounter.getTick())
                 room.addEntity(newBear)

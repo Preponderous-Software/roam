@@ -1,6 +1,5 @@
 import json
 import math
-from math import ceil
 import os
 import threading
 import time
@@ -225,7 +224,7 @@ class WorldScreen:
         x = self.currentRoom.getX()
         y = self.currentRoom.getY()
 
-        if self.ifCorner(location):
+        if self.isCorner(location):
             direction = self.player.getDirection()
             if location.getX() == 0 and location.getY() == 0:
                 if direction == 0:
@@ -267,7 +266,7 @@ class WorldScreen:
 
         x = self.currentRoom.getX()
         y = self.currentRoom.getY()
-        if self.ifCorner(location):
+        if self.isCorner(location):
             raise Exception("corner movement not implemented yet")
         else:
             if location.getX() == self.config.gridSize - 1:
@@ -280,7 +279,7 @@ class WorldScreen:
                 y -= 1
         return x, y
 
-    def ifCorner(self, location: Location):
+    def isCorner(self, location: Location):
         return (
             (location.getX() == 0 and location.getY() == 0)
             or (location.getX() == self.config.gridSize - 1 and location.getY() == 0)
@@ -297,11 +296,9 @@ class WorldScreen:
     def saveRoomToFile(self, room: Room):
         self.persistence.saveRoomToFile(room)
 
-    def saveRoomToFileAsync(self, room: Room):
-        """Save a room to file on the background thread (non-blocking).
-        Prepares the JSON snapshot on the main thread to avoid dict-iteration
-        races, then writes the file in the background."""
-        roomPath = (
+    def _buildRoomFilePath(self, room: Room) -> str:
+        """Return the file path for a room's JSON save file."""
+        return (
             self.config.pathToSaveDirectory
             + "/rooms/room_"
             + str(room.getX())
@@ -309,6 +306,12 @@ class WorldScreen:
             + str(room.getY())
             + ".json"
         )
+
+    def saveRoomToFileAsync(self, room: Room):
+        """Save a room to file on the background thread (non-blocking).
+        Prepares the JSON snapshot on the main thread to avoid dict-iteration
+        races, then writes the file in the background."""
+        roomPath = self._buildRoomFilePath(room)
         try:
             roomJson = self.roomJsonReaderWriter.generateJsonForRoom(room)
         except Exception as e:
@@ -346,7 +349,7 @@ class WorldScreen:
         minCoord = 0
         maxCoord = self.config.gridSize - 1
 
-        if self.ifCorner(playerLocation):
+        if self.isCorner(playerLocation):
             playerDirection = self.player.getDirection()
             if playerLocation.getX() == 0 and playerLocation.getY() == 0:
                 if playerDirection == 0:
@@ -995,7 +998,7 @@ class WorldScreen:
             self.status.set("Low on energy!")
         if self.player.isDead():
             self.status.set("You died! Respawning...")
-            self.stats.setScore(ceil(self.stats.getScore() * 0.9))
+            self.stats.setScore(math.ceil(self.stats.getScore() * 0.9))
             self.stats.incrementNumberOfDeaths()
 
     def switchToInventoryScreen(self):
@@ -1669,7 +1672,7 @@ class WorldScreen:
         currentLocationY = currentLocation.getY()
         gridEdge = self.currentRoom.getGrid().getRows() - 1
 
-        if self.ifCorner(currentLocation):
+        if self.isCorner(currentLocation):
             raise Exception("corner movement not supported yet")
 
         if currentLocationX == 0:
@@ -1746,14 +1749,7 @@ class WorldScreen:
         except Exception as e:
             _logger.error("error preparing room snapshot for save", error=str(e))
             roomJson = None
-        roomPath = (
-            self.config.pathToSaveDirectory
-            + "/rooms/room_"
-            + str(self.currentRoom.getX())
-            + "_"
-            + str(self.currentRoom.getY())
-            + ".json"
-        )
+        roomPath = self._buildRoomFilePath(self.currentRoom)
         self._saveExecutor.submit(self._doSave, roomJson, roomPath)
 
     def saveSynchronous(self):

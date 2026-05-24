@@ -300,8 +300,6 @@ class Room(Environment):
                 if isinstance(entity, YoungCrop):
                     if tick - entity.getTickPlanted() >= config.cropGrowthTicks:
                         replacements.append((location, entity, "mature"))
-                elif isinstance(entity, MatureCrop):
-                    pass  # MatureCrop waits for player harvest
 
         for location, oldEntity, stage in replacements:
             location.removeEntity(oldEntity)
