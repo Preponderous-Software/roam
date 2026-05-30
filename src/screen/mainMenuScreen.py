@@ -16,6 +16,7 @@ class MainMenuScreen:
         self.running = True
         self.nextScreen = ScreenType.SAVE_SELECTION_SCREEN
         self.changeScreen = False
+        self._cachedVersionLabel = None
 
     def switchToSaveSelectionScreen(self):
         self.nextScreen = ScreenType.SAVE_SELECTION_SCREEN
@@ -82,20 +83,29 @@ class MainMenuScreen:
             "Quit",
             self.quitApplication,
         )
+        ypos = ypos + height + margin + 6
+        self.graphik.drawText(
+            "Enter / Space: Play  -  Esc: Quit",
+            x / 2,
+            ypos,
+            16,
+            (160, 160, 160),
+        )
 
     def drawVersion(self):
-        if os.path.isfile("version.txt"):
+        if self._cachedVersionLabel is None:
+            if not os.path.isfile("version.txt"):
+                return
             with open("version.txt", "r") as file:
-                version = file.read()
+                self._cachedVersionLabel = "Roam v" + file.read().strip()
 
-                # display centered at bottom of screen
-                self.graphik.drawText(
-                    version,
-                    self.graphik.getGameDisplay().get_size()[0] / 2,
-                    self.graphik.getGameDisplay().get_size()[1] - 10,
-                    16,
-                    (255, 255, 255),
-                )
+        self.graphik.drawText(
+            self._cachedVersionLabel,
+            self.graphik.getGameDisplay().get_size()[0] / 2,
+            self.graphik.getGameDisplay().get_size()[1] - 10,
+            16,
+            (255, 255, 255),
+        )
 
     def handleKeyDownEvent(self, key):
         if key == pygame.K_ESCAPE:
