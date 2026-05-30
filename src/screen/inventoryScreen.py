@@ -111,6 +111,8 @@ class InventoryScreen:
         row = 0
         column = 0
         margin = 5
+        mouseX, mouseY = pygame.mouse.get_pos()
+        hoveredItemName = None
         for inventorySlot in self.inventory.getInventorySlots():
             itemX = backgroundX + column * backgroundWidth / itemsPerRow + margin
             itemY = backgroundY + row * backgroundHeight / itemsPerRow + margin
@@ -138,16 +140,16 @@ class InventoryScreen:
             self.graphik.gameDisplay.blit(scaledImage, (itemX, itemY))
 
             if (
+                itemX <= mouseX < itemX + itemWidth
+                and itemY <= mouseY < itemY + itemHeight
+            ):
+                hoveredItemName = item.getName()
+
+            if (
                 row * itemsPerRow + column
                 == self.inventory.getSelectedInventorySlotIndex()
             ):
-                self.graphik.drawRectangle(
-                    itemX + itemWidth / 2 - 5,
-                    itemY + itemHeight / 2 - 5,
-                    10,
-                    10,
-                    (255, 255, 0),
-                )
+                self._drawSelectionBorder(itemX, itemY, itemWidth, itemHeight)
 
             self.graphik.drawText(
                 str(inventorySlot.getNumItems()),
@@ -177,6 +179,21 @@ class InventoryScreen:
             16,
             (180, 180, 180),
         )
+
+        if hoveredItemName is not None:
+            tooltipX = mouseX + 18
+            tooltipY = mouseY + 18
+            textWidth = len(hoveredItemName) * 8 + 12
+            self.graphik.drawRectangle(
+                tooltipX, tooltipY, textWidth, 22, (30, 30, 30)
+            )
+            self.graphik.drawText(
+                hoveredItemName,
+                tooltipX + textWidth / 2,
+                tooltipY + 11,
+                14,
+                (255, 255, 255),
+            )
 
     def toggleCraftPanel(self):
         now = time.time()

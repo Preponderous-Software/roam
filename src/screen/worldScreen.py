@@ -1663,6 +1663,8 @@ class WorldScreen:
         if location == -1:
             # mouse is not over a location
             return
+        livingDescribed = False
+        fallbackName = None
         for entityId in location.getEntities():
             entity = location.getEntity(entityId)
             if isinstance(entity, LivingEntity):
@@ -1679,6 +1681,12 @@ class WorldScreen:
                         + ")"
                     )
                 self.status.set(statusString)
+                livingDescribed = True
+                break
+            if fallbackName is None and hasattr(entity, "getName"):
+                fallbackName = entity.getName()
+        if not livingDescribed and fallbackName is not None:
+            self.status.set(fallbackName)
 
     def savePlayerLocationToFile(self):
         self.persistence.savePlayerLocationToFile(self.currentRoom)
