@@ -2,6 +2,7 @@ import pygame
 from appContainer import component
 from codex.codex import Codex, ALL_LIVING_ENTITY_TYPES, ENTITY_IMAGE_PATHS
 from config.config import Config
+from config.keyBindings import KeyBindings
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
 from gameLogging.logger import getLogger
@@ -13,10 +14,17 @@ _logger = getLogger(__name__)
 # @since April 20th, 2026
 @component
 class CodexScreen:
-    def __init__(self, graphik: Graphik, config: Config, codex: Codex):
+    def __init__(
+        self,
+        graphik: Graphik,
+        config: Config,
+        codex: Codex,
+        keyBindings: KeyBindings,
+    ):
         self.graphik = graphik
         self.config = config
         self.codex = codex
+        self.keyBindings = keyBindings
         self.nextScreen = ScreenType.WORLD_SCREEN
         self.returnScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = False
@@ -34,6 +42,15 @@ class CodexScreen:
     def drawTitle(self):
         x, y = self.graphik.getGameDisplay().get_size()
         self.graphik.drawText("Codex", x / 2, 25, 36, (255, 255, 255))
+        discoveredCount = len(self.codex.getDiscoveredEntities())
+        totalCount = len(ALL_LIVING_ENTITY_TYPES)
+        self.graphik.drawText(
+            f"{discoveredCount} of {totalCount} discovered",
+            x / 2,
+            50,
+            16,
+            (180, 180, 180),
+        )
 
     def _getEntityImage(self, entityName):
         if entityName not in self._imageCache:
@@ -72,7 +89,7 @@ class CodexScreen:
         entries = ALL_LIVING_ENTITY_TYPES
 
         rowHeight = 45
-        startY = 60
+        startY = 85
         imageSize = 32
         imageX = x * 0.25
         nameX = imageX + imageSize + 16
@@ -141,7 +158,7 @@ class CodexScreen:
         )
 
     def handleKeyDownEvent(self, key):
-        if key == pygame.K_ESCAPE:
+        if key == pygame.K_ESCAPE or key == self.keyBindings.getKey("codex"):
             self.switchToReturnScreen()
 
     def handleScrollEvent(self, event):
