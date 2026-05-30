@@ -23,6 +23,8 @@ class MapImageGenerator:
         self.roomImagesDirectoryPath = self.config.pathToSaveDirectory + "/roompngs"
         self.mapImagePath = self.config.pathToSaveDirectory + "/mapImage.png"
 
+        os.makedirs(self.config.pathToSaveDirectory, exist_ok=True)
+
         if self.mapImageExists():
             self.mapImage = self.getExistingMapImage()
         else:
