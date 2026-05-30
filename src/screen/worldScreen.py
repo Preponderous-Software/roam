@@ -2,7 +2,6 @@ import json
 import math
 import os
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor
 import pygame
 from appContainer import component
@@ -91,6 +90,7 @@ class WorldScreen:
         self.hudDragManager = self.container.resolve(HudDragManager)
         self.codex = self.container.resolve(Codex)
         self.dayNightCycle = self.container.resolve(DayNightCycle)
+        self.deathRespawnTicksRemaining = 0
         self._dayNightOverlay = None
         self._dayNightOverlaySize = (0, 0)
         self._scaledMaskCache = {}
@@ -996,10 +996,13 @@ class WorldScreen:
         self.player.removeEnergy(self.config.energyDepletionRate)
         if self.player.getEnergy() < self.player.getTargetEnergy() * 0.10:
             self.status.set("Low on energy!")
-        if self.player.isDead():
+        if self.player.isDead() and self.deathRespawnTicksRemaining == 0:
             self.status.set("You died! Respawning...")
             self.stats.setScore(math.ceil(self.stats.getScore() * 0.9))
             self.stats.incrementNumberOfDeaths()
+            self.deathRespawnTicksRemaining = max(
+                1, int(self.config.ticksPerSecond * 3)
+            )
 
     def switchToInventoryScreen(self):
         self.returnCursorSlotToInventory()
@@ -1909,9 +1912,10 @@ class WorldScreen:
         if self.config.limitTps:
             self.clock.tick(self.config.ticksPerSecond)
 
-        if self.player.isDead():
-            time.sleep(3)
-            self.respawnPlayer()
+        if self.deathRespawnTicksRemaining > 0:
+            self.deathRespawnTicksRemaining -= 1
+            if self.deathRespawnTicksRemaining == 0:
+                self.respawnPlayer()
 
         if self.config.showMiniMap:
             self.mapImageUpdater.updateIfCooldownOver()
