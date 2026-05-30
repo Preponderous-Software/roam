@@ -2,7 +2,6 @@ import json
 import math
 import os
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor
 import pygame
 from appContainer import component
@@ -91,6 +90,8 @@ class WorldScreen:
         self.hudDragManager = self.container.resolve(HudDragManager)
         self.codex = self.container.resolve(Codex)
         self.dayNightCycle = self.container.resolve(DayNightCycle)
+        self.deathRespawnTicksRemaining = 0
+        self.pausedByFocusLoss = False
         self._dayNightOverlay = None
         self._dayNightOverlaySize = (0, 0)
         self._scaledMaskCache = {}
@@ -439,6 +440,7 @@ class WorldScreen:
         for entityId in list(newLocation.getEntities().keys()):
             entity = newLocation.getEntity(entityId)
             if isinstance(entity, Bear):
+                self.status.set("Killed by " + entity.getName())
                 self.player.kill()
                 return
 
@@ -571,6 +573,7 @@ class WorldScreen:
                 break
 
         if toRemove is None:
+            self.status.set("Nothing to pick up here")
             return
 
         if not self.player.getInventory().placeIntoFirstAvailableInventorySlot(
@@ -712,7 +715,9 @@ class WorldScreen:
 
         inventorySlot = self.player.getInventory().getSelectedInventorySlot()
         if inventorySlot.isEmpty():
-            self.status.set("Select an item first (1-0)")
+            firstKey = self.keyBindings.getKeyName("hotbar_1").upper()
+            zeroKey = self.keyBindings.getKeyName("hotbar_0").upper()
+            self.status.set(f"Select an item first ({firstKey}-{zeroKey})")
             return
 
         selectedItem = inventorySlot.getContents()[0]
@@ -844,6 +849,9 @@ class WorldScreen:
     def handleKeyDownEvent(self, key):
         kb = self.keyBindings
         if key == pygame.K_ESCAPE:
+            if self.showHelp:
+                self.showHelp = False
+                return
             self.nextScreen = ScreenType.OPTIONS_SCREEN
             self.changeScreen = True
         elif key == kb.getKey("move_up") or key == kb.getKey("alt_move_up"):
@@ -875,8 +883,12 @@ class WorldScreen:
     def _handleUtilityKey(self, key, kb):
         if key == kb.getKey("toggle_debug"):
             self.config.debug = not self.config.debug
+            self.status.set("Debug info " + ("ON" if self.config.debug else "OFF"))
         elif key == kb.getKey("toggle_minimap"):
             self.config.showMiniMap = not self.config.showMiniMap
+            self.status.set(
+                "Minimap " + ("ON" if self.config.showMiniMap else "OFF")
+            )
         elif key == kb.getKey("minimap_zoom_in"):
             if self.minimapScaleFactor < 1.0:
                 self.minimapScaleFactor += 0.1
@@ -885,6 +897,10 @@ class WorldScreen:
                 self.minimapScaleFactor -= 0.1
         elif key == kb.getKey("toggle_camera_follow"):
             self.config.cameraFollowPlayer = not self.config.cameraFollowPlayer
+            self.status.set(
+                "Camera follow "
+                + ("ON" if self.config.cameraFollowPlayer else "OFF")
+            )
         elif key == kb.getKey("toggle_help"):
             self.showHelp = not self.showHelp
         elif key == kb.getKey("codex"):
@@ -996,10 +1012,13 @@ class WorldScreen:
         self.player.removeEnergy(self.config.energyDepletionRate)
         if self.player.getEnergy() < self.player.getTargetEnergy() * 0.10:
             self.status.set("Low on energy!")
-        if self.player.isDead():
+        if self.player.isDead() and self.deathRespawnTicksRemaining == 0:
             self.status.set("You died! Respawning...")
             self.stats.setScore(math.ceil(self.stats.getScore() * 0.9))
             self.stats.incrementNumberOfDeaths()
+            self.deathRespawnTicksRemaining = max(
+                1, int(self.config.ticksPerSecond * 3)
+            )
 
     def switchToInventoryScreen(self):
         self.returnCursorSlotToInventory()
@@ -1202,6 +1221,55 @@ class WorldScreen:
                     room, roomOffsetX, roomOffsetY, self._frameLightSources
                 )
 
+    def _drawPausedOverlay(self):
+        display = self.graphik.getGameDisplay()
+        width, height = display.get_size()
+        dim = pygame.Surface((width, height), pygame.SRCALPHA)
+        dim.fill((0, 0, 0, 140))
+        display.blit(dim, (0, 0))
+        self.graphik.drawText("PAUSED", width / 2, height / 2 - 20, 56, (220, 220, 220))
+        self.graphik.drawText(
+            "Click the window to resume",
+            width / 2,
+            height / 2 + 28,
+            22,
+            (180, 180, 180),
+        )
+
+    def _drawDayNightPhaseIndicator(self):
+        phase = self.dayNightCycle.getPhase(self.tickCounter.getTick())
+        label = phase.capitalize()
+        phaseColors = {
+            "day": (255, 220, 90),
+            "dusk": (240, 140, 90),
+            "night": (140, 160, 255),
+            "dawn": (255, 180, 140),
+        }
+        color = phaseColors.get(phase, (220, 220, 220))
+        self.graphik.drawText(label, 30, 20, 18, color)
+
+    def _drawDeathOverlay(self):
+        display = self.graphik.getGameDisplay()
+        width, height = display.get_size()
+        dim = pygame.Surface((width, height), pygame.SRCALPHA)
+        dim.fill((0, 0, 0, 160))
+        display.blit(dim, (0, 0))
+        self.graphik.drawText("YOU DIED", width / 2, height / 2 - 30, 64, (220, 60, 60))
+        secondsLeft = max(
+            1,
+            int(
+                (self.deathRespawnTicksRemaining + self.config.ticksPerSecond - 1)
+                / self.config.ticksPerSecond
+            ),
+        )
+        self.graphik.drawText(
+            f"Respawning in {secondsLeft}...",
+            width / 2,
+            height / 2 + 30,
+            28,
+            (220, 220, 220),
+        )
+
     def drawHelpOverlay(self):
         x, y = self.graphik.getGameDisplay().get_size()
         overlayWidth = x * 0.6
@@ -1213,27 +1281,39 @@ class WorldScreen:
             overlayX, overlayY, overlayWidth, overlayHeight, (30, 30, 30)
         )
 
+        kb = self.keyBindings
+
         titleY = overlayY + 25
+        closeKeyName = kb.getKeyName("toggle_help").upper()
         self.graphik.drawText(
-            "Controls  (F1 to close)", x / 2, titleY, 28, (255, 255, 255)
+            f"Controls  ({closeKeyName} to close)",
+            x / 2,
+            titleY,
+            28,
+            (255, 255, 255),
         )
+
+        def keyName(action):
+            return kb.getKeyName(action).upper()
 
         helpLines = [
             "W/A/S/D or Arrows  -  Move",
             "Left Click  -  Gather / Pick up",
             "Right Click  -  Place item",
+            "Middle Click  -  Drag HUD elements to reposition",
             "1-0  -  Select hotbar slot",
             "Scroll Wheel  -  Cycle hotbar",
-            "I  -  Open / Close inventory",
-            "Shift  -  Run",
-            "Ctrl  -  Crouch",
-            "M  -  Toggle minimap",
-            "+/-  -  Resize minimap",
-            "C  -  Toggle camera follow",
-            "F3  -  Toggle debug info",
-            "Print Screen  -  Take screenshot",
+            f"{keyName('inventory')}  -  Open / Close inventory",
+            f"{keyName('run')}  -  Run",
+            f"{keyName('crouch')}  -  Crouch",
+            f"{keyName('toggle_minimap')}  -  Toggle minimap",
+            f"{keyName('minimap_zoom_in')}/{keyName('minimap_zoom_out')}  -  Resize minimap",
+            f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",
+            f"{keyName('toggle_debug')}  -  Toggle debug info",
+            f"{keyName('screenshot')}  -  Take screenshot",
+            f"{keyName('codex')}  -  Open Codex",
             "Esc  -  Open menu",
-            "F1  -  Toggle this help",
+            f"{keyName('toggle_help')}  -  Toggle this help",
         ]
 
         lineY = titleY + 40
@@ -1304,12 +1384,15 @@ class WorldScreen:
         )
 
     def _drawHotbarSelectionIndicator(self, xPos, yPos, slotWidth, slotHeight):
+        borderWidth = 3
+        color = (255, 255, 0)
+        self.graphik.drawRectangle(xPos, yPos, slotWidth, borderWidth, color)
         self.graphik.drawRectangle(
-            xPos + slotWidth / 2 - 5,
-            yPos + slotHeight / 2 - 5,
-            10,
-            10,
-            (255, 255, 0),
+            xPos, yPos + slotHeight - borderWidth, slotWidth, borderWidth, color
+        )
+        self.graphik.drawRectangle(xPos, yPos, borderWidth, slotHeight, color)
+        self.graphik.drawRectangle(
+            xPos + slotWidth - borderWidth, yPos, borderWidth, slotHeight, color
         )
 
     def _drawHotbar(self):
@@ -1428,6 +1511,9 @@ class WorldScreen:
 
         self._drawHotbar()
 
+        if self.config.dayNightCycleEnabled:
+            self._drawDayNightPhaseIndicator()
+
         if self.config.debug:
             self._drawDebugInfo()
 
@@ -1435,11 +1521,19 @@ class WorldScreen:
             self.drawMiniMap()
 
         if not self.showHelp:
+            helpKeyName = self.keyBindings.getKeyName("toggle_help").upper()
+            hintLabel = f"{helpKeyName}: Help"
             hintX = self.graphik.getGameDisplay().get_width() - 50
             hintY = self.graphik.getGameDisplay().get_height() - 20
-            self.graphik.drawText("F1: Help", hintX, hintY, 16, (180, 180, 180))
+            self.graphik.drawText(hintLabel, hintX, hintY, 16, (180, 180, 180))
 
         self.drawCursorSlot()
+
+        if self.deathRespawnTicksRemaining > 0:
+            self._drawDeathOverlay()
+
+        if self.pausedByFocusLoss:
+            self._drawPausedOverlay()
 
         if self.showHelp:
             self.drawHelpOverlay()
@@ -1562,8 +1656,8 @@ class WorldScreen:
             return
 
         if self.showInventory:
-            # disallow player to interact with the world while inventory is open
-            self.status.set("Close inventory first (I)")
+            invKey = self.keyBindings.getKeyName("inventory").upper()
+            self.status.set(f"Close inventory first ({invKey})")
             return
 
         hotbarIndex = self.getHotbarSlotAtMousePosition()
@@ -1611,6 +1705,8 @@ class WorldScreen:
         if location == -1:
             # mouse is not over a location
             return
+        livingDescribed = False
+        fallbackName = None
         for entityId in location.getEntities():
             entity = location.getEntity(entityId)
             if isinstance(entity, LivingEntity):
@@ -1627,6 +1723,12 @@ class WorldScreen:
                         + ")"
                     )
                 self.status.set(statusString)
+                livingDescribed = True
+                break
+            if fallbackName is None and hasattr(entity, "getName"):
+                fallbackName = entity.getName()
+        if not livingDescribed and fallbackName is not None:
+            self.status.set(fallbackName)
 
     def savePlayerLocationToFile(self):
         self.persistence.savePlayerLocationToFile(self.currentRoom)
@@ -1818,6 +1920,10 @@ class WorldScreen:
             elif event.type == pygame.VIDEORESIZE:
                 self.initializeLocationWidthAndHeight()
                 self.updateConfigWindowSize()
+            elif event.type == pygame.WINDOWFOCUSLOST:
+                self.pausedByFocusLoss = True
+            elif event.type == pygame.WINDOWFOCUSGAINED:
+                self.pausedByFocusLoss = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 self.handleMouseDownEvent(event)
             elif event.type == pygame.MOUSEBUTTONUP:
@@ -1885,12 +1991,20 @@ class WorldScreen:
         self.currentRoom.reproduceLivingEntities(self.tickCounter.getTick())
 
     def _updateGameState(self):
+        if self.pausedByFocusLoss:
+            self.draw()
+            pygame.display.update()
+            if self.config.limitTps:
+                self.clock.tick(self.config.ticksPerSecond)
+            return
+
         self.currentRoom.tickExcrement(self.tickCounter.getTick(), self.config)
         self.currentRoom.tickCrops(self.tickCounter.getTick(), self.config)
 
         self.handleMouseOver()
 
-        self.handlePlayerActions()
+        if self.deathRespawnTicksRemaining == 0:
+            self.handlePlayerActions()
         self.removeEnergyAndCheckForPlayerDeath()
         if self.config.removeDeadEntities:
             self.checkForLivingEntityDeaths()
@@ -1903,9 +2017,10 @@ class WorldScreen:
         if self.config.limitTps:
             self.clock.tick(self.config.ticksPerSecond)
 
-        if self.player.isDead():
-            time.sleep(3)
-            self.respawnPlayer()
+        if self.deathRespawnTicksRemaining > 0:
+            self.deathRespawnTicksRemaining -= 1
+            if self.deathRespawnTicksRemaining == 0:
+                self.respawnPlayer()
 
         if self.config.showMiniMap:
             self.mapImageUpdater.updateIfCooldownOver()

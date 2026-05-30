@@ -53,6 +53,13 @@ class StatsScreen:
 
         text = "Score: " + str(self.stats.getScore())
         self.graphik.drawText(text, xpos, ypos, 30, (255, 255, 255))
+        self.graphik.drawText(
+            "(+1 per new area or meal, -10% per death)",
+            xpos,
+            ypos + 24,
+            16,
+            (170, 170, 170),
+        )
 
         text = "Rooms Explored: " + str(self.stats.getRoomsExplored())
         self.graphik.drawText(text, xpos, ypos + lineSpacing, 30, (255, 255, 255))

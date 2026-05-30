@@ -87,7 +87,7 @@ class ControlsScreen:
 
             if self.waitingForKey == action:
                 bgColor = (100, 100, 255)
-                displayText = "Press a key..."
+                displayText = "Press a key  (Esc cancels)"
             else:
                 bgColor = (255, 50, 50) if isConflict else (60, 60, 60)
                 displayText = keyName
@@ -113,6 +113,9 @@ class ControlsScreen:
                 + str(len(actions))
             )
             self.graphik.drawText(scrollInfo, x / 2, y - 70, 16, (180, 180, 180))
+            self.graphik.drawText(
+                "Scroll to see more", x / 2, y - 92, 14, (140, 140, 140)
+            )
 
     def drawBottomButtons(self):
         x, y = self.graphik.getGameDisplay().get_size()
@@ -121,7 +124,20 @@ class ControlsScreen:
         bottomY = y - 45
         margin = 10
 
-        hasConflicts = len(self.getActiveConflicts()) > 0
+        conflicts = self.getActiveConflicts()
+        hasConflicts = len(conflicts) > 0
+
+        if hasConflicts:
+            conflictCount = len(conflicts)
+            noun = "conflict" if conflictCount == 1 else "conflicts"
+            message = (
+                "Resolve "
+                + str(conflictCount)
+                + " key "
+                + noun
+                + " (shown in red) to enable Save"
+            )
+            self.graphik.drawText(message, x / 2, bottomY - 18, 16, (255, 120, 120))
 
         totalWidth = buttonWidth * 3 + margin * 2
         startX = (x - totalWidth) / 2

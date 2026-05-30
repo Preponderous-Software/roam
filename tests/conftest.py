@@ -8,6 +8,7 @@ from bootstrap import createContainer
 from codex.codexJsonReaderWriter import CodexJsonReaderWriter
 from config.config import Config
 from inventory.inventoryJsonReaderWriter import InventoryJsonReaderWriter
+from config.keyBindings import KeyBindings
 from lib.graphik.src.graphik import Graphik
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
@@ -50,6 +51,7 @@ def test_di_container(test_config, test_graphik):
         lambda: CodexJsonReaderWriter(container.resolve(Config)),
         lifetime="transient",
     )
+    container.register(KeyBindings, KeyBindings)
 
     previousRegistrations = {}
 

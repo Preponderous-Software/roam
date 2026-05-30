@@ -16,10 +16,14 @@ class OptionsScreen:
         self.running = True
         self.nextScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = False
+        self.confirmingMainMenu = False
 
     def handleKeyDownEvent(self, key):
         if key == pygame.K_ESCAPE:
-            self.switchToWorldScreen()
+            if self.confirmingMainMenu:
+                self.confirmingMainMenu = False
+            else:
+                self.switchToWorldScreen()
 
     def _switchToScreen(self, screenType):
         self.nextScreen = screenType
@@ -36,6 +40,12 @@ class OptionsScreen:
 
     def switchToMainMenuScreen(self):
         self._switchToScreen(ScreenType.MAIN_MENU_SCREEN)
+
+    def requestMainMenuConfirmation(self):
+        self.confirmingMainMenu = True
+
+    def cancelMainMenuConfirmation(self):
+        self.confirmingMainMenu = False
 
     def switchToConfigScreen(self):
         self._switchToScreen(ScreenType.CONFIG_SCREEN)
@@ -62,7 +72,7 @@ class OptionsScreen:
         margin = 10
 
         menuItems = [
-            ("Main Menu", self.switchToMainMenuScreen),
+            ("Quit to Main Menu", self.requestMainMenuConfirmation),
             ("Stats", self.switchToStatsScreen),
             ("Inventory", self.switchToInventoryScreen),
             ("Controls", self.switchToControlsScreen),
@@ -103,6 +113,65 @@ class OptionsScreen:
             self.switchToWorldScreen,
         )
 
+    def drawMainMenuConfirmation(self):
+        x, y = self.graphik.getGameDisplay().get_size()
+        overlayWidth = x * 0.6
+        overlayHeight = y * 0.35
+        overlayX = x / 2 - overlayWidth / 2
+        overlayY = y / 2 - overlayHeight / 2
+        self.graphik.drawRectangle(
+            overlayX, overlayY, overlayWidth, overlayHeight, (50, 50, 50)
+        )
+        self.graphik.drawText(
+            "Return to main menu?",
+            x / 2,
+            overlayY + overlayHeight * 0.22,
+            28,
+            (255, 255, 255),
+        )
+        self.graphik.drawText(
+            "Your current session will end.",
+            x / 2,
+            overlayY + overlayHeight * 0.42,
+            18,
+            (200, 200, 200),
+        )
+        self.graphik.drawText(
+            "Your progress will be saved automatically.",
+            x / 2,
+            overlayY + overlayHeight * 0.55,
+            18,
+            (160, 200, 160),
+        )
+        buttonWidth = overlayWidth * 0.35
+        buttonHeight = overlayHeight * 0.22
+        buttonMargin = 20
+        totalBtnWidth = buttonWidth * 2 + buttonMargin
+        btnStartX = x / 2 - totalBtnWidth / 2
+        btnY = overlayY + overlayHeight * 0.68
+        self.graphik.drawButton(
+            btnStartX,
+            btnY,
+            buttonWidth,
+            buttonHeight,
+            (200, 0, 0),
+            (255, 255, 255),
+            22,
+            "Quit to Menu",
+            self.switchToMainMenuScreen,
+        )
+        self.graphik.drawButton(
+            btnStartX + buttonWidth + buttonMargin,
+            btnY,
+            buttonWidth,
+            buttonHeight,
+            (255, 255, 255),
+            (0, 0, 0),
+            22,
+            "Cancel",
+            self.cancelMainMenuConfirmation,
+        )
+
     def run(self):
         while not self.changeScreen:
             for event in pygame.event.get():
@@ -113,8 +182,14 @@ class OptionsScreen:
 
             self.graphik.getGameDisplay().fill((0, 0, 0))
             self.drawTitle()
-            self.drawMenuButtons()
+            if self.confirmingMainMenu:
+                # Skip the menu buttons while confirming so their click
+                # rects don't fire through the overlay.
+                self.drawMainMenuConfirmation()
+            else:
+                self.drawMenuButtons()
             pygame.display.update()
 
         self.changeScreen = False
+        self.confirmingMainMenu = False
         return self.nextScreen

@@ -15,7 +15,7 @@ class Status:
         self.textSize = 18
         self.textColor = (0, 0, 0)
         self.tickLastSet = -1
-        self.durationInTicks = 20
+        self.durationInTicks = 60
         self.tickCounter = tickCounter
 
     def set(self, text):
