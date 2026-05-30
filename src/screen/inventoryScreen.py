@@ -255,9 +255,19 @@ class InventoryScreen:
         )
 
         recipes = self.recipeRegistry.getRecipes()
+        craftableCount = sum(
+            1 for r in recipes if r.canCraft(self.inventory)
+        )
+        self.graphik.drawText(
+            f"{craftableCount} / {len(recipes)} craftable",
+            panelX + panelWidth / 2,
+            panelY + 40,
+            14,
+            (180, 180, 180),
+        )
         recipeButtonHeight = 40
         recipeMargin = 10
-        startY = panelY + 50
+        startY = panelY + 60
 
         for i, recipe in enumerate(recipes):
             recipeY = startY + i * (recipeButtonHeight + recipeMargin)
@@ -267,7 +277,10 @@ class InventoryScreen:
                     for cls, count in recipe.getIngredients().items()
                 ]
             )
-            label = recipe.getName() + " (" + ingredientText + ")"
+            namePrefix = recipe.getName()
+            if recipe.getResultCount() > 1:
+                namePrefix = f"{recipe.getResultCount()}x " + namePrefix
+            label = namePrefix + " (" + ingredientText + ")"
 
             if recipe.canCraft(self.inventory):
                 self.graphik.drawButton(
@@ -288,7 +301,7 @@ class InventoryScreen:
                     if self.inventory.getNumItemsByType(cls) < required
                 ]
                 disabledLabel = (
-                    f"{recipe.getName()} — need {', '.join(missingParts)}"
+                    f"{namePrefix} — need {', '.join(missingParts)}"
                     if missingParts
                     else label
                 )
