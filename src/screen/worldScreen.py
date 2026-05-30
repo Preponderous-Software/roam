@@ -571,6 +571,7 @@ class WorldScreen:
                 break
 
         if toRemove is None:
+            self.status.set("Nothing to pick up here")
             return
 
         if not self.player.getInventory().placeIntoFirstAvailableInventorySlot(
@@ -1213,6 +1214,18 @@ class WorldScreen:
                     room, roomOffsetX, roomOffsetY, self._frameLightSources
                 )
 
+    def _drawDayNightPhaseIndicator(self):
+        phase = self.dayNightCycle.getPhase(self.tickCounter.getTick())
+        label = phase.capitalize()
+        phaseColors = {
+            "day": (255, 220, 90),
+            "dusk": (240, 140, 90),
+            "night": (140, 160, 255),
+            "dawn": (255, 180, 140),
+        }
+        color = phaseColors.get(phase, (220, 220, 220))
+        self.graphik.drawText(label, 30, 20, 18, color)
+
     def _drawDeathOverlay(self):
         display = self.graphik.getGameDisplay()
         width, height = display.get_size()
@@ -1474,6 +1487,9 @@ class WorldScreen:
         self.energyBar.draw(energyOx, energyOy)
 
         self._drawHotbar()
+
+        if self.config.dayNightCycleEnabled:
+            self._drawDayNightPhaseIndicator()
 
         if self.config.debug:
             self._drawDebugInfo()
