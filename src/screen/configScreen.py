@@ -1,4 +1,4 @@
-from time import sleep
+import time
 from appContainer import component
 from config.config import Config
 from lib.graphik.src.graphik import Graphik
@@ -18,6 +18,8 @@ class ConfigScreen:
         self.nextScreen = ScreenType.MAIN_MENU_SCREEN
         self.changeScreen = False
         self.scrollOffset = 0
+        self._lastToggleAt = 0.0
+        self._toggleCooldown = 0.25
 
     def handleKeyDownEvent(self, key):
         if key == pygame.K_ESCAPE:
@@ -32,8 +34,11 @@ class ConfigScreen:
         self.changeScreen = True
 
     def _toggleConfigAttribute(self, attributeName):
+        now = time.time()
+        if now - self._lastToggleAt < self._toggleCooldown:
+            return
+        self._lastToggleAt = now
         setattr(self.config, attributeName, not getattr(self.config, attributeName))
-        sleep(0.1)
 
     def drawTitle(self):
         x, y = self.graphik.getGameDisplay().get_size()
