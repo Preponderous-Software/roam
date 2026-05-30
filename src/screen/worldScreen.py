@@ -849,6 +849,9 @@ class WorldScreen:
     def handleKeyDownEvent(self, key):
         kb = self.keyBindings
         if key == pygame.K_ESCAPE:
+            if self.showHelp:
+                self.showHelp = False
+                return
             self.nextScreen = ScreenType.OPTIONS_SCREEN
             self.changeScreen = True
         elif key == kb.getKey("move_up") or key == kb.getKey("alt_move_up"):
