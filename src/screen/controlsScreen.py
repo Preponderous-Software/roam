@@ -113,6 +113,9 @@ class ControlsScreen:
                 + str(len(actions))
             )
             self.graphik.drawText(scrollInfo, x / 2, y - 70, 16, (180, 180, 180))
+            self.graphik.drawText(
+                "Scroll to see more", x / 2, y - 92, 14, (140, 140, 140)
+            )
 
     def drawBottomButtons(self):
         x, y = self.graphik.getGameDisplay().get_size()
