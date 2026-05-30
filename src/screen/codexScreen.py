@@ -138,6 +138,9 @@ class CodexScreen:
                 + str(len(entries))
             )
             self.graphik.drawText(scrollInfo, x / 2, y - 70, 16, (180, 180, 180))
+            self.graphik.drawText(
+                "Scroll to see more", x / 2, y - 92, 14, (140, 140, 140)
+            )
 
     def drawBackButton(self):
         x, y = self.graphik.getGameDisplay().get_size()
