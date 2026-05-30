@@ -310,14 +310,14 @@ class InventoryScreen:
                     recipeY,
                     panelWidth - 2 * recipeMargin,
                     recipeButtonHeight,
-                    (80, 80, 80),
+                    (60, 60, 60),
                 )
                 self.graphik.drawText(
                     disabledLabel,
                     panelX + panelWidth / 2,
                     recipeY + recipeButtonHeight / 2,
                     16,
-                    (150, 150, 150),
+                    (210, 210, 210),
                 )
 
     def craftRecipe(self, recipe):
