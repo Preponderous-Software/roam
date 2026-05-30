@@ -181,9 +181,14 @@ class InventoryScreen:
         )
 
         if hoveredItemName is not None:
+            screenW, screenH = self.graphik.getGameDisplay().get_size()
+            textWidth = len(hoveredItemName) * 8 + 12
             tooltipX = mouseX + 18
             tooltipY = mouseY + 18
-            textWidth = len(hoveredItemName) * 8 + 12
+            if tooltipX + textWidth > screenW:
+                tooltipX = max(0, mouseX - textWidth - 8)
+            if tooltipY + 22 > screenH:
+                tooltipY = max(0, mouseY - 30)
             self.graphik.drawRectangle(
                 tooltipX, tooltipY, textWidth, 22, (30, 30, 30)
             )
@@ -470,8 +475,19 @@ class InventoryScreen:
 
         item = self.cursorSlot.getContents()[0]
         image = item.getImage()
+        cursorX, cursorY = pygame.mouse.get_pos()
         scaledImage = pygame.transform.scale(image, (50, 50))
-        self.graphik.gameDisplay.blit(scaledImage, pygame.mouse.get_pos())
+        self.graphik.gameDisplay.blit(scaledImage, (cursorX, cursorY))
+
+        count = self.cursorSlot.getNumItems()
+        if count > 1:
+            self.graphik.drawText(
+                str(count),
+                cursorX + 40,
+                cursorY + 40,
+                18,
+                (255, 255, 255),
+            )
 
     def run(self):
         while not self.changeScreen:

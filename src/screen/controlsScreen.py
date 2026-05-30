@@ -87,7 +87,7 @@ class ControlsScreen:
 
             if self.waitingForKey == action:
                 bgColor = (100, 100, 255)
-                displayText = "Press a key..."
+                displayText = "Press a key  (Esc cancels)"
             else:
                 bgColor = (255, 50, 50) if isConflict else (60, 60, 60)
                 displayText = keyName
