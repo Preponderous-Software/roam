@@ -1213,6 +1213,28 @@ class WorldScreen:
                     room, roomOffsetX, roomOffsetY, self._frameLightSources
                 )
 
+    def _drawDeathOverlay(self):
+        display = self.graphik.getGameDisplay()
+        width, height = display.get_size()
+        dim = pygame.Surface((width, height), pygame.SRCALPHA)
+        dim.fill((0, 0, 0, 160))
+        display.blit(dim, (0, 0))
+        self.graphik.drawText("YOU DIED", width / 2, height / 2 - 30, 64, (220, 60, 60))
+        secondsLeft = max(
+            1,
+            int(
+                (self.deathRespawnTicksRemaining + self.config.ticksPerSecond - 1)
+                / self.config.ticksPerSecond
+            ),
+        )
+        self.graphik.drawText(
+            f"Respawning in {secondsLeft}...",
+            width / 2,
+            height / 2 + 30,
+            28,
+            (220, 220, 220),
+        )
+
     def drawHelpOverlay(self):
         x, y = self.graphik.getGameDisplay().get_size()
         overlayWidth = x * 0.6
@@ -1467,6 +1489,9 @@ class WorldScreen:
             self.graphik.drawText(hintLabel, hintX, hintY, 16, (180, 180, 180))
 
         self.drawCursorSlot()
+
+        if self.deathRespawnTicksRemaining > 0:
+            self._drawDeathOverlay()
 
         if self.showHelp:
             self.drawHelpOverlay()
@@ -1917,7 +1942,8 @@ class WorldScreen:
 
         self.handleMouseOver()
 
-        self.handlePlayerActions()
+        if self.deathRespawnTicksRemaining == 0:
+            self.handlePlayerActions()
         self.removeEnergyAndCheckForPlayerDeath()
         if self.config.removeDeadEntities:
             self.checkForLivingEntityDeaths()
@@ -1931,7 +1957,6 @@ class WorldScreen:
             self.clock.tick(self.config.ticksPerSecond)
 
         if self.deathRespawnTicksRemaining > 0:
-            self.status.set("You died! Respawning...")
             self.deathRespawnTicksRemaining -= 1
             if self.deathRespawnTicksRemaining == 0:
                 self.respawnPlayer()
