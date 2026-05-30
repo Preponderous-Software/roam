@@ -91,6 +91,7 @@ class WorldScreen:
         self.codex = self.container.resolve(Codex)
         self.dayNightCycle = self.container.resolve(DayNightCycle)
         self.deathRespawnTicksRemaining = 0
+        self.pausedByFocusLoss = False
         self._dayNightOverlay = None
         self._dayNightOverlaySize = (0, 0)
         self._scaledMaskCache = {}
@@ -1214,6 +1215,21 @@ class WorldScreen:
                     room, roomOffsetX, roomOffsetY, self._frameLightSources
                 )
 
+    def _drawPausedOverlay(self):
+        display = self.graphik.getGameDisplay()
+        width, height = display.get_size()
+        dim = pygame.Surface((width, height), pygame.SRCALPHA)
+        dim.fill((0, 0, 0, 140))
+        display.blit(dim, (0, 0))
+        self.graphik.drawText("PAUSED", width / 2, height / 2 - 20, 56, (220, 220, 220))
+        self.graphik.drawText(
+            "Click the window to resume",
+            width / 2,
+            height / 2 + 28,
+            22,
+            (180, 180, 180),
+        )
+
     def _drawDayNightPhaseIndicator(self):
         phase = self.dayNightCycle.getPhase(self.tickCounter.getTick())
         label = phase.capitalize()
@@ -1508,6 +1524,9 @@ class WorldScreen:
 
         if self.deathRespawnTicksRemaining > 0:
             self._drawDeathOverlay()
+
+        if self.pausedByFocusLoss:
+            self._drawPausedOverlay()
 
         if self.showHelp:
             self.drawHelpOverlay()
@@ -1894,6 +1913,10 @@ class WorldScreen:
             elif event.type == pygame.VIDEORESIZE:
                 self.initializeLocationWidthAndHeight()
                 self.updateConfigWindowSize()
+            elif event.type == pygame.WINDOWFOCUSLOST:
+                self.pausedByFocusLoss = True
+            elif event.type == pygame.WINDOWFOCUSGAINED:
+                self.pausedByFocusLoss = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 self.handleMouseDownEvent(event)
             elif event.type == pygame.MOUSEBUTTONUP:
@@ -1961,6 +1984,13 @@ class WorldScreen:
         self.currentRoom.reproduceLivingEntities(self.tickCounter.getTick())
 
     def _updateGameState(self):
+        if self.pausedByFocusLoss:
+            self.draw()
+            pygame.display.update()
+            if self.config.limitTps:
+                self.clock.tick(self.config.ticksPerSecond)
+            return
+
         self.currentRoom.tickExcrement(self.tickCounter.getTick(), self.config)
         self.currentRoom.tickCrops(self.tickCounter.getTick(), self.config)
 
