@@ -132,9 +132,16 @@ class OptionsScreen:
         self.graphik.drawText(
             "Your current session will end.",
             x / 2,
-            overlayY + overlayHeight * 0.45,
+            overlayY + overlayHeight * 0.42,
             18,
             (200, 200, 200),
+        )
+        self.graphik.drawText(
+            "Your progress will be saved automatically.",
+            x / 2,
+            overlayY + overlayHeight * 0.55,
+            18,
+            (160, 200, 160),
         )
         buttonWidth = overlayWidth * 0.35
         buttonHeight = overlayHeight * 0.22
