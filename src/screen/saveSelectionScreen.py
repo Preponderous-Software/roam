@@ -217,6 +217,14 @@ class SaveSelectionScreen:
         visibleSaves = saves[self.scrollOffset : self.scrollOffset + maxVisible]
         interactive = self.confirmingDelete is None and not self.namingNewSave
 
+        if len(saves) > maxVisible:
+            shownEnd = min(self.scrollOffset + maxVisible, len(saves))
+            scrollInfo = (
+                f"{self.scrollOffset + 1}-{shownEnd} of {len(saves)}"
+                "  -  scroll or arrow keys"
+            )
+            self.graphik.drawText(scrollInfo, x / 2, ypos - 18, 14, (180, 180, 180))
+
         for save in visibleSaves:
             label = save["name"] + "  |  " + save["lastPlayed"]
             savePath = save["path"]
@@ -286,9 +294,16 @@ class SaveSelectionScreen:
         self.graphik.drawText(
             "Delete '" + saveName + "'?",
             x / 2,
-            overlayY + overlayHeight * 0.3,
+            overlayY + overlayHeight * 0.25,
             28,
             (255, 255, 255),
+        )
+        self.graphik.drawText(
+            "This cannot be undone.",
+            x / 2,
+            overlayY + overlayHeight * 0.42,
+            18,
+            (255, 140, 140),
         )
         buttonWidth = overlayWidth * 0.35
         buttonHeight = overlayHeight * 0.25
@@ -418,7 +433,9 @@ class SaveSelectionScreen:
             )
 
             sortLabel = (
-                "Sort: Date" if self.sortMode == self.SORT_BY_DATE else "Sort: Name"
+                "Sorted: Date"
+                if self.sortMode == self.SORT_BY_DATE
+                else "Sorted: Name"
             )
             self.graphik.drawButton(
                 startX + buttonWidth + margin,
@@ -445,7 +462,9 @@ class SaveSelectionScreen:
             )
         else:
             sortLabel = (
-                "Sort: Date" if self.sortMode == self.SORT_BY_DATE else "Sort: Name"
+                "Sorted: Date"
+                if self.sortMode == self.SORT_BY_DATE
+                else "Sorted: Name"
             )
             for i, label in enumerate(["New Game", sortLabel, "Back"]):
                 bx = startX + (buttonWidth + margin) * i
