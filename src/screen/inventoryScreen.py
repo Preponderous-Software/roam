@@ -247,6 +247,16 @@ class InventoryScreen:
                     lambda r=recipe: self.craftRecipe(r),
                 )
             else:
+                missingParts = [
+                    f"{required - self.inventory.getNumItemsByType(cls)} {cls.__name__}"
+                    for cls, required in recipe.getIngredients().items()
+                    if self.inventory.getNumItemsByType(cls) < required
+                ]
+                disabledLabel = (
+                    f"{recipe.getName()} — need {', '.join(missingParts)}"
+                    if missingParts
+                    else label
+                )
                 self.graphik.drawRectangle(
                     panelX + recipeMargin,
                     recipeY,
@@ -255,7 +265,7 @@ class InventoryScreen:
                     (80, 80, 80),
                 )
                 self.graphik.drawText(
-                    label,
+                    disabledLabel,
                     panelX + panelWidth / 2,
                     recipeY + recipeButtonHeight / 2,
                     16,
