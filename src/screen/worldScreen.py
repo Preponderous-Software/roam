@@ -1297,6 +1297,7 @@ class WorldScreen:
             "W/A/S/D or Arrows  -  Move",
             "Left Click  -  Gather / Pick up",
             "Right Click  -  Place item",
+            "Middle Click  -  Drag HUD elements to reposition",
             "1-0  -  Select hotbar slot",
             "Scroll Wheel  -  Cycle hotbar",
             f"{keyName('inventory')}  -  Open / Close inventory",
@@ -1652,8 +1653,8 @@ class WorldScreen:
             return
 
         if self.showInventory:
-            # disallow player to interact with the world while inventory is open
-            self.status.set("Close inventory first (I)")
+            invKey = self.keyBindings.getKeyName("inventory").upper()
+            self.status.set(f"Close inventory first ({invKey})")
             return
 
         hotbarIndex = self.getHotbarSlotAtMousePosition()
