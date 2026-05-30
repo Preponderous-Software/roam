@@ -35,6 +35,18 @@ class InventoryScreen:
         self.recipeRegistry = RecipeRegistry()
         self.lastCraftToggleTime = 0
 
+    def _drawSelectionBorder(self, x, y, width, height):
+        borderWidth = 3
+        color = (255, 255, 0)
+        self.graphik.drawRectangle(x, y, width, borderWidth, color)
+        self.graphik.drawRectangle(
+            x, y + height - borderWidth, width, borderWidth, color
+        )
+        self.graphik.drawRectangle(x, y, borderWidth, height, color)
+        self.graphik.drawRectangle(
+            x + width - borderWidth, y, borderWidth, height, color
+        )
+
     def swapCursorSlotWithInventorySlotByIndex(self, index):
         destSlot = self.inventory.getInventorySlots()[index]
         if self.cursorSlot.isEmpty():
@@ -113,13 +125,7 @@ class InventoryScreen:
                     row * itemsPerRow + column
                     == self.inventory.getSelectedInventorySlotIndex()
                 ):
-                    self.graphik.drawRectangle(
-                        itemX + itemWidth / 2 - 5,
-                        itemY + itemHeight / 2 - 5,
-                        10,
-                        10,
-                        (255, 255, 0),
-                    )
+                    self._drawSelectionBorder(itemX, itemY, itemWidth, itemHeight)
                 column += 1
                 if column == itemsPerRow:
                     column = 0
@@ -163,6 +169,13 @@ class InventoryScreen:
             backgroundY + backgroundHeight + 20,
             20,
             (255, 255, 255),
+        )
+        self.graphik.drawText(
+            "Left-click: swap  -  Right-click: select hotbar  -  click outside: drop",
+            backgroundX,
+            backgroundY + backgroundHeight + 45,
+            16,
+            (180, 180, 180),
         )
 
     def toggleCraftPanel(self):

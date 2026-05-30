@@ -875,8 +875,12 @@ class WorldScreen:
     def _handleUtilityKey(self, key, kb):
         if key == kb.getKey("toggle_debug"):
             self.config.debug = not self.config.debug
+            self.status.set("Debug info " + ("ON" if self.config.debug else "OFF"))
         elif key == kb.getKey("toggle_minimap"):
             self.config.showMiniMap = not self.config.showMiniMap
+            self.status.set(
+                "Minimap " + ("ON" if self.config.showMiniMap else "OFF")
+            )
         elif key == kb.getKey("minimap_zoom_in"):
             if self.minimapScaleFactor < 1.0:
                 self.minimapScaleFactor += 0.1
@@ -885,6 +889,10 @@ class WorldScreen:
                 self.minimapScaleFactor -= 0.1
         elif key == kb.getKey("toggle_camera_follow"):
             self.config.cameraFollowPlayer = not self.config.cameraFollowPlayer
+            self.status.set(
+                "Camera follow "
+                + ("ON" if self.config.cameraFollowPlayer else "OFF")
+            )
         elif key == kb.getKey("toggle_help"):
             self.showHelp = not self.showHelp
         elif key == kb.getKey("codex"):
