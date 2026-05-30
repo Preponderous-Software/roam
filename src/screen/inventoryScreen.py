@@ -158,7 +158,7 @@ class InventoryScreen:
 
         closeKeyName = self.keyBindings.getKeyName("inventory").upper()
         self.graphik.drawText(
-            "(press " + closeKeyName + " to close)",
+            "press [" + closeKeyName + "] or [Esc] to close",
             backgroundX,
             backgroundY + backgroundHeight + 20,
             20,
