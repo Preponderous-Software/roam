@@ -85,7 +85,15 @@ class StatsScreen:
         )
         self.graphik.drawText(header, xpos, startY, 26, (255, 255, 255))
 
-        for i, goal in enumerate(self.goals.getGoals()):
+        goals = self.goals.getGoals()
+        columnCount = 2
+        perColumn = (len(goals) + columnCount - 1) // columnCount
+        displayWidth = self.graphik.getGameDisplay().get_size()[0]
+        columnX = [displayWidth / 4, displayWidth * 3 / 4]
+        rowSpacing = 26
+        rowsStartY = startY + 34
+
+        for i, goal in enumerate(goals):
             progress = self.goals.getProgress(goal)
             if goal.isCompleted():
                 marker = "[X] "
@@ -102,7 +110,11 @@ class StatsScreen:
                 + str(goal.getTarget())
                 + ")"
             )
-            self.graphik.drawText(line, xpos, startY + 32 + i * 28, 20, color)
+            column = i // perColumn
+            row = i % perColumn
+            self.graphik.drawText(
+                line, columnX[column], rowsStartY + row * rowSpacing, 18, color
+            )
 
     def drawBackButton(self):
         x, y = self.graphik.getGameDisplay().get_size()

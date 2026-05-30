@@ -7,15 +7,19 @@ from goals.goalsJsonReaderWriter import GoalsJsonReaderWriter
 
 
 class FakeStats:
-    def __init__(self, rooms=0, food=0):
+    def __init__(self, rooms=0, food=0, score=0):
         self._rooms = rooms
         self._food = food
+        self._score = score
 
     def getRoomsExplored(self):
         return self._rooms
 
     def getFoodEaten(self):
         return self._food
+
+    def getScore(self):
+        return self._score
 
 
 class FakeCodex:
@@ -47,18 +51,18 @@ class FakeConfig:
         self.pathToSaveDirectory = path
 
 
-def makeContext(rooms=0, food=0, discovered=None, phase="day"):
+def makeContext(rooms=0, food=0, score=0, discovered=None, phase="day"):
     return GoalContext(
-        FakeStats(rooms, food),
+        FakeStats(rooms, food, score),
         FakeCodex(discovered),
         FakeDayNightCycle(phase),
         FakeTickCounter(),
     )
 
 
-def makeGoals(rooms=0, food=0, discovered=None, phase="day"):
+def makeGoals(rooms=0, food=0, score=0, discovered=None, phase="day"):
     return Goals(
-        FakeStats(rooms, food),
+        FakeStats(rooms, food, score),
         FakeCodex(discovered),
         FakeDayNightCycle(phase),
         FakeTickCounter(),
@@ -91,9 +95,18 @@ def test_progress_is_clamped_to_target():
 def test_registry_provides_default_goals():
     ids = [g.getIdentifier() for g in GoalRegistry().getGoals()]
     assert "explore_5_rooms" in ids
-    assert "eat_10_food" in ids
-    assert "discover_3_entities" in ids
+    assert "explore_100_rooms" in ids
+    assert "eat_50_food" in ids
+    assert "discover_bear" in ids
+    assert "discover_all_creatures" in ids
     assert "experience_nightfall" in ids
+    assert "witness_dawn" in ids
+    assert "reach_score_25" in ids
+
+
+def test_registry_goal_ids_are_unique():
+    ids = [g.getIdentifier() for g in GoalRegistry().getGoals()]
+    assert len(ids) == len(set(ids))
 
 
 def test_evaluate_reports_newly_completed_once():
@@ -109,10 +122,26 @@ def test_nightfall_goal_completes_at_night():
     assert "experience_nightfall" in ids
 
 
-def test_discovery_goal_uses_codex_count():
-    goals = makeGoals(discovered=["Bear", "Chicken", "Apple"])
+def test_specific_creature_discovery_goal_completes():
+    goals = makeGoals(discovered=["Chicken"])
     ids = [g.getIdentifier() for g in goals.evaluate()]
-    assert "discover_3_entities" in ids
+    assert "discover_chicken" in ids
+    assert "discover_bear" not in ids
+    assert "discover_all_creatures" not in ids
+
+
+def test_discover_all_creatures_completes_when_all_found():
+    goals = makeGoals(discovered=["Bear", "Chicken"])
+    ids = [g.getIdentifier() for g in goals.evaluate()]
+    assert "discover_all_creatures" in ids
+
+
+def test_score_and_dawn_goals_complete():
+    goals = makeGoals(score=100, phase="dawn")
+    ids = [g.getIdentifier() for g in goals.evaluate()]
+    assert "reach_score_25" in ids
+    assert "reach_score_100" in ids
+    assert "witness_dawn" in ids
 
 
 def test_completed_count_and_total():
