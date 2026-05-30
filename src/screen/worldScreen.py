@@ -440,6 +440,7 @@ class WorldScreen:
         for entityId in list(newLocation.getEntities().keys()):
             entity = newLocation.getEntity(entityId)
             if isinstance(entity, Bear):
+                self.status.set("Killed by " + entity.getName())
                 self.player.kill()
                 return
 
@@ -714,7 +715,9 @@ class WorldScreen:
 
         inventorySlot = self.player.getInventory().getSelectedInventorySlot()
         if inventorySlot.isEmpty():
-            self.status.set("Select an item first (1-0)")
+            firstKey = self.keyBindings.getKeyName("hotbar_1").upper()
+            zeroKey = self.keyBindings.getKeyName("hotbar_0").upper()
+            self.status.set(f"Select an item first ({firstKey}-{zeroKey})")
             return
 
         selectedItem = inventorySlot.getContents()[0]
