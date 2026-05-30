@@ -1318,12 +1318,15 @@ class WorldScreen:
         )
 
     def _drawHotbarSelectionIndicator(self, xPos, yPos, slotWidth, slotHeight):
+        borderWidth = 3
+        color = (255, 255, 0)
+        self.graphik.drawRectangle(xPos, yPos, slotWidth, borderWidth, color)
         self.graphik.drawRectangle(
-            xPos + slotWidth / 2 - 5,
-            yPos + slotHeight / 2 - 5,
-            10,
-            10,
-            (255, 255, 0),
+            xPos, yPos + slotHeight - borderWidth, slotWidth, borderWidth, color
+        )
+        self.graphik.drawRectangle(xPos, yPos, borderWidth, slotHeight, color)
+        self.graphik.drawRectangle(
+            xPos + slotWidth - borderWidth, yPos, borderWidth, slotHeight, color
         )
 
     def _drawHotbar(self):
@@ -1920,6 +1923,7 @@ class WorldScreen:
             self.clock.tick(self.config.ticksPerSecond)
 
         if self.deathRespawnTicksRemaining > 0:
+            self.status.set("You died! Respawning...")
             self.deathRespawnTicksRemaining -= 1
             if self.deathRespawnTicksRemaining == 0:
                 self.respawnPlayer()

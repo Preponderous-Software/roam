@@ -26,10 +26,16 @@ class EnergyBar:
         x, y = self.graphik.getGameDisplay().get_size()
         xpos = 0 + offsetX
         ypos = y - y / 64 + offsetY
-        width = x * (self.player.getEnergy() / self.player.getTargetEnergy())
+        energyRatio = self.player.getEnergy() / self.player.getTargetEnergy()
+        width = x * energyRatio
         fullWidth = x
         height = y / 64
-        color = (255, 215, 73)
+        if energyRatio < 0.10:
+            color = (220, 60, 60)
+        elif energyRatio < 0.25:
+            color = (240, 160, 60)
+        else:
+            color = (255, 215, 73)
 
         # draw black bar
         self.graphik.drawRectangle(xpos, ypos, fullWidth, height, (0, 0, 0))
