@@ -1218,22 +1218,28 @@ class WorldScreen:
             "Controls  (F1 to close)", x / 2, titleY, 28, (255, 255, 255)
         )
 
+        kb = self.keyBindings
+
+        def keyName(action):
+            return kb.getKeyName(action).upper()
+
         helpLines = [
             "W/A/S/D or Arrows  -  Move",
             "Left Click  -  Gather / Pick up",
             "Right Click  -  Place item",
             "1-0  -  Select hotbar slot",
             "Scroll Wheel  -  Cycle hotbar",
-            "I  -  Open / Close inventory",
-            "Shift  -  Run",
-            "Ctrl  -  Crouch",
-            "M  -  Toggle minimap",
-            "+/-  -  Resize minimap",
-            "C  -  Toggle camera follow",
-            "F3  -  Toggle debug info",
-            "Print Screen  -  Take screenshot",
+            f"{keyName('inventory')}  -  Open / Close inventory",
+            f"{keyName('run')}  -  Run",
+            f"{keyName('crouch')}  -  Crouch",
+            f"{keyName('toggle_minimap')}  -  Toggle minimap",
+            f"{keyName('minimap_zoom_in')}/{keyName('minimap_zoom_out')}  -  Resize minimap",
+            f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",
+            f"{keyName('toggle_debug')}  -  Toggle debug info",
+            f"{keyName('screenshot')}  -  Take screenshot",
+            f"{keyName('codex')}  -  Open Codex",
             "Esc  -  Open menu",
-            "F1  -  Toggle this help",
+            f"{keyName('toggle_help')}  -  Toggle this help",
         ]
 
         lineY = titleY + 40
