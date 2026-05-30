@@ -24,6 +24,8 @@ from screen.screenshotHelper import takeScreenshot
 from screen.worldScreenPersistence import WorldScreenPersistence
 from stats.stats import Stats
 from ui.energyBar import EnergyBar
+from goals.goals import Goals
+from goals.goalsJsonReaderWriter import GoalsJsonReaderWriter
 from lib.graphik.src.graphik import Graphik
 from entity.grass import Grass
 from lib.pyenvlib.grid import Grid
@@ -90,6 +92,8 @@ class WorldScreen:
         self.hudDragManager = self.container.resolve(HudDragManager)
         self.codex = self.container.resolve(Codex)
         self.dayNightCycle = self.container.resolve(DayNightCycle)
+        self.goals = self.container.resolve(Goals)
+        self.goalsJsonReaderWriter = self.container.resolve(GoalsJsonReaderWriter)
         self.deathRespawnTicksRemaining = 0
         self.pausedByFocusLoss = False
         self._dayNightOverlay = None
@@ -135,6 +139,9 @@ class WorldScreen:
 
         if os.path.exists(self.config.pathToSaveDirectory + "/tick.json"):
             self.tickCounter.load()
+
+        if os.path.exists(self.config.pathToSaveDirectory + "/goals.json"):
+            self.goals.setCompletedIdentifiers(self.goalsJsonReaderWriter.load())
 
         if os.path.exists(self.config.pathToSaveDirectory + "/playerInventory.json"):
             self.loadPlayerInventoryFromFile()
@@ -1990,7 +1997,14 @@ class WorldScreen:
 
         self.currentRoom.reproduceLivingEntities(self.tickCounter.getTick())
 
+    def _updateGoals(self):
+        # Re-evaluate goals; announce and persist any fresh completions.
+        for goal in self.goals.evaluate():
+            self.status.set("Goal complete: " + goal.getDescription())
+            self.goalsJsonReaderWriter.save(self.goals.getCompletedIdentifiers())
+
     def _updateGameState(self):
+        self._updateGoals()
         if self.pausedByFocusLoss:
             self.draw()
             pygame.display.update()

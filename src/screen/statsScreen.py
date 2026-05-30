@@ -5,6 +5,7 @@ from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
 from screen.screenshotHelper import takeScreenshot
 from stats.stats import Stats
+from goals.goals import Goals
 from ui.status import Status
 import pygame
 
@@ -19,12 +20,14 @@ class StatsScreen:
         status: Status,
         stats: Stats,
         keyBindings: KeyBindings,
+        goals: Goals,
     ):
         self.graphik = graphik
         self.config = config
         self.status = status
         self.stats = stats
         self.keyBindings = keyBindings
+        self.goals = goals
         self.nextScreen = ScreenType.OPTIONS_SCREEN
         self.changeScreen = False
 
@@ -69,6 +72,37 @@ class StatsScreen:
 
         text = "Deaths: " + str(self.stats.getNumberOfDeaths())
         self.graphik.drawText(text, xpos, ypos + lineSpacing * 3, 30, (255, 255, 255))
+
+        self.drawGoals(xpos, ypos + lineSpacing * 3 + 60)
+
+    def drawGoals(self, xpos, startY):
+        header = (
+            "Goals ("
+            + str(self.goals.getCompletedCount())
+            + "/"
+            + str(self.goals.getTotalCount())
+            + ")"
+        )
+        self.graphik.drawText(header, xpos, startY, 26, (255, 255, 255))
+
+        for i, goal in enumerate(self.goals.getGoals()):
+            progress = self.goals.getProgress(goal)
+            if goal.isCompleted():
+                marker = "[X] "
+                color = (120, 220, 120)
+            else:
+                marker = "[ ] "
+                color = (200, 200, 200)
+            line = (
+                marker
+                + goal.getDescription()
+                + " ("
+                + str(progress)
+                + "/"
+                + str(goal.getTarget())
+                + ")"
+            )
+            self.graphik.drawText(line, xpos, startY + 32 + i * 28, 20, color)
 
     def drawBackButton(self):
         x, y = self.graphik.getGameDisplay().get_size()
