@@ -65,6 +65,9 @@ class InventoryScreen:
 
     def handleKeyDownEvent(self, key):
         kb = self.keyBindings
+        if key == pygame.K_ESCAPE and self.craftPanelOpen:
+            self.craftPanelOpen = False
+            return
         if key == kb.getKey("inventory") or key == pygame.K_ESCAPE:
             self.switchToWorldScreen()
         elif key == kb.getKey("screenshot"):
