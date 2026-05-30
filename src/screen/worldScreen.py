@@ -1216,12 +1216,17 @@ class WorldScreen:
             overlayX, overlayY, overlayWidth, overlayHeight, (30, 30, 30)
         )
 
-        titleY = overlayY + 25
-        self.graphik.drawText(
-            "Controls  (F1 to close)", x / 2, titleY, 28, (255, 255, 255)
-        )
-
         kb = self.keyBindings
+
+        titleY = overlayY + 25
+        closeKeyName = kb.getKeyName("toggle_help").upper()
+        self.graphik.drawText(
+            f"Controls  ({closeKeyName} to close)",
+            x / 2,
+            titleY,
+            28,
+            (255, 255, 255),
+        )
 
         def keyName(action):
             return kb.getKeyName(action).upper()
@@ -1444,9 +1449,11 @@ class WorldScreen:
             self.drawMiniMap()
 
         if not self.showHelp:
+            helpKeyName = self.keyBindings.getKeyName("toggle_help").upper()
+            hintLabel = f"{helpKeyName}: Help"
             hintX = self.graphik.getGameDisplay().get_width() - 50
             hintY = self.graphik.getGameDisplay().get_height() - 20
-            self.graphik.drawText("F1: Help", hintX, hintY, 16, (180, 180, 180))
+            self.graphik.drawText(hintLabel, hintX, hintY, 16, (180, 180, 180))
 
         self.drawCursorSlot()
 
