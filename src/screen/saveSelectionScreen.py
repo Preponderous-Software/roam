@@ -29,6 +29,7 @@ class SaveSelectionScreen:
         self.confirmingDelete = None
         self.namingNewSave = False
         self.newSaveNameInput = ""
+        self.newSaveNameError = ""
 
     def refreshSaveCache(self):
         self.cachedSaves = self._scanSaveDirectories()
@@ -74,6 +75,7 @@ class SaveSelectionScreen:
     def startNamingNewSave(self):
         self.namingNewSave = True
         self.newSaveNameInput = ""
+        self.newSaveNameError = ""
 
     def _isValidSaveName(self, name):
         if not name or name != name.strip():
@@ -103,13 +105,18 @@ class SaveSelectionScreen:
         name = self.newSaveNameInput.strip()
         if len(name) == 0:
             name = self._generateSaveName()
+        elif os.path.exists(os.path.join(self.savesBaseDirectory, name)):
+            self.newSaveNameError = f'A save named "{name}" already exists.'
+            return
         self.namingNewSave = False
         self.newSaveNameInput = ""
+        self.newSaveNameError = ""
         self.createNewGameWithName(name)
 
     def cancelNamingNewSave(self):
         self.namingNewSave = False
         self.newSaveNameInput = ""
+        self.newSaveNameError = ""
 
     def _generateSaveName(self):
         if not os.path.exists(self.savesBaseDirectory):
@@ -164,6 +171,7 @@ class SaveSelectionScreen:
                 self.confirmNewSaveName()
             elif key == pygame.K_BACKSPACE:
                 self.newSaveNameInput = self.newSaveNameInput[:-1]
+                self.newSaveNameError = ""
             return
         if key == pygame.K_ESCAPE:
             if self.confirmingDelete is not None:
@@ -342,12 +350,20 @@ class SaveSelectionScreen:
             24,
             (0, 0, 0),
         )
+        if self.newSaveNameError:
+            self.graphik.drawText(
+                self.newSaveNameError,
+                x / 2,
+                overlayY + overlayHeight * 0.60,
+                18,
+                (255, 120, 120),
+            )
         self.graphik.drawText(
             "(Enter to confirm, Escape to cancel)",
             x / 2,
-            overlayY + overlayHeight * 0.65,
-            18,
-            (200, 200, 200),
+            overlayY + overlayHeight * 0.68,
+            16,
+            (180, 180, 180),
         )
         buttonWidth = overlayWidth * 0.35
         buttonHeight = overlayHeight * 0.18
@@ -479,6 +495,7 @@ class SaveSelectionScreen:
                         for ch in event.text:
                             if ch.isalnum() or ch in "-_ ":
                                 self.newSaveNameInput += ch
+                                self.newSaveNameError = ""
 
             self.graphik.getGameDisplay().fill((0, 0, 0))
             self.drawTitle()
