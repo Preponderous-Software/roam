@@ -76,14 +76,14 @@ class StatsScreen:
         self.drawGoals(xpos, ypos + lineSpacing * 3 + 60)
 
     def drawGoals(self, xpos, startY):
-        header = (
-            "Goals ("
-            + str(self.goals.getCompletedCount())
-            + "/"
-            + str(self.goals.getTotalCount())
-            + ")"
-        )
-        self.graphik.drawText(header, xpos, startY, 26, (255, 255, 255))
+        completed = self.goals.getCompletedCount()
+        total = self.goals.getTotalCount()
+        allComplete = total > 0 and completed == total
+        header = "Goals (" + str(completed) + "/" + str(total) + ")"
+        if allComplete:
+            header += " - All complete!"
+        headerColor = (120, 220, 120) if allComplete else (255, 255, 255)
+        self.graphik.drawText(header, xpos, startY, 26, headerColor)
 
         goals = self.goals.getGoals()
         columnCount = 2
