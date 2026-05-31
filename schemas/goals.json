@@ -1,0 +1,12 @@
+{
+    "type": "object",
+    "properties": {
+        "completedGoals": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        }
+    },
+    "required": ["completedGoals"]
+}
