@@ -1999,9 +1999,14 @@ class WorldScreen:
 
     def _updateGoals(self):
         # Re-evaluate goals; announce and persist any fresh completions.
-        for goal in self.goals.evaluate():
-            self.status.set("Goal complete: " + goal.getDescription())
-            self.goalsJsonReaderWriter.save(self.goals.getCompletedIdentifiers())
+        newlyCompleted = self.goals.evaluate()
+        if not newlyCompleted:
+            return
+        if len(newlyCompleted) == 1:
+            self.status.set("Goal complete: " + newlyCompleted[0].getDescription())
+        else:
+            self.status.set(str(len(newlyCompleted)) + " goals complete!")
+        self.goalsJsonReaderWriter.save(self.goals.getCompletedIdentifiers())
 
     def _updateGameState(self):
         self._updateGoals()
