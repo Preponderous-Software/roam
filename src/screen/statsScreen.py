@@ -101,15 +101,9 @@ class StatsScreen:
             else:
                 marker = "[ ] "
                 color = (200, 200, 200)
-            line = (
-                marker
-                + goal.getDescription()
-                + " ("
-                + str(progress)
-                + "/"
-                + str(goal.getTarget())
-                + ")"
-            )
+            line = marker + goal.getDescription()
+            if goal.getTarget() > 1:
+                line += " (" + str(progress) + "/" + str(goal.getTarget()) + ")"
             column = i // perColumn
             row = i % perColumn
             self.graphik.drawText(
