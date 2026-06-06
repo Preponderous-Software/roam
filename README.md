@@ -33,7 +33,7 @@ Right Mouse (inventory slot) | Select inventory slot (inventory screen)
 ### Clone
 1. If you don't have git installed, install it from [here](https://git-scm.com/downloads).
 2. Clone the repository with the following command:
-> git clone https://github.com/Stephenson-Software/Roam.git
+> git clone https://github.com/Preponderous-Software/roam.git
 
 ### Install Dependencies
 3. If you don't have python installed, install it from [here](https://www.python.org/downloads/).

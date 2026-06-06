@@ -14,14 +14,16 @@ The map will be generated as the player explores.
 ### Inventory
 The player will have an inventory that can hold items. The player can open/close the inventory with the `i` key.
 
-### Crafting (unimplemented)
-The player will be able to craft items using the items in their inventory.
+### Crafting
+The player can craft items using the items in their inventory. Crafting is implemented via the `Recipe` and `RecipeRegistry` classes (`src/crafting/`). The current recipes are: Wood Floor, Bed, Stone Floor, Stone Bed, Fence, Campfire, Wheat Seed, and Torch.
 
 ### Food
 The player will be able to eat food to replenish energy. Food will be able to be found in the world or grown by the player.
 
 ## Room Types
-- Grass
+Defined by `RoomType` in `src/world/roomType.py`:
+- Empty
+- Grassland
 - Forest
 - Jungle
 - Mountain
