@@ -76,6 +76,14 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-06-06 — Fix death-penalty rounding and un-skip silently-dead tests (issues #369, #371)
+- **`src/screen/worldScreen.py`:** Changed the on-death score penalty from `math.ceil(score * 0.9)` to `math.floor(score * 0.9)`. With `ceil`, the intended 10% penalty was a no-op for every score 1–9 (`ceil(0.9)` = 1, `ceil(8.1)` = 9) and only began reducing the score at 10 — exactly the early game where new players die most. `floor` makes the penalty always apply.
+- **`tests/screen/test_worldScreen_deathPenalty.py`** (new): Parametrized regression test pinning `removeEnergyAndCheckForPlayerDeath` at boundary scores (1→0, 9→8, 10→9, 25→22, 100→90); each case would fail under the old `ceil` logic. Also asserts the death counter increments.
+- **`tests/inventory/test_inventory.py`:** Renamed `removeSelectedItem` → `test_removeSelectedItem` so pytest actually collects it — the only test for `Inventory.removeSelectedItem` had been silently skipped (missing `test_` prefix).
+- **`tests/crafting/test_recipe.py`:** Added two multi-ingredient `Recipe.craft` tests (Bed = OakWood×3 + Stone×2) using the previously-unused `createInventoryWithOakWoodAndStone` helper — covering the multi-type/multi-slot ingredient-deduction path that single-ingredient tests never exercised.
+- **Validation:** `python3 -m compileall src -q` clean; `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python3 -m pytest` — 460 passed (was 451; +9 effective new cases).
+- **Learning Log:** `[not yet integrated]` — observed that `./format.sh` (Black + autoflake) reformats ~8 files unrelated to the change because CI does not enforce formatting, so drift accumulates on `main`; running it tree-wide pollutes a focused PR. For this session only the four in-scope files were kept and unrelated reformats reverted. Candidate rule for `copilot-instructions.md`: run formatters scoped to changed files, or land a separate formatting-only sweep.
+
 ### 2026-06-06 — Documentation sync: README clone URL and PLANNING.md drift (issues #374, #361)
 - **`README.md`:** Corrected the "Clone and Run" git URL from `https://github.com/Stephenson-Software/Roam.git` to the canonical `https://github.com/Preponderous-Software/roam.git` (matching the configured `origin` remote and the org used elsewhere in the README for the `graphik` / `py_env_lib` libraries).
 - **`PLANNING.md`:**

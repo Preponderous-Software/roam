@@ -1,4 +1,5 @@
 from src.crafting.recipe import Recipe
+from src.entity.bed import Bed
 from src.entity.oakWood import OakWood
 from src.entity.stone import Stone
 from src.entity.woodFloor import WoodFloor
@@ -57,3 +58,24 @@ def test_craft_returns_none_when_materials_missing():
     result = recipe.craft(inventory)
     assert result is None
     assert inventory.getNumItemsByType(OakWood) == 2
+
+
+def test_craft_multi_ingredient_deducts_each_type():
+    inventory = createInventoryWithOakWoodAndStone(3, 2)
+    recipe = Recipe("Bed", {OakWood: 3, Stone: 2}, Bed, "assets/images/bed.png")
+    result = recipe.craft(inventory)
+    assert result is not None
+    assert len(result) == 1
+    assert isinstance(result[0], Bed)
+    assert inventory.getNumItemsByType(OakWood) == 0
+    assert inventory.getNumItemsByType(Stone) == 0
+
+
+def test_craft_multi_ingredient_consumes_only_required_counts():
+    inventory = createInventoryWithOakWoodAndStone(5, 4)
+    recipe = Recipe("Bed", {OakWood: 3, Stone: 2}, Bed, "assets/images/bed.png")
+    result = recipe.craft(inventory)
+    assert result is not None
+    assert isinstance(result[0], Bed)
+    assert inventory.getNumItemsByType(OakWood) == 2
+    assert inventory.getNumItemsByType(Stone) == 2
