@@ -262,6 +262,26 @@ def test_save_window_size_clamps_to_minimum(tmp_path, monkeypatch):
     assert "savedWindowHeight: 400" in content
 
 
+def test_write_key_values_updates_appends_and_preserves(tmp_path, monkeypatch):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text("# a comment\n\nexisting: old\n", encoding="utf-8")
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
+
+    config = Config()
+    config._writeKeyValues({"existing": "new", "added": "value"}, "failed to write")
+
+    content = configFilePath.read_text(encoding="utf-8")
+    # Existing key updated in place (no duplicate), new key appended
+    assert "existing: new" in content
+    assert "old" not in content
+    assert content.count("existing") == 1
+    assert "added: value" in content
+    # Comment and blank line preserved verbatim
+    assert "# a comment" in content
+
+
 def test_saved_window_size_is_loaded_on_init(tmp_path, monkeypatch):
     configFilePath = tmp_path / "config.yml"
     configFilePath.write_text(
