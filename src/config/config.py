@@ -240,9 +240,7 @@ class Config:
             debug=self.debug,
         )
 
-    def saveWindowSize(self, width, height):
-        width = max(int(width), self.MIN_WINDOW_SIZE)
-        height = max(int(height), self.MIN_WINDOW_SIZE)
+    def _writeKeyValues(self, savedValues, errorMessage):
         configFilePath = self.getConfigFilePath()
         lines = []
         if configFilePath.exists():
@@ -251,10 +249,6 @@ class Config:
             except (OSError, UnicodeDecodeError):
                 lines = []
 
-        savedValues = {
-            "savedWindowWidth": str(width),
-            "savedWindowHeight": str(height),
-        }
         updatedKeys = set()
         newLines = []
         for line in lines:
@@ -279,7 +273,16 @@ class Config:
             configFilePath.write_text("\n".join(newLines) + "\n", encoding="utf-8")
         except OSError as e:
             _logger.warning(
-                "failed to save window size to config file",
+                errorMessage,
                 error=str(e),
                 path=str(configFilePath),
             )
+
+    def saveWindowSize(self, width, height):
+        width = max(int(width), self.MIN_WINDOW_SIZE)
+        height = max(int(height), self.MIN_WINDOW_SIZE)
+        savedValues = {
+            "savedWindowWidth": str(width),
+            "savedWindowHeight": str(height),
+        }
+        self._writeKeyValues(savedValues, "failed to save window size to config file")

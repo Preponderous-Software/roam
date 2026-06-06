@@ -76,6 +76,13 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-06-06 — Deduplicate the config-file rewrite loop (issue #366)
+- **`src/config/config.py`:** Extracted the read → update-matching-keys → append-new-keys → write-back loop into a new `Config._writeKeyValues(self, savedValues, errorMessage)` helper. `saveWindowSize` now just builds its `savedValues` dict and delegates; the differing log message is passed through `errorMessage` so existing log behavior is preserved.
+- **`src/config/keyBindings.py`:** `KeyBindings.saveToConfigFile` now builds its prefixed `savedValues` dict and delegates to `config._writeKeyValues(...)`, dropping the verbatim-duplicated loop (~37 lines). Removed the now-unused `getLogger` import and module-level `_logger` (the only use was the warning that moved into `Config`).
+- **`tests/config/test_config.py`:** Added `test_write_key_values_updates_appends_and_preserves`, a direct test of the helper covering in-place key update (no duplicate), new-key append, and comment/blank-line preservation in a single call. The existing `saveWindowSize`/`saveToConfigFile` suites already exercise the helper through both public callers, providing regression coverage for the extraction.
+- **Validation:** `python3 -m compileall src -q` clean; `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python3 -m pytest` — 461 passed (was 460; +1 new). Net −13 LOC across 3 files.
+- **Learning Log:** `[integrated]` — applied the cycle-2 lesson (roam-dev-loop#3): formatting was run scoped to the 3 changed files (`black`/`autoflake` on explicit paths) rather than tree-wide `./format.sh`, so no unrelated drift entered the diff.
+
 ### 2026-06-06 — Fix death-penalty rounding and un-skip silently-dead tests (issues #369, #371)
 - **`src/screen/worldScreen.py`:** Changed the on-death score penalty from `math.ceil(score * 0.9)` to `math.floor(score * 0.9)`. With `ceil`, the intended 10% penalty was a no-op for every score 1–9 (`ceil(0.9)` = 1, `ceil(8.1)` = 9) and only began reducing the score at 10 — exactly the early game where new players die most. `floor` makes the penalty always apply.
 - **`tests/screen/test_worldScreen_deathPenalty.py`** (new): Parametrized regression test pinning `removeEnergyAndCheckForPlayerDeath` at boundary scores (1→0, 9→8, 10→9, 25→22, 100→90); each case would fail under the old `ceil` logic. Also asserts the death counter increments.

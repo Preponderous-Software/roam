@@ -1,7 +1,4 @@
 import pygame
-from gameLogging.logger import getLogger
-
-_logger = getLogger(__name__)
 
 
 # @author Copilot
@@ -128,43 +125,10 @@ class KeyBindings:
 
     def saveToConfigFile(self, config):
         """Save current keybindings to config.yml."""
-        configFilePath = config.getConfigFilePath()
-        lines = []
-        if configFilePath.exists():
-            try:
-                lines = configFilePath.read_text(encoding="utf-8").splitlines()
-            except (OSError, UnicodeDecodeError):
-                lines = []
-
         savedValues = {}
         for action, key in self.bindings.items():
             savedValues[self.CONFIG_PREFIX + action] = str(key)
 
-        updatedKeys = set()
-        newLines = []
-        for line in lines:
-            stripped = line.strip()
-            if stripped == "" or stripped.startswith("#"):
-                newLines.append(line)
-                continue
-            parts = stripped.split(":", 1)
-            if len(parts) == 2:
-                key = parts[0].strip()
-                if key in savedValues:
-                    newLines.append(key + ": " + savedValues[key])
-                    updatedKeys.add(key)
-                    continue
-            newLines.append(line)
-
-        for key, value in savedValues.items():
-            if key not in updatedKeys:
-                newLines.append(key + ": " + value)
-
-        try:
-            configFilePath.write_text("\n".join(newLines) + "\n", encoding="utf-8")
-        except OSError as e:
-            _logger.warning(
-                "failed to save key bindings to config file",
-                error=str(e),
-                path=str(configFilePath),
-            )
+        config._writeKeyValues(
+            savedValues, "failed to save key bindings to config file"
+        )
