@@ -102,7 +102,7 @@ def test_getSelectedInventorySlot():
     )
 
 
-def removeSelectedItem():
+def test_removeSelectedItem():
     inventoryInstance = createInventory()
     item = createGrassEntity()
     inventoryInstance.placeIntoFirstAvailableInventorySlot(item)

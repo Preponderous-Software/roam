@@ -1021,7 +1021,7 @@ class WorldScreen:
             self.status.set("Low on energy!")
         if self.player.isDead() and self.deathRespawnTicksRemaining == 0:
             self.status.set("You died! Respawning...")
-            self.stats.setScore(math.ceil(self.stats.getScore() * 0.9))
+            self.stats.setScore(math.floor(self.stats.getScore() * 0.9))
             self.stats.incrementNumberOfDeaths()
             self.deathRespawnTicksRemaining = max(
                 1, int(self.config.ticksPerSecond * 3)
