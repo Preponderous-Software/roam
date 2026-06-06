@@ -76,6 +76,14 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-06-06 — Documentation sync: README clone URL and PLANNING.md drift (issues #374, #361)
+- **`README.md`:** Corrected the "Clone and Run" git URL from `https://github.com/Stephenson-Software/Roam.git` to the canonical `https://github.com/Preponderous-Software/roam.git` (matching the configured `origin` remote and the org used elsewhere in the README for the `graphik` / `py_env_lib` libraries).
+- **`PLANNING.md`:**
+  - Removed the stale "(unimplemented)" marker from the Crafting heading and documented the shipped recipe system (`Recipe` / `RecipeRegistry` in `src/crafting/`, listing all 8 recipes: Wood Floor, Bed, Stone Floor, Stone Bed, Fence, Campfire, Wheat Seed, Torch).
+  - Reconciled the Room Types list with `RoomType` in `src/world/roomType.py` — added the missing `Empty` type and corrected `Grass` → `Grassland`.
+- **Validation:** Documentation-only change; no `src/` or `tests/` files modified. `python -m compileall src -q` clean; full test suite re-run as a regression check (PASS).
+- **Learning Log:** `[integrated]` — no new convention; reinforces the existing doc-drift triage rule already in `copilot-instructions.md`.
+
 ### 2026-04-23 — Clean Code refactoring (names, DRY, dead code)
 - **`src/screen/worldScreen.py`:**
   - Removed duplicate `from math import ceil` import (already imported via `import math`); replaced the one `ceil()` call with `math.ceil()`.
