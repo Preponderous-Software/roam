@@ -30,6 +30,8 @@ from lib.graphik.src.graphik import Graphik
 from entity.grass import Grass
 from lib.pyenvlib.grid import Grid
 from entity.stone import Stone
+from entity.woodFloor import WoodFloor
+from entity.stoneFloor import StoneFloor
 from lib.pyenvlib.location import Location
 from world.room import Room
 from world.roomJsonReaderWriter import RoomJsonReaderWriter
@@ -603,6 +605,13 @@ class WorldScreen:
                 return True
         return False
 
+    def locationContainsFloor(self, location):
+        for entityId in list(location.getEntities().keys()):
+            entity = location.getEntity(entityId)
+            if isinstance(entity, (WoodFloor, StoneFloor)):
+                return True
+        return False
+
     def tryPushStone(self, location, direction):
         stoneEntity = None
         for entityId in list(location.getEntities().keys()):
@@ -719,6 +728,11 @@ class WorldScreen:
         selectedItem = inventorySlot.getContents()[0]
         if isinstance(selectedItem, WheatSeed):
             self._plantWheatSeed(targetLocation, targetRoom)
+            return
+
+        isFloor = isinstance(selectedItem, (WoodFloor, StoneFloor))
+        if isFloor and self.locationContainsFloor(targetLocation):
+            self.status.set("A floor is already here")
             return
 
         self.player.removeEnergy(self.config.playerInteractionEnergyCost)

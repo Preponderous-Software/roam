@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-06-07 | 1+ | fix: Prevent stacking floor tiles — `executePlaceAction` now blocks placing a `WoodFloor`/`StoneFloor` where a floor already exists (via a new `locationContainsFloor` helper), setting "A floor is already here" and consuming no item; +2 tests (closes #345) |
 | 2026-06-07 | 1+ | ux: install.ps1 — drop `--quiet` so dependency-install progress is visible (no more "frozen" hang) and pip's real error shows on failure; the completion message now warns that shortcuts are anchored to the folder and prints where saves/settings/screenshots live (`%APPDATA%\Roam`) (closes #400, #401) |
 | 2026-06-07 | 1+ | docs: Lead the README with the recommended prebuilt download (no Python), reframe the clone steps as "Run from Source (for developers)", and rename the `install.ps1` section to a "setup script" distinct from the `RoamSetup.exe` installer — fixes the information scent and the two-things-both-called-"wizard" naming collision (closes #404) |
 | 2026-06-07 | 1+ | test: Add unit-test coverage for `Room.tickExcrement` (spawn/decay/grass-blocking branches), `Inventory.hasAvailableSlotFor` (empty/matching-stack/full), and `MapImageGenerator` coordinate + bounds math; align `test_room.py` entity imports to the production `entity.*` root so `isinstance` checks match room-created entities; +18 tests (issues #372, #367) |
@@ -88,6 +89,12 @@ logged in detail below.
 | 2022-08-08 | 21 | Create version.txt; Update README.md; Modified README. (+9 more) |
 
 ## AI Agent Sessions
+
+### 2026-06-07 — Prevent floors from being placed on floors (issue #345)
+- **`src/screen/worldScreen.py`:** Floor tiles (`WoodFloor`, `StoneFloor`) are non-solid, so the existing `locationContainsSolidEntity` guard didn't stop them — players could stack multiple floors on one location, wasting items. Added a `locationContainsFloor(location)` helper (mirroring `locationContainsSolidEntity`) and a guard in `executePlaceAction`: when the selected item is a floor and the target already contains a floor, it sets the status `"A floor is already here"` and returns **before** energy or the item is consumed. Imported `WoodFloor`/`StoneFloor`.
+- **`tests/screen/test_worldScreen_placeFloor.py` (new):** Two tests driving `executePlaceAction` via the `WorldScreen.__new__` + mocked-deps harness used by the other worldScreen tests — placing a `StoneFloor` on a location that already has a `WoodFloor` is blocked (no `StoneFloor` added, item not consumed, status set), and placing a floor on an empty location still succeeds (placed + item consumed). The blocked test was confirmed to fail without the guard.
+- **Validation:** `python3 -m compileall src -q` clean; `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python3 -m pytest` → 513 passed (was 511; +2). The new lines are Black-clean (`black --diff` flags only pre-existing drift elsewhere in `worldScreen.py`, which was intentionally left untouched to keep this PR scoped, per the format-scope lesson).
+- **Learning Log:** `[integrated]` — no new convention; reused the existing scoped-formatting rule (don't run Black tree-wide on a file with pre-existing drift) and the worldScreen test harness pattern.
 
 ### 2026-06-07 — Add unit-test coverage for excrement decay, inventory slotting, and minimap geometry (issues #372, #367)
 - **`tests/world/test_room.py`:** Added eight tests for `Room.tickExcrement`, previously uncovered. Using the room's real 3×3 grid and a `SimpleNamespace(excrementDecayTicks=…)` config stub, they drive each branch: a living entity spawns excrement when `random.randrange` is monkeypatched to hit the 0.1% chance (and does **not** when it misses); an entity at location `-1` is skipped; a bogus location id exercises the `KeyError` guard without crashing; excrement below the decay threshold is left in place; expired excrement on an empty location decays into grass; and grass placement is correctly blocked by an existing `Grass` and by a solid `Stone`.
