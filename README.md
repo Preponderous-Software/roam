@@ -49,6 +49,17 @@ Right Mouse (inventory slot) | Select inventory slot (inventory screen)
 ## Run Script (Linux Only)
 There is also a run.sh script you can execute if you're on linux which will automatically attempt to install the dependencies for you.
 
+## Windows Installation Wizard
+On Windows you can use the `install.ps1` wizard instead of running the steps above by hand. It checks that Python and pip are available, installs pygame and the rest of the dependencies, and creates Desktop and Start Menu shortcuts so you can launch the game without using the command line.
+
+1. [Clone or download](#clone) the repository.
+2. Right-click `install.ps1` and choose **Run with PowerShell**.
+   - If Windows blocks the script, open PowerShell in the project folder and run:
+     > powershell -ExecutionPolicy Bypass -File .\install.ps1
+3. Follow the prompts. When it finishes, launch Roam from the **Roam** Desktop/Start Menu shortcut, or by double-clicking `run.bat`.
+
+If Python is not installed, the wizard opens the [Python download page](https://www.python.org/downloads/) for you — install it (make sure **Add python.exe to PATH** is checked) and run the wizard again.
+
 ## Support
 You can find the support discord server [here](https://discord.gg/49J4RHQxhy).
 
