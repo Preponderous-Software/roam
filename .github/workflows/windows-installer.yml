@@ -93,8 +93,10 @@ jobs:
           $ErrorActionPreference = "Stop"
           $exe = "dist/Roam/Roam.exe"
           if (-not (Test-Path $exe)) { throw "Expected built executable at $exe" }
-          & $exe --selftest
-          if ($LASTEXITCODE -ne 0) { throw "Frozen bundle selftest failed (exit $LASTEXITCODE)" }
+          # Roam.exe is a windowed (console=False) app, so `& $exe` does not set
+          # $LASTEXITCODE; Start-Process -Wait -PassThru reliably captures it.
+          $proc = Start-Process -FilePath $exe -ArgumentList "--selftest" -Wait -PassThru -NoNewWindow
+          if ($proc.ExitCode -ne 0) { throw "Frozen bundle selftest failed (exit $($proc.ExitCode))" }
           Write-Host "Frozen bundle selftest passed."
 
       - name: Upload the build artifact
