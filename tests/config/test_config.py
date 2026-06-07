@@ -38,6 +38,37 @@ def test_defaults():
     assert config.pushableStone == True
 
 
+def test_saves_base_directory_is_relative_on_non_windows(monkeypatch):
+    monkeypatch.setattr(os, "name", "posix")
+    assert Config.getSavesBaseDirectory() == "saves"
+
+
+def test_saves_base_directory_uses_appdata_on_windows(monkeypatch):
+    monkeypatch.setattr(os, "name", "nt")
+    appData = os.path.join(os.sep, "fake", "AppData", "Roaming")
+    monkeypatch.setenv("APPDATA", appData)
+    assert Config.getSavesBaseDirectory() == os.path.join(appData, "Roam", "saves")
+
+
+def test_saves_base_directory_falls_back_when_appdata_missing(monkeypatch):
+    monkeypatch.setattr(os, "name", "nt")
+    monkeypatch.delenv("APPDATA", raising=False)
+    assert Config.getSavesBaseDirectory() == "saves"
+
+
+def test_default_save_directory_is_under_saves_base(monkeypatch):
+    monkeypatch.setattr(os, "name", "posix")
+    assert Config.getDefaultSaveDirectory() == os.path.join("saves", "defaultsavefile")
+
+
+def test_config_uses_platform_default_save_directory(monkeypatch):
+    # With no explicit pathToSaveDirectory in config.yml (isolate_config_file
+    # writes an empty file), the platform default save directory is used.
+    monkeypatch.setattr(os, "name", "posix")
+    config = Config()
+    assert config.pathToSaveDirectory == os.path.join("saves", "defaultsavefile")
+
+
 def test_toggle_camera_follow_player():
     config = Config()
 
