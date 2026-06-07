@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-06-07 | 1+ | refactor: Replace the 10 near-identical hotbar `elif` branches in `InventoryScreen.handleKeyDownEvent` with a data-driven `_handleHotbarKey` loop (preserving the `hotbar_0 → slot 9` wrap); +3 tests (closes #410) |
 | 2026-06-07 | 1+ | fix: Correct release versioning — `version.txt` had been stale at `0.8.0-SNAPSHOT` while `0.9.0`/`0.10.0` were already released, leading to an erroneous `v0.9.0` tag/release (now deleted); set `version.txt` to `0.11.0-SNAPSHOT`, switch the release workflow to the repo's bare-number tag convention (`0.11.0`, not `v0.11.0`), and fix `UpdateChecker` to read the `/releases` list (every Roam release is a GitHub pre-release, so `/releases/latest` 404s) |
 | 2026-06-07 | 1+ | feat: In-game update notifier + version plumbing — bundle `version.txt` in `roam.spec` and stamp the release tag into it (so packaged builds know their version, previously blank), add `Config.getVersion()`, and add an `UpdateChecker` that checks GitHub Releases on a daemon thread (fail-silent, `checkForUpdates` config toggle) and shows a "press U to download" banner on the main menu (closes #413, #414) |
 | 2026-06-07 | 1+ | fix: Prevent stacking floor tiles — `executePlaceAction` now blocks placing a `WoodFloor`/`StoneFloor` where a floor already exists (via a new `locationContainsFloor` helper), setting "A floor is already here" and consuming no item; +2 tests (closes #345) |

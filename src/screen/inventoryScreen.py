@@ -72,26 +72,17 @@ class InventoryScreen:
             self.switchToWorldScreen()
         elif key == kb.getKey("screenshot"):
             takeScreenshot(self.graphik.getGameDisplay())
-        elif key == kb.getKey("hotbar_1"):
-            self.swapCursorSlotWithInventorySlotByIndex(0)
-        elif key == kb.getKey("hotbar_2"):
-            self.swapCursorSlotWithInventorySlotByIndex(1)
-        elif key == kb.getKey("hotbar_3"):
-            self.swapCursorSlotWithInventorySlotByIndex(2)
-        elif key == kb.getKey("hotbar_4"):
-            self.swapCursorSlotWithInventorySlotByIndex(3)
-        elif key == kb.getKey("hotbar_5"):
-            self.swapCursorSlotWithInventorySlotByIndex(4)
-        elif key == kb.getKey("hotbar_6"):
-            self.swapCursorSlotWithInventorySlotByIndex(5)
-        elif key == kb.getKey("hotbar_7"):
-            self.swapCursorSlotWithInventorySlotByIndex(6)
-        elif key == kb.getKey("hotbar_8"):
-            self.swapCursorSlotWithInventorySlotByIndex(7)
-        elif key == kb.getKey("hotbar_9"):
-            self.swapCursorSlotWithInventorySlotByIndex(8)
-        elif key == kb.getKey("hotbar_0"):
-            self.swapCursorSlotWithInventorySlotByIndex(9)
+        else:
+            self._handleHotbarKey(key)
+
+    def _handleHotbarKey(self, key):
+        # hotbar_1..hotbar_9 select inventory slots 0..8 and hotbar_0 selects
+        # slot 9 (the "10th" hotbar key wraps to index 9).
+        kb = self.keyBindings
+        for index in range(10):
+            if key == kb.getKey("hotbar_" + str((index + 1) % 10)):
+                self.swapCursorSlotWithInventorySlotByIndex(index)
+                return
 
     def switchToWorldScreen(self):
         self.nextScreen = ScreenType.WORLD_SCREEN
