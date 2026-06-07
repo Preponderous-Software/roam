@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-06-07 | 1+ | chore: Bump GitHub Actions to their Node 24 majors across all workflows — `actions/checkout` v4→v6, `actions/setup-python` v5→v6, `actions/upload-artifact` v4→v7 — clearing the Node.js 20 deprecation warnings |
 | 2026-06-07 | 1+ | feat: Add a release workflow — on a `v*` tag push, build and attach `Roam-<version>-Setup.exe`, a portable Windows zip, and `Roam-<version>.dmg` to an auto-generated GitHub Release (so distributables persist beyond the ~90-day CI-artifact retention) |
 | 2026-06-07 | 1+ | feat: Package Roam for macOS (#394) — add a macOS-only PyInstaller `BUNDLE` step to `roam.spec` (`dist/Roam.app`), route user data to `~/Library/Application Support/Roam` on macOS (`Config.getUserDataDirectory`/`getSavesBaseDirectory`), and add a `macos-latest` CI job that builds the `.app`, runs `--selftest`, builds a `.dmg`, and uploads both |
 | 2026-06-07 | 1+ | feat: Add a Windows setup wizard installer (#385, phase 2) — `roam.iss` Inno Setup script wrapping the PyInstaller build into `RoamSetup.exe` (installs to Program Files, Start Menu + optional Desktop shortcuts, uninstaller/Add-Remove Programs); CI builds the installer and runs a silent install → frozen `--selftest` → uninstall round-trip and uploads `RoamSetup.exe`. Completes #385 |
@@ -84,6 +85,10 @@ logged in detail below.
 | 2022-08-08 | 21 | Create version.txt; Update README.md; Modified README. (+9 more) |
 
 ## AI Agent Sessions
+
+### 2026-06-07 — Bump GitHub Actions to Node 24 majors
+- **`.github/workflows/{tests,windows-installer,macos-package,release}.yml`:** Bumped `actions/checkout@v4 → @v6`, `actions/setup-python@v5 → @v6`, and `actions/upload-artifact@v4 → @v7` (the current latest majors, all on Node 24), clearing the Node.js 20 deprecation warnings GitHub emitted on every run (Node 20 is force-removed from runners on 2026-09-16). Versions were confirmed against `repos/actions/<name>/releases/latest`.
+- **Validation:** Pure CI-config change; no source touched. The `checkout`/`setup-python`/`upload-artifact` bumps are exercised directly by this PR's `test`, `windows-installer`, `package`, and `package-macos` jobs; `release.yml` (tag-only) uses the same `checkout`/`setup-python` versions proven by those jobs. `.github/workflows/` is on the do-not-auto-merge list → manual review.
 
 ### 2026-06-07 — Add a tag-triggered release workflow
 - **`.github/workflows/release.yml` (new):** Triggers on `v*` tag pushes (`permissions: contents: write`). A `create-release` job creates the GitHub Release for the tag (idempotent — skipped if it already exists) with `gh release create --generate-notes`. A `windows` job (windows-latest) builds the PyInstaller exe, compiles the Inno Setup installer with the tag's version (`ISCC /DMyAppVersion=<tag without leading v>`), produces `Roam-<version>-Setup.exe` and a `Roam-<version>-windows-portable.zip`, and attaches them via `gh release upload --clobber`. A `macos` job (macos-latest) builds the `.app`, packages `Roam-<version>.dmg`, and attaches it. All uploads use the built-in `GITHUB_TOKEN`; no third-party actions.

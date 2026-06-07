@@ -14,10 +14,10 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           # Match the Linux Tests job. requirements.txt now uses lower bounds,
           # so the wizard's `pip install -r requirements.txt` resolves modern
@@ -61,10 +61,10 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -100,7 +100,7 @@ jobs:
           Write-Host "Frozen bundle selftest passed."
 
       - name: Upload the build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: roam-windows
           path: dist/Roam/
@@ -143,7 +143,7 @@ jobs:
           Write-Host "Install / self-test / uninstall round-trip passed."
 
       - name: Upload the installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: roam-setup
           path: installer-output/RoamSetup.exe
