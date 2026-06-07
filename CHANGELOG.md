@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-06-07 | 1+ | chore: Set version to 0.9.0 for release |
 | 2026-06-07 | 1+ | feat: In-game update notifier + version plumbing — bundle `version.txt` in `roam.spec` and stamp the release tag into it (so packaged builds know their version, previously blank), add `Config.getVersion()`, and add an `UpdateChecker` that checks GitHub Releases on a daemon thread (fail-silent, `checkForUpdates` config toggle) and shows a "press U to download" banner on the main menu (closes #413, #414) |
 | 2026-06-07 | 1+ | fix: Prevent stacking floor tiles — `executePlaceAction` now blocks placing a `WoodFloor`/`StoneFloor` where a floor already exists (via a new `locationContainsFloor` helper), setting "A floor is already here" and consuming no item; +2 tests (closes #345) |
 | 2026-06-07 | 1+ | ux: install.ps1 — drop `--quiet` so dependency-install progress is visible (no more "frozen" hang) and pip's real error shows on failure; the completion message now warns that shortcuts are anchored to the folder and prints where saves/settings/screenshots live (`%APPDATA%\Roam`) (closes #400, #401) |
