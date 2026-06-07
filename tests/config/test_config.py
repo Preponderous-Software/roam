@@ -403,6 +403,13 @@ def test_write_key_values_updates_appends_and_preserves(tmp_path, monkeypatch):
     assert "# a comment" in content
 
 
+def test_get_rooms_directory_format():
+    config = Config()
+    config.pathToSaveDirectory = "saves/myworld"
+    # Single source of truth for the <saveDir>/rooms directory.
+    assert config.getRoomsDirectory() == "saves/myworld/rooms"
+
+
 def test_get_room_file_path_format():
     config = Config()
     config.pathToSaveDirectory = "saves/myworld"

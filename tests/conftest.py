@@ -27,6 +27,7 @@ def test_config(tmp_path):
     config.ticksPerSecond = 30
     # Delegate to the real implementation so room-path construction reflects
     # the (possibly per-test overridden) pathToSaveDirectory.
+    config.getRoomsDirectory = lambda: Config.getRoomsDirectory(config)
     config.getRoomFilePath = lambda x, y: Config.getRoomFilePath(config, x, y)
     return config
 
