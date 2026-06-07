@@ -52,13 +52,25 @@ def test_unparseable_version_is_not_newer():
 # --- _fetchLatestVersion (network mocked) -----------------------------------
 
 
-def test_fetch_latest_version_parses_tag():
+def test_fetch_latest_version_parses_newest_tag_from_list():
     checker = _checker()
+    # /releases returns a list, newest first; the first non-draft tag is taken.
+    releases = [{"tag_name": "0.10.0", "draft": False}, {"tag_name": "0.9.0"}]
     with patch("update.updateChecker.urllib.request.urlopen") as mockUrlopen, patch(
-        "update.updateChecker.json.load", return_value={"tag_name": "v0.9.0"}
+        "update.updateChecker.json.load", return_value=releases
     ):
         mockUrlopen.return_value.__enter__.return_value = MagicMock()
-        assert checker._fetchLatestVersion() == "0.9.0"
+        assert checker._fetchLatestVersion() == "0.10.0"
+
+
+def test_fetch_latest_version_skips_drafts():
+    checker = _checker()
+    releases = [{"tag_name": "0.11.0", "draft": True}, {"tag_name": "0.10.0"}]
+    with patch("update.updateChecker.urllib.request.urlopen") as mockUrlopen, patch(
+        "update.updateChecker.json.load", return_value=releases
+    ):
+        mockUrlopen.return_value.__enter__.return_value = MagicMock()
+        assert checker._fetchLatestVersion() == "0.10.0"
 
 
 def test_fetch_latest_version_returns_none_on_network_error():
@@ -69,10 +81,10 @@ def test_fetch_latest_version_returns_none_on_network_error():
         assert checker._fetchLatestVersion() is None
 
 
-def test_fetch_latest_version_none_when_tag_missing():
+def test_fetch_latest_version_none_when_no_releases():
     checker = _checker()
     with patch("update.updateChecker.urllib.request.urlopen") as mockUrlopen, patch(
-        "update.updateChecker.json.load", return_value={}
+        "update.updateChecker.json.load", return_value=[]
     ):
         mockUrlopen.return_value.__enter__.return_value = MagicMock()
         assert checker._fetchLatestVersion() is None

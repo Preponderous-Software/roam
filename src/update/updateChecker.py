@@ -10,9 +10,11 @@ from gameLogging.logger import getLogger
 
 _logger = getLogger(__name__)
 
-RELEASES_API_URL = (
-    "https://api.github.com/repos/Preponderous-Software/roam/releases/latest"
-)
+# The releases list (newest first), not /releases/latest: every Roam release is
+# published as a GitHub "pre-release", and /releases/latest excludes those (it
+# returns 404 when there is no full release), so the list endpoint is the only
+# reliable way to find the newest tag.
+RELEASES_API_URL = "https://api.github.com/repos/Preponderous-Software/roam/releases"
 RELEASES_PAGE_URL = "https://github.com/Preponderous-Software/roam/releases"
 
 
@@ -65,11 +67,15 @@ class UpdateChecker:
                 },
             )
             with urllib.request.urlopen(request, timeout=5) as response:
-                data = json.load(response)
-            tag = data.get("tag_name")
-            if not tag:
-                return None
-            return tag.lstrip("v")
+                releases = json.load(response)
+            # The list is newest-first; take the first non-draft release's tag.
+            for release in releases:
+                if release.get("draft"):
+                    continue
+                tag = release.get("tag_name")
+                if tag:
+                    return tag.lstrip("v")
+            return None
         except Exception as e:
             _logger.debug("update check failed", error=str(e))
             return None
