@@ -2,7 +2,6 @@
 # @since August 6th, 2022
 import os
 import shutil
-from pathlib import Path
 
 import pygame
 
@@ -29,15 +28,17 @@ class Config:
 
     @staticmethod
     def getBundledConfigFilePath():
-        # The config.yml shipped with the app (read-only when frozen).
-        return Path(getBundleDirectory()) / "config.yml"
+        # The config.yml shipped with the app (read-only when frozen). Uses
+        # os.path (not pathlib) so it stays correct under os.name monkeypatching
+        # in cross-platform tests.
+        return os.path.join(getBundleDirectory(), "config.yml")
 
     @staticmethod
     def getConfigFilePath():
         # The user's read/write config file, in the writable user-data
         # directory. From source this resolves to the repository root, matching
         # the previous behavior.
-        return Path(Config.getUserDataDirectory()) / "config.yml"
+        return os.path.join(Config.getUserDataDirectory(), "config.yml")
 
     @staticmethod
     def ensureUserConfigExists():
@@ -47,10 +48,10 @@ class Config:
         # or the user config already exists.
         userConfig = Config.getConfigFilePath()
         bundled = Config.getBundledConfigFilePath()
-        if userConfig == bundled or userConfig.exists():
+        if str(userConfig) == str(bundled) or os.path.exists(userConfig):
             return
-        if bundled.exists():
-            os.makedirs(userConfig.parent, exist_ok=True)
+        if os.path.exists(bundled):
+            os.makedirs(os.path.dirname(userConfig), exist_ok=True)
             shutil.copyfile(bundled, userConfig)
 
     @staticmethod
@@ -108,10 +109,10 @@ class Config:
     def readConfigFile(cls):
         configValues = {}
         configFilePath = cls.getConfigFilePath()
-        if not configFilePath.exists():
+        if not os.path.exists(configFilePath):
             return configValues
         try:
-            with configFilePath.open("r", encoding="utf-8") as configFile:
+            with open(configFilePath, "r", encoding="utf-8") as configFile:
                 for line in configFile:
                     strippedLine = line.strip()
                     if strippedLine == "" or strippedLine.startswith("#"):
@@ -309,9 +310,10 @@ class Config:
     def _writeKeyValues(self, savedValues, errorMessage):
         configFilePath = self.getConfigFilePath()
         lines = []
-        if configFilePath.exists():
+        if os.path.exists(configFilePath):
             try:
-                lines = configFilePath.read_text(encoding="utf-8").splitlines()
+                with open(configFilePath, "r", encoding="utf-8") as configFile:
+                    lines = configFile.read().splitlines()
             except (OSError, UnicodeDecodeError):
                 lines = []
 
@@ -336,7 +338,8 @@ class Config:
                 newLines.append(key + ": " + value)
 
         try:
-            configFilePath.write_text("\n".join(newLines) + "\n", encoding="utf-8")
+            with open(configFilePath, "w", encoding="utf-8") as configFile:
+                configFile.write("\n".join(newLines) + "\n")
         except OSError as e:
             _logger.warning(
                 errorMessage,

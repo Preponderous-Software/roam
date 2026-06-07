@@ -1,5 +1,5 @@
+import os
 import sys
-from pathlib import Path
 
 import appPaths
 
@@ -9,7 +9,7 @@ def test_is_frozen_false_when_running_from_source():
 
 
 def test_bundle_directory_is_repo_root_from_source():
-    expected = str(Path(appPaths.__file__).resolve().parents[1])
+    expected = os.path.dirname(os.path.dirname(os.path.realpath(appPaths.__file__)))
     assert appPaths.getBundleDirectory() == expected
 
 

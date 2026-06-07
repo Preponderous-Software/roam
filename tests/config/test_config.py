@@ -189,16 +189,13 @@ def test_reads_values_from_config_file(tmp_path, monkeypatch):
     assert config.black == (1, 2, 3)
 
 
-def test_handles_read_errors_with_defaults(monkeypatch):
-    class UnreadableConfigPath:
-        def exists(self):
-            return True
-
-        def open(self, *args, **kwargs):
-            raise OSError("Cannot read file")
-
+def test_handles_read_errors_with_defaults(tmp_path, monkeypatch):
+    # Point the config path at a directory: it "exists" but open() raises
+    # IsADirectoryError (an OSError), so Config must fall back to defaults.
+    unreadable = tmp_path / "config_dir"
+    unreadable.mkdir()
     monkeypatch.setattr(
-        Config, "getConfigFilePath", staticmethod(lambda: UnreadableConfigPath())
+        Config, "getConfigFilePath", staticmethod(lambda: unreadable)
     )
 
     config = Config()
