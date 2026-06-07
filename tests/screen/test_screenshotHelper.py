@@ -1,4 +1,5 @@
 import os
+import sys
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
@@ -18,3 +19,12 @@ def test_screenshots_folder_uses_appdata_on_windows(monkeypatch):
     appData = os.path.join(os.sep, "fake", "AppData", "Roaming")
     monkeypatch.setenv("APPDATA", appData)
     assert getScreenshotsFolder() == os.path.join(appData, "Roam", "screenshots")
+
+
+def test_screenshots_folder_uses_application_support_on_macos(monkeypatch):
+    monkeypatch.setattr(os, "name", "posix")
+    monkeypatch.setattr(sys, "platform", "darwin")
+    expected = os.path.join(
+        os.path.expanduser("~"), "Library", "Application Support", "Roam", "screenshots"
+    )
+    assert getScreenshotsFolder() == expected

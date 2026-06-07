@@ -1,0 +1,77 @@
+name: macOS Package
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  package-macos:
+    # Build the macOS .app bundle and .dmg, and smoke-test that the frozen
+    # bundle can locate its data files (assets, schemas, config).
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies + PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Generate the .icns icon from the bundled PNG
+        run: |
+          set -euo pipefail
+          iconset=icon.iconset
+          mkdir -p "$iconset"
+          for size in 16 32 128 256 512; do
+            double=$((size * 2))
+            sips -z $size  $size  src/media/icon.PNG --out "$iconset/icon_${size}x${size}.png"
+            sips -z $double $double src/media/icon.PNG --out "$iconset/icon_${size}x${size}@2x.png"
+          done
+          iconutil -c icns "$iconset" -o src/media/icon.icns
+
+      - name: Build the .app bundle
+        run: pyinstaller roam.spec --noconfirm
+
+      - name: Smoke-test the .app bundle
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          set -euo pipefail
+          exe="dist/Roam.app/Contents/MacOS/Roam"
+          if [ ! -x "$exe" ]; then
+            echo "Expected app executable at $exe" >&2
+            exit 1
+          fi
+          "$exe" --selftest
+          echo ".app bundle selftest passed."
+
+      - name: Build the .dmg
+        run: |
+          set -euo pipefail
+          hdiutil create -volname Roam -srcfolder dist/Roam.app -ov -format UDZO dist/Roam.dmg
+          test -f dist/Roam.dmg
+
+      - name: Upload the .app bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: roam-macos-app
+          path: dist/Roam.app
+
+      - name: Upload the .dmg
+        uses: actions/upload-artifact@v4
+        with:
+          name: roam-macos-dmg
+          path: dist/Roam.dmg

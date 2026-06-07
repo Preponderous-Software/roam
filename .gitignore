@@ -10,6 +10,7 @@ tests/stats/*.json
 cov.xml
 tests/*/*.json
 src/media/icon.ico
+src/media/icon.icns
 
 # PyInstaller build output
 build/
