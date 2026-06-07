@@ -1,10 +1,12 @@
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from entity.apple import Apple
+from entity.excrement import Excrement
+from entity.grass import Grass
 from entity.living.chicken import Chicken
+from entity.stone import Stone
 from src.world.room import Room
-from src.entity.grass import Grass
-from src.entity.stone import Stone
 
 
 def createRoom():
@@ -251,3 +253,133 @@ def test_reproduce_living_entities_respects_reproduction_cooldown():
         if isinstance(entity, Chicken):
             chickenCount += 1
     assert chickenCount == 2
+
+
+def _firstLocation(room):
+    grid = room.getGrid()
+    return grid.getLocation(list(grid.getLocations().keys())[0])
+
+
+def _entitiesOfType(location, entityType):
+    return [
+        entity
+        for entity in location.getEntities().values()
+        if isinstance(entity, entityType)
+    ]
+
+
+def _totalExcrement(room):
+    grid = room.getGrid()
+    return sum(
+        len(_entitiesOfType(grid.getLocation(locationId), Excrement))
+        for locationId in grid.getLocations()
+    )
+
+
+def test_tick_excrement_spawns_excrement_for_living_entity(monkeypatch):
+    room = createRoom()
+    location = _firstLocation(room)
+    entity = MagicMock()
+    entity.getID.return_value = "e1"
+    entity.getLocationID.return_value = location.getID()
+    room.addLivingEntity(entity)
+    # randrange returns 1, so "> 1" is False -> the entity produces excrement.
+    monkeypatch.setattr("src.world.room.random.randrange", lambda _start, _stop: 1)
+
+    room.tickExcrement(0, SimpleNamespace(excrementDecayTicks=100))
+
+    assert len(_entitiesOfType(location, Excrement)) == 1
+
+
+def test_tick_excrement_does_not_spawn_when_chance_misses(monkeypatch):
+    room = createRoom()
+    location = _firstLocation(room)
+    entity = MagicMock()
+    entity.getID.return_value = "e1"
+    entity.getLocationID.return_value = location.getID()
+    room.addLivingEntity(entity)
+    # randrange returns 2, so "> 1" is True -> the spawn branch is skipped.
+    monkeypatch.setattr("src.world.room.random.randrange", lambda _start, _stop: 2)
+
+    room.tickExcrement(0, SimpleNamespace(excrementDecayTicks=100))
+
+    assert _entitiesOfType(location, Excrement) == []
+
+
+def test_tick_excrement_skips_entity_with_no_location(monkeypatch):
+    room = createRoom()
+    entity = MagicMock()
+    entity.getID.return_value = "e1"
+    entity.getLocationID.return_value = "-1"
+    room.addLivingEntity(entity)
+    monkeypatch.setattr("src.world.room.random.randrange", lambda _start, _stop: 1)
+
+    room.tickExcrement(0, SimpleNamespace(excrementDecayTicks=100))
+
+    assert _totalExcrement(room) == 0
+
+
+def test_tick_excrement_handles_missing_location(monkeypatch):
+    room = createRoom()
+    entity = MagicMock()
+    entity.getID.return_value = "e1"
+    entity.getLocationID.return_value = "nonexistent-location"
+    room.addLivingEntity(entity)
+    monkeypatch.setattr("src.world.room.random.randrange", lambda _start, _stop: 1)
+
+    # getGrid().getLocation raises KeyError for the bogus id; tickExcrement
+    # must swallow it rather than crash.
+    room.tickExcrement(0, SimpleNamespace(excrementDecayTicks=100))
+
+    assert _totalExcrement(room) == 0
+
+
+def test_tick_excrement_does_not_decay_before_threshold():
+    room = createRoom()
+    location = _firstLocation(room)
+    room.addEntityToLocation(Excrement(0), location)
+
+    # tick - tickCreated = 10 < 100, so the excrement is left in place.
+    room.tickExcrement(10, SimpleNamespace(excrementDecayTicks=100))
+
+    assert len(_entitiesOfType(location, Excrement)) == 1
+    assert _entitiesOfType(location, Grass) == []
+
+
+def test_tick_excrement_decays_into_grass():
+    room = createRoom()
+    location = _firstLocation(room)
+    room.addEntityToLocation(Excrement(0), location)
+
+    # tick - tickCreated = 10 >= 5 and the location is otherwise empty, so the
+    # excrement decays into grass.
+    room.tickExcrement(10, SimpleNamespace(excrementDecayTicks=5))
+
+    assert _entitiesOfType(location, Excrement) == []
+    assert len(_entitiesOfType(location, Grass)) == 1
+
+
+def test_tick_excrement_does_not_place_grass_over_existing_grass():
+    room = createRoom()
+    location = _firstLocation(room)
+    room.addEntityToLocation(Grass(), location)
+    room.addEntityToLocation(Excrement(0), location)
+
+    room.tickExcrement(10, SimpleNamespace(excrementDecayTicks=5))
+
+    # The excrement is removed, but no second grass is placed on top.
+    assert _entitiesOfType(location, Excrement) == []
+    assert len(_entitiesOfType(location, Grass)) == 1
+
+
+def test_tick_excrement_does_not_place_grass_over_solid_entity():
+    room = createRoom()
+    location = _firstLocation(room)
+    room.addEntityToLocation(Stone(), location)
+    room.addEntityToLocation(Excrement(0), location)
+
+    room.tickExcrement(10, SimpleNamespace(excrementDecayTicks=5))
+
+    assert _entitiesOfType(location, Excrement) == []
+    assert _entitiesOfType(location, Grass) == []
+    assert len(_entitiesOfType(location, Stone)) == 1
