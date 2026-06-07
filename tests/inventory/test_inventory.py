@@ -1,4 +1,5 @@
 from src.entity.grass import Grass
+from src.entity.stone import Stone
 from src.inventory import inventory
 
 
@@ -206,3 +207,36 @@ def test_placeIntoFirstAvailableNonHotbarSlot_non_hotbar_full():
     item = createGrassEntity()
     result = inventoryInstance.placeIntoFirstAvailableNonHotbarSlot(item)
     assert result is False
+
+
+def test_hasAvailableSlotFor_empty_inventory():
+    inventoryInstance = createInventory()
+
+    # Every slot is empty, so the first one satisfies the request.
+    assert inventoryInstance.hasAvailableSlotFor(Grass) is True
+
+
+def test_hasAvailableSlotFor_matching_stack_with_room():
+    inventoryInstance = createInventory()
+    slots = inventoryInstance.getInventorySlots()
+
+    # Leave no empty slot: slot 0 holds a single Grass (room to spare, well
+    # under the max stack size of 20) and every other slot is filled with a
+    # non-matching Stone. The only way a True result can come back is via the
+    # matching-stack-with-room branch, not the empty-slot branch.
+    slots[0].add(createGrassEntity())
+    for slot in slots[1:]:
+        slot.add(Stone())
+
+    assert inventoryInstance.hasAvailableSlotFor(Grass) is True
+
+
+def test_hasAvailableSlotFor_full_inventory_no_match():
+    inventoryInstance = createInventory()
+
+    # Occupy every slot with a non-matching item: no empty slot and no Grass
+    # stack to add to.
+    for slot in inventoryInstance.getInventorySlots():
+        slot.add(Stone())
+
+    assert inventoryInstance.hasAvailableSlotFor(Grass) is False
