@@ -1742,7 +1742,8 @@ class WorldScreen:
 
     def savePlayerInventoryToFile(self):
         inventoryJsonReaderWriter = InventoryJsonReaderWriter(self.config)
-        self.persistence.savePlayerInventoryToFile(inventoryJsonReaderWriter)
+        if not self.persistence.savePlayerInventoryToFile(inventoryJsonReaderWriter):
+            self.status.set("Could not save inventory (invalid data)")
 
     def loadPlayerInventoryFromFile(self):
         inventoryJsonReaderWriter = InventoryJsonReaderWriter(self.config)
@@ -1750,7 +1751,8 @@ class WorldScreen:
 
     def saveCodexToFile(self):
         codexReaderWriter = CodexJsonReaderWriter(self.config)
-        codexReaderWriter.save(self.codex.getDiscoveredEntities())
+        if not codexReaderWriter.save(self.codex.getDiscoveredEntities()):
+            self.status.set("Could not save codex (invalid data)")
 
     def loadCodexFromFile(self):
         codexReaderWriter = CodexJsonReaderWriter(self.config)
