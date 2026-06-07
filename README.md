@@ -60,6 +60,9 @@ On Windows you can use the `install.ps1` wizard instead of running the steps abo
 
 If Python is not installed, the wizard opens the [Python download page](https://www.python.org/downloads/) for you — install it (make sure **Add python.exe to PATH** is checked) and run the wizard again.
 
+### Where saves are stored
+On Windows, save files live under `%APPDATA%\Roam\saves` (e.g. `C:\Users\<you>\AppData\Roaming\Roam\saves`) so they stay with your user account rather than in the install folder. On Linux and macOS they remain in the `saves/` directory next to the game. You can override the location by setting `pathToSaveDirectory` in `config.yml`.
+
 ## Support
 You can find the support discord server [here](https://discord.gg/49J4RHQxhy).
 

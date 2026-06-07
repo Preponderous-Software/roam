@@ -1,5 +1,6 @@
 # @author Daniel McCoy Stephenson
 # @since August 6th, 2022
+import os
 from pathlib import Path
 
 import pygame
@@ -13,6 +14,25 @@ class Config:
     @staticmethod
     def getConfigFilePath():
         return Path(__file__).resolve().parents[2] / "config.yml"
+
+    @staticmethod
+    def getSavesBaseDirectory():
+        # The single source of truth for where save folders live. On Windows we
+        # store them under %APPDATA% (e.g. C:\Users\<you>\AppData\Roaming\Roam\saves)
+        # so saves live with the user rather than in the install directory, which
+        # may be read-only (e.g. Program Files). Other platforms keep the
+        # repository-relative "saves" directory.
+        if os.name == "nt":
+            appData = os.environ.get("APPDATA")
+            if appData:
+                return os.path.join(appData, "Roam", "saves")
+        return "saves"
+
+    @staticmethod
+    def getDefaultSaveDirectory():
+        # The default save slot, used when config.yml does not pin
+        # pathToSaveDirectory explicitly.
+        return os.path.join(Config.getSavesBaseDirectory(), "defaultsavefile")
 
     @staticmethod
     def parseConfigValue(value):
@@ -202,7 +222,7 @@ class Config:
             configValues, "cropGrowthTicks", 1800
         )  # 1 minute per stage at 30 tps
         self.pathToSaveDirectory = self.getStringValue(
-            configValues, "pathToSaveDirectory", "saves/defaultsavefile"
+            configValues, "pathToSaveDirectory", Config.getDefaultSaveDirectory()
         )
 
         # dynamic (can be changed in game)

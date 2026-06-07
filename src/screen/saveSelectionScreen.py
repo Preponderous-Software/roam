@@ -22,7 +22,7 @@ class SaveSelectionScreen:
         self.initializeWorldScreen = initializeWorldScreen
         self.nextScreen = ScreenType.MAIN_MENU_SCREEN
         self.changeScreen = False
-        self.savesBaseDirectory = "saves"
+        self.savesBaseDirectory = Config.getSavesBaseDirectory()
         self.scrollOffset = 0
         self.sortMode = self.SORT_BY_DATE
         self.cachedSaves = None
