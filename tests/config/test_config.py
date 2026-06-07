@@ -82,6 +82,17 @@ def test_config_uses_platform_default_save_directory(monkeypatch):
     assert config.pathToSaveDirectory == os.path.join("saves", "defaultsavefile")
 
 
+def test_get_version_reads_bundled_version_file(monkeypatch, tmp_path):
+    (tmp_path / "version.txt").write_text("1.2.3", encoding="utf-8")
+    monkeypatch.setattr("src.config.config.getBundleDirectory", lambda: str(tmp_path))
+    assert Config.getVersion() == "1.2.3"
+
+
+def test_get_version_returns_unknown_when_missing(monkeypatch, tmp_path):
+    monkeypatch.setattr("src.config.config.getBundleDirectory", lambda: str(tmp_path))
+    assert Config.getVersion() == "unknown"
+
+
 def test_user_data_directory_is_bundle_dir_from_source(monkeypatch):
     monkeypatch.setattr(os, "name", "posix")
     monkeypatch.setattr(sys, "platform", "linux")
