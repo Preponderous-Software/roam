@@ -76,6 +76,16 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-06-06 — Consolidate room save-file path into a single source of truth (issue #373)
+- **`src/config/config.py`:** Added `Config.getRoomFilePath(self, x, y)` — the single canonical builder for the `<saveDir>/rooms/room_<x>_<y>.json` layout.
+- **`src/world/map.py`, `src/world/roomPreloader.py`:** Replaced inline hand-concatenated path builds in `getRoom` / the preloader with `self.config.getRoomFilePath(x, y)`.
+- **`src/screen/worldScreenPersistence.py`:** `saveRoomToFile` now calls `getRoomFilePath`; removed the dead `buildRoomPath` method (it had zero callers).
+- **`src/screen/worldScreen.py`:** Removed the `_buildRoomFilePath` helper and routed its two call sites (`saveRoomToFileAsync`, entity-move save) through `config.getRoomFilePath`.
+- **`tests/conftest.py`:** The shared `test_config` mock (`MagicMock(spec=Config)`) now delegates `getRoomFilePath` to the real `Config.getRoomFilePath` so path construction reflects each test's `pathToSaveDirectory` — required because the logic moved behind a Config method the mock would otherwise stub out.
+- **`tests/config/test_config.py`:** Added `test_get_room_file_path_format` pinning the exact on-disk path string (including negative coordinates) that all save/load call sites depend on.
+- **Validation:** `python3 -m compileall src -q` clean; `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python3 -m pytest` — 462 passed (was 461; +1 new). The format string `"/rooms/room_"` now appears in exactly one place. Net −22 LOC.
+- **Learning Log:** `[not yet integrated]` — refines the cycle-2 lesson (roam-dev-loop#3): scoping formatters to *changed files* is still insufficient when a touched file carries pre-existing Black drift (`worldScreen.py` here), because `black <file>` reformats the whole file. The fix is to scope to changed *hunks* — after formatting, diff the touched file and revert any reformat that isn't part of the change (here, `worldScreen.py` was reverted and the two intended edits re-applied by hand).
+
 ### 2026-06-06 — Deduplicate the config-file rewrite loop (issue #366)
 - **`src/config/config.py`:** Extracted the read → update-matching-keys → append-new-keys → write-back loop into a new `Config._writeKeyValues(self, savedValues, errorMessage)` helper. `saveWindowSize` now just builds its `savedValues` dict and delegates; the differing log message is passed through `errorMessage` so existing log behavior is preserved.
 - **`src/config/keyBindings.py`:** `KeyBindings.saveToConfigFile` now builds its prefixed `savedValues` dict and delegates to `config._writeKeyValues(...)`, dropping the verbatim-duplicated loop (~37 lines). Removed the now-unused `getLogger` import and module-level `_logger` (the only use was the warning that moved into `Config`).

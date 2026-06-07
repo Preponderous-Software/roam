@@ -282,6 +282,14 @@ def test_write_key_values_updates_appends_and_preserves(tmp_path, monkeypatch):
     assert "# a comment" in content
 
 
+def test_get_room_file_path_format():
+    config = Config()
+    config.pathToSaveDirectory = "saves/myworld"
+    # Pins the on-disk room-file layout that all save/load call sites depend on
+    assert config.getRoomFilePath(2, -3) == "saves/myworld/rooms/room_2_-3.json"
+    assert config.getRoomFilePath(0, 0) == "saves/myworld/rooms/room_0_0.json"
+
+
 def test_saved_window_size_is_loaded_on_init(tmp_path, monkeypatch):
     configFilePath = tmp_path / "config.yml"
     configFilePath.write_text(

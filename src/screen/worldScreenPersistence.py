@@ -129,14 +129,7 @@ class WorldScreenPersistence:
             self.player.setInventory(inventory)
 
     def saveRoomToFile(self, room):
-        roomPath = (
-            self.config.pathToSaveDirectory
-            + "/rooms/room_"
-            + str(room.getX())
-            + "_"
-            + str(room.getY())
-            + ".json"
-        )
+        roomPath = self.config.getRoomFilePath(room.getX(), room.getY())
         _logger.info("saving room", path=roomPath)
         if not os.path.exists(self.config.pathToSaveDirectory + "/rooms"):
             os.makedirs(self.config.pathToSaveDirectory + "/rooms")
@@ -144,13 +137,3 @@ class WorldScreenPersistence:
         jsonRoom = self.roomJsonReaderWriter.generateJsonForRoom(room)
         with open(roomPath, "w") as outfile:
             json.dump(jsonRoom, outfile, indent=4)
-
-    def buildRoomPath(self, roomX, roomY):
-        return (
-            self.config.pathToSaveDirectory
-            + "/rooms/room_"
-            + str(roomX)
-            + "_"
-            + str(roomY)
-            + ".json"
-        )

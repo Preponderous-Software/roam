@@ -53,14 +53,7 @@ class Map:
                 return self._roomIndex[key]
 
         # attempt to load room if file exists, otherwise generate new room
-        nextRoomPath = (
-            self.config.pathToSaveDirectory
-            + "/rooms/room_"
-            + str(x)
-            + "_"
-            + str(y)
-            + ".json"
-        )
+        nextRoomPath = self.config.getRoomFilePath(x, y)
         if os.path.exists(nextRoomPath):
             if self._roomJsonReaderWriterFactory is not None:
                 roomJsonReaderWriter = self._roomJsonReaderWriterFactory()

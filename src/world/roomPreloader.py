@@ -69,14 +69,7 @@ class RoomPreloader:
             if gameMap.hasRoom(x, y):
                 return
 
-            nextRoomPath = (
-                self.config.pathToSaveDirectory
-                + "/rooms/room_"
-                + str(x)
-                + "_"
-                + str(y)
-                + ".json"
-            )
+            nextRoomPath = self.config.getRoomFilePath(x, y)
             if os.path.exists(nextRoomPath):
                 roomJsonReaderWriter = self._roomJsonReaderWriterFactory()
                 room = roomJsonReaderWriter.loadRoom(nextRoomPath)
