@@ -81,17 +81,20 @@ function Install-Dependencies {
         }
     }
 
-    Write-Host "Installing pygame..."
-    & $Python -m pip install pygame --pre --quiet
+    # Show pip's normal output (no --quiet): the downloads can take a minute, so
+    # the progress reassures the user it isn't frozen, and on failure pip's real
+    # error is visible instead of being swallowed.
+    Write-Host "Installing pygame (this can take a minute)..."
+    & $Python -m pip install pygame --pre
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Failed to install pygame." -ForegroundColor Red
+        Write-Host "Failed to install pygame. See the pip output above for the cause." -ForegroundColor Red
         return $false
     }
 
     Write-Host "Installing remaining dependencies from requirements.txt..."
-    & $Python -m pip install -r (Join-Path $RepoRoot "requirements.txt") --quiet
+    & $Python -m pip install -r (Join-Path $RepoRoot "requirements.txt")
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Failed to install requirements.txt dependencies." -ForegroundColor Red
+        Write-Host "Failed to install dependencies. See the pip output above for the cause." -ForegroundColor Red
         return $false
     }
 
@@ -190,6 +193,11 @@ Create-Shortcuts -IconPath $iconPath
 Write-Step "Installation complete"
 Write-Host "Roam is installed. Launch it from the Desktop or Start Menu shortcut," -ForegroundColor Green
 Write-Host "or by double-clicking run.bat in this folder." -ForegroundColor Green
+Write-Host ""
+Write-Host "The shortcuts point to this folder ($RepoRoot), so keep it where it is —"
+Write-Host "moving or deleting it will break them (re-run install.ps1 if you do move it)."
+$dataDir = Join-Path $env:APPDATA "Roam"
+Write-Host "Your saves, settings, and screenshots are stored in: $dataDir"
 
 if ($NonInteractive -or $NoLaunch) {
     Write-Host "Skipping launch (run was non-interactive or -NoLaunch was set)."
