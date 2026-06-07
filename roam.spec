@@ -26,6 +26,7 @@ a = Analysis(
         ("assets", "assets"),
         ("schemas", "schemas"),
         ("config.yml", "."),
+        ("version.txt", "."),
         (os.path.join("src", "media"), os.path.join("src", "media")),
     ],
     hiddenimports=[],

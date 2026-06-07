@@ -1,18 +1,21 @@
-import os
+import webbrowser
+
 import pygame
 from appContainer import component
 from config.config import Config
 
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
+from update.updateChecker import UpdateChecker
 
 
 # @author Daniel McCoy Stephenson
 @component
 class MainMenuScreen:
-    def __init__(self, graphik: Graphik, config: Config):
+    def __init__(self, graphik: Graphik, config: Config, updateChecker: UpdateChecker):
         self.graphik = graphik
         self.config = config
+        self.updateChecker = updateChecker
         self.running = True
         self.nextScreen = ScreenType.SAVE_SELECTION_SCREEN
         self.changeScreen = False
@@ -94,10 +97,10 @@ class MainMenuScreen:
 
     def drawVersion(self):
         if self._cachedVersionLabel is None:
-            if not os.path.isfile("version.txt"):
+            version = self.config.getVersion()
+            if not version or version == "unknown":
                 return
-            with open("version.txt", "r") as file:
-                self._cachedVersionLabel = "Roam v" + file.read().strip()
+            self._cachedVersionLabel = "Roam v" + version
 
         self.graphik.drawText(
             self._cachedVersionLabel,
@@ -107,13 +110,35 @@ class MainMenuScreen:
             (255, 255, 255),
         )
 
+    def drawUpdateBanner(self):
+        if not self.updateChecker.isUpdateAvailable():
+            return
+        x, y = self.graphik.getGameDisplay().get_size()
+        self.graphik.drawText(
+            "Update available: v"
+            + str(self.updateChecker.getLatestVersion())
+            + "  -  press U to download",
+            x / 2,
+            y * 0.42,
+            18,
+            (255, 220, 120),
+        )
+
+    def openUpdatePage(self):
+        if not self.updateChecker.isUpdateAvailable():
+            return
+        webbrowser.open(self.updateChecker.getReleasesUrl())
+
     def handleKeyDownEvent(self, key):
         if key == pygame.K_ESCAPE:
             self.quitApplication()
         elif key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
             self.switchToSaveSelectionScreen()
+        elif key == pygame.K_u:
+            self.openUpdatePage()
 
     def run(self):
+        self.updateChecker.checkForUpdatesAsync()
         while not self.changeScreen:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -126,6 +151,7 @@ class MainMenuScreen:
             self.graphik.getGameDisplay().fill((0, 0, 0))
             self.drawText()
             self.drawMenuButtons()
+            self.drawUpdateBanner()
             self.drawVersion()
             pygame.display.update()
         self.changeScreen = False

@@ -29,3 +29,6 @@ cameraFollowPlayer: true
 limitTps: true
 dayNightCycleEnabled: true
 dayNightCycleLengthTicks: 54000
+# Check GitHub for a newer release on launch and show a notice on the main menu.
+# Set to false to disable the only network request Roam makes.
+checkForUpdates: true

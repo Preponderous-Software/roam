@@ -14,6 +14,18 @@ _logger = getLogger(__name__)
 
 class Config:
     @staticmethod
+    def getVersion():
+        # The build's version string, read from the bundled version.txt (which
+        # is the repository root from source and the PyInstaller bundle when
+        # frozen). Returns "unknown" if the file is missing.
+        versionPath = os.path.join(getBundleDirectory(), "version.txt")
+        try:
+            with open(versionPath, "r", encoding="utf-8") as versionFile:
+                return versionFile.read().strip()
+        except OSError:
+            return "unknown"
+
+    @staticmethod
     def getUserDataDirectory():
         # Writable per-user directory for config and screenshots. On Windows
         # this is %APPDATA%\Roam and on macOS ~/Library/Application Support/Roam,
@@ -296,6 +308,7 @@ class Config:
             self.ticksPerSecond * 30 * 60,
         )  # 30 minutes at the configured ticksPerSecond
         self.pushableStone = self.getBoolValue(configValues, "pushableStone", True)
+        self.checkForUpdates = self.getBoolValue(configValues, "checkForUpdates", True)
 
         _logger.debug(
             "config loaded",
