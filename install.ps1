@@ -14,7 +14,20 @@
     Right-click install.ps1 and choose "Run with PowerShell", or from a
     PowerShell prompt in the repository root:
         powershell -ExecutionPolicy Bypass -File .\install.ps1
+
+.PARAMETER NonInteractive
+    Suppress all "Press Enter" prompts and do not launch the game. Implies
+    -NoLaunch. Intended for automated/CI runs that cannot answer prompts.
+
+.PARAMETER NoLaunch
+    Complete the install (dependencies, icon, shortcuts) but skip the
+    "play now?" prompt and do not launch the game.
 #>
+
+param(
+    [switch]$NonInteractive,
+    [switch]$NoLaunch
+)
 
 # Run from the directory this script lives in so relative paths resolve.
 $RepoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -24,6 +37,14 @@ function Write-Step {
     param([string]$Message)
     Write-Host ""
     Write-Host "==> $Message" -ForegroundColor Cyan
+}
+
+function Pause-IfInteractive {
+    # Keep the window open so the user can read the message, unless running
+    # non-interactively (e.g. in CI), where there is no one to press Enter.
+    if (-not $NonInteractive) {
+        Read-Host "Press Enter to exit"
+    }
 }
 
 function Resolve-Python {
@@ -154,12 +175,12 @@ if (-not $python) {
     Write-Host "Install it from https://www.python.org/downloads/ and be sure to check"
     Write-Host "'Add python.exe to PATH' in the installer, then run this wizard again."
     try { Start-Process "https://www.python.org/downloads/" } catch {}
-    Read-Host "Press Enter to exit"
+    Pause-IfInteractive
     exit 1
 }
 
 if (-not (Install-Dependencies -Python $python)) {
-    Read-Host "Press Enter to exit"
+    Pause-IfInteractive
     exit 1
 }
 
@@ -170,7 +191,11 @@ Write-Step "Installation complete"
 Write-Host "Roam is installed. Launch it from the Desktop or Start Menu shortcut," -ForegroundColor Green
 Write-Host "or by double-clicking run.bat in this folder." -ForegroundColor Green
 
-$answer = Read-Host "Would you like to play Roam now? (y/N)"
-if ($answer -match '^(y|yes)$') {
-    & $python (Join-Path $RepoRoot "src\roam.py")
+if ($NonInteractive -or $NoLaunch) {
+    Write-Host "Skipping launch (run was non-interactive or -NoLaunch was set)."
+} else {
+    $answer = Read-Host "Would you like to play Roam now? (y/N)"
+    if ($answer -match '^(y|yes)$') {
+        & $python (Join-Path $RepoRoot "src\roam.py")
+    }
 }
