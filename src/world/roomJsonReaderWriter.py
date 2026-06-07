@@ -80,8 +80,7 @@ class RoomJsonReaderWriter:
     def saveRoom(self, room, path):
         _logger.info("saving room", path=path, roomX=room.getX(), roomY=room.getY())
         roomJson = self.generateJsonForRoom(room)
-        if not os.path.exists(self.config.pathToSaveDirectory + "/rooms"):
-            os.makedirs(self.config.pathToSaveDirectory + "/rooms")
+        os.makedirs(self.config.getRoomsDirectory(), exist_ok=True)
         with open(path, "w") as outfile:
             json.dump(roomJson, outfile, indent=4)
 
