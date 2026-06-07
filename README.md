@@ -49,6 +49,9 @@ Right Mouse (inventory slot) | Select inventory slot (inventory screen)
 ## Run Script (Linux Only)
 There is also a run.sh script you can execute if you're on linux which will automatically attempt to install the dependencies for you.
 
+## Downloads
+Prebuilt installers are attached to each tagged release on the [Releases page](https://github.com/Preponderous-Software/roam/releases): `Roam-<version>-Setup.exe` (Windows installer), `Roam-<version>-windows-portable.zip` (no-install Windows build), and `Roam-<version>.dmg` (macOS). These are built automatically by the release workflow when a `v*` tag is pushed. They are not yet code-signed, so Windows SmartScreen / macOS Gatekeeper will warn on first run (see issues #393 / #396).
+
 ## Windows Installation Wizard
 On Windows you can use the `install.ps1` wizard instead of running the steps above by hand. It checks that Python and pip are available, installs pygame and the rest of the dependencies, and creates Desktop and Start Menu shortcuts so you can launch the game without using the command line.
 

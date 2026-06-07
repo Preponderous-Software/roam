@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-06-07 | 1+ | feat: Add a release workflow — on a `v*` tag push, build and attach `Roam-<version>-Setup.exe`, a portable Windows zip, and `Roam-<version>.dmg` to an auto-generated GitHub Release (so distributables persist beyond the ~90-day CI-artifact retention) |
 | 2026-06-07 | 1+ | feat: Package Roam for macOS (#394) — add a macOS-only PyInstaller `BUNDLE` step to `roam.spec` (`dist/Roam.app`), route user data to `~/Library/Application Support/Roam` on macOS (`Config.getUserDataDirectory`/`getSavesBaseDirectory`), and add a `macos-latest` CI job that builds the `.app`, runs `--selftest`, builds a `.dmg`, and uploads both |
 | 2026-06-07 | 1+ | feat: Add a Windows setup wizard installer (#385, phase 2) — `roam.iss` Inno Setup script wrapping the PyInstaller build into `RoamSetup.exe` (installs to Program Files, Start Menu + optional Desktop shortcuts, uninstaller/Add-Remove Programs); CI builds the installer and runs a silent install → frozen `--selftest` → uninstall round-trip and uploads `RoamSetup.exe`. Completes #385 |
 | 2026-06-07 | 1+ | feat: Store all writable user data under %APPDATA% on Windows — add `Config.getUserDataDirectory()` and route config + screenshots through it (joining saves, which already used %APPDATA%), seed the writable `config.yml` from the bundled defaults on first run, and relocate screenshots; lets config/keybinding writes and screenshots work when installed to a read-only location like Program Files |
@@ -83,6 +84,12 @@ logged in detail below.
 | 2022-08-08 | 21 | Create version.txt; Update README.md; Modified README. (+9 more) |
 
 ## AI Agent Sessions
+
+### 2026-06-07 — Add a tag-triggered release workflow
+- **`.github/workflows/release.yml` (new):** Triggers on `v*` tag pushes (`permissions: contents: write`). A `create-release` job creates the GitHub Release for the tag (idempotent — skipped if it already exists) with `gh release create --generate-notes`. A `windows` job (windows-latest) builds the PyInstaller exe, compiles the Inno Setup installer with the tag's version (`ISCC /DMyAppVersion=<tag without leading v>`), produces `Roam-<version>-Setup.exe` and a `Roam-<version>-windows-portable.zip`, and attaches them via `gh release upload --clobber`. A `macos` job (macos-latest) builds the `.app`, packages `Roam-<version>.dmg`, and attaches it. All uploads use the built-in `GITHUB_TOKEN`; no third-party actions.
+- **Rationale:** CI build artifacts expire (~90 days), so the only durable place for end-user downloads is a Release. The build steps mirror the already-green `package` / `package-macos` jobs; the new pieces are tag→version extraction and the `gh release` create/upload calls.
+- **`README.md`:** Added a Downloads section pointing to the Releases page and noting the artifacts are unsigned (SmartScreen/Gatekeeper — #393/#396).
+- **Validation:** YAML validated locally (`yaml.safe_load`); the workflow only runs on tag pushes, so it is not exercised by PR CI. The per-OS build steps are identical to the existing, passing package jobs. A real end-to-end check requires pushing a version tag (a maintainer action that publishes a public Release), so it is intentionally left for the user rather than triggered here. `.github/workflows/` is on the do-not-auto-merge list → manual review.
 
 ### 2026-06-07 — Package Roam for macOS (.app + .dmg) (#394)
 - **`src/config/config.py`:** Added a macOS branch (`sys.platform == "darwin"`) to `getUserDataDirectory()` → `~/Library/Application Support/Roam`, and to `getSavesBaseDirectory()` → that dir's `saves`. Mirrors the Windows `%APPDATA%` handling so a `.app` in a read-only `/Applications` can still persist config, saves, and screenshots. The existing Windows and from-source branches are untouched (the Windows no-APPDATA fallback still returns `"saves"`/the bundle dir). Added `import sys`.
