@@ -171,7 +171,9 @@ def test_ignores_invalid_or_empty_values(tmp_path, monkeypatch):
     assert config.debug
     assert config.ticksPerSecond == 30
     assert config.black == (0, 0, 0)
-    assert config.pathToSaveDirectory == "saves/defaultsavefile"
+    # An empty pathToSaveDirectory falls back to the platform default, which is
+    # the %APPDATA% path on Windows and "saves/defaultsavefile" elsewhere.
+    assert config.pathToSaveDirectory == Config.getDefaultSaveDirectory()
     assert config.displayWidth == config.displayHeight
 
 
