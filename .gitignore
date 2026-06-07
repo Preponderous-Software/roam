@@ -9,3 +9,4 @@ output.txt
 tests/stats/*.json
 cov.xml
 tests/*/*.json
+src/media/icon.ico
