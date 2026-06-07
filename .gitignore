@@ -14,3 +14,6 @@ src/media/icon.ico
 # PyInstaller build output
 build/
 dist/
+
+# Inno Setup installer output
+installer-output/

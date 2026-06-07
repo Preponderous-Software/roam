@@ -104,3 +104,46 @@ jobs:
         with:
           name: roam-windows
           path: dist/Roam/
+
+      - name: Build the setup installer (Inno Setup)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found at $iscc" }
+          & $iscc roam.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed (exit $LASTEXITCODE)" }
+          if (-not (Test-Path "installer-output/RoamSetup.exe")) {
+              throw "Expected installer at installer-output/RoamSetup.exe"
+          }
+
+      - name: Install, self-test, and uninstall (end-to-end)
+        shell: pwsh
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          $ErrorActionPreference = "Stop"
+          $setup = Resolve-Path "installer-output/RoamSetup.exe"
+          # Silent install into Program Files (the read-only-install scenario).
+          $p = Start-Process -FilePath $setup -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Silent install failed (exit $($p.ExitCode))" }
+          $installed = "$env:ProgramFiles\Roam\Roam.exe"
+          if (-not (Test-Path $installed)) { throw "Installed executable not found at $installed" }
+          # The installed app must locate its bundled data and write to %APPDATA%.
+          $st = Start-Process -FilePath $installed -ArgumentList "--selftest" -Wait -PassThru -NoNewWindow
+          if ($st.ExitCode -ne 0) { throw "Installed app selftest failed (exit $($st.ExitCode))" }
+          Write-Host "Installed app selftest passed."
+          # Silent uninstall.
+          $uninstall = "$env:ProgramFiles\Roam\unins000.exe"
+          if (Test-Path $uninstall) {
+              $u = Start-Process -FilePath $uninstall -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait -PassThru
+              if ($u.ExitCode -ne 0) { throw "Silent uninstall failed (exit $($u.ExitCode))" }
+          }
+          Write-Host "Install / self-test / uninstall round-trip passed."
+
+      - name: Upload the installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: roam-setup
+          path: installer-output/RoamSetup.exe
