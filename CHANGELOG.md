@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-06-07 | 1+ | ux: install.ps1 — drop `--quiet` so dependency-install progress is visible (no more "frozen" hang) and pip's real error shows on failure; the completion message now warns that shortcuts are anchored to the folder and prints where saves/settings/screenshots live (`%APPDATA%\Roam`) (closes #400, #401) |
 | 2026-06-07 | 1+ | docs: Lead the README with the recommended prebuilt download (no Python), reframe the clone steps as "Run from Source (for developers)", and rename the `install.ps1` section to a "setup script" distinct from the `RoamSetup.exe` installer — fixes the information scent and the two-things-both-called-"wizard" naming collision (closes #404) |
 | 2026-06-07 | 1+ | test: Add unit-test coverage for `Room.tickExcrement` (spawn/decay/grass-blocking branches), `Inventory.hasAvailableSlotFor` (empty/matching-stack/full), and `MapImageGenerator` coordinate + bounds math; align `test_room.py` entity imports to the production `entity.*` root so `isinstance` checks match room-created entities; +18 tests (issues #372, #367) |
 | 2026-06-07 | 1+ | chore: Bump GitHub Actions to their Node 24 majors across all workflows — `actions/checkout` v4→v6, `actions/setup-python` v5→v6, `actions/upload-artifact` v4→v7 — clearing the Node.js 20 deprecation warnings |
