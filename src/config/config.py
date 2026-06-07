@@ -240,6 +240,13 @@ class Config:
             debug=self.debug,
         )
 
+    def getRoomFilePath(self, x, y):
+        """Return the path to a room's JSON save file: the single source of
+        truth for the on-disk room-file layout."""
+        return (
+            self.pathToSaveDirectory + "/rooms/room_" + str(x) + "_" + str(y) + ".json"
+        )
+
     def _writeKeyValues(self, savedValues, errorMessage):
         configFilePath = self.getConfigFilePath()
         lines = []

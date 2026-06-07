@@ -304,22 +304,11 @@ class WorldScreen:
     def saveRoomToFile(self, room: Room):
         self.persistence.saveRoomToFile(room)
 
-    def _buildRoomFilePath(self, room: Room) -> str:
-        """Return the file path for a room's JSON save file."""
-        return (
-            self.config.pathToSaveDirectory
-            + "/rooms/room_"
-            + str(room.getX())
-            + "_"
-            + str(room.getY())
-            + ".json"
-        )
-
     def saveRoomToFileAsync(self, room: Room):
         """Save a room to file on the background thread (non-blocking).
         Prepares the JSON snapshot on the main thread to avoid dict-iteration
         races, then writes the file in the background."""
-        roomPath = self._buildRoomFilePath(room)
+        roomPath = self.config.getRoomFilePath(room.getX(), room.getY())
         try:
             roomJson = self.roomJsonReaderWriter.generateJsonForRoom(room)
         except Exception as e:
@@ -1858,7 +1847,9 @@ class WorldScreen:
         except Exception as e:
             _logger.error("error preparing room snapshot for save", error=str(e))
             roomJson = None
-        roomPath = self._buildRoomFilePath(self.currentRoom)
+        roomPath = self.config.getRoomFilePath(
+            self.currentRoom.getX(), self.currentRoom.getY()
+        )
         self._saveExecutor.submit(self._doSave, roomJson, roomPath)
 
     def saveSynchronous(self):
