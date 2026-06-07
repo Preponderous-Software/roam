@@ -19,10 +19,10 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          # 3.10 is the newest version with prebuilt pygame 2.1.2 wheels (the
-          # version pinned in requirements.txt that the wizard installs); newer
-          # interpreters would try to build pygame from source and fail.
-          python-version: "3.10"
+          # Match the Linux Tests job. requirements.txt now uses lower bounds,
+          # so the wizard's `pip install -r requirements.txt` resolves modern
+          # wheels here — exercising that the installer works on a current Python.
+          python-version: "3.12"
 
       - name: Run the installation wizard (non-interactive)
         shell: pwsh
