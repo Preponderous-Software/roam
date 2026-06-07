@@ -22,7 +22,11 @@ class CodexJsonReaderWriter:
         try:
             jsonschema.validate(data, schema)
         except jsonschema.exceptions.ValidationError as e:
-            _logger.error("codex validation error on save", error=str(e))
+            _logger.error(
+                "codex validation failed; aborting save to preserve existing file",
+                error=str(e),
+            )
+            return
 
         if not os.path.exists(self.config.pathToSaveDirectory):
             os.makedirs(self.config.pathToSaveDirectory)

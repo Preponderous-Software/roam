@@ -114,7 +114,12 @@ class InventoryJsonReaderWriter:
         try:
             jsonschema.validate(toReturn, inventorySchema)
         except jsonschema.exceptions.ValidationError as e:
-            _logger.error("inventory validation error", error=str(e))
+            _logger.error(
+                "inventory validation failed; aborting save to preserve existing file",
+                error=str(e),
+                path=path,
+            )
+            return
 
         if not os.path.exists(self.config.pathToSaveDirectory):
             os.makedirs(self.config.pathToSaveDirectory)

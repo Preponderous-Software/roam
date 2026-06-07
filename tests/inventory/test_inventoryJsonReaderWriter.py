@@ -1,4 +1,10 @@
+import jsonschema
+
 from inventory.inventoryJsonReaderWriter import InventoryJsonReaderWriter
+
+
+def _raiseValidationError(*args, **kwargs):
+    raise jsonschema.exceptions.ValidationError("forced validation failure")
 
 
 def test_initialization(resolve):
@@ -34,3 +40,36 @@ def test_saveInventory(resolve, tmp_path, test_config):
     assert inventoryInstance2.getNumInventorySlots() == 25
     assert inventoryInstance2.getNumFreeInventorySlots() == 25
     assert inventoryInstance2.getNumTakenInventorySlots() == 0
+
+
+def test_saveInventory_aborts_and_preserves_existing_file_on_validation_error(
+    resolve, tmp_path, test_config, monkeypatch
+):
+    test_config.pathToSaveDirectory = str(tmp_path)
+    writer = resolve(InventoryJsonReaderWriter)
+    inventory = writer.loadInventory("tests/inventory/inventory.json")
+    savePath = tmp_path / "inventory2.json"
+
+    # Seed a distinct existing "good" save so an overwrite would be detectable
+    sentinel = "EXISTING_GOOD_SAVE"
+    savePath.write_text(sentinel)
+
+    # A validation failure must NOT clobber the existing good file
+    monkeypatch.setattr(jsonschema, "validate", _raiseValidationError)
+    writer.saveInventory(inventory, str(savePath))
+
+    assert savePath.read_text() == sentinel
+
+
+def test_saveInventory_does_not_create_file_on_validation_error(
+    resolve, tmp_path, test_config, monkeypatch
+):
+    test_config.pathToSaveDirectory = str(tmp_path)
+    writer = resolve(InventoryJsonReaderWriter)
+    inventory = writer.loadInventory("tests/inventory/inventory.json")
+    savePath = tmp_path / "new_inventory.json"
+
+    monkeypatch.setattr(jsonschema, "validate", _raiseValidationError)
+    writer.saveInventory(inventory, str(savePath))
+
+    assert not savePath.exists()
