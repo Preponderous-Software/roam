@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pygame
 
+from appPaths import getBundleDirectory
 from gameLogging.logger import getLogger
 
 _logger = getLogger(__name__)
@@ -13,7 +14,9 @@ _logger = getLogger(__name__)
 class Config:
     @staticmethod
     def getConfigFilePath():
-        return Path(__file__).resolve().parents[2] / "config.yml"
+        # Resolve relative to the bundle directory so this works both when run
+        # from source (repository root) and when frozen (PyInstaller bundle).
+        return Path(getBundleDirectory()) / "config.yml"
 
     @staticmethod
     def getSavesBaseDirectory():
