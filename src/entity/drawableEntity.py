@@ -1,11 +1,15 @@
 import pygame
 from lib.pyenvlib.entity import Entity
+from gameLogging.logger import getLogger
+
+_logger = getLogger(__name__)
 
 
 # @author Daniel McCoy Stephenson
 # @since August 5th, 2022
 class DrawableEntity(Entity):
     _imageCache = {}
+    _FALLBACK_SIZE = 32
 
     def __init__(self, name, imagePath, solid=False):
         Entity.__init__(self, name)
@@ -17,10 +21,30 @@ class DrawableEntity(Entity):
 
     def getImage(self):
         if self.imagePath not in DrawableEntity._imageCache:
-            DrawableEntity._imageCache[self.imagePath] = pygame.image.load(
-                self.imagePath
-            )
+            try:
+                DrawableEntity._imageCache[self.imagePath] = pygame.image.load(
+                    self.imagePath
+                )
+            except (pygame.error, FileNotFoundError) as e:
+                _logger.warning(
+                    "failed to load image asset; using placeholder",
+                    imagePath=self.imagePath,
+                    error=str(e),
+                )
+                DrawableEntity._imageCache[
+                    self.imagePath
+                ] = DrawableEntity._createFallbackSurface()
         return DrawableEntity._imageCache[self.imagePath]
+
+    @staticmethod
+    def _createFallbackSurface():
+        # A visibly-wrong magenta square so a missing asset is obvious in-game
+        # rather than crashing the render loop. Cached per path so the failing
+        # load is not retried and the warning is logged only once.
+        size = DrawableEntity._FALLBACK_SIZE
+        surface = pygame.Surface((size, size))
+        surface.fill((255, 0, 255))
+        return surface
 
     def getImagePath(self):
         return self.imagePath

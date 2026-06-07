@@ -76,6 +76,12 @@ logged in detail below.
 
 ## AI Agent Sessions
 
+### 2026-06-06 — Harden render loop against missing/unreadable assets (issue #368)
+- **`src/entity/drawableEntity.py`:** `getImage` previously called `pygame.image.load` with no error handling; a missing, renamed, or corrupt sprite raised `pygame.error` / `FileNotFoundError` straight out of the hot render path (`room.py`, `worldScreen.py`, `inventoryScreen.py`), hard-crashing an in-progress, auto-saving session. The load is now wrapped in `try`/`except (pygame.error, FileNotFoundError)`: on failure it logs the offending `imagePath` once (structured `getLogger` warning) and caches a magenta placeholder surface from the new `_createFallbackSurface()` helper, so the game degrades gracefully and the missing asset is visible rather than fatal. The fallback is cached per path, so the failing load is not retried every frame and the warning is logged only once.
+- **`tests/entity/test_drawableEntity.py`:** Added a headless-pygame fixture plus two tests: a missing asset returns a `pygame.Surface` of the fallback size (would raise under the old unguarded load), and the fallback is cached (the second `getImage` returns the same surface, confirming no per-frame retry). Both pop their cache keys to keep the class-level `_imageCache` clean.
+- **Validation:** `python3 -m compileall src -q` clean; `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python3 -m pytest` — 464 passed (was 462; +2 new).
+- **Learning Log:** `[integrated]` — applied the cycle-4 refinements: formatting was scoped to the two changed files and the diff verified at the hunk level (no pre-existing drift in this file to leak); no `print()`, structured `getLogger` used per logging conventions.
+
 ### 2026-06-06 — Consolidate room save-file path into a single source of truth (issue #373)
 - **`src/config/config.py`:** Added `Config.getRoomFilePath(self, x, y)` — the single canonical builder for the `<saveDir>/rooms/room_<x>_<y>.json` layout.
 - **`src/world/map.py`, `src/world/roomPreloader.py`:** Replaced inline hand-concatenated path builds in `getRoom` / the preloader with `self.config.getRoomFilePath(x, y)`.
