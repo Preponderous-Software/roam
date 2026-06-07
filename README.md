@@ -49,6 +49,9 @@ Right Mouse (inventory slot) | Select inventory slot (inventory screen)
 ## Run Script (Linux Only)
 There is also a run.sh script you can execute if you're on linux which will automatically attempt to install the dependencies for you.
 
+## Downloads
+Prebuilt installers are attached to each tagged release on the [Releases page](https://github.com/Preponderous-Software/roam/releases): `Roam-<version>-Setup.exe` (Windows installer), `Roam-<version>-windows-portable.zip` (no-install Windows build), and `Roam-<version>.dmg` (macOS). These are built automatically by the release workflow when a `v*` tag is pushed. They are not yet code-signed, so Windows SmartScreen / macOS Gatekeeper will warn on first run (see issues #393 / #396).
+
 ## Windows Installation Wizard
 On Windows you can use the `install.ps1` wizard instead of running the steps above by hand. It checks that Python and pip are available, installs pygame and the rest of the dependencies, and creates Desktop and Start Menu shortcuts so you can launch the game without using the command line.
 
@@ -59,6 +62,37 @@ On Windows you can use the `install.ps1` wizard instead of running the steps abo
 3. Follow the prompts. When it finishes, launch Roam from the **Roam** Desktop/Start Menu shortcut, or by double-clicking `run.bat`.
 
 If Python is not installed, the wizard opens the [Python download page](https://www.python.org/downloads/) for you — install it (make sure **Add python.exe to PATH** is checked) and run the wizard again.
+
+### Building a standalone executable (advanced)
+A self-contained Windows build that bundles Python and all dependencies can be produced with [PyInstaller](https://pyinstaller.org/):
+
+> pip install -r requirements.txt pyinstaller
+> pyinstaller roam.spec --noconfirm
+
+This writes `dist\Roam\Roam.exe` along with its bundled `assets`, `schemas`, and `config.yml`. You can verify the bundle without launching the game using `dist\Roam\Roam.exe --selftest`.
+
+To produce a setup wizard (a `RoamSetup.exe` that installs the game with Start Menu/Desktop shortcuts and an uninstaller), build the executable above, then compile the [Inno Setup](https://jrsoftware.org/isinfo.php) script with Inno Setup 6:
+
+> "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" roam.iss
+
+This writes `installer-output\RoamSetup.exe`. Run it (or `RoamSetup.exe /VERYSILENT` for an unattended install) to install Roam into `Program Files`; user data is kept under `%APPDATA%\Roam`.
+
+#### macOS
+On macOS the same spec produces an app bundle (`dist/Roam.app`). Build it, then wrap it in a disk image:
+
+> pip install -r requirements.txt pyinstaller
+> pyinstaller roam.spec --noconfirm
+> hdiutil create -volname Roam -srcfolder dist/Roam.app -ov -format UDZO dist/Roam.dmg
+
+Open `Roam.dmg` and drag `Roam.app` to Applications. User data (saves, settings, screenshots) is kept under `~/Library/Application Support/Roam`.
+
+### Where your data is stored
+On Windows, Roam keeps your user data under `%APPDATA%\Roam` (e.g. `C:\Users\<you>\AppData\Roaming\Roam`) so it stays with your account and works even when the game is installed to a read-only location like `Program Files`. This includes:
+- **Saves** — `%APPDATA%\Roam\saves`
+- **Settings** — `%APPDATA%\Roam\config.yml` (seeded from the shipped defaults on first run)
+- **Screenshots** — `%APPDATA%\Roam\screenshots`
+
+On Linux and macOS these stay next to the game (`saves/`, `config.yml`, `screenshots/`). You can override the save location by setting `pathToSaveDirectory` in `config.yml`.
 
 ## Support
 You can find the support discord server [here](https://discord.gg/49J4RHQxhy).

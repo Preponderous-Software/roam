@@ -15,7 +15,9 @@ ticksPerSecond: 30
 gridSize: 17
 worldBorder: 0
 excrementDecayTicks: 3600
-pathToSaveDirectory: saves/defaultsavefile
+# pathToSaveDirectory: leave unset to use the platform default save location
+# ("saves/defaultsavefile", or %APPDATA%\Roam\saves\defaultsavefile on Windows).
+# Set it explicitly to override, e.g. pathToSaveDirectory: saves/defaultsavefile
 
 # dynamic (can be changed in game)
 debug: true

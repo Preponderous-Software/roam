@@ -1,4 +1,9 @@
+import json
+import os
+import sys
+
 import pygame
+from appPaths import prepareWorkingDirectory
 from bootstrap import createContainer
 from config.config import Config
 from config.keyBindings import KeyBindings
@@ -152,6 +157,34 @@ class Roam:
                 return
             _logger.info("screen transition", screen=str(result))
 
+
+def runSelfTest():
+    # Verify a frozen build can locate its bundled data (assets, schemas,
+    # config). CI runs the packaged executable with --selftest to confirm the
+    # bundle is complete without launching the interactive game loop.
+    os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+    os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+    try:
+        pygame.init()
+        pygame.image.load("assets/images/player_down.png")
+        with open("schemas/tick.json") as f:
+            json.load(f)
+        Config()  # reads config.yml
+        _logger.info("selftest passed")
+        print("Roam selftest: OK")
+        return 0
+    except Exception as exc:
+        _logger.error("selftest failed", error=str(exc))
+        print("Roam selftest: FAILED -", exc)
+        return 1
+
+
+# Frozen executables start in an arbitrary working directory; make relative
+# asset/schema paths resolve against the bundle. No-op when run from source.
+prepareWorkingDirectory()
+
+if "--selftest" in sys.argv:
+    sys.exit(runSelfTest())
 
 pygame.init()
 config = Config()

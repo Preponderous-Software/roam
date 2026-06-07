@@ -1,9 +1,12 @@
 # @author Daniel McCoy Stephenson
 # @since August 6th, 2022
-from pathlib import Path
+import os
+import shutil
+import sys
 
 import pygame
 
+from appPaths import getBundleDirectory
 from gameLogging.logger import getLogger
 
 _logger = getLogger(__name__)
@@ -11,8 +14,72 @@ _logger = getLogger(__name__)
 
 class Config:
     @staticmethod
+    def getUserDataDirectory():
+        # Writable per-user directory for config and screenshots. On Windows
+        # this is %APPDATA%\Roam and on macOS ~/Library/Application Support/Roam,
+        # so writes succeed even when the game is installed to a read-only
+        # location (Program Files, /Applications). Other platforms use the
+        # repository/bundle root (the current from-source behavior). (Saves have
+        # their own getSavesBaseDirectory, which resolves the same way.)
+        if os.name == "nt":
+            appData = os.environ.get("APPDATA")
+            if appData:
+                return os.path.join(appData, "Roam")
+        elif sys.platform == "darwin":
+            return os.path.join(
+                os.path.expanduser("~"), "Library", "Application Support", "Roam"
+            )
+        return getBundleDirectory()
+
+    @staticmethod
+    def getBundledConfigFilePath():
+        # The config.yml shipped with the app (read-only when frozen). Uses
+        # os.path (not pathlib) so it stays correct under os.name monkeypatching
+        # in cross-platform tests.
+        return os.path.join(getBundleDirectory(), "config.yml")
+
+    @staticmethod
     def getConfigFilePath():
-        return Path(__file__).resolve().parents[2] / "config.yml"
+        # The user's read/write config file, in the writable user-data
+        # directory. From source this resolves to the repository root, matching
+        # the previous behavior.
+        return os.path.join(Config.getUserDataDirectory(), "config.yml")
+
+    @staticmethod
+    def ensureUserConfigExists():
+        # On first run, seed the writable user config from the bundled defaults
+        # so shipped settings are preserved and the file is writable. No-op when
+        # the user config and the bundled config are the same file (from source)
+        # or the user config already exists.
+        userConfig = Config.getConfigFilePath()
+        bundled = Config.getBundledConfigFilePath()
+        if str(userConfig) == str(bundled) or os.path.exists(userConfig):
+            return
+        if os.path.exists(bundled):
+            os.makedirs(os.path.dirname(userConfig), exist_ok=True)
+            shutil.copyfile(bundled, userConfig)
+
+    @staticmethod
+    def getSavesBaseDirectory():
+        # The single source of truth for where save folders live. On Windows we
+        # store them under %APPDATA% (e.g. C:\Users\<you>\AppData\Roaming\Roam\saves)
+        # and on macOS under ~/Library/Application Support/Roam/saves, so saves
+        # live with the user rather than in a possibly read-only install
+        # directory (Program Files, /Applications). Other platforms keep the
+        # repository-relative "saves" directory.
+        if os.name == "nt":
+            appData = os.environ.get("APPDATA")
+            if appData:
+                return os.path.join(appData, "Roam", "saves")
+        elif sys.platform == "darwin":
+            return os.path.join(Config.getUserDataDirectory(), "saves")
+        return "saves"
+
+    @staticmethod
+    def getDefaultSaveDirectory():
+        # The default save slot, used when config.yml does not pin
+        # pathToSaveDirectory explicitly.
+        return os.path.join(Config.getSavesBaseDirectory(), "defaultsavefile")
 
     @staticmethod
     def parseConfigValue(value):
@@ -50,10 +117,10 @@ class Config:
     def readConfigFile(cls):
         configValues = {}
         configFilePath = cls.getConfigFilePath()
-        if not configFilePath.exists():
+        if not os.path.exists(configFilePath):
             return configValues
         try:
-            with configFilePath.open("r", encoding="utf-8") as configFile:
+            with open(configFilePath, "r", encoding="utf-8") as configFile:
                 for line in configFile:
                     strippedLine = line.strip()
                     if strippedLine == "" or strippedLine.startswith("#"):
@@ -138,6 +205,7 @@ class Config:
     MIN_WINDOW_SIZE = 400
 
     def __init__(self):
+        self.ensureUserConfigExists()
         configValues = self.readConfigFile()
         screenHeight = pygame.display.Info().current_h
         displayDimensionDefault = screenHeight * 0.90
@@ -202,7 +270,7 @@ class Config:
             configValues, "cropGrowthTicks", 1800
         )  # 1 minute per stage at 30 tps
         self.pathToSaveDirectory = self.getStringValue(
-            configValues, "pathToSaveDirectory", "saves/defaultsavefile"
+            configValues, "pathToSaveDirectory", Config.getDefaultSaveDirectory()
         )
 
         # dynamic (can be changed in game)
@@ -250,9 +318,10 @@ class Config:
     def _writeKeyValues(self, savedValues, errorMessage):
         configFilePath = self.getConfigFilePath()
         lines = []
-        if configFilePath.exists():
+        if os.path.exists(configFilePath):
             try:
-                lines = configFilePath.read_text(encoding="utf-8").splitlines()
+                with open(configFilePath, "r", encoding="utf-8") as configFile:
+                    lines = configFile.read().splitlines()
             except (OSError, UnicodeDecodeError):
                 lines = []
 
@@ -277,7 +346,8 @@ class Config:
                 newLines.append(key + ": " + value)
 
         try:
-            configFilePath.write_text("\n".join(newLines) + "\n", encoding="utf-8")
+            with open(configFilePath, "w", encoding="utf-8") as configFile:
+                configFile.write("\n".join(newLines) + "\n")
         except OSError as e:
             _logger.warning(
                 errorMessage,
