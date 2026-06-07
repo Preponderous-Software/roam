@@ -3,7 +3,14 @@ import os
 
 import pygame
 
-SCREENSHOTS_FOLDER = "screenshots"
+from config.config import Config
+
+
+def getScreenshotsFolder():
+    # Write screenshots to the writable user-data directory so captures work
+    # even when the game is installed to a read-only location (e.g. Program
+    # Files). From source this is the repository root, as before.
+    return os.path.join(Config.getUserDataDirectory(), "screenshots")
 
 
 def captureScreen(gameDisplay, name, pos, size):
@@ -13,9 +20,10 @@ def captureScreen(gameDisplay, name, pos, size):
 
 
 def takeScreenshot(gameDisplay):
-    if not os.path.exists(SCREENSHOTS_FOLDER):
-        os.makedirs(SCREENSHOTS_FOLDER)
+    screenshotsFolder = getScreenshotsFolder()
+    if not os.path.exists(screenshotsFolder):
+        os.makedirs(screenshotsFolder)
     displayWidth, displayHeight = gameDisplay.get_size()
     timestamp = str(datetime.datetime.now()).replace(" ", "-").replace(":", ".")
-    filename = SCREENSHOTS_FOLDER + "/screenshot-" + timestamp + ".png"
+    filename = os.path.join(screenshotsFolder, "screenshot-" + timestamp + ".png")
     captureScreen(gameDisplay, filename, (0, 0), (displayWidth, displayHeight))

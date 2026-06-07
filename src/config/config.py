@@ -1,6 +1,7 @@
 # @author Daniel McCoy Stephenson
 # @since August 6th, 2022
 import os
+import shutil
 from pathlib import Path
 
 import pygame
@@ -13,10 +14,44 @@ _logger = getLogger(__name__)
 
 class Config:
     @staticmethod
-    def getConfigFilePath():
-        # Resolve relative to the bundle directory so this works both when run
-        # from source (repository root) and when frozen (PyInstaller bundle).
+    def getUserDataDirectory():
+        # Writable per-user directory for config and screenshots. On Windows
+        # this is %APPDATA%\Roam so writes succeed even when the game is
+        # installed to a read-only location like Program Files; other platforms
+        # use the repository/bundle root (the current from-source behavior).
+        # (Saves have their own getSavesBaseDirectory, which already resolves to
+        # %APPDATA%\Roam\saves on Windows.)
+        if os.name == "nt":
+            appData = os.environ.get("APPDATA")
+            if appData:
+                return os.path.join(appData, "Roam")
+        return getBundleDirectory()
+
+    @staticmethod
+    def getBundledConfigFilePath():
+        # The config.yml shipped with the app (read-only when frozen).
         return Path(getBundleDirectory()) / "config.yml"
+
+    @staticmethod
+    def getConfigFilePath():
+        # The user's read/write config file, in the writable user-data
+        # directory. From source this resolves to the repository root, matching
+        # the previous behavior.
+        return Path(Config.getUserDataDirectory()) / "config.yml"
+
+    @staticmethod
+    def ensureUserConfigExists():
+        # On first run, seed the writable user config from the bundled defaults
+        # so shipped settings are preserved and the file is writable. No-op when
+        # the user config and the bundled config are the same file (from source)
+        # or the user config already exists.
+        userConfig = Config.getConfigFilePath()
+        bundled = Config.getBundledConfigFilePath()
+        if userConfig == bundled or userConfig.exists():
+            return
+        if bundled.exists():
+            os.makedirs(userConfig.parent, exist_ok=True)
+            shutil.copyfile(bundled, userConfig)
 
     @staticmethod
     def getSavesBaseDirectory():
@@ -161,6 +196,7 @@ class Config:
     MIN_WINDOW_SIZE = 400
 
     def __init__(self):
+        self.ensureUserConfigExists()
         configValues = self.readConfigFile()
         screenHeight = pygame.display.Info().current_h
         displayDimensionDefault = screenHeight * 0.90
