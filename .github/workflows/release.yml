@@ -1,10 +1,12 @@
 name: Release
 
 # Build the standalone Windows installer + portable zip and the macOS .dmg, and
-# attach them to a GitHub Release whenever a version tag (e.g. v0.8.0) is pushed.
+# attach them to a GitHub Release whenever a bare version tag (e.g. 0.11.0) is
+# pushed — matching the repository's existing 0.x.y release-tag convention.
 on:
   push:
-    tags: ["v*"]
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
   contents: write

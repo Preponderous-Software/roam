@@ -8,8 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
-| 2026-06-07 | 1+ | chore: Set version to 0.10.0-SNAPSHOT for development toward the next release |
-| 2026-06-07 | 1+ | chore: Set version to 0.9.0 for release |
+| 2026-06-07 | 1+ | fix: Correct release versioning — `version.txt` had been stale at `0.8.0-SNAPSHOT` while `0.9.0`/`0.10.0` were already released, leading to an erroneous `v0.9.0` tag/release (now deleted); set `version.txt` to `0.11.0-SNAPSHOT`, switch the release workflow to the repo's bare-number tag convention (`0.11.0`, not `v0.11.0`), and fix `UpdateChecker` to read the `/releases` list (every Roam release is a GitHub pre-release, so `/releases/latest` 404s) |
 | 2026-06-07 | 1+ | feat: In-game update notifier + version plumbing — bundle `version.txt` in `roam.spec` and stamp the release tag into it (so packaged builds know their version, previously blank), add `Config.getVersion()`, and add an `UpdateChecker` that checks GitHub Releases on a daemon thread (fail-silent, `checkForUpdates` config toggle) and shows a "press U to download" banner on the main menu (closes #413, #414) |
 | 2026-06-07 | 1+ | fix: Prevent stacking floor tiles — `executePlaceAction` now blocks placing a `WoodFloor`/`StoneFloor` where a floor already exists (via a new `locationContainsFloor` helper), setting "A floor is already here" and consuming no item; +2 tests (closes #345) |
 | 2026-06-07 | 1+ | ux: install.ps1 — drop `--quiet` so dependency-install progress is visible (no more "frozen" hang) and pip's real error shows on failure; the completion message now warns that shortcuts are anchored to the folder and prints where saves/settings/screenshots live (`%APPDATA%\Roam`) (closes #400, #401) |
@@ -92,6 +91,14 @@ logged in detail below.
 | 2022-08-08 | 21 | Create version.txt; Update README.md; Modified README. (+9 more) |
 
 ## AI Agent Sessions
+
+### 2026-06-07 — Correct release versioning and the update-check endpoint
+- **Context:** `version.txt` had drifted to `0.8.0-SNAPSHOT` while the repo had in fact already published `0.9.0` and `0.10.0` (all releases are GitHub pre-releases, bare-number tags). Trusting the stale file, an erroneous `v0.9.0` tag + release was cut today (a duplicate version, `v`-prefixed against the bare-number convention, and briefly flagged "latest"). It was deleted (the real `0.9.0`/`0.10.0` are separate tags and untouched).
+- **`version.txt`:** Set to `0.11.0-SNAPSHOT` (the correct in-development version after the real latest, `0.10.0`).
+- **`.github/workflows/release.yml`:** Changed the trigger from `v*` to the bare-number pattern `[0-9]+.[0-9]+.[0-9]+`, matching all 11 prior releases. The existing `TrimStart("v")` / `${GITHUB_REF_NAME#v}` version extraction is a harmless no-op for bare tags. The next release is cut with `git tag 0.11.0 && git push origin 0.11.0`.
+- **`src/update/updateChecker.py`:** Switched from `/releases/latest` to the `/releases` list. Every Roam release is published as a GitHub *pre-release*, and `/releases/latest` excludes pre-releases (returns 404), so the notifier built in #414 would never have found an update for this repo. It now reads the newest non-draft tag from the list. Updated tests accordingly (parse newest from list, skip drafts, empty-list → None).
+- **Validation:** `python3 -m compileall src -q` clean; `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python3 -m pytest tests/update` → 17 passed.
+- **Learning Log:** `[not yet integrated]` — a release-process lesson worth a `create-dev-loop.md` rule: before cutting a release, verify the actual published releases/tags (`gh release list`, `git ls-remote --tags`) rather than trusting `version.txt`; and confirm the repo's tag convention (prefix, prerelease flag) so the new tag/release is consistent. A stale version marker had silently diverged from the real release history.
 
 ### 2026-06-07 — In-game update notifier and version plumbing (issues #413, #414)
 - **Version prerequisite (#413):** Packaged builds previously had no `version.txt` (it wasn't in `roam.spec`'s `datas`), so `MainMenuScreen.drawVersion` found no file and showed nothing; `version.txt` was also a static `0.8.0-SNAPSHOT` never stamped per release. Fixed by bundling `("version.txt", ".")` in `roam.spec`, having the release workflow write the tag into `version.txt` before building (the `windows` job via `Set-Content`, the `macos` job via `printf`), and adding `Config.getVersion()` (reads the bundled `version.txt` via `getBundleDirectory()`, returns `"unknown"` if absent). `drawVersion` now sources the version through `Config.getVersion()`.
