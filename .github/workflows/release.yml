@@ -51,6 +51,12 @@ jobs:
         run: |
           python -c "from PIL import Image; Image.open('src/media/icon.PNG').save('src/media/icon.ico', sizes=[(16,16),(32,32),(48,48),(256,256)])"
 
+      - name: Stamp the release version into version.txt
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          Set-Content -Path version.txt -Value $version -NoNewline
+
       - name: Build the executable
         shell: pwsh
         run: pyinstaller roam.spec --noconfirm
@@ -110,6 +116,7 @@ jobs:
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME#v}"
+          printf '%s' "$version" > version.txt
           pyinstaller roam.spec --noconfirm
           hdiutil create -volname Roam -srcfolder dist/Roam.app -ov -format UDZO "Roam-$version.dmg"
 
