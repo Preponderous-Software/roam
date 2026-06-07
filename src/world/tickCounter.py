@@ -38,10 +38,16 @@ class TickCounter:
         currentTimestamp = time.time()
         timeElapsed = currentTimestamp - self.lastTimestamp
         self.lastTimestamp = currentTimestamp
-        self.measuredTicksPerSecond = 1 / timeElapsed
 
-        if self.measuredTicksPerSecond > self.highestMeasuredTicksPerSecond:
-            self.highestMeasuredTicksPerSecond = self.measuredTicksPerSecond
+        # On platforms with a coarse clock (e.g. Windows' ~15ms time.time()
+        # resolution), two consecutive ticks can read the same timestamp,
+        # making timeElapsed zero. Skip the rate update in that case to avoid
+        # a ZeroDivisionError; the previously measured value is kept.
+        if timeElapsed > 0:
+            self.measuredTicksPerSecond = 1 / timeElapsed
+
+            if self.measuredTicksPerSecond > self.highestMeasuredTicksPerSecond:
+                self.highestMeasuredTicksPerSecond = self.measuredTicksPerSecond
 
     def getMeasuredTicksPerSecond(self):
         return self.measuredTicksPerSecond
