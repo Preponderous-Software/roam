@@ -66,7 +66,13 @@ A self-contained Windows build that bundles Python and all dependencies can be p
 > pip install -r requirements.txt pyinstaller
 > pyinstaller roam.spec --noconfirm
 
-This writes `dist\Roam\Roam.exe` along with its bundled `assets`, `schemas`, and `config.yml`. You can verify the bundle without launching the game using `dist\Roam\Roam.exe --selftest`. (A packaged setup wizard that wraps this build is planned — see issue #385.)
+This writes `dist\Roam\Roam.exe` along with its bundled `assets`, `schemas`, and `config.yml`. You can verify the bundle without launching the game using `dist\Roam\Roam.exe --selftest`.
+
+To produce a setup wizard (a `RoamSetup.exe` that installs the game with Start Menu/Desktop shortcuts and an uninstaller), build the executable above, then compile the [Inno Setup](https://jrsoftware.org/isinfo.php) script with Inno Setup 6:
+
+> "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" roam.iss
+
+This writes `installer-output\RoamSetup.exe`. Run it (or `RoamSetup.exe /VERYSILENT` for an unattended install) to install Roam into `Program Files`; user data is kept under `%APPDATA%\Roam`.
 
 ### Where your data is stored
 On Windows, Roam keeps your user data under `%APPDATA%\Roam` (e.g. `C:\Users\<you>\AppData\Roaming\Roam`) so it stays with your account and works even when the game is installed to a read-only location like `Program Files`. This includes:
