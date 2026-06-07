@@ -116,7 +116,7 @@ class WorldScreenPersistence:
         self.player.setEnergy(energy)
 
     def savePlayerInventoryToFile(self, inventoryJsonReaderWriter):
-        inventoryJsonReaderWriter.saveInventory(
+        return inventoryJsonReaderWriter.saveInventory(
             self.player.getInventory(),
             self.config.pathToSaveDirectory + "/playerInventory.json",
         )

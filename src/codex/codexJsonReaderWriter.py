@@ -26,7 +26,7 @@ class CodexJsonReaderWriter:
                 "codex validation failed; aborting save to preserve existing file",
                 error=str(e),
             )
-            return
+            return False
 
         if not os.path.exists(self.config.pathToSaveDirectory):
             os.makedirs(self.config.pathToSaveDirectory)
@@ -35,6 +35,7 @@ class CodexJsonReaderWriter:
         with open(path, "w") as f:
             json.dump(data, f, indent=4)
         _logger.info("codex saved", path=path)
+        return True
 
     def load(self):
         path = self.config.pathToSaveDirectory + "/codex.json"

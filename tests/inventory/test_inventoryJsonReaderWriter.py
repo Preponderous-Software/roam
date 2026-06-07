@@ -56,8 +56,9 @@ def test_saveInventory_aborts_and_preserves_existing_file_on_validation_error(
 
     # A validation failure must NOT clobber the existing good file
     monkeypatch.setattr(jsonschema, "validate", _raiseValidationError)
-    writer.saveInventory(inventory, str(savePath))
+    result = writer.saveInventory(inventory, str(savePath))
 
+    assert result is False
     assert savePath.read_text() == sentinel
 
 
@@ -70,6 +71,16 @@ def test_saveInventory_does_not_create_file_on_validation_error(
     savePath = tmp_path / "new_inventory.json"
 
     monkeypatch.setattr(jsonschema, "validate", _raiseValidationError)
-    writer.saveInventory(inventory, str(savePath))
+    result = writer.saveInventory(inventory, str(savePath))
 
+    assert result is False
     assert not savePath.exists()
+
+
+def test_saveInventory_returns_true_on_success(resolve, tmp_path, test_config):
+    test_config.pathToSaveDirectory = str(tmp_path)
+    writer = resolve(InventoryJsonReaderWriter)
+    inventory = writer.loadInventory("tests/inventory/inventory.json")
+    savePath = tmp_path / "inventory2.json"
+
+    assert writer.saveInventory(inventory, str(savePath)) is True

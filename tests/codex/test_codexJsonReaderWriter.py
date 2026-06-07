@@ -11,7 +11,7 @@ def test_save_and_load_round_trip(resolve, tmp_path, test_config):
     test_config.pathToSaveDirectory = str(tmp_path)
     writer = resolve(CodexJsonReaderWriter)
 
-    writer.save(["Chicken", "Bear"])
+    assert writer.save(["Chicken", "Bear"]) is True
     loaded = writer.load()
 
     assert sorted(loaded) == ["Bear", "Chicken"]
@@ -30,6 +30,7 @@ def test_save_aborts_and_preserves_existing_file_on_validation_error(
 
     # A validation failure must NOT clobber the existing good file
     monkeypatch.setattr(jsonschema, "validate", _raiseValidationError)
-    writer.save(["Chicken", "Bear", "Apple"])
+    result = writer.save(["Chicken", "Bear", "Apple"])
 
+    assert result is False
     assert codexPath.read_text() == goodContent
