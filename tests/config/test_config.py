@@ -1,4 +1,5 @@
 import os
+import sys
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 import pygame
@@ -41,7 +42,16 @@ def test_defaults():
 
 def test_saves_base_directory_is_relative_on_non_windows(monkeypatch):
     monkeypatch.setattr(os, "name", "posix")
+    monkeypatch.setattr(sys, "platform", "linux")
     assert Config.getSavesBaseDirectory() == "saves"
+
+
+def test_saves_base_directory_uses_application_support_on_macos(monkeypatch):
+    monkeypatch.setattr(os, "name", "posix")
+    monkeypatch.setattr(sys, "platform", "darwin")
+    assert Config.getSavesBaseDirectory() == os.path.join(
+        Config.getUserDataDirectory(), "saves"
+    )
 
 
 def test_saves_base_directory_uses_appdata_on_windows(monkeypatch):
@@ -59,6 +69,7 @@ def test_saves_base_directory_falls_back_when_appdata_missing(monkeypatch):
 
 def test_default_save_directory_is_under_saves_base(monkeypatch):
     monkeypatch.setattr(os, "name", "posix")
+    monkeypatch.setattr(sys, "platform", "linux")
     assert Config.getDefaultSaveDirectory() == os.path.join("saves", "defaultsavefile")
 
 
@@ -66,13 +77,24 @@ def test_config_uses_platform_default_save_directory(monkeypatch):
     # With no explicit pathToSaveDirectory in config.yml (isolate_config_file
     # writes an empty file), the platform default save directory is used.
     monkeypatch.setattr(os, "name", "posix")
+    monkeypatch.setattr(sys, "platform", "linux")
     config = Config()
     assert config.pathToSaveDirectory == os.path.join("saves", "defaultsavefile")
 
 
 def test_user_data_directory_is_bundle_dir_from_source(monkeypatch):
     monkeypatch.setattr(os, "name", "posix")
+    monkeypatch.setattr(sys, "platform", "linux")
     assert Config.getUserDataDirectory() == getBundleDirectory()
+
+
+def test_user_data_directory_uses_application_support_on_macos(monkeypatch):
+    monkeypatch.setattr(os, "name", "posix")
+    monkeypatch.setattr(sys, "platform", "darwin")
+    expected = os.path.join(
+        os.path.expanduser("~"), "Library", "Application Support", "Roam"
+    )
+    assert Config.getUserDataDirectory() == expected
 
 
 def test_user_data_directory_uses_appdata_on_windows(monkeypatch):

@@ -74,6 +74,15 @@ To produce a setup wizard (a `RoamSetup.exe` that installs the game with Start M
 
 This writes `installer-output\RoamSetup.exe`. Run it (or `RoamSetup.exe /VERYSILENT` for an unattended install) to install Roam into `Program Files`; user data is kept under `%APPDATA%\Roam`.
 
+#### macOS
+On macOS the same spec produces an app bundle (`dist/Roam.app`). Build it, then wrap it in a disk image:
+
+> pip install -r requirements.txt pyinstaller
+> pyinstaller roam.spec --noconfirm
+> hdiutil create -volname Roam -srcfolder dist/Roam.app -ov -format UDZO dist/Roam.dmg
+
+Open `Roam.dmg` and drag `Roam.app` to Applications. User data (saves, settings, screenshots) is kept under `~/Library/Application Support/Roam`.
+
 ### Where your data is stored
 On Windows, Roam keeps your user data under `%APPDATA%\Roam` (e.g. `C:\Users\<you>\AppData\Roaming\Roam`) so it stays with your account and works even when the game is installed to a read-only location like `Program Files`. This includes:
 - **Saves** — `%APPDATA%\Roam\saves`

@@ -2,6 +2,7 @@
 # @since August 6th, 2022
 import os
 import shutil
+import sys
 
 import pygame
 
@@ -15,15 +16,19 @@ class Config:
     @staticmethod
     def getUserDataDirectory():
         # Writable per-user directory for config and screenshots. On Windows
-        # this is %APPDATA%\Roam so writes succeed even when the game is
-        # installed to a read-only location like Program Files; other platforms
-        # use the repository/bundle root (the current from-source behavior).
-        # (Saves have their own getSavesBaseDirectory, which already resolves to
-        # %APPDATA%\Roam\saves on Windows.)
+        # this is %APPDATA%\Roam and on macOS ~/Library/Application Support/Roam,
+        # so writes succeed even when the game is installed to a read-only
+        # location (Program Files, /Applications). Other platforms use the
+        # repository/bundle root (the current from-source behavior). (Saves have
+        # their own getSavesBaseDirectory, which resolves the same way.)
         if os.name == "nt":
             appData = os.environ.get("APPDATA")
             if appData:
                 return os.path.join(appData, "Roam")
+        elif sys.platform == "darwin":
+            return os.path.join(
+                os.path.expanduser("~"), "Library", "Application Support", "Roam"
+            )
         return getBundleDirectory()
 
     @staticmethod
@@ -58,13 +63,16 @@ class Config:
     def getSavesBaseDirectory():
         # The single source of truth for where save folders live. On Windows we
         # store them under %APPDATA% (e.g. C:\Users\<you>\AppData\Roaming\Roam\saves)
-        # so saves live with the user rather than in the install directory, which
-        # may be read-only (e.g. Program Files). Other platforms keep the
+        # and on macOS under ~/Library/Application Support/Roam/saves, so saves
+        # live with the user rather than in a possibly read-only install
+        # directory (Program Files, /Applications). Other platforms keep the
         # repository-relative "saves" directory.
         if os.name == "nt":
             appData = os.environ.get("APPDATA")
             if appData:
                 return os.path.join(appData, "Roam", "saves")
+        elif sys.platform == "darwin":
+            return os.path.join(Config.getUserDataDirectory(), "saves")
         return "saves"
 
     @staticmethod
