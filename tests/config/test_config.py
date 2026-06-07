@@ -4,6 +4,7 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 import pygame
 import pytest
 
+from src.appPaths import getBundleDirectory
 from src.config.config import Config
 
 
@@ -69,6 +70,63 @@ def test_config_uses_platform_default_save_directory(monkeypatch):
     assert config.pathToSaveDirectory == os.path.join("saves", "defaultsavefile")
 
 
+def test_user_data_directory_is_bundle_dir_from_source(monkeypatch):
+    monkeypatch.setattr(os, "name", "posix")
+    assert Config.getUserDataDirectory() == getBundleDirectory()
+
+
+def test_user_data_directory_uses_appdata_on_windows(monkeypatch):
+    monkeypatch.setattr(os, "name", "nt")
+    appData = os.path.join(os.sep, "fake", "AppData", "Roaming")
+    monkeypatch.setenv("APPDATA", appData)
+    assert Config.getUserDataDirectory() == os.path.join(appData, "Roam")
+
+
+def test_user_data_directory_falls_back_when_appdata_missing(monkeypatch):
+    monkeypatch.setattr(os, "name", "nt")
+    monkeypatch.delenv("APPDATA", raising=False)
+    assert Config.getUserDataDirectory() == getBundleDirectory()
+
+
+def test_ensure_user_config_seeds_from_bundled(monkeypatch, tmp_path):
+    bundled = tmp_path / "bundle" / "config.yml"
+    bundled.parent.mkdir()
+    bundled.write_text("debug: false\n", encoding="utf-8")
+    user = tmp_path / "user" / "config.yml"
+    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: user))
+    monkeypatch.setattr(Config, "getBundledConfigFilePath", staticmethod(lambda: bundled))
+
+    Config.ensureUserConfigExists()
+
+    assert user.exists()
+    assert user.read_text(encoding="utf-8") == "debug: false\n"
+
+
+def test_ensure_user_config_noop_when_same_file(monkeypatch, tmp_path):
+    # Use a subpath so it doesn't collide with the autouse fixture's
+    # tmp_path/config.yml.
+    same = tmp_path / "sub" / "config.yml"
+    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: same))
+    monkeypatch.setattr(Config, "getBundledConfigFilePath", staticmethod(lambda: same))
+
+    Config.ensureUserConfigExists()
+
+    assert not same.exists()
+
+
+def test_ensure_user_config_noop_when_user_already_exists(monkeypatch, tmp_path):
+    bundled = tmp_path / "bundled.yml"
+    bundled.write_text("debug: false\n", encoding="utf-8")
+    user = tmp_path / "user.yml"
+    user.write_text("debug: true\n", encoding="utf-8")
+    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: user))
+    monkeypatch.setattr(Config, "getBundledConfigFilePath", staticmethod(lambda: bundled))
+
+    Config.ensureUserConfigExists()
+
+    assert user.read_text(encoding="utf-8") == "debug: true\n"
+
+
 def test_toggle_camera_follow_player():
     config = Config()
 
@@ -131,16 +189,13 @@ def test_reads_values_from_config_file(tmp_path, monkeypatch):
     assert config.black == (1, 2, 3)
 
 
-def test_handles_read_errors_with_defaults(monkeypatch):
-    class UnreadableConfigPath:
-        def exists(self):
-            return True
-
-        def open(self, *args, **kwargs):
-            raise OSError("Cannot read file")
-
+def test_handles_read_errors_with_defaults(tmp_path, monkeypatch):
+    # Point the config path at a directory: it "exists" but open() raises
+    # IsADirectoryError (an OSError), so Config must fall back to defaults.
+    unreadable = tmp_path / "config_dir"
+    unreadable.mkdir()
     monkeypatch.setattr(
-        Config, "getConfigFilePath", staticmethod(lambda: UnreadableConfigPath())
+        Config, "getConfigFilePath", staticmethod(lambda: unreadable)
     )
 
     config = Config()

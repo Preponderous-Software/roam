@@ -2,7 +2,6 @@
 # @since June 7th, 2026
 import os
 import sys
-from pathlib import Path
 
 
 def isFrozen():
@@ -14,9 +13,12 @@ def getBundleDirectory():
     # The directory that holds the bundled data files (assets, schemas,
     # config.yml). When frozen this is PyInstaller's extraction/install
     # directory; otherwise it is the repository root (one level up from src/).
+    # Uses os.path rather than pathlib so it stays correct when os.name is
+    # monkeypatched in cross-platform tests (pathlib.Path keys off os.name and
+    # cannot instantiate a WindowsPath on a POSIX host).
     if isFrozen():
         return sys._MEIPASS
-    return str(Path(__file__).resolve().parents[1])
+    return os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 
 def prepareWorkingDirectory():
