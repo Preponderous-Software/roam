@@ -66,6 +66,24 @@ def test_get_highest_measured_ticks_per_second(resolve, test_config, tmp_path):
     assert tickCounter.getHighestMeasuredTicksPerSecond() == pytest.approx(10.0)
 
 
+def test_increment_tick_with_zero_time_elapsed(resolve, test_config, tmp_path):
+    # On a coarse clock (e.g. Windows) two ticks can share a timestamp, so
+    # timeElapsed is 0. incrementTick must not raise ZeroDivisionError, and the
+    # previously measured rate is preserved. Without the guard this raises.
+    tickCounter = createTickCounter(resolve, test_config, tmp_path)
+
+    with patch("world.tickCounter.time") as mock_time:
+        # First tick: 0.1s elapsed -> 10 TPS. Second tick: same timestamp -> 0 elapsed.
+        mock_time.time.side_effect = [100.1, 100.1, 100.1, 100.1]
+        tickCounter.lastTimestamp = 100.0
+        tickCounter.incrementTick()
+        tickCounter.incrementTick()
+
+    assert tickCounter.getTick() == 2
+    assert tickCounter.getMeasuredTicksPerSecond() == pytest.approx(10.0)
+    assert tickCounter.getHighestMeasuredTicksPerSecond() == pytest.approx(10.0)
+
+
 def test_save_and_load(resolve, di_container, test_config, tmp_path):
     tickCounter = createTickCounter(resolve, test_config, tmp_path)
 
