@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-06-07 | 1+ | docs: Lead the README with the recommended prebuilt download (no Python), reframe the clone steps as "Run from Source (for developers)", and rename the `install.ps1` section to a "setup script" distinct from the `RoamSetup.exe` installer — fixes the information scent and the two-things-both-called-"wizard" naming collision (closes #404) |
 | 2026-06-07 | 1+ | test: Add unit-test coverage for `Room.tickExcrement` (spawn/decay/grass-blocking branches), `Inventory.hasAvailableSlotFor` (empty/matching-stack/full), and `MapImageGenerator` coordinate + bounds math; align `test_room.py` entity imports to the production `entity.*` root so `isinstance` checks match room-created entities; +18 tests (issues #372, #367) |
 | 2026-06-07 | 1+ | chore: Bump GitHub Actions to their Node 24 majors across all workflows — `actions/checkout` v4→v6, `actions/setup-python` v5→v6, `actions/upload-artifact` v4→v7 — clearing the Node.js 20 deprecation warnings |
 | 2026-06-07 | 1+ | feat: Add a release workflow — on a `v*` tag push, build and attach `Roam-<version>-Setup.exe`, a portable Windows zip, and `Roam-<version>.dmg` to an auto-generated GitHub Release (so distributables persist beyond the ~90-day CI-artifact retention) |

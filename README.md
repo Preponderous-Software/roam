@@ -29,7 +29,16 @@ Right Mouse (inventory slot) | Select inventory slot (inventory screen)
 
 > **Tip:** Keybindings are configurable in-game. Open the options menu and select **Controls** to view or remap bindings. Remapped keys are respected across all screens (world, inventory, stats, etc.).
 
-## Clone and Run
+## Download & Install (recommended)
+The easiest way to play Roam — no Python and no command line. Grab the latest build from the [Releases page](https://github.com/Preponderous-Software/roam/releases):
+
+- **Windows:** `Roam-<version>-Setup.exe` — a standard installer that adds Start Menu/Desktop shortcuts and an uninstaller. Prefer no install? Use `Roam-<version>-windows-portable.zip`.
+- **macOS:** `Roam-<version>.dmg` — open it and drag `Roam.app` to Applications.
+
+These builds aren't code-signed yet, so on first run Windows SmartScreen shows an "unknown publisher" prompt (choose **More info → Run anyway**) and macOS Gatekeeper may block the app (right-click it → **Open**). See issues #393 / #396.
+
+## Run from Source (for developers)
+Want the latest code, or to contribute? Run Roam from a clone. (To just play, use the [download above](#download--install-recommended).)
 ### Clone
 1. If you don't have git installed, install it from [here](https://git-scm.com/downloads).
 2. Clone the repository with the following command:
@@ -49,11 +58,8 @@ Right Mouse (inventory slot) | Select inventory slot (inventory screen)
 ## Run Script (Linux Only)
 There is also a run.sh script you can execute if you're on linux which will automatically attempt to install the dependencies for you.
 
-## Downloads
-Prebuilt installers are attached to each tagged release on the [Releases page](https://github.com/Preponderous-Software/roam/releases): `Roam-<version>-Setup.exe` (Windows installer), `Roam-<version>-windows-portable.zip` (no-install Windows build), and `Roam-<version>.dmg` (macOS). These are built automatically by the release workflow when a `v*` tag is pushed. They are not yet code-signed, so Windows SmartScreen / macOS Gatekeeper will warn on first run (see issues #393 / #396).
-
-## Windows Installation Wizard
-On Windows you can use the `install.ps1` wizard instead of running the steps above by hand. It checks that Python and pip are available, installs pygame and the rest of the dependencies, and creates Desktop and Start Menu shortcuts so you can launch the game without using the command line.
+## Windows setup script (run from source)
+If you're [running from source](#run-from-source-for-developers) on Windows, `install.ps1` is a setup *script* — the from-source counterpart to `run.sh`. It checks that Python and pip are available, installs the dependencies, and creates Desktop and Start Menu shortcuts so you can launch the game without using the command line. (For a normal install, use the `RoamSetup.exe` **installer** from [Download & Install](#download--install-recommended) instead — it needs no Python.)
 
 1. [Clone or download](#clone) the repository.
 2. Right-click `install.ps1` and choose **Run with PowerShell**.
