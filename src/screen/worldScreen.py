@@ -108,6 +108,9 @@ class WorldScreen:
         self.minimapY = 5
         self._cachedMiniMapImage = None
         self._miniMapLastLoadTick = 0
+        # Tracks whether the last minimap-image load failed, so the failure is
+        # logged once on the good->failed transition rather than every reload.
+        self._miniMapLoadFailed = False
         self._saveExecutor = ThreadPoolExecutor(
             max_workers=1
         )  # serialize save operations off main thread
@@ -1114,7 +1117,19 @@ class WorldScreen:
                     mapImage = pygame.image.load(mapImagePath)
                     self._cachedMiniMapImage = mapImage
                     self._miniMapLastLoadTick = currentTick
-                except (FileNotFoundError, pygame.error):
+                    self._miniMapLoadFailed = False
+                except (FileNotFoundError, pygame.error) as e:
+                    # Log once on the good->failed transition so a persistently
+                    # missing/corrupt mapImage.png is diagnosable, without
+                    # spamming a log line on every 60-tick reload attempt.
+                    if not self._miniMapLoadFailed:
+                        _logger.warning(
+                            "could not load minimap image; "
+                            "keeping last good frame if available",
+                            path=mapImagePath,
+                            error=str(e),
+                        )
+                        self._miniMapLoadFailed = True
                     if self._cachedMiniMapImage is not None:
                         mapImage = self._cachedMiniMapImage
                     else:

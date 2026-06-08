@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-06-07 | 1+ | robustness: Log once when the minimap image fails to load — the `except (FileNotFoundError, pygame.error)` in `WorldScreen.drawMiniMap` previously swallowed the failure silently; it now warns via the structured logger on the good->failed transition (throttled by a `_miniMapLoadFailed` flag, reset on a successful load), keeping the existing fallback-to-cached-or-return behavior; +3 tests (closes #412) |
 | 2026-06-07 | 1+ | docs: Sync the config/docs sources of truth — drop the dead `black`/`white` keys from `config.yml` and add the missing `cropGrowthTicks` (static) and `pushableStone` (dynamic toggle) keys the code already reads; correct `copilot-instructions.md` (add the `crafting/`, `codex/`, `gameLogging/` packages to the repository layout, fix the Pillow version to `>=10.0.0`, refresh the stale `0.8.0-SNAPSHOT` version marker to `0.11.0-SNAPSHOT`) (closes #362, #365) |
 | 2026-06-07 | 1+ | refactor: Add `Config.getRoomsDirectory()` as the single source of truth for the `<saveDir>/rooms` path — `getRoomFilePath` and both makedirs sites (`roomJsonReaderWriter`, `worldScreenPersistence`) now go through it instead of hand-concatenating `"/rooms"` (closes #409) |
 | 2026-06-07 | 1+ | refactor: Replace the 10 near-identical hotbar `elif` branches in `InventoryScreen.handleKeyDownEvent` with a data-driven `_handleHotbarKey` loop (preserving the `hotbar_0 → slot 9` wrap); +3 tests (closes #410) |
@@ -94,6 +95,13 @@ logged in detail below.
 | 2022-08-08 | 21 | Create version.txt; Update README.md; Modified README. (+9 more) |
 
 ## AI Agent Sessions
+
+### 2026-06-07 — Log minimap image-load failures instead of swallowing them (issue #412)
+- **Context:** In `WorldScreen.drawMiniMap`, the reload path caught `(FileNotFoundError, pygame.error)` and silently fell back to the cached frame (or returned). The fallback is correct — it must not crash the render loop — but it logged nothing, so a persistently missing/corrupt `mapImage.png` made the minimap silently never appear with zero diagnostic. Same class of silent-render-failure that #368 fixed for `DrawableEntity.getImage`.
+- **`src/screen/worldScreen.py`:** Added a `_miniMapLoadFailed` flag (initialized in `__init__`). The `except` now logs `_logger.warning("could not load minimap image; keeping last good frame if available", path=..., error=...)` only on the good->failed transition (guarded by the flag), and a successful load resets the flag. This avoids per-reload log spam (the path runs every ~60 ticks) while making the failure diagnosable, and re-arms the warning if the minimap recovers and later breaks again. Existing fallback-to-cached-or-return behavior is unchanged.
+- **`tests/screen/test_worldScreen_minimap.py` (new):** 3 tests — a corrupt `mapImage.png` is logged once and `drawMiniMap` returns cleanly (would fail before the fix, which logged nothing); repeated failures log only once (throttle); a successful load resets the failure flag (recovery). Built via `WorldScreen.__new__` with minimal attributes, mirroring `test_worldScreen_saveSurfacing.py`.
+- **Validation:** `python3 -m compileall src -q` clean; `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python3 -m pytest` → 539 passed (was 536; +3). Black/autoflake scoped to the two changed files; pre-existing Black drift the file-scoped format pulled in (unrelated `status.set`/`_loadOrGenerateRoom` lines) was reverted so the diff carries only the change.
+- **Learning Log:** `[integrated]` — reused the #368 silent-render-failure precedent (structured `getLogger`, log-once degradation) and the cycle-2/4 hunk-scoping rule (roam-dev-loop#3): file-scoped `black` reformatted pre-existing-drift blocks in `worldScreen.py`; those were reverted and only the intended hunks kept.
 
 ### 2026-06-07 — Sync the config and copilot-instructions sources of truth (issues #362, #365)
 - **Context:** A triage pass found drift between three sources of truth and the code: `config.yml`, `.github/copilot-instructions.md`, and `version.txt`. Each claim was re-verified against source before editing (line numbers in the issues were stale but the underlying mismatches held).
