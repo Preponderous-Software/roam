@@ -7,6 +7,7 @@ import jsonschema
 
 from config.config import Config
 from gameLogging.logger import getLogger
+from schemaCache import loadSchema
 
 _logger = getLogger(__name__)
 
@@ -19,10 +20,8 @@ class GoalsJsonReaderWriter:
     def save(self, completedIdentifiers):
         data = {"completedGoals": list(completedIdentifiers)}
 
-        with open("schemas/goals.json") as f:
-            schema = json.load(f)
         try:
-            jsonschema.validate(data, schema)
+            jsonschema.validate(data, loadSchema("goals.json"))
         except jsonschema.exceptions.ValidationError as e:
             _logger.error("goals validation error on save", error=str(e))
 
@@ -43,9 +42,7 @@ class GoalsJsonReaderWriter:
             with open(path) as f:
                 data = json.load(f)
 
-            with open("schemas/goals.json") as f:
-                schema = json.load(f)
-            jsonschema.validate(data, schema)
+            jsonschema.validate(data, loadSchema("goals.json"))
         except (json.JSONDecodeError, jsonschema.exceptions.ValidationError) as e:
             _logger.error("goals validation error on load", error=str(e), path=path)
             return []
