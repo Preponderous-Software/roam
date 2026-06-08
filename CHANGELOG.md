@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-06-07 | 1+ | docs: Sync the config/docs sources of truth — drop the dead `black`/`white` keys from `config.yml` and add the missing `cropGrowthTicks` (static) and `pushableStone` (dynamic toggle) keys the code already reads; correct `copilot-instructions.md` (add the `crafting/`, `codex/`, `gameLogging/` packages to the repository layout, fix the Pillow version to `>=10.0.0`, refresh the stale `0.8.0-SNAPSHOT` version marker to `0.11.0-SNAPSHOT`) (closes #362, #365) |
 | 2026-06-07 | 1+ | refactor: Add `Config.getRoomsDirectory()` as the single source of truth for the `<saveDir>/rooms` path — `getRoomFilePath` and both makedirs sites (`roomJsonReaderWriter`, `worldScreenPersistence`) now go through it instead of hand-concatenating `"/rooms"` (closes #409) |
 | 2026-06-07 | 1+ | refactor: Replace the 10 near-identical hotbar `elif` branches in `InventoryScreen.handleKeyDownEvent` with a data-driven `_handleHotbarKey` loop (preserving the `hotbar_0 → slot 9` wrap); +3 tests (closes #410) |
 | 2026-06-07 | 1+ | fix: Correct release versioning — `version.txt` had been stale at `0.8.0-SNAPSHOT` while `0.9.0`/`0.10.0` were already released, leading to an erroneous `v0.9.0` tag/release (now deleted); set `version.txt` to `0.11.0-SNAPSHOT`, switch the release workflow to the repo's bare-number tag convention (`0.11.0`, not `v0.11.0`), and fix `UpdateChecker` to read the `/releases` list (every Roam release is a GitHub pre-release, so `/releases/latest` 404s) |
@@ -93,6 +94,14 @@ logged in detail below.
 | 2022-08-08 | 21 | Create version.txt; Update README.md; Modified README. (+9 more) |
 
 ## AI Agent Sessions
+
+### 2026-06-07 — Sync the config and copilot-instructions sources of truth (issues #362, #365)
+- **Context:** A triage pass found drift between three sources of truth and the code: `config.yml`, `.github/copilot-instructions.md`, and `version.txt`. Each claim was re-verified against source before editing (line numbers in the issues were stale but the underlying mismatches held).
+- **`config.yml` (#365):** Removed the `black`/`white` keys — they parse into `Config.black`/`Config.white` but a grep across `src/` (excluding `src/lib/`) finds zero consumers, so they were dead and misleading. Added the two keys the code reads but the file omitted: `cropGrowthTicks: 1800` (read at `config.py`, consumed at `world/room.py` for crop maturity) under the static section, and `pushableStone: true` (read at `config.py`, consumed at `worldScreen.py`, and already an in-game toggle in `configScreen.py`) under the dynamic section. The `getColorValue` helper and `Config.black`/`Config.white` reads were left in place — they default harmlessly and are covered by `tests/config/test_config.py`; removing them would delete tested code, which the issue marks as optional and is out of scope for a config-sync change.
+- **`.github/copilot-instructions.md` (#362):** Added the `crafting/`, `codex/`, and `gameLogging/` packages (all present under `src/`) to the Repository Layout; corrected the Pillow version from the stale `9.4.0` to `>=10.0.0` to match `requirements.txt` (the issue said `==12.2.0`, but the actual pin is `>=10.0.0`); refreshed the stale `0.8.0-SNAPSHOT` version marker in the Technology Stack section to `0.11.0-SNAPSHOT` to match `version.txt`.
+- **Validation:** `python3 -m compileall src -q` clean; `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy python3 -m pytest` green (config/docs-only change; no behavioral code touched).
+- **Merge note:** `config.yml` is on the do-not-auto-merge list, so this PR is left for manual review rather than auto-merged.
+- **Learning Log:** `[integrated]` — no new convention; reinforces the existing doc-drift / config-sync triage rules already in `copilot-instructions.md`. Confirmed the standing lesson that issue-reported specifics (line numbers, the `==12.2.0` Pillow pin) must be re-verified against source — Phase-3 localization caught the wrong version string before it shipped.
 
 ### 2026-06-07 — Correct release versioning and the update-check endpoint
 - **Context:** `version.txt` had drifted to `0.8.0-SNAPSHOT` while the repo had in fact already published `0.9.0` and `0.10.0` (all releases are GitHub pre-releases, bare-number tags). Trusting the stale file, an erroneous `v0.9.0` tag + release was cut today (a duplicate version, `v`-prefixed against the bare-number convention, and briefly flagged "latest"). It was deleted (the real `0.9.0`/`0.10.0` are separate tags and untouched).

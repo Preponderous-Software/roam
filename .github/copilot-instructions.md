@@ -8,10 +8,10 @@ Roam is a single-player 2D survival game built with Python and Pygame. Players e
 - **Game framework:** Pygame 2.1.2
 - **Testing:** pytest 7.1.3, pytest-cov 4.0.0
 - **Formatter:** Black (via `format.sh`), autoflake (unused import/variable removal)
-- **Image processing:** Pillow 9.4.0
+- **Image processing:** Pillow >=10.0.0
 - **JSON schema validation:** jsonschema 4.17.3
 - **Bundled libraries:** [graphik](https://github.com/Preponderous-Software/graphik) (vendored in `src/lib/graphik`), [py_env_lib](https://github.com/Preponderous-Software/py_env_lib) (vendored in `src/lib/pyenvlib`)
-- **Version:** 0.8.0-SNAPSHOT (tracked in `version.txt`)
+- **Version:** 0.11.0-SNAPSHOT (tracked in `version.txt`)
 
 ## Repository Layout
 
@@ -22,10 +22,13 @@ Roam is a single-player 2D survival game built with Python and Pygame. Players e
   - `inventory/` — Inventory system and JSON persistence.
   - `player/` — Player class.
   - `world/` — World map, rooms, room generation, tick counter.
+  - `crafting/` — Crafting recipes and the recipe registry (`recipe.py`, `recipeRegistry.py`).
+  - `codex/` — Discovered-entity codex and its JSON persistence (`codex.py`, `codexJsonReaderWriter.py`).
   - `screen/` — Game screens (main menu, world, options, inventory, stats, config).
   - `ui/` — HUD elements (energy bar, status display).
   - `stats/` — Game statistics tracking.
   - `mapimage/` — Map image generation and updating.
+  - `gameLogging/` — Structured logging helpers (`logger.py` — `getLogger()`, `redact()`).
   - `di/` — Lightweight dependency injection container (stdlib-only).
   - `appContainer.py` — Module-level container singleton and `component` decorator.
   - `bootstrap.py` — Centralized factory/instance registrations.
