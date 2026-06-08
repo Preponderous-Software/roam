@@ -1,4 +1,3 @@
-import json
 import math
 import os
 import threading
@@ -17,6 +16,7 @@ from codex.codex import Codex
 from codex.codexJsonReaderWriter import CodexJsonReaderWriter
 from inventory.inventoryJsonReaderWriter import InventoryJsonReaderWriter
 from inventory.inventorySlot import InventorySlot
+from jsonPersistence import writeJsonAtomically
 from mapimage.mapImageUpdater import MapImageUpdater
 from screen.pickupableEntities import canBePickedUp as _canBePickedUp
 from screen.screenType import ScreenType
@@ -324,11 +324,7 @@ class WorldScreen:
     def _writeJsonToFile(self, data, path):
         """Write a pre-built JSON dict to disk. Runs on background thread."""
         try:
-            dirPath = os.path.dirname(path)
-            if not os.path.exists(dirPath):
-                os.makedirs(dirPath, exist_ok=True)
-            with open(path, "w") as outfile:
-                json.dump(data, outfile, indent=4)
+            writeJsonAtomically(path, data)
         except Exception as e:
             _logger.error("error writing JSON file", error=str(e), path=path)
 
@@ -1906,11 +1902,7 @@ class WorldScreen:
         roomJson is a pre-built dict snapshot prepared on the main thread."""
         try:
             if roomJson is not None:
-                dirPath = os.path.dirname(roomPath)
-                if not os.path.exists(dirPath):
-                    os.makedirs(dirPath, exist_ok=True)
-                with open(roomPath, "w") as outfile:
-                    json.dump(roomJson, outfile, indent=4)
+                writeJsonAtomically(roomPath, roomJson)
             self.savePlayerLocationToFile()
             self.savePlayerAttributesToFile()
             self.savePlayerInventoryToFile()
