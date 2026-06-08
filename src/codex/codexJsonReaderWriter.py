@@ -6,6 +6,7 @@ import jsonschema
 
 from config.config import Config
 from gameLogging.logger import getLogger
+from schemaCache import loadSchema
 
 _logger = getLogger(__name__)
 
@@ -17,10 +18,8 @@ class CodexJsonReaderWriter:
     def save(self, discoveredEntities):
         data = {"discoveredEntities": list(discoveredEntities)}
 
-        with open("schemas/codex.json") as f:
-            schema = json.load(f)
         try:
-            jsonschema.validate(data, schema)
+            jsonschema.validate(data, loadSchema("codex.json"))
         except jsonschema.exceptions.ValidationError as e:
             _logger.error(
                 "codex validation failed; aborting save to preserve existing file",
@@ -46,9 +45,7 @@ class CodexJsonReaderWriter:
             with open(path) as f:
                 data = json.load(f)
 
-            with open("schemas/codex.json") as f:
-                schema = json.load(f)
-            jsonschema.validate(data, schema)
+            jsonschema.validate(data, loadSchema("codex.json"))
         except (json.JSONDecodeError, jsonschema.exceptions.ValidationError) as e:
             _logger.error("codex validation error on load", error=str(e), path=path)
             return None

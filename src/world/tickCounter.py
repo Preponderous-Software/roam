@@ -6,6 +6,7 @@ import jsonschema
 from appContainer import component
 from config.config import Config
 from gameLogging.logger import getLogger
+from schemaCache import loadSchema
 
 _logger = getLogger(__name__)
 
@@ -59,9 +60,7 @@ class TickCounter:
         jsonTick = {}
         jsonTick["tick"] = self.getTick()
 
-        with open("schemas/tick.json") as f:
-            tickSchema = json.load(f)
-        jsonschema.validate(jsonTick, tickSchema)
+        jsonschema.validate(jsonTick, loadSchema("tick.json"))
 
         path = self.config.pathToSaveDirectory + "/tick.json"
         with open(path, "w") as f:
@@ -73,9 +72,7 @@ class TickCounter:
         with open(path) as f:
             jsonTick = json.load(f)
 
-        with open("schemas/tick.json") as f:
-            tickSchema = json.load(f)
-        jsonschema.validate(jsonTick, tickSchema)
+        jsonschema.validate(jsonTick, loadSchema("tick.json"))
 
         self.tick = int(jsonTick["tick"])
         _logger.info("tick counter loaded", path=path, tickCount=self.tick)

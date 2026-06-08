@@ -6,6 +6,7 @@ import jsonschema
 from appContainer import component
 from config.config import Config
 from gameLogging.logger import getLogger
+from schemaCache import loadSchema
 
 _logger = getLogger(__name__)
 
@@ -63,9 +64,7 @@ class Stats:
             "numberOfDeaths": str(self.getNumberOfDeaths()),
         }
 
-        with open("schemas/stats.json") as f:
-            statsSchema = json.load(f)
-        jsonschema.validate(jsonStats, statsSchema)
+        jsonschema.validate(jsonStats, loadSchema("stats.json"))
 
         path = self.config.pathToSaveDirectory + "/stats.json"
         with open(path, "w") as f:
@@ -80,9 +79,7 @@ class Stats:
         with open(path) as f:
             jsonStats = json.load(f)
 
-        with open("schemas/stats.json") as f:
-            statsSchema = json.load(f)
-        jsonschema.validate(jsonStats, statsSchema)
+        jsonschema.validate(jsonStats, loadSchema("stats.json"))
 
         self.setScore(int(jsonStats["score"]))
         self.setRoomsExplored(int(jsonStats["roomsExplored"]))
