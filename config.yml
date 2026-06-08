@@ -4,8 +4,6 @@
 # displayWidth/displayHeight default to 90% of display height when omitted.
 # displayWidth: 972
 # displayHeight: 972
-black: [0, 0, 0]
-white: [255, 255, 255]
 playerMovementEnergyCost: 0.2
 playerInteractionEnergyCost: 0.05
 runSpeedFactor: 2
@@ -15,6 +13,8 @@ ticksPerSecond: 30
 gridSize: 17
 worldBorder: 0
 excrementDecayTicks: 3600
+# Ticks for a planted crop to grow to maturity (30 tps → 1800 ticks ≈ 60s).
+cropGrowthTicks: 1800
 # pathToSaveDirectory: leave unset to use the platform default save location
 # ("saves/defaultsavefile", or %APPDATA%\Roam\saves\defaultsavefile on Windows).
 # Set it explicitly to override, e.g. pathToSaveDirectory: saves/defaultsavefile
@@ -27,6 +27,7 @@ removeDeadEntities: true
 showMiniMap: true
 cameraFollowPlayer: true
 limitTps: true
+pushableStone: true
 dayNightCycleEnabled: true
 dayNightCycleLengthTicks: 54000
 # Check GitHub for a newer release on launch and show a notice on the main menu.
