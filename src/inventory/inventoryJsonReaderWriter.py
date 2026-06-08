@@ -31,6 +31,7 @@ from entity.woodFloor import WoodFloor
 from entity.youngCrop import YoungCrop
 from inventory.inventory import Inventory
 from gameLogging.logger import getLogger
+from jsonPersistence import readJsonFile
 
 _logger = getLogger(__name__)
 
@@ -131,10 +132,9 @@ class InventoryJsonReaderWriter:
     def loadInventory(self, path):
         _logger.info("loading inventory", path=path)
         inventory = Inventory()
-        if not os.path.exists(path):
+        inventoryJson = readJsonFile(path)
+        if inventoryJson is None:
             return inventory
-        with open(path) as f:
-            inventoryJson = json.load(f)
         for slot in inventoryJson["inventorySlots"]:
             for entityJson in slot["slotContents"]:
                 entity = self._createEntityFromJson(entityJson)

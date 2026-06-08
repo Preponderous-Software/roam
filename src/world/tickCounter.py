@@ -6,6 +6,7 @@ import jsonschema
 from appContainer import component
 from config.config import Config
 from gameLogging.logger import getLogger
+from jsonPersistence import readJsonFile
 from schemaCache import loadSchema
 
 _logger = getLogger(__name__)
@@ -69,8 +70,9 @@ class TickCounter:
 
     def load(self):
         path = self.config.pathToSaveDirectory + "/tick.json"
-        with open(path) as f:
-            jsonTick = json.load(f)
+        jsonTick = readJsonFile(path)
+        if jsonTick is None:
+            return
 
         jsonschema.validate(jsonTick, loadSchema("tick.json"))
 
