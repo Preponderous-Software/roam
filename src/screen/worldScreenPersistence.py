@@ -5,6 +5,7 @@ from math import ceil
 from appContainer import component
 from config.config import Config
 from gameLogging.logger import getLogger
+from jsonPersistence import readJsonFile
 from player.player import Player
 from stats.stats import Stats
 from world.roomJsonReaderWriter import RoomJsonReaderWriter
@@ -49,13 +50,11 @@ class WorldScreenPersistence:
 
     def loadPlayerLocationFromFile(self, mapInstance):
         path = self.config.pathToSaveDirectory + "/playerLocation.json"
-        if not os.path.exists(path):
+        jsonPlayerLocation = readJsonFile(path)
+        if jsonPlayerLocation is None:
             return None
 
         _logger.info("loading player location", path=path)
-        with open(path) as f:
-            jsonPlayerLocation = json.load(f)
-
         with open("schemas/playerLocation.json") as f:
             playerLocationSchema = json.load(f)
         jsonschema.validate(jsonPlayerLocation, playerLocationSchema)
@@ -101,13 +100,11 @@ class WorldScreenPersistence:
 
     def loadPlayerAttributesFromFile(self):
         path = self.config.pathToSaveDirectory + "/playerAttributes.json"
-        if not os.path.exists(path):
+        jsonPlayerAttributes = readJsonFile(path)
+        if jsonPlayerAttributes is None:
             return
 
         _logger.info("loading player attributes", path=path)
-        with open(path) as f:
-            jsonPlayerAttributes = json.load(f)
-
         with open("schemas/playerAttributes.json") as f:
             playerAttributesSchema = json.load(f)
         jsonschema.validate(jsonPlayerAttributes, playerAttributesSchema)

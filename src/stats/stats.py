@@ -1,11 +1,11 @@
 # @author Daniel McCoy Stephenson
 import json
-import os
 import jsonschema
 
 from appContainer import component
 from config.config import Config
 from gameLogging.logger import getLogger
+from jsonPersistence import readJsonFile
 from schemaCache import loadSchema
 
 _logger = getLogger(__name__)
@@ -73,11 +73,9 @@ class Stats:
 
     def load(self):
         path = self.config.pathToSaveDirectory + "/stats.json"
-        if not os.path.exists(path):
+        jsonStats = readJsonFile(path)
+        if jsonStats is None:
             return
-
-        with open(path) as f:
-            jsonStats = json.load(f)
 
         jsonschema.validate(jsonStats, loadSchema("stats.json"))
 

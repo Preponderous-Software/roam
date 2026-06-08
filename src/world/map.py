@@ -62,6 +62,17 @@ class Map:
                     self.gridSize, self.graphik, self.tickCounter, self.config
                 )
             room = roomJsonReaderWriter.loadRoom(nextRoomPath)
+            if room is None:
+                # The room file exists but is corrupt/unreadable. Treat it as
+                # absent (return -1) so the caller generates a fresh room
+                # instead of crashing on startup.
+                _logger.error(
+                    "room file unreadable; generating a fresh room instead",
+                    roomX=x,
+                    roomY=y,
+                    path=nextRoomPath,
+                )
+                return -1
             _logger.info("room loaded from file", roomX=x, roomY=y, path=nextRoomPath)
             return self.addRoom(room)
 
