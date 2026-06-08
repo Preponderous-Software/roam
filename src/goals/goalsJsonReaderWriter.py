@@ -7,6 +7,7 @@ import jsonschema
 
 from config.config import Config
 from gameLogging.logger import getLogger
+from jsonPersistence import writeJsonAtomically
 from schemaCache import loadSchema
 
 _logger = getLogger(__name__)
@@ -29,8 +30,7 @@ class GoalsJsonReaderWriter:
             os.makedirs(self.config.pathToSaveDirectory)
 
         path = self.config.pathToSaveDirectory + "/goals.json"
-        with open(path, "w") as f:
-            json.dump(data, f, indent=4)
+        writeJsonAtomically(path, data)
         _logger.info("goals saved", path=path)
 
     def load(self):

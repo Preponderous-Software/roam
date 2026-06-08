@@ -1,11 +1,10 @@
 # @author Daniel McCoy Stephenson
-import json
 import jsonschema
 
 from appContainer import component
 from config.config import Config
 from gameLogging.logger import getLogger
-from jsonPersistence import readJsonFile
+from jsonPersistence import readJsonFile, writeJsonAtomically
 from schemaCache import loadSchema
 
 _logger = getLogger(__name__)
@@ -67,8 +66,7 @@ class Stats:
         jsonschema.validate(jsonStats, loadSchema("stats.json"))
 
         path = self.config.pathToSaveDirectory + "/stats.json"
-        with open(path, "w") as f:
-            json.dump(jsonStats, f, indent=4)
+        writeJsonAtomically(path, jsonStats)
         _logger.info("stats saved", path=path)
 
     def load(self):

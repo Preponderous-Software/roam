@@ -31,7 +31,7 @@ from entity.woodFloor import WoodFloor
 from entity.youngCrop import YoungCrop
 from inventory.inventory import Inventory
 from gameLogging.logger import getLogger
-from jsonPersistence import readJsonFile
+from jsonPersistence import readJsonFile, writeJsonAtomically
 
 _logger = getLogger(__name__)
 
@@ -125,8 +125,7 @@ class InventoryJsonReaderWriter:
         if not os.path.exists(self.config.pathToSaveDirectory):
             os.makedirs(self.config.pathToSaveDirectory)
 
-        with open(path, "w") as f:
-            json.dump(toReturn, f, indent=4)
+        writeJsonAtomically(path, toReturn)
         return True
 
     def loadInventory(self, path):

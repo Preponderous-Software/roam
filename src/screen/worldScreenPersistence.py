@@ -5,7 +5,7 @@ from math import ceil
 from appContainer import component
 from config.config import Config
 from gameLogging.logger import getLogger
-from jsonPersistence import readJsonFile
+from jsonPersistence import readJsonFile, writeJsonAtomically
 from player.player import Player
 from stats.stats import Stats
 from world.roomJsonReaderWriter import RoomJsonReaderWriter
@@ -45,8 +45,7 @@ class WorldScreenPersistence:
 
         path = self.config.pathToSaveDirectory + "/playerLocation.json"
         _logger.info("saving player location", path=path)
-        with open(path, "w") as f:
-            json.dump(jsonPlayerLocation, f, indent=4)
+        writeJsonAtomically(path, jsonPlayerLocation)
 
     def loadPlayerLocationFromFile(self, mapInstance):
         path = self.config.pathToSaveDirectory + "/playerLocation.json"
@@ -95,8 +94,7 @@ class WorldScreenPersistence:
 
         path = self.config.pathToSaveDirectory + "/playerAttributes.json"
         _logger.info("saving player attributes", path=path)
-        with open(path, "w") as f:
-            json.dump(jsonPlayerAttributes, f, indent=4)
+        writeJsonAtomically(path, jsonPlayerAttributes)
 
     def loadPlayerAttributesFromFile(self):
         path = self.config.pathToSaveDirectory + "/playerAttributes.json"
@@ -131,5 +129,4 @@ class WorldScreenPersistence:
         os.makedirs(self.config.getRoomsDirectory(), exist_ok=True)
 
         jsonRoom = self.roomJsonReaderWriter.generateJsonForRoom(room)
-        with open(roomPath, "w") as outfile:
-            json.dump(jsonRoom, outfile, indent=4)
+        writeJsonAtomically(roomPath, jsonRoom)

@@ -6,6 +6,7 @@ import jsonschema
 
 from config.config import Config
 from gameLogging.logger import getLogger
+from jsonPersistence import writeJsonAtomically
 from schemaCache import loadSchema
 
 _logger = getLogger(__name__)
@@ -31,8 +32,7 @@ class CodexJsonReaderWriter:
             os.makedirs(self.config.pathToSaveDirectory)
 
         path = self.config.pathToSaveDirectory + "/codex.json"
-        with open(path, "w") as f:
-            json.dump(data, f, indent=4)
+        writeJsonAtomically(path, data)
         _logger.info("codex saved", path=path)
         return True
 

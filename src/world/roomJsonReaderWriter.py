@@ -36,7 +36,7 @@ from lib.graphik.src.graphik import Graphik
 from lib.pyenvlib.grid import Grid
 from lib.pyenvlib.location import Location
 from gameLogging.logger import getLogger
-from jsonPersistence import readJsonFile
+from jsonPersistence import readJsonFile, writeJsonAtomically
 
 from world.room import Room
 from world.tickCounter import TickCounter
@@ -82,8 +82,7 @@ class RoomJsonReaderWriter:
         _logger.info("saving room", path=path, roomX=room.getX(), roomY=room.getY())
         roomJson = self.generateJsonForRoom(room)
         os.makedirs(self.config.getRoomsDirectory(), exist_ok=True)
-        with open(path, "w") as outfile:
-            json.dump(roomJson, outfile, indent=4)
+        writeJsonAtomically(path, roomJson)
 
     def loadRoom(self, path):
         _logger.info("loading room", path=path)

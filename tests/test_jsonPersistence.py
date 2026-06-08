@@ -3,7 +3,9 @@ import os
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 
-from jsonPersistence import readJsonFile
+import pytest
+
+from jsonPersistence import readJsonFile, writeJsonAtomically
 from stats.stats import Stats
 from world.tickCounter import TickCounter
 
@@ -75,3 +77,36 @@ def test_stats_load_still_reads_a_valid_file(test_config, tmp_path):
     reloaded.load()
     assert reloaded.getScore() == 7
     assert reloaded.getNumberOfDeaths() == 2
+
+
+def test_writeJsonAtomically_round_trips(tmp_path):
+    path = str(tmp_path / "out.json")
+    writeJsonAtomically(path, {"x": 1, "y": [2, 3]})
+    assert readJsonFile(path) == {"x": 1, "y": [2, 3]}
+
+
+def test_writeJsonAtomically_creates_missing_directory(tmp_path):
+    path = str(tmp_path / "nested" / "dir" / "out.json")
+    writeJsonAtomically(path, {"ok": True})
+    assert readJsonFile(path) == {"ok": True}
+
+
+def test_writeJsonAtomically_leaves_no_temp_file_on_success(tmp_path):
+    path = str(tmp_path / "out.json")
+    writeJsonAtomically(path, {"ok": True})
+    leftovers = [name for name in os.listdir(str(tmp_path)) if name.endswith(".tmp")]
+    assert leftovers == []
+
+
+def test_writeJsonAtomically_preserves_good_file_when_serialization_fails(tmp_path):
+    # The core #370 guarantee: a failed save must not destroy the previous file.
+    path = str(tmp_path / "save.json")
+    writeJsonAtomically(path, {"version": 1})
+
+    with pytest.raises(TypeError):
+        writeJsonAtomically(path, {"bad": {1, 2, 3}})  # a set isn't JSON-serializable
+
+    # Old contents intact, and the aborted write left no temp file behind.
+    assert readJsonFile(path) == {"version": 1}
+    leftovers = [name for name in os.listdir(str(tmp_path)) if name.endswith(".tmp")]
+    assert leftovers == []
