@@ -143,6 +143,20 @@ def test_draw_panel_returns_none_when_not_hovering_an_item(monkeypatch):
     assert hovered is None
 
 
+def test_chest_title_marks_an_empty_chest():
+    screen = createChestScreen(chest=Chest())
+
+    assert screen._chestTitle() == "Chest (empty)"
+
+
+def test_chest_title_is_plain_when_chest_has_items():
+    chest = Chest()
+    chest.getStoredInventory().placeIntoFirstAvailableInventorySlot(Apple())
+    screen = createChestScreen(chest=chest)
+
+    assert screen._chestTitle() == "Chest"
+
+
 def test_back_button_geometry_is_bottom_right():
     screen = createChestScreen()
 

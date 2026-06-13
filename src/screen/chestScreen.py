@@ -56,6 +56,14 @@ class ChestScreen:
     def getChestInventory(self):
         return self.chest.getStoredInventory()
 
+    def _chestTitle(self):
+        # Confirm an empty chest in the title so the player can see at a glance
+        # it holds nothing (and is therefore safe to pick up) without scanning
+        # the slots one by one (Nielsen #1, visibility of system status).
+        if self.getChestInventory().getNumItems() == 0:
+            return "Chest (empty)"
+        return "Chest"
+
     def switchToWorldScreen(self):
         self.nextScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = True
@@ -276,7 +284,7 @@ class ChestScreen:
 
             self.graphik.getGameDisplay().fill((0, 0, 0))
             hoveredChestItem = self._drawPanel(
-                self.getChestInventory(), self.getChestPanelRect(), "Chest"
+                self.getChestInventory(), self.getChestPanelRect(), self._chestTitle()
             )
             hoveredPlayerItem = self._drawPanel(
                 self.inventory, self.getPlayerPanelRect(), "Inventory"
