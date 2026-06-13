@@ -1780,7 +1780,13 @@ class WorldScreen:
                 livingDescribed = True
                 break
             if fallbackName is None and hasattr(entity, "getName"):
-                fallbackName = entity.getName()
+                if isinstance(entity, Chest):
+                    if entity.getStoredInventory().getNumItems() > 0:
+                        fallbackName = "Chest (contains items)"
+                    else:
+                        fallbackName = "Chest (empty)"
+                else:
+                    fallbackName = entity.getName()
         if not livingDescribed and fallbackName is not None:
             self.status.set(fallbackName)
 

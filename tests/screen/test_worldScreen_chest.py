@@ -123,3 +123,35 @@ def test_gather_on_empty_location_still_reports_nothing_to_pick_up():
     ws.executeGatherAction()
 
     ws.status.set.assert_called_with("Nothing to pick up here")
+
+
+def test_hover_over_empty_chest_reports_empty():
+    ws = createWorldScreen()
+    ws.config = MagicMock()
+    ws.config.debug = False
+    room = createMockRoom()
+    loc = room.getGrid().getLocationByCoordinates(1, 1)
+    room.addEntityToLocation(Chest(), loc)
+
+    ws.getLocationAtMousePosition = lambda: loc
+
+    ws.handleMouseOver()
+
+    ws.status.set.assert_called_with("Chest (empty)")
+
+
+def test_hover_over_non_empty_chest_reports_contents():
+    ws = createWorldScreen()
+    ws.config = MagicMock()
+    ws.config.debug = False
+    room = createMockRoom()
+    loc = room.getGrid().getLocationByCoordinates(1, 1)
+    chest = Chest()
+    chest.getStoredInventory().placeIntoFirstAvailableInventorySlot(Apple())
+    room.addEntityToLocation(chest, loc)
+
+    ws.getLocationAtMousePosition = lambda: loc
+
+    ws.handleMouseOver()
+
+    ws.status.set.assert_called_with("Chest (contains items)")
