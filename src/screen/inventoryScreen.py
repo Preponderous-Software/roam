@@ -233,6 +233,23 @@ class InventoryScreen:
         panelHeight = backgroundHeight
         return panelX, panelY, panelWidth, panelHeight
 
+    def _craftRowLayout(self, numRecipes):
+        # Fit every recipe row inside the craft panel so none spill off the
+        # bottom (the list grew past the fixed 40px-row layout's capacity).
+        # Rows shrink to fit when there are many recipes, but are capped at the
+        # original 50px stride so a short list doesn't balloon into huge buttons.
+        _, panelY, _, panelHeight = self.getCraftPanelRect()
+        recipeMargin = 10
+        bottomPadding = 10
+        startY = panelY + 60
+        availableHeight = (panelY + panelHeight - bottomPadding) - startY
+        defaultStride = 50
+        rowStride = defaultStride
+        if numRecipes > 0:
+            rowStride = min(defaultStride, availableHeight / numRecipes)
+        recipeButtonHeight = max(20, rowStride - recipeMargin)
+        return startY, rowStride, recipeButtonHeight, recipeMargin
+
     def drawCraftPanel(self):
         if not self.craftPanelOpen:
             return
@@ -259,12 +276,12 @@ class InventoryScreen:
             14,
             (180, 180, 180),
         )
-        recipeButtonHeight = 40
-        recipeMargin = 10
-        startY = panelY + 60
+        startY, rowStride, recipeButtonHeight, recipeMargin = self._craftRowLayout(
+            len(recipes)
+        )
 
         for i, recipe in enumerate(recipes):
-            recipeY = startY + i * (recipeButtonHeight + recipeMargin)
+            recipeY = startY + i * rowStride
             ingredientText = ", ".join(
                 [
                     str(count) + "x " + cls.__name__

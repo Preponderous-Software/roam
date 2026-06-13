@@ -1,6 +1,7 @@
 from crafting.recipe import Recipe
 from entity.bed import Bed
 from entity.campfire import Campfire
+from entity.chest import Chest
 from entity.coalOre import CoalOre
 from entity.fence import Fence
 from entity.grass import Grass
@@ -65,6 +66,14 @@ class RecipeRegistry:
                 {OakWood: 2, CoalOre: 1},
                 Campfire,
                 "assets/images/campfire.png",
+            )
+        )
+        self.recipes.append(
+            Recipe(
+                "Chest",
+                {OakWood: 6},
+                Chest,
+                "assets/images/chest.png",
             )
         )
         self.recipes.append(

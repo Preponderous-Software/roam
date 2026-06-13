@@ -14,6 +14,7 @@ from lib.graphik.src.graphik import Graphik
 from screen.configScreen import ConfigScreen
 from screen.controlsScreen import ControlsScreen
 from screen.codexScreen import CodexScreen
+from screen.chestScreen import ChestScreen
 from screen.inventoryScreen import InventoryScreen
 from screen.mainMenuScreen import MainMenuScreen
 from screen.optionsScreen import OptionsScreen
@@ -79,6 +80,7 @@ class Roam:
         self.mainMenuScreen = self.container.resolve(MainMenuScreen)
         self.statsScreen = self.container.resolve(StatsScreen)
         self.inventoryScreen = self.container.resolve(InventoryScreen)
+        self.chestScreen = self.container.resolve(ChestScreen)
         self.configScreen = self.container.resolve(ConfigScreen)
         self.controlsScreen = self.container.resolve(ControlsScreen)
         self.codexScreen = self.container.resolve(CodexScreen)
@@ -135,6 +137,11 @@ class Roam:
             elif result == ScreenType.INVENTORY_SCREEN:
                 self.currentScreen = self.inventoryScreen
                 self.inventoryScreen.setInventory(self.player.getInventory())
+            elif result == ScreenType.CHEST_SCREEN:
+                self.currentScreen = self.chestScreen
+                self.chestScreen.setInventory(self.player.getInventory())
+                self.chestScreen.setChest(self.worldScreen.getActiveChest())
+                self.chestScreen.setOnClose(self.worldScreen.saveActiveChestRoom)
             elif result == ScreenType.CONFIG_SCREEN:
                 self.currentScreen = self.configScreen
             elif result == ScreenType.CONTROLS_SCREEN:

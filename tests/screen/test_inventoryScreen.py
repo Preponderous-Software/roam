@@ -54,3 +54,36 @@ def test_handle_key_down_routes_hotbar_key_to_slot():
     screen._swapCalls.clear()
     screen.handleKeyDownEvent("hotbar_5")
     assert screen._swapCalls == [4]
+
+
+def _craftLayoutScreen(displayHeight):
+    screen = InventoryScreen.__new__(InventoryScreen)
+    gameDisplay = MagicMock()
+    gameDisplay.get_width.return_value = 1280
+    gameDisplay.get_height.return_value = displayHeight
+    screen.graphik = MagicMock()
+    screen.graphik.getGameDisplay.return_value = gameDisplay
+    return screen
+
+
+def test_craft_rows_fit_within_panel_for_many_recipes():
+    # Even on a short window, every recipe row must stay inside the panel box
+    # rather than spilling off the bottom.
+    screen = _craftLayoutScreen(720)
+    _, panelY, _, panelHeight = screen.getCraftPanelRect()
+
+    numRecipes = 12
+    startY, rowStride, buttonHeight, _margin = screen._craftRowLayout(numRecipes)
+    lastRowBottom = startY + (numRecipes - 1) * rowStride + buttonHeight
+
+    assert lastRowBottom <= panelY + panelHeight
+
+
+def test_craft_rows_do_not_balloon_for_few_recipes():
+    # With only a couple of recipes, rows keep the original compact stride
+    # instead of stretching to fill the panel.
+    screen = _craftLayoutScreen(720)
+
+    _startY, rowStride, _buttonHeight, _margin = screen._craftRowLayout(2)
+
+    assert rowStride <= 50

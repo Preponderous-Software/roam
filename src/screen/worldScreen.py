@@ -48,6 +48,7 @@ from ui.hotbarLayout import (
     HOTBAR_BOTTOM_OFFSET,
 )
 from ui.hudDragManager import HudDragManager
+from entity.chest import Chest
 from entity.gravestone import Gravestone
 from entity.wheat import Wheat
 from entity.wheatSeed import WheatSeed
@@ -120,6 +121,10 @@ class WorldScreen:
         self.cursorSlot = InventorySlot()
         self.clock = pygame.time.Clock()
         self.showHelp = False
+        # The chest most recently opened via right-click, and the room it lives
+        # in, so the ChestScreen can persist its contents on close.
+        self.activeChest = None
+        self.activeChestRoom = None
 
     def initialize(self):
         self.map = self.container.resolve(Map)
@@ -570,7 +575,18 @@ class WorldScreen:
                 break
 
         if toRemove is None:
-            self.status.set("Nothing to pick up here")
+            nonEmptyChestPresent = any(
+                isinstance(targetLocation.getEntity(entityId), Chest)
+                and targetLocation.getEntity(entityId)
+                .getStoredInventory()
+                .getNumItems()
+                > 0
+                for entityId in targetLocation.getEntities()
+            )
+            if nonEmptyChestPresent:
+                self.status.set("Empty the chest before picking it up")
+            else:
+                self.status.set("Nothing to pick up here")
             return
 
         if not self.player.getInventory().placeIntoFirstAvailableInventorySlot(
@@ -696,9 +712,12 @@ class WorldScreen:
             self.status.set("Too far away")
             return
 
-        # Check for gravestone interaction before checking solid/blocked
+        # Check for chest/gravestone interaction before checking solid/blocked
         for entityId in list(targetLocation.getEntities().keys()):
             entity = targetLocation.getEntity(entityId)
+            if isinstance(entity, Chest):
+                self._openChest(entity, targetRoom)
+                return
             if isinstance(entity, Gravestone):
                 self._interactWithGravestone(entity, targetRoom, targetLocation)
                 return
@@ -772,6 +791,20 @@ class WorldScreen:
         targetRoom.addEntityToLocation(youngCrop, targetLocation)
         self.status.set("Planted Wheat Seed")
         self.player.setTickLastPlaced(self.tickCounter.getTick())
+
+    def _openChest(self, chest, targetRoom):
+        self.returnCursorSlotToInventory()
+        self.activeChest = chest
+        self.activeChestRoom = targetRoom
+        self.nextScreen = ScreenType.CHEST_SCREEN
+        self.changeScreen = True
+
+    def getActiveChest(self):
+        return self.activeChest
+
+    def saveActiveChestRoom(self):
+        if self.activeChestRoom is not None:
+            self.saveRoomToFileAsync(self.activeChestRoom)
 
     def _interactWithGravestone(self, gravestone, targetRoom, targetLocation):
         storedInventory = gravestone.getStoredInventory()
@@ -1320,7 +1353,7 @@ class WorldScreen:
         helpLines = [
             "W/A/S/D or Arrows  -  Move",
             "Left Click  -  Gather / Pick up",
-            "Right Click  -  Place item",
+            "Right Click  -  Place item / open chest",
             "Middle Click  -  Drag HUD elements to reposition",
             "1-0  -  Select hotbar slot",
             "Scroll Wheel  -  Cycle hotbar",
@@ -1747,7 +1780,13 @@ class WorldScreen:
                 livingDescribed = True
                 break
             if fallbackName is None and hasattr(entity, "getName"):
-                fallbackName = entity.getName()
+                if isinstance(entity, Chest):
+                    if entity.getStoredInventory().getNumItems() > 0:
+                        fallbackName = "Chest (contains items)"
+                    else:
+                        fallbackName = "Chest (empty)"
+                else:
+                    fallbackName = entity.getName()
         if not livingDescribed and fallbackName is not None:
             self.status.set(fallbackName)
 

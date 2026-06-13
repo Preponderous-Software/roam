@@ -5,6 +5,7 @@ class ScreenType:
     OPTIONS_SCREEN = "options_screen"
     STATS_SCREEN = "stats_screen"
     INVENTORY_SCREEN = "inventory_screen"
+    CHEST_SCREEN = "chest_screen"
     CONFIG_SCREEN = "config_screen"
     SAVE_SELECTION_SCREEN = "save_selection_screen"
     CONTROLS_SCREEN = "controls_screen"
