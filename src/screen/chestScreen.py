@@ -92,6 +92,8 @@ class ChestScreen:
             title, panelX + panelWidth / 2, panelY - 15, 20, (255, 255, 255)
         )
         self.graphik.drawRectangle(panelX, panelY, panelWidth, panelHeight, (0, 0, 0))
+        mouseX, mouseY = pygame.mouse.get_pos()
+        hoveredItemName = None
         for index, slot, itemX, itemY, itemWidth, itemHeight in self._slotGeometry(
             inventory, panelRect
         ):
@@ -105,6 +107,11 @@ class ChestScreen:
                 item.getImage(), (itemWidth, itemHeight)
             )
             self.graphik.gameDisplay.blit(scaledImage, (itemX, itemY))
+            if (
+                itemX <= mouseX < itemX + itemWidth
+                and itemY <= mouseY < itemY + itemHeight
+            ):
+                hoveredItemName = item.getName()
             self.graphik.drawText(
                 str(slot.getNumItems()),
                 itemX + itemWidth - 20,
@@ -112,6 +119,22 @@ class ChestScreen:
                 20,
                 (255, 255, 255),
             )
+        return hoveredItemName
+
+    def _drawTooltip(self, itemName):
+        screenWidth, screenHeight = self.graphik.getGameDisplay().get_size()
+        mouseX, mouseY = pygame.mouse.get_pos()
+        textWidth = len(itemName) * 8 + 12
+        tooltipX = mouseX + 18
+        tooltipY = mouseY + 18
+        if tooltipX + textWidth > screenWidth:
+            tooltipX = max(0, mouseX - textWidth - 8)
+        if tooltipY + 22 > screenHeight:
+            tooltipY = max(0, mouseY - 30)
+        self.graphik.drawRectangle(tooltipX, tooltipY, textWidth, 22, (30, 30, 30))
+        self.graphik.drawText(
+            itemName, tooltipX + textWidth / 2, tooltipY + 11, 14, (255, 255, 255)
+        )
 
     def isInsidePanel(self, pos, panelRect):
         panelX, panelY, panelWidth, panelHeight = panelRect
@@ -217,9 +240,16 @@ class ChestScreen:
                     self.handleMouseClickEvent(event.pos, event.button)
 
             self.graphik.getGameDisplay().fill((0, 0, 0))
-            self._drawPanel(self.getChestInventory(), self.getChestPanelRect(), "Chest")
-            self._drawPanel(self.inventory, self.getPlayerPanelRect(), "Inventory")
+            hoveredChestItem = self._drawPanel(
+                self.getChestInventory(), self.getChestPanelRect(), "Chest"
+            )
+            hoveredPlayerItem = self._drawPanel(
+                self.inventory, self.getPlayerPanelRect(), "Inventory"
+            )
             self.drawInstructions()
+            hoveredItemName = hoveredChestItem or hoveredPlayerItem
+            if hoveredItemName is not None and self.cursorSlot.isEmpty():
+                self._drawTooltip(hoveredItemName)
             self.drawCursorSlot()
             self.status.draw()
             pygame.display.update()

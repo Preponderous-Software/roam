@@ -4,6 +4,9 @@ os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 from unittest.mock import MagicMock
 
+import pygame
+import pytest
+
 from entity.apple import Apple
 from entity.chest import Chest
 from entity.oakWood import OakWood
@@ -11,6 +14,14 @@ from inventory.inventory import Inventory
 from inventory.inventorySlot import InventorySlot
 from screen.chestScreen import ChestScreen
 from screen.screenType import ScreenType
+
+
+@pytest.fixture(scope="module", autouse=True)
+def init_pygame():
+    pygame.init()
+    pygame.display.set_mode((800, 600))
+    yield
+    pygame.quit()
 
 
 def createChestScreen(playerInventory=None, chest=None):
@@ -97,6 +108,38 @@ def test_click_on_chest_slot_moves_item_to_cursor():
 
     assert chest.getStoredInventory().getNumItems() == 0
     assert screen.cursorSlot.getNumItems() == 1
+
+
+def test_draw_panel_returns_hovered_item_name(monkeypatch):
+    chest = Chest()
+    chest.getStoredInventory().placeIntoFirstAvailableInventorySlot(Apple())
+    screen = createChestScreen(chest=chest)
+
+    geometry = list(
+        screen._slotGeometry(screen.getChestInventory(), screen.getChestPanelRect())
+    )
+    _, _, itemX, itemY, itemWidth, itemHeight = geometry[0]
+    centre = (int(itemX + itemWidth / 2), int(itemY + itemHeight / 2))
+    monkeypatch.setattr(pygame.mouse, "get_pos", lambda: centre)
+
+    hovered = screen._drawPanel(
+        screen.getChestInventory(), screen.getChestPanelRect(), "Chest"
+    )
+
+    assert hovered == "Apple"
+
+
+def test_draw_panel_returns_none_when_not_hovering_an_item(monkeypatch):
+    chest = Chest()
+    chest.getStoredInventory().placeIntoFirstAvailableInventorySlot(Apple())
+    screen = createChestScreen(chest=chest)
+    monkeypatch.setattr(pygame.mouse, "get_pos", lambda: (0, 0))
+
+    hovered = screen._drawPanel(
+        screen.getChestInventory(), screen.getChestPanelRect(), "Chest"
+    )
+
+    assert hovered is None
 
 
 def test_left_click_outside_panels_drops_cursor_stack():
