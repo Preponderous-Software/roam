@@ -1,0 +1,75 @@
+from abc import ABC, abstractmethod
+
+
+# @author Daniel McCoy Stephenson
+# @since June 13th, 2026
+#
+# Backend-neutral drawing interface for Roam (frontend-abstraction epic #433).
+#
+# Screens and HUD widgets depend on this interface rather than on pygame so the
+# same game logic can drive multiple frontends (pygame today; text/web later).
+# The pygame implementation is rendering/pygameRenderer.py; a future frontend
+# implements the same methods against its own backend. Colors are the plain
+# (R, G, B) tuples from ui/palette.py.
+class Renderer(ABC):
+    # --- display surface lifecycle ---
+
+    @abstractmethod
+    def getDisplaySize(self):
+        """Return the display size as a (width, height) tuple."""
+
+    @abstractmethod
+    def getDisplayWidth(self):
+        """Return the display width in pixels."""
+
+    @abstractmethod
+    def getDisplayHeight(self):
+        """Return the display height in pixels."""
+
+    @abstractmethod
+    def clearScreen(self, color):
+        """Fill the entire display with a single color."""
+
+    @abstractmethod
+    def present(self):
+        """Flush the frame drawn so far to the screen."""
+
+    @abstractmethod
+    def setCaption(self, text):
+        """Set the application window caption."""
+
+    # --- drawing primitives ---
+
+    @abstractmethod
+    def drawRectangle(self, xpos, ypos, width, height, color):
+        """Draw a filled rectangle."""
+
+    @abstractmethod
+    def drawText(self, text, xpos, ypos, size, color):
+        """Draw text centered on (xpos, ypos)."""
+
+    @abstractmethod
+    def drawButton(
+        self, xpos, ypos, width, height, colorBox, colorText, sizeText, text, function
+    ):
+        """Draw an immediate-mode button and invoke function when clicked."""
+
+    @abstractmethod
+    def drawImage(self, image, position):
+        """Draw an image at position (an (x, y) tuple or a rect-like dest)."""
+
+    @abstractmethod
+    def getGameAreaRect(self):
+        """Return the centered square play-area rect for the current display."""
+
+    # --- region clipping ---
+
+    @abstractmethod
+    def setClipRegion(self, rect):
+        """Restrict drawing to rect; pass None to clear the clip region."""
+
+    # --- screenshots ---
+
+    @abstractmethod
+    def captureScreenshot(self):
+        """Save a screenshot of the current frame to the screenshots folder."""

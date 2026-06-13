@@ -4,7 +4,7 @@ import datetime
 import pygame
 from config.config import Config
 from gameLogging.logger import getLogger
-from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
 from screen.screenType import ScreenType
 from ui import palette
 
@@ -17,8 +17,8 @@ class SaveSelectionScreen:
     SORT_BY_DATE = "date"
     SORT_BY_NAME = "name"
 
-    def __init__(self, graphik: Graphik, config: Config, initializeWorldScreen):
-        self.graphik = graphik
+    def __init__(self, renderer: Renderer, config: Config, initializeWorldScreen):
+        self.renderer = renderer
         self.config = config
         self.initializeWorldScreen = initializeWorldScreen
         self.nextScreen = ScreenType.MAIN_MENU_SCREEN
@@ -68,7 +68,7 @@ class SaveSelectionScreen:
 
     def selectSave(self, savePath):
         self.config.pathToSaveDirectory = savePath
-        pygame.display.set_caption("Roam" + " (" + savePath + ")")
+        self.renderer.setCaption("Roam" + " (" + savePath + ")")
         self.nextScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = True
         _logger.info("save selected", savePath=savePath)
@@ -185,18 +185,18 @@ class SaveSelectionScreen:
             self.scrollDown()
 
     def drawTitle(self):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         xpos = x / 2
         ypos = y / 12
-        self.graphik.drawText("Select Save", xpos, ypos, 48, palette.WHITE)
+        self.renderer.drawText("Select Save", xpos, ypos, 48, palette.WHITE)
 
     def drawNoSavesMessage(self):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         xpos = x / 2
         ypos = y / 3
-        self.graphik.drawText("No save files found.", xpos, ypos, 28, palette.WHITE)
+        self.renderer.drawText("No save files found.", xpos, ypos, 28, palette.WHITE)
         ypos += 40
-        self.graphik.drawText(
+        self.renderer.drawText(
             'Click "New Game" to start playing!',
             xpos,
             ypos,
@@ -205,7 +205,7 @@ class SaveSelectionScreen:
         )
 
     def drawSaveList(self, saves):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         saveWidth = x * 0.5
         deleteWidth = x * 0.08
         height = y / 14
@@ -224,13 +224,15 @@ class SaveSelectionScreen:
                 f"{self.scrollOffset + 1}-{shownEnd} of {len(saves)}"
                 "  -  scroll or arrow keys"
             )
-            self.graphik.drawText(scrollInfo, x / 2, ypos - 18, 14, palette.MEDIUM_GRAY)
+            self.renderer.drawText(
+                scrollInfo, x / 2, ypos - 18, 14, palette.MEDIUM_GRAY
+            )
 
         for save in visibleSaves:
             label = save["name"] + "  |  " + save["lastPlayed"]
             savePath = save["path"]
             if interactive:
-                self.graphik.drawButton(
+                self.renderer.drawButton(
                     xpos,
                     ypos,
                     saveWidth,
@@ -241,7 +243,7 @@ class SaveSelectionScreen:
                     label,
                     lambda p=savePath: self.selectSave(p),
                 )
-                self.graphik.drawButton(
+                self.renderer.drawButton(
                     xpos + saveWidth + margin,
                     ypos,
                     deleteWidth,
@@ -253,24 +255,24 @@ class SaveSelectionScreen:
                     lambda p=savePath: self._requestDelete(p),
                 )
             else:
-                self.graphik.drawRectangle(
+                self.renderer.drawRectangle(
                     xpos, ypos, saveWidth, height, palette.MEDIUM_GRAY
                 )
-                self.graphik.drawText(
+                self.renderer.drawText(
                     label,
                     xpos + saveWidth // 2,
                     ypos + height // 2,
                     24,
                     palette.BLACK,
                 )
-                self.graphik.drawRectangle(
+                self.renderer.drawRectangle(
                     xpos + saveWidth + margin,
                     ypos,
                     deleteWidth,
                     height,
                     (140, 0, 0),
                 )
-                self.graphik.drawText(
+                self.renderer.drawText(
                     "X",
                     xpos + saveWidth + margin + deleteWidth // 2,
                     ypos + height // 2,
@@ -283,23 +285,23 @@ class SaveSelectionScreen:
         self.confirmingDelete = savePath
 
     def drawDeleteConfirmation(self):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         overlayWidth = x * 0.5
         overlayHeight = y * 0.3
         overlayX = x / 2 - overlayWidth / 2
         overlayY = y / 2 - overlayHeight / 2
-        self.graphik.drawRectangle(
+        self.renderer.drawRectangle(
             overlayX, overlayY, overlayWidth, overlayHeight, palette.CHARCOAL
         )
         saveName = os.path.basename(self.confirmingDelete)
-        self.graphik.drawText(
+        self.renderer.drawText(
             "Delete '" + saveName + "'?",
             x / 2,
             overlayY + overlayHeight * 0.25,
             28,
             palette.WHITE,
         )
-        self.graphik.drawText(
+        self.renderer.drawText(
             "This cannot be undone.",
             x / 2,
             overlayY + overlayHeight * 0.42,
@@ -312,7 +314,7 @@ class SaveSelectionScreen:
         totalBtnWidth = buttonWidth * 2 + buttonMargin
         btnStartX = x / 2 - totalBtnWidth / 2
         btnY = overlayY + overlayHeight * 0.6
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             btnStartX,
             btnY,
             buttonWidth,
@@ -323,7 +325,7 @@ class SaveSelectionScreen:
             "Delete",
             lambda: self.deleteSave(self.confirmingDelete),
         )
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             btnStartX + buttonWidth + buttonMargin,
             btnY,
             buttonWidth,
@@ -336,15 +338,15 @@ class SaveSelectionScreen:
         )
 
     def drawNamingDialog(self):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         overlayWidth = x * 0.5
         overlayHeight = y * 0.35
         overlayX = x / 2 - overlayWidth / 2
         overlayY = y / 2 - overlayHeight / 2
-        self.graphik.drawRectangle(
+        self.renderer.drawRectangle(
             overlayX, overlayY, overlayWidth, overlayHeight, palette.CHARCOAL
         )
-        self.graphik.drawText(
+        self.renderer.drawText(
             "Enter save name:",
             x / 2,
             overlayY + overlayHeight * 0.2,
@@ -355,11 +357,11 @@ class SaveSelectionScreen:
         inputHeight = overlayHeight * 0.18
         inputX = x / 2 - inputWidth / 2
         inputY = overlayY + overlayHeight * 0.38
-        self.graphik.drawRectangle(
+        self.renderer.drawRectangle(
             inputX, inputY, inputWidth, inputHeight, palette.WHITE
         )
         displayText = self.newSaveNameInput + "_"
-        self.graphik.drawText(
+        self.renderer.drawText(
             displayText,
             x / 2,
             inputY + inputHeight / 2,
@@ -367,14 +369,14 @@ class SaveSelectionScreen:
             palette.BLACK,
         )
         if self.newSaveNameError:
-            self.graphik.drawText(
+            self.renderer.drawText(
                 self.newSaveNameError,
                 x / 2,
                 overlayY + overlayHeight * 0.60,
                 18,
                 (255, 120, 120),
             )
-        self.graphik.drawText(
+        self.renderer.drawText(
             "(Enter to confirm, Escape to cancel)",
             x / 2,
             overlayY + overlayHeight * 0.68,
@@ -387,7 +389,7 @@ class SaveSelectionScreen:
         totalBtnWidth = buttonWidth * 2 + buttonMargin
         btnStartX = x / 2 - totalBtnWidth / 2
         btnY = overlayY + overlayHeight * 0.78
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             btnStartX,
             btnY,
             buttonWidth,
@@ -398,7 +400,7 @@ class SaveSelectionScreen:
             "Create",
             self.confirmNewSaveName,
         )
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             btnStartX + buttonWidth + buttonMargin,
             btnY,
             buttonWidth,
@@ -411,7 +413,7 @@ class SaveSelectionScreen:
         )
 
     def drawBottomButtons(self):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         buttonWidth = x / 5
         buttonHeight = y / 10
         margin = 20
@@ -421,7 +423,7 @@ class SaveSelectionScreen:
         interactive = self.confirmingDelete is None and not self.namingNewSave
 
         if interactive:
-            self.graphik.drawButton(
+            self.renderer.drawButton(
                 startX,
                 ypos,
                 buttonWidth,
@@ -436,7 +438,7 @@ class SaveSelectionScreen:
             sortLabel = (
                 "Sorted: Date" if self.sortMode == self.SORT_BY_DATE else "Sorted: Name"
             )
-            self.graphik.drawButton(
+            self.renderer.drawButton(
                 startX + buttonWidth + margin,
                 ypos,
                 buttonWidth,
@@ -448,7 +450,7 @@ class SaveSelectionScreen:
                 self.toggleSort,
             )
 
-            self.graphik.drawButton(
+            self.renderer.drawButton(
                 startX + (buttonWidth + margin) * 2,
                 ypos,
                 buttonWidth,
@@ -465,10 +467,10 @@ class SaveSelectionScreen:
             )
             for i, label in enumerate(["New Game", sortLabel, "Back"]):
                 bx = startX + (buttonWidth + margin) * i
-                self.graphik.drawRectangle(
+                self.renderer.drawRectangle(
                     bx, ypos, buttonWidth, buttonHeight, palette.MEDIUM_GRAY
                 )
-                self.graphik.drawText(
+                self.renderer.drawText(
                     label,
                     bx + buttonWidth // 2,
                     ypos + buttonHeight // 2,
@@ -513,7 +515,7 @@ class SaveSelectionScreen:
                                 self.newSaveNameInput += ch
                                 self.newSaveNameError = ""
 
-            self.graphik.getGameDisplay().fill(palette.BLACK)
+            self.renderer.clearScreen(palette.BLACK)
             self.drawTitle()
 
             saves = self.getSaveDirectories()
@@ -529,7 +531,7 @@ class SaveSelectionScreen:
             elif self.namingNewSave:
                 self.drawNamingDialog()
 
-            pygame.display.update()
+            self.renderer.present()
 
         if self.nextScreen == ScreenType.WORLD_SCREEN:
             self.initializeWorldScreen()

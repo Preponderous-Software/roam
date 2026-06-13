@@ -1,6 +1,6 @@
 import pygame
 from appContainer import component
-from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
 from ui.hotbarLayout import getHotbarTop
 from world.tickCounter import TickCounter
 from ui import palette
@@ -10,8 +10,8 @@ from ui import palette
 # since August 14th, 2022
 @component
 class Status:
-    def __init__(self, graphik: Graphik, tickCounter: TickCounter):
-        self.graphik = graphik
+    def __init__(self, renderer: Renderer, tickCounter: TickCounter):
+        self.renderer = renderer
         self.text = -1
         self.textSize = 18
         self.textColor = palette.BLACK
@@ -30,7 +30,7 @@ class Status:
         """Return the default bounding rect for the status text (no drag offset)."""
         if self.text == -1:
             return pygame.Rect(0, 0, 0, 0)
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         width = len(self.text) * 10
         height = self.textSize * 2
         xpos = x / 2 - width / 2
@@ -41,13 +41,13 @@ class Status:
     def draw(self, offsetX=0, offsetY=0):
         if self.text == -1:
             return
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         width = len(self.text) * 10
         height = self.textSize * 2
         xpos = x / 2 - width / 2 + offsetX
         hotbarTop = getHotbarTop(y)
         ypos = hotbarTop - height - 10 + offsetY
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             xpos,
             ypos,
             width,

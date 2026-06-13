@@ -4,6 +4,7 @@ from src.config.keyBindings import KeyBindings
 from src.inventory.inventory import Inventory
 from src.entity.grass import Grass
 from src.lib.graphik.src.graphik import Graphik
+from src.rendering.pygameRenderer import PygameRenderer
 from src.screen.inventoryScreen import InventoryScreen
 
 
@@ -12,12 +13,12 @@ def createInventoryScreen():
     gameDisplay.get_width.return_value = 800
     gameDisplay.get_height.return_value = 600
     gameDisplay.get_size.return_value = (800, 600)
-    graphik = Graphik(gameDisplay)
+    renderer = PygameRenderer(Graphik(gameDisplay))
     config = MagicMock()
     status = MagicMock()
     inventory = Inventory()
     keyBindings = KeyBindings()
-    return InventoryScreen(graphik, config, status, inventory, keyBindings)
+    return InventoryScreen(renderer, config, status, inventory, keyBindings)
 
 
 def createGrass():

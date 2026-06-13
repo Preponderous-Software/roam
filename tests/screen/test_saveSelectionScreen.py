@@ -10,6 +10,7 @@ from src.config.config import Config
 from src.screen.saveSelectionScreen import SaveSelectionScreen
 from src.screen.screenType import ScreenType
 from src.lib.graphik.src.graphik import Graphik
+from src.rendering.pygameRenderer import PygameRenderer
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -31,7 +32,7 @@ def createSaveSelectionScreen(savesDir):
     gameDisplay = pygame.display.set_mode((800, 600))
     graphik = Graphik(gameDisplay)
     initializeWorldScreen = lambda: None
-    screen = SaveSelectionScreen(graphik, config, initializeWorldScreen)
+    screen = SaveSelectionScreen(PygameRenderer(graphik), config, initializeWorldScreen)
     screen.savesBaseDirectory = savesDir
     return screen
 

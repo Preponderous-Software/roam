@@ -2,7 +2,7 @@ import pygame
 from appContainer import component
 from config.config import Config
 from config.keyBindings import KeyBindings
-from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
 from screen.screenType import ScreenType
 from ui import palette
 
@@ -11,8 +11,8 @@ from ui import palette
 # @since April 19th, 2026
 @component
 class ControlsScreen:
-    def __init__(self, graphik: Graphik, config: Config, keyBindings: KeyBindings):
-        self.graphik = graphik
+    def __init__(self, renderer: Renderer, config: Config, keyBindings: KeyBindings):
+        self.renderer = renderer
         self.config = config
         self.keyBindings = keyBindings
         self.nextScreen = ScreenType.OPTIONS_SCREEN
@@ -52,11 +52,11 @@ class ControlsScreen:
         return self.keyBindings.getConflictsForBindings(self.getActiveBindings())
 
     def drawTitle(self):
-        x, y = self.graphik.getGameDisplay().get_size()
-        self.graphik.drawText("Controls", x / 2, 25, 36, palette.WHITE)
+        x, y = self.renderer.getDisplaySize()
+        self.renderer.drawText("Controls", x / 2, 25, 36, palette.WHITE)
 
     def drawBindings(self):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         actions = self.keyBindings.getActions()
         bindings = self.getActiveBindings()
         conflicts = self.getActiveConflicts()
@@ -82,7 +82,7 @@ class ControlsScreen:
 
             isConflict = action in conflicts
             labelColor = (255, 100, 100) if isConflict else palette.WHITE
-            self.graphik.drawText(
+            self.renderer.drawText(
                 label, labelX, rowY + buttonHeight / 2, 20, labelColor
             )
 
@@ -93,7 +93,7 @@ class ControlsScreen:
                 bgColor = (255, 50, 50) if isConflict else palette.DARKER_GRAY
                 displayText = keyName
 
-            self.graphik.drawButton(
+            self.renderer.drawButton(
                 keyX,
                 rowY,
                 buttonWidth,
@@ -113,13 +113,13 @@ class ControlsScreen:
                 + " of "
                 + str(len(actions))
             )
-            self.graphik.drawText(scrollInfo, x / 2, y - 70, 16, palette.MEDIUM_GRAY)
-            self.graphik.drawText(
+            self.renderer.drawText(scrollInfo, x / 2, y - 70, 16, palette.MEDIUM_GRAY)
+            self.renderer.drawText(
                 "Scroll to see more", x / 2, y - 92, 14, palette.DIM_GRAY
             )
 
     def drawBottomButtons(self):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         buttonWidth = x / 5
         buttonHeight = 35
         bottomY = y - 45
@@ -138,12 +138,12 @@ class ControlsScreen:
                 + noun
                 + " (shown in red) to enable Save"
             )
-            self.graphik.drawText(message, x / 2, bottomY - 18, 16, (255, 120, 120))
+            self.renderer.drawText(message, x / 2, bottomY - 18, 16, (255, 120, 120))
 
         totalWidth = buttonWidth * 3 + margin * 2
         startX = (x - totalWidth) / 2
 
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             startX,
             bottomY,
             buttonWidth,
@@ -159,7 +159,7 @@ class ControlsScreen:
             saveColor = palette.DARK_GRAY
         else:
             saveColor = palette.GREEN
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             startX + buttonWidth + margin,
             bottomY,
             buttonWidth,
@@ -171,7 +171,7 @@ class ControlsScreen:
             self.saveAndReturn if not hasConflicts else (lambda: None),
         )
 
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             startX + 2 * (buttonWidth + margin),
             bottomY,
             buttonWidth,
@@ -220,11 +220,11 @@ class ControlsScreen:
                 elif event.type == pygame.MOUSEWHEEL:
                     self.handleScrollEvent(event)
 
-            self.graphik.getGameDisplay().fill(palette.BLACK)
+            self.renderer.clearScreen(palette.BLACK)
             self.drawTitle()
             self.drawBindings()
             self.drawBottomButtons()
-            pygame.display.update()
+            self.renderer.present()
 
         self.changeScreen = False
         return self.nextScreen

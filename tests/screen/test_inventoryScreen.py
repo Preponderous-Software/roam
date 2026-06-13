@@ -58,11 +58,10 @@ def test_handle_key_down_routes_hotbar_key_to_slot():
 
 def _craftLayoutScreen(displayHeight):
     screen = InventoryScreen.__new__(InventoryScreen)
-    gameDisplay = MagicMock()
-    gameDisplay.get_width.return_value = 1280
-    gameDisplay.get_height.return_value = displayHeight
-    screen.graphik = MagicMock()
-    screen.graphik.getGameDisplay.return_value = gameDisplay
+    screen.renderer = MagicMock()
+    screen.renderer.getDisplayWidth.return_value = 1280
+    screen.renderer.getDisplayHeight.return_value = displayHeight
+    screen.renderer.getDisplaySize.return_value = (1280, displayHeight)
     return screen
 
 

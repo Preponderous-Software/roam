@@ -4,7 +4,7 @@ import pygame
 from appContainer import component
 from config.config import Config
 
-from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
 from screen.screenType import ScreenType
 from update.updateChecker import UpdateChecker
 from ui import palette
@@ -13,8 +13,10 @@ from ui import palette
 # @author Daniel McCoy Stephenson
 @component
 class MainMenuScreen:
-    def __init__(self, graphik: Graphik, config: Config, updateChecker: UpdateChecker):
-        self.graphik = graphik
+    def __init__(
+        self, renderer: Renderer, config: Config, updateChecker: UpdateChecker
+    ):
+        self.renderer = renderer
         self.config = config
         self.updateChecker = updateChecker
         self.running = True
@@ -35,24 +37,24 @@ class MainMenuScreen:
         quit()
 
     def drawText(self):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         xpos = x / 2
         ypos = y / 10
-        self.graphik.drawText("Roam", xpos, ypos, 64, palette.WHITE)
+        self.renderer.drawText("Roam", xpos, ypos, 64, palette.WHITE)
         ypos = y / 3
-        self.graphik.drawText(
+        self.renderer.drawText(
             "Explore a procedurally-generated world", xpos, ypos, 24, palette.GRAY
         )
 
     def drawMenuButtons(self):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         width = x / 5
         height = y / 10
         xpos = x / 2 - width / 2
         ypos = y / 2 - height / 2
         margin = 10
         backgroundColor = palette.WHITE
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             xpos,
             ypos,
             width,
@@ -64,7 +66,7 @@ class MainMenuScreen:
             self.switchToSaveSelectionScreen,
         )
         ypos = ypos + height + margin
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             xpos,
             ypos,
             width,
@@ -76,7 +78,7 @@ class MainMenuScreen:
             self.switchToConfigScreen,
         )
         ypos = ypos + height + margin
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             xpos,
             ypos,
             width,
@@ -88,7 +90,7 @@ class MainMenuScreen:
             self.quitApplication,
         )
         ypos = ypos + height + margin + 6
-        self.graphik.drawText(
+        self.renderer.drawText(
             "Enter / Space: Play  -  Esc: Quit",
             x / 2,
             ypos,
@@ -103,10 +105,10 @@ class MainMenuScreen:
                 return
             self._cachedVersionLabel = "Roam v" + version
 
-        self.graphik.drawText(
+        self.renderer.drawText(
             self._cachedVersionLabel,
-            self.graphik.getGameDisplay().get_size()[0] / 2,
-            self.graphik.getGameDisplay().get_size()[1] - 10,
+            self.renderer.getDisplaySize()[0] / 2,
+            self.renderer.getDisplaySize()[1] - 10,
             16,
             palette.WHITE,
         )
@@ -114,8 +116,8 @@ class MainMenuScreen:
     def drawUpdateBanner(self):
         if not self.updateChecker.isUpdateAvailable():
             return
-        x, y = self.graphik.getGameDisplay().get_size()
-        self.graphik.drawText(
+        x, y = self.renderer.getDisplaySize()
+        self.renderer.drawText(
             "Update available: v"
             + str(self.updateChecker.getLatestVersion())
             + "  -  press U to download",
@@ -149,11 +151,11 @@ class MainMenuScreen:
                 elif event.type == pygame.KEYDOWN:
                     self.handleKeyDownEvent(event.key)
 
-            self.graphik.getGameDisplay().fill(palette.BLACK)
+            self.renderer.clearScreen(palette.BLACK)
             self.drawText()
             self.drawMenuButtons()
             self.drawUpdateBanner()
             self.drawVersion()
-            pygame.display.update()
+            self.renderer.present()
         self.changeScreen = False
         return self.nextScreen

@@ -3,9 +3,8 @@ from config.config import Config
 from config.keyBindings import KeyBindings
 from inventory.inventory import Inventory
 from inventory.inventorySlot import InventorySlot
-from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
 from screen.screenType import ScreenType
-from screen.screenshotHelper import takeScreenshot
 from ui.status import Status
 import pygame
 from ui import palette
@@ -28,13 +27,13 @@ class ChestScreen:
 
     def __init__(
         self,
-        graphik: Graphik,
+        renderer: Renderer,
         config: Config,
         status: Status,
         inventory: Inventory,
         keyBindings: KeyBindings,
     ):
-        self.graphik = graphik
+        self.renderer = renderer
         self.config = config
         self.status = status
         self.inventory = inventory
@@ -70,13 +69,13 @@ class ChestScreen:
         self.changeScreen = True
 
     def getChestPanelRect(self):
-        width = self.graphik.getGameDisplay().get_width()
-        height = self.graphik.getGameDisplay().get_height()
+        width = self.renderer.getDisplayWidth()
+        height = self.renderer.getDisplayHeight()
         return width / 4, height * 0.10, width / 2, height * 0.32
 
     def getPlayerPanelRect(self):
-        width = self.graphik.getGameDisplay().get_width()
-        height = self.graphik.getGameDisplay().get_height()
+        width = self.renderer.getDisplayWidth()
+        height = self.renderer.getDisplayHeight()
         return width / 4, height * 0.52, width / 2, height * 0.36
 
     def _slotGeometry(self, inventory, panelRect):
@@ -97,10 +96,10 @@ class ChestScreen:
 
     def _drawPanel(self, inventory, panelRect, title):
         panelX, panelY, panelWidth, panelHeight = panelRect
-        self.graphik.drawText(
+        self.renderer.drawText(
             title, panelX + panelWidth / 2, panelY - 15, 20, palette.WHITE
         )
-        self.graphik.drawRectangle(
+        self.renderer.drawRectangle(
             panelX, panelY, panelWidth, panelHeight, palette.BLACK
         )
         mouseX, mouseY = pygame.mouse.get_pos()
@@ -109,7 +108,7 @@ class ChestScreen:
             inventory, panelRect
         ):
             if slot.isEmpty():
-                self.graphik.drawRectangle(
+                self.renderer.drawRectangle(
                     itemX, itemY, itemWidth, itemHeight, palette.WHITE
                 )
                 continue
@@ -117,13 +116,13 @@ class ChestScreen:
             scaledImage = pygame.transform.scale(
                 item.getImage(), (itemWidth, itemHeight)
             )
-            self.graphik.gameDisplay.blit(scaledImage, (itemX, itemY))
+            self.renderer.drawImage(scaledImage, (itemX, itemY))
             if (
                 itemX <= mouseX < itemX + itemWidth
                 and itemY <= mouseY < itemY + itemHeight
             ):
                 hoveredItemName = item.getName()
-            self.graphik.drawText(
+            self.renderer.drawText(
                 str(slot.getNumItems()),
                 itemX + itemWidth - 20,
                 itemY + itemHeight - 20,
@@ -133,7 +132,7 @@ class ChestScreen:
         return hoveredItemName
 
     def _drawTooltip(self, itemName):
-        screenWidth, screenHeight = self.graphik.getGameDisplay().get_size()
+        screenWidth, screenHeight = self.renderer.getDisplaySize()
         mouseX, mouseY = pygame.mouse.get_pos()
         textWidth = len(itemName) * 8 + 12
         tooltipX = mouseX + 18
@@ -142,10 +141,10 @@ class ChestScreen:
             tooltipX = max(0, mouseX - textWidth - 8)
         if tooltipY + 22 > screenHeight:
             tooltipY = max(0, mouseY - 30)
-        self.graphik.drawRectangle(
+        self.renderer.drawRectangle(
             tooltipX, tooltipY, textWidth, 22, palette.NEAR_BLACK
         )
-        self.graphik.drawText(
+        self.renderer.drawText(
             itemName, tooltipX + textWidth / 2, tooltipY + 11, 14, palette.WHITE
         )
 
@@ -182,15 +181,15 @@ class ChestScreen:
         if key == kb.getKey("inventory") or key == pygame.K_ESCAPE:
             self.switchToWorldScreen()
         elif key == kb.getKey("screenshot"):
-            takeScreenshot(self.graphik.getGameDisplay())
+            self.renderer.captureScreenshot()
 
     def drawBackButton(self):
-        width, height = self.graphik.getGameDisplay().get_size()
+        width, height = self.renderer.getDisplaySize()
         buttonWidth = 100
         buttonHeight = 50
         buttonX = width - buttonWidth - 10
         buttonY = height - buttonHeight - 10
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             buttonX,
             buttonY,
             buttonWidth,
@@ -203,7 +202,7 @@ class ChestScreen:
         )
 
     def isInsideBackButton(self, pos):
-        width, height = self.graphik.getGameDisplay().get_size()
+        width, height = self.renderer.getDisplaySize()
         buttonWidth = 100
         buttonHeight = 50
         buttonX = width - buttonWidth - 10
@@ -214,12 +213,12 @@ class ChestScreen:
         )
 
     def _takeAllButtonRect(self):
-        _, height = self.graphik.getGameDisplay().get_size()
+        _, height = self.renderer.getDisplaySize()
         return 10, height - 60, 120, 50
 
     def drawTakeAllButton(self):
         buttonX, buttonY, buttonWidth, buttonHeight = self._takeAllButtonRect()
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             buttonX,
             buttonY,
             buttonWidth,
@@ -281,7 +280,7 @@ class ChestScreen:
             self.status.set("Transferred items")
 
     def _dropButtonRect(self):
-        width, height = self.graphik.getGameDisplay().get_size()
+        width, height = self.renderer.getDisplaySize()
         buttonWidth = 120
         return width / 2 - buttonWidth / 2, height - 60, buttonWidth, 50
 
@@ -295,8 +294,8 @@ class ChestScreen:
         # A muted red marks it as the destructive option, distinct from the
         # white Back / Take All buttons; it brightens on hover.
         color = (200, 110, 110) if hovering else (150, 80, 80)
-        self.graphik.drawRectangle(buttonX, buttonY, buttonWidth, buttonHeight, color)
-        self.graphik.drawText(
+        self.renderer.drawRectangle(buttonX, buttonY, buttonWidth, buttonHeight, color)
+        self.renderer.drawText(
             "Drop",
             buttonX + buttonWidth / 2,
             buttonY + buttonHeight / 2,
@@ -312,7 +311,7 @@ class ChestScreen:
         )
 
     def handleMouseClickEvent(self, pos, button=1, shift=False):
-        # The Back / Take All buttons are actioned by graphik.drawButton during
+        # The Back / Take All buttons are actioned by renderer.drawButton during
         # the draw phase; intercept their clicks here so they aren't reprocessed.
         if self.isInsideBackButton(pos) or self.isInsideTakeAllButton(pos):
             return
@@ -358,26 +357,26 @@ class ChestScreen:
         item = self.cursorSlot.getContents()[0]
         cursorX, cursorY = pygame.mouse.get_pos()
         scaledImage = pygame.transform.scale(item.getImage(), (50, 50))
-        self.graphik.gameDisplay.blit(scaledImage, (cursorX, cursorY))
+        self.renderer.drawImage(scaledImage, (cursorX, cursorY))
         count = self.cursorSlot.getNumItems()
         if count > 1:
-            self.graphik.drawText(
+            self.renderer.drawText(
                 str(count), cursorX + 40, cursorY + 40, 18, palette.WHITE
             )
 
     def drawInstructions(self):
         # Drawn along the top so it stays clear of the Take All / Drop / Back
         # button row across the bottom of the screen.
-        width, _ = self.graphik.getGameDisplay().get_size()
+        width, _ = self.renderer.getDisplaySize()
         closeKeyName = self.keyBindings.getKeyName("inventory").upper()
-        self.graphik.drawText(
+        self.renderer.drawText(
             "Left-click: move  -  Shift-click: transfer between chest and inventory",
             width / 2,
             14,
             16,
             palette.MEDIUM_GRAY,
         )
-        self.graphik.drawText(
+        self.renderer.drawText(
             "press [" + closeKeyName + "] or [Esc] to close",
             width / 2,
             32,
@@ -397,7 +396,7 @@ class ChestScreen:
                     shift = bool(pygame.key.get_mods() & pygame.KMOD_SHIFT)
                     self.handleMouseClickEvent(event.pos, event.button, shift)
 
-            self.graphik.getGameDisplay().fill(palette.BLACK)
+            self.renderer.clearScreen(palette.BLACK)
             hoveredChestItem = self._drawPanel(
                 self.getChestInventory(), self.getChestPanelRect(), self._chestTitle()
             )
@@ -413,7 +412,7 @@ class ChestScreen:
                 self._drawTooltip(hoveredItemName)
             self.drawCursorSlot()
             self.status.draw()
-            pygame.display.update()
+            self.renderer.present()
 
         # Return any held cursor items on close so nothing is lost: prefer the
         # player's inventory, but if it's full, fall back to the chest the items

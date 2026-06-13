@@ -11,6 +11,8 @@ from inventory.inventory import Inventory
 from gameLogging.logger import getLogger
 from player.player import Player
 from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
+from rendering.pygameRenderer import PygameRenderer
 from screen.configScreen import ConfigScreen
 from screen.controlsScreen import ControlsScreen
 from screen.codexScreen import CodexScreen
@@ -62,6 +64,9 @@ class Roam:
         self.tickCounter = self.container.resolve(TickCounter)
         self.container.registerInstance(Graphik, Graphik(self.gameDisplay))
         self.graphik = self.container.resolve(Graphik)
+        # Register the pygame Renderer (composes Graphik) so screens and HUD
+        # widgets can auto-wire the backend-neutral interface (epic #433).
+        self.container.registerInstance(Renderer, PygameRenderer(self.graphik))
         self.status = self.container.resolve(Status)
         self.stats = self.container.resolve(Stats)
         self.player = self.container.resolve(Player)
@@ -89,7 +94,7 @@ class Roam:
         self.container.register(
             SaveSelectionScreen,
             lambda: SaveSelectionScreen(
-                self.container.resolve(Graphik),
+                self.container.resolve(Renderer),
                 self.container.resolve(Config),
                 self.initializeWorldScreen,
             ),
