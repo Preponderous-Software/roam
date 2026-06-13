@@ -77,8 +77,8 @@ def test_successful_load_resets_failure_flag(test_config, tmp_path, monkeypatch)
     ws.minimapScaleFactor = 0.2
     ws.minimapX = 5
     ws.minimapY = 5
-    ws.graphik = MagicMock()
-    ws.graphik.getGameAreaRect.return_value = MagicMock(width=100)
+    ws.renderer = MagicMock()
+    ws.renderer.getGameAreaRect.return_value = MagicMock(width=100)
     ws.hudDragManager = MagicMock()
     ws.hudDragManager.getOffset.return_value = (0, 0)
 
