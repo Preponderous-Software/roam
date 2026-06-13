@@ -258,36 +258,94 @@ class ChestScreen:
         else:
             self.status.set("Took all items")
 
-    def handleMouseClickEvent(self, pos, button=1):
+    def _quickTransfer(self, sourceSlot, destInventory):
+        # Move a whole slot's stack to the other container without using the
+        # cursor (shift-click), stopping if the destination runs out of room.
+        if sourceSlot.isEmpty():
+            return
+        movedAny = False
+        while not sourceSlot.isEmpty():
+            item = sourceSlot.getContents()[0]
+            if destInventory.placeIntoFirstAvailableInventorySlot(item):
+                sourceSlot.remove(item)
+                movedAny = True
+            else:
+                self.status.set("No room to transfer")
+                return
+        if movedAny:
+            self.status.set("Transferred items")
+
+    def _dropButtonRect(self):
+        width, height = self.graphik.getGameDisplay().get_size()
+        buttonWidth = 120
+        return width / 2 - buttonWidth / 2, height - 60, buttonWidth, 50
+
+    def drawDropButton(self):
+        buttonX, buttonY, buttonWidth, buttonHeight = self._dropButtonRect()
+        mouseX, mouseY = pygame.mouse.get_pos()
+        hovering = (
+            buttonX <= mouseX <= buttonX + buttonWidth
+            and buttonY <= mouseY <= buttonY + buttonHeight
+        )
+        # A muted red marks it as the destructive option, distinct from the
+        # white Back / Take All buttons; it brightens on hover.
+        color = (200, 110, 110) if hovering else (150, 80, 80)
+        self.graphik.drawRectangle(buttonX, buttonY, buttonWidth, buttonHeight, color)
+        self.graphik.drawText(
+            "Drop",
+            buttonX + buttonWidth / 2,
+            buttonY + buttonHeight / 2,
+            24,
+            (255, 255, 255),
+        )
+
+    def isInsideDropButton(self, pos):
+        buttonX, buttonY, buttonWidth, buttonHeight = self._dropButtonRect()
+        return (
+            buttonX <= pos[0] <= buttonX + buttonWidth
+            and buttonY <= pos[1] <= buttonY + buttonHeight
+        )
+
+    def handleMouseClickEvent(self, pos, button=1, shift=False):
         # The Back / Take All buttons are actioned by graphik.drawButton during
-        # the draw phase; intercept their clicks here so they aren't also read as
-        # a click-outside that would drop the cursor stack.
+        # the draw phase; intercept their clicks here so they aren't reprocessed.
         if self.isInsideBackButton(pos) or self.isInsideTakeAllButton(pos):
             return
 
+        # Dropping (discarding) cursor items now happens only via the explicit
+        # Drop button, so it can no longer be triggered by an accidental click
+        # in empty space (Nielsen #5, error prevention).
+        if self.isInsideDropButton(pos):
+            if self.cursorSlot.isEmpty():
+                return
+            if button == 2:  # middle mouse button drops a single item
+                self.dropOneFromCursorSlot()
+            elif button == 1:  # left mouse button drops the whole stack
+                self.dropCursorSlot()
+            return
+
         panels = (
-            (self.getChestInventory(), self.getChestPanelRect()),
-            (self.inventory, self.getPlayerPanelRect()),
+            (self.getChestInventory(), self.getChestPanelRect(), self.inventory),
+            (self.inventory, self.getPlayerPanelRect(), self.getChestInventory()),
         )
-        for inventory, panelRect in panels:
+        for sourceInventory, panelRect, destInventory in panels:
             for index, slot, itemX, itemY, itemWidth, itemHeight in self._slotGeometry(
-                inventory, panelRect
+                sourceInventory, panelRect
             ):
                 if (
                     itemX < pos[0] < itemX + itemWidth
                     and itemY < pos[1] < itemY + itemHeight
                 ):
-                    if button in (1, 3):
+                    if shift and button == 1:
+                        # Shift-click whisks the whole stack to the other
+                        # container without picking it up onto the cursor.
+                        self._quickTransfer(slot, destInventory)
+                    elif button in (1, 3):
                         self.swapCursorSlotWithSlot(slot)
                     return
 
-        # drop cursor items when clicking outside both panels
-        if self.cursorSlot.isEmpty():
-            return
-        if button == 2:  # middle mouse button drops a single item
-            self.dropOneFromCursorSlot()
-        elif button == 1:  # left mouse button drops the whole stack
-            self.dropCursorSlot()
+        # Clicking outside the panels and buttons keeps the cursor's items
+        # rather than discarding them.
 
     def drawCursorSlot(self):
         if self.cursorSlot.isEmpty():
@@ -303,21 +361,22 @@ class ChestScreen:
             )
 
     def drawInstructions(self):
-        playerPanelRect = self.getPlayerPanelRect()
-        panelX, panelY, panelWidth, panelHeight = playerPanelRect
+        # Drawn along the top so it stays clear of the Take All / Drop / Back
+        # button row across the bottom of the screen.
+        width, _ = self.graphik.getGameDisplay().get_size()
         closeKeyName = self.keyBindings.getKeyName("inventory").upper()
         self.graphik.drawText(
-            "press [" + closeKeyName + "] or [Esc] to close",
-            panelX + panelWidth / 2,
-            panelY + panelHeight + 20,
-            20,
-            (255, 255, 255),
+            "Left-click: move  -  Shift-click: transfer between chest and inventory",
+            width / 2,
+            14,
+            16,
+            (180, 180, 180),
         )
         self.graphik.drawText(
-            "Left-click: move item  -  click outside: drop",
-            panelX + panelWidth / 2,
-            panelY + panelHeight + 45,
-            16,
+            "press [" + closeKeyName + "] or [Esc] to close",
+            width / 2,
+            32,
+            14,
             (180, 180, 180),
         )
 
@@ -330,7 +389,8 @@ class ChestScreen:
                 elif event.type == pygame.KEYDOWN:
                     self.handleKeyDownEvent(event.key)
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    self.handleMouseClickEvent(event.pos, event.button)
+                    shift = bool(pygame.key.get_mods() & pygame.KMOD_SHIFT)
+                    self.handleMouseClickEvent(event.pos, event.button, shift)
 
             self.graphik.getGameDisplay().fill((0, 0, 0))
             hoveredChestItem = self._drawPanel(
@@ -342,6 +402,7 @@ class ChestScreen:
             self.drawInstructions()
             self.drawBackButton()
             self.drawTakeAllButton()
+            self.drawDropButton()
             hoveredItemName = hoveredChestItem or hoveredPlayerItem
             if hoveredItemName is not None and self.cursorSlot.isEmpty():
                 self._drawTooltip(hoveredItemName)

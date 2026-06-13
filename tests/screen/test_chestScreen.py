@@ -241,25 +241,96 @@ def test_click_on_take_all_button_does_not_drop_cursor_stack():
     assert screen.cursorSlot.getNumItems() == 2
 
 
-def test_left_click_outside_panels_drops_cursor_stack():
+def test_left_click_outside_panels_keeps_cursor_items():
+    # Clicking empty space must no longer discard cursor items — dropping is
+    # now only possible via the explicit Drop button.
     screen = createChestScreen()
     screen.cursorSlot.add(Apple())
     screen.cursorSlot.add(Apple())
 
-    # (0, 0) is above both panels.
+    # (0, 0) is above both panels and not on any button.
     screen.handleMouseClickEvent((0, 0), button=1)
+
+    assert screen.cursorSlot.getNumItems() == 2
+
+
+def test_left_click_on_drop_button_drops_stack():
+    screen = createChestScreen()
+    screen.cursorSlot.add(Apple())
+    screen.cursorSlot.add(Apple())
+
+    buttonX, buttonY, buttonWidth, buttonHeight = screen._dropButtonRect()
+    centre = (buttonX + buttonWidth / 2, buttonY + buttonHeight / 2)
+    screen.handleMouseClickEvent(centre, button=1)
 
     assert screen.cursorSlot.isEmpty()
 
 
-def test_middle_click_outside_panels_drops_single_item():
+def test_middle_click_on_drop_button_drops_single_item():
     screen = createChestScreen()
     screen.cursorSlot.add(Apple())
     screen.cursorSlot.add(Apple())
 
-    screen.handleMouseClickEvent((0, 0), button=2)
+    buttonX, buttonY, buttonWidth, buttonHeight = screen._dropButtonRect()
+    centre = (buttonX + buttonWidth / 2, buttonY + buttonHeight / 2)
+    screen.handleMouseClickEvent(centre, button=2)
 
     assert screen.cursorSlot.getNumItems() == 1
+
+
+def test_shift_click_chest_slot_transfers_stack_to_player():
+    chest = Chest()
+    chest.getStoredInventory().placeIntoFirstAvailableInventorySlot(Apple())
+    chest.getStoredInventory().placeIntoFirstAvailableInventorySlot(Apple())
+    player = Inventory()
+    screen = createChestScreen(playerInventory=player, chest=chest)
+
+    geometry = list(
+        screen._slotGeometry(screen.getChestInventory(), screen.getChestPanelRect())
+    )
+    _, _, itemX, itemY, itemWidth, itemHeight = geometry[0]
+    centre = (itemX + itemWidth / 2, itemY + itemHeight / 2)
+
+    screen.handleMouseClickEvent(centre, button=1, shift=True)
+
+    assert chest.getStoredInventory().getNumItems() == 0
+    assert player.getNumItems() == 2
+    assert screen.cursorSlot.isEmpty()  # nothing picked onto the cursor
+
+
+def test_shift_click_player_slot_transfers_stack_to_chest():
+    chest = Chest()
+    player = Inventory()
+    player.placeIntoFirstAvailableInventorySlot(Apple())
+    screen = createChestScreen(playerInventory=player, chest=chest)
+
+    geometry = list(screen._slotGeometry(screen.inventory, screen.getPlayerPanelRect()))
+    _, _, itemX, itemY, itemWidth, itemHeight = geometry[0]
+    centre = (itemX + itemWidth / 2, itemY + itemHeight / 2)
+
+    screen.handleMouseClickEvent(centre, button=1, shift=True)
+
+    assert player.getNumItems() == 0
+    assert chest.getStoredInventory().getNumItems() == 1
+
+
+def test_shift_click_into_full_destination_keeps_items_and_warns():
+    chest = Chest()
+    chest.getStoredInventory().placeIntoFirstAvailableInventorySlot(OakWood())
+    player = Inventory()
+    _fill_inventory(player)
+    screen = createChestScreen(playerInventory=player, chest=chest)
+
+    geometry = list(
+        screen._slotGeometry(screen.getChestInventory(), screen.getChestPanelRect())
+    )
+    _, _, itemX, itemY, itemWidth, itemHeight = geometry[0]
+    centre = (itemX + itemWidth / 2, itemY + itemHeight / 2)
+
+    screen.handleMouseClickEvent(centre, button=1, shift=True)
+
+    assert chest.getStoredInventory().getNumItems() == 1
+    screen.status.set.assert_called_with("No room to transfer")
 
 
 def test_close_returns_cursor_items_to_player_and_calls_on_close():
