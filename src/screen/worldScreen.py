@@ -1353,7 +1353,7 @@ class WorldScreen:
         helpLines = [
             "W/A/S/D or Arrows  -  Move",
             "Left Click  -  Gather / Pick up",
-            "Right Click  -  Place item",
+            "Right Click  -  Place item / open chest",
             "Middle Click  -  Drag HUD elements to reposition",
             "1-0  -  Select hotbar slot",
             "Scroll Wheel  -  Cycle hotbar",
