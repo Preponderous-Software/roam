@@ -3,6 +3,7 @@ from entity.banana import Banana
 from entity.bearMeat import BearMeat
 from entity.bed import Bed
 from entity.campfire import Campfire
+from entity.chest import Chest
 from entity.chickenMeat import ChickenMeat
 from entity.coalOre import CoalOre
 from entity.fence import Fence
@@ -24,6 +25,7 @@ from entity.woodFloor import WoodFloor
 from entity.youngCrop import YoungCrop
 
 PICKUPABLE_TYPES = (
+    Chest,
     OakWood,
     JungleWood,
     Leaves,
@@ -52,4 +54,10 @@ PICKUPABLE_TYPES = (
 
 
 def canBePickedUp(entity):
-    return isinstance(entity, PICKUPABLE_TYPES)
+    if not isinstance(entity, PICKUPABLE_TYPES):
+        return False
+    # A Chest may only be picked up when empty, otherwise its contents
+    # would be lost when it is converted back into an inventory item.
+    if isinstance(entity, Chest):
+        return entity.getStoredInventory().getNumItems() == 0
+    return True

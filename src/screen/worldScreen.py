@@ -48,6 +48,7 @@ from ui.hotbarLayout import (
     HOTBAR_BOTTOM_OFFSET,
 )
 from ui.hudDragManager import HudDragManager
+from entity.chest import Chest
 from entity.gravestone import Gravestone
 from entity.wheat import Wheat
 from entity.wheatSeed import WheatSeed
@@ -120,6 +121,10 @@ class WorldScreen:
         self.cursorSlot = InventorySlot()
         self.clock = pygame.time.Clock()
         self.showHelp = False
+        # The chest most recently opened via right-click, and the room it lives
+        # in, so the ChestScreen can persist its contents on close.
+        self.activeChest = None
+        self.activeChestRoom = None
 
     def initialize(self):
         self.map = self.container.resolve(Map)
@@ -696,9 +701,12 @@ class WorldScreen:
             self.status.set("Too far away")
             return
 
-        # Check for gravestone interaction before checking solid/blocked
+        # Check for chest/gravestone interaction before checking solid/blocked
         for entityId in list(targetLocation.getEntities().keys()):
             entity = targetLocation.getEntity(entityId)
+            if isinstance(entity, Chest):
+                self._openChest(entity, targetRoom)
+                return
             if isinstance(entity, Gravestone):
                 self._interactWithGravestone(entity, targetRoom, targetLocation)
                 return
@@ -772,6 +780,20 @@ class WorldScreen:
         targetRoom.addEntityToLocation(youngCrop, targetLocation)
         self.status.set("Planted Wheat Seed")
         self.player.setTickLastPlaced(self.tickCounter.getTick())
+
+    def _openChest(self, chest, targetRoom):
+        self.returnCursorSlotToInventory()
+        self.activeChest = chest
+        self.activeChestRoom = targetRoom
+        self.nextScreen = ScreenType.CHEST_SCREEN
+        self.changeScreen = True
+
+    def getActiveChest(self):
+        return self.activeChest
+
+    def saveActiveChestRoom(self):
+        if self.activeChestRoom is not None:
+            self.saveRoomToFileAsync(self.activeChestRoom)
 
     def _interactWithGravestone(self, gravestone, targetRoom, targetLocation):
         storedInventory = gravestone.getStoredInventory()

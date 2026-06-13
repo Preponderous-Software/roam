@@ -65,3 +65,14 @@ def test_recipeRegistry_has_campfire_recipe():
     ingredients = recipe.getIngredients()
     ingredientNames = {cls.__name__: count for cls, count in ingredients.items()}
     assert ingredientNames == {"OakWood": 2, "CoalOre": 1}
+
+
+def test_recipeRegistry_has_chest_recipe():
+    registry = RecipeRegistry()
+    recipes = registry.getRecipes()
+    chestRecipes = [r for r in recipes if r.getName() == "Chest"]
+    assert len(chestRecipes) == 1
+    recipe = chestRecipes[0]
+    ingredients = recipe.getIngredients()
+    ingredientNames = {cls.__name__: count for cls, count in ingredients.items()}
+    assert ingredientNames == {"OakWood": 6}

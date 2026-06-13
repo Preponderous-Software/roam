@@ -5,6 +5,7 @@ from entity.banana import Banana
 from entity.bearMeat import BearMeat
 from entity.bed import Bed
 from entity.campfire import Campfire
+from entity.chest import Chest
 from entity.chickenMeat import ChickenMeat
 from entity.coalOre import CoalOre
 from entity.excrement import Excrement
@@ -85,6 +86,7 @@ def createEntityJson(entityClass):
         ("YoungCrop", YoungCrop),
         ("MatureCrop", MatureCrop),
         ("Gravestone", Gravestone),
+        ("Chest", Chest),
     ],
 )
 def test_generate_entity_from_json_supports_all_known_entity_classes(
@@ -161,7 +163,9 @@ def test_mature_crop_preserves_tick_planted(resolve, test_config, tmp_path):
     assert entity.getTickPlanted() == 750
 
 
-def test_generate_json_for_young_crop_includes_tick_planted(resolve, test_config, tmp_path):
+def test_generate_json_for_young_crop_includes_tick_planted(
+    resolve, test_config, tmp_path
+):
     roomJsonReaderWriter = createRoomJsonReaderWriter(resolve, test_config, tmp_path)
     crop = YoungCrop(300)
 
@@ -171,7 +175,9 @@ def test_generate_json_for_young_crop_includes_tick_planted(resolve, test_config
     assert entityJson["tickPlanted"] == 300
 
 
-def test_generate_json_for_mature_crop_includes_tick_planted(resolve, test_config, tmp_path):
+def test_generate_json_for_mature_crop_includes_tick_planted(
+    resolve, test_config, tmp_path
+):
     roomJsonReaderWriter = createRoomJsonReaderWriter(resolve, test_config, tmp_path)
     crop = MatureCrop(400)
 
@@ -181,7 +187,9 @@ def test_generate_json_for_mature_crop_includes_tick_planted(resolve, test_confi
     assert entityJson["tickPlanted"] == 400
 
 
-def test_generate_json_for_gravestone_includes_stored_inventory(resolve, test_config, tmp_path):
+def test_generate_json_for_gravestone_includes_stored_inventory(
+    resolve, test_config, tmp_path
+):
     roomJsonReaderWriter = createRoomJsonReaderWriter(resolve, test_config, tmp_path)
     gravestone = Gravestone()
     gravestone.setEnvironmentID(uuid4())
@@ -198,7 +206,9 @@ def test_generate_json_for_gravestone_includes_stored_inventory(resolve, test_co
     assert total_items == 1
 
 
-def test_generate_entity_from_json_restores_gravestone_stored_inventory(resolve, test_config, tmp_path):
+def test_generate_entity_from_json_restores_gravestone_stored_inventory(
+    resolve, test_config, tmp_path
+):
     roomJsonReaderWriter = createRoomJsonReaderWriter(resolve, test_config, tmp_path)
 
     apple = Apple()
@@ -249,3 +259,37 @@ def test_gravestone_round_trip_preserves_stored_items(resolve, test_config, tmp_
     assert isinstance(restored, Gravestone)
     assert restored.getStoredInventory().getNumItems() == 2
 
+
+def test_generate_json_for_chest_includes_stored_inventory(
+    resolve, test_config, tmp_path
+):
+    roomJsonReaderWriter = createRoomJsonReaderWriter(resolve, test_config, tmp_path)
+    chest = Chest()
+    chest.setEnvironmentID(uuid4())
+    chest.setGridID(uuid4())
+    chest.setLocationID(str(uuid4()))
+    chest.getStoredInventory().placeIntoFirstAvailableInventorySlot(Apple())
+
+    entityJson = roomJsonReaderWriter.generateJsonForEntity(chest)
+
+    assert entityJson["entityClass"] == "Chest"
+    assert "storedInventory" in entityJson
+    slots = entityJson["storedInventory"]["inventorySlots"]
+    total_items = sum(len(s["slotContents"]) for s in slots)
+    assert total_items == 1
+
+
+def test_chest_round_trip_preserves_stored_items(resolve, test_config, tmp_path):
+    roomJsonReaderWriter = createRoomJsonReaderWriter(resolve, test_config, tmp_path)
+    chest = Chest()
+    chest.setEnvironmentID(uuid4())
+    chest.setGridID(uuid4())
+    chest.setLocationID(str(uuid4()))
+    chest.getStoredInventory().placeIntoFirstAvailableInventorySlot(Apple())
+    chest.getStoredInventory().placeIntoFirstAvailableInventorySlot(OakWood())
+
+    entityJson = roomJsonReaderWriter.generateJsonForEntity(chest)
+    restored = roomJsonReaderWriter.generateEntityFromJson(entityJson)
+
+    assert isinstance(restored, Chest)
+    assert restored.getStoredInventory().getNumItems() == 2

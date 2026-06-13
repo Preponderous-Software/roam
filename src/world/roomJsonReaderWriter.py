@@ -9,6 +9,7 @@ from entity.banana import Banana
 from entity.bearMeat import BearMeat
 from entity.bed import Bed
 from entity.campfire import Campfire
+from entity.chest import Chest
 from entity.chickenMeat import ChickenMeat
 from entity.coalOre import CoalOre
 from entity.excrement import Excrement
@@ -27,6 +28,7 @@ from entity.oakWood import OakWood
 from entity.stone import Stone
 from entity.stoneBed import StoneBed
 from entity.stoneFloor import StoneFloor
+from entity.storableInventory import StorableInventory
 from entity.torch import Torch
 from entity.wheat import Wheat
 from entity.wheatSeed import WheatSeed
@@ -73,6 +75,7 @@ class RoomJsonReaderWriter:
             "StoneBed": StoneBed,
             "Fence": Fence,
             "Campfire": Campfire,
+            "Chest": Chest,
             "Torch": Torch,
             "WheatSeed": WheatSeed,
             "Wheat": Wheat,
@@ -157,7 +160,7 @@ class RoomJsonReaderWriter:
             entityJson["tickCreated"] = entity.getTickCreated()
         elif isinstance(entity, (YoungCrop, MatureCrop)):
             entityJson["tickPlanted"] = entity.getTickPlanted()
-        elif isinstance(entity, Gravestone):
+        elif isinstance(entity, StorableInventory):
             entityJson["storedInventory"] = self._generateJsonForStoredInventory(
                 entity.getStoredInventory()
             )
@@ -234,7 +237,7 @@ class RoomJsonReaderWriter:
         entity.setLocationID(entityJson["locationId"])
         entity.setName(entityJson["name"])
 
-        if isinstance(entity, Gravestone) and "storedInventory" in entityJson:
+        if isinstance(entity, StorableInventory) and "storedInventory" in entityJson:
             self._restoreStoredInventory(
                 entity.getStoredInventory(), entityJson["storedInventory"]
             )
