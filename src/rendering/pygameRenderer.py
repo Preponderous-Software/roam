@@ -1,8 +1,14 @@
 import pygame
 
+from gameLogging.logger import getLogger
 from lib.graphik.src.graphik import Graphik
 from rendering.renderer import Renderer
 from screen.screenshotHelper import takeScreenshot
+from ui import palette
+
+_logger = getLogger(__name__)
+
+_FALLBACK_IMAGE_SIZE = 32
 
 
 # @author Daniel McCoy Stephenson
@@ -16,6 +22,7 @@ from screen.screenshotHelper import takeScreenshot
 class PygameRenderer(Renderer):
     def __init__(self, graphik: Graphik):
         self.graphik = graphik
+        self._imageCache = {}
 
     def _display(self):
         return self.graphik.getGameDisplay()
@@ -57,6 +64,31 @@ class PygameRenderer(Renderer):
 
     def drawImage(self, image, position):
         self._display().blit(image, position)
+
+    def loadImage(self, path):
+        # Cached per path (game assets are static); a load failure is logged
+        # once and replaced with a visible placeholder so a missing asset is
+        # obvious in-game rather than crashing the render loop.
+        if path not in self._imageCache:
+            try:
+                self._imageCache[path] = pygame.image.load(path)
+            except (pygame.error, FileNotFoundError) as error:
+                _logger.warning(
+                    "failed to load image asset; using placeholder",
+                    imagePath=path,
+                    error=str(error),
+                )
+                self._imageCache[path] = self._createFallbackImage()
+        return self._imageCache[path]
+
+    def scaleImage(self, image, size):
+        return pygame.transform.scale(image, size)
+
+    @staticmethod
+    def _createFallbackImage():
+        surface = pygame.Surface((_FALLBACK_IMAGE_SIZE, _FALLBACK_IMAGE_SIZE))
+        surface.fill(palette.DEBUG_MAGENTA)
+        return surface
 
     def getGameAreaRect(self):
         return self.graphik.getGameAreaRect()

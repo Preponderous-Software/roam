@@ -32,6 +32,25 @@ def test_display_queries_reflect_the_real_surface(renderer):
     assert renderer.getDisplayHeight() == DISPLAY_SIZE[1]
 
 
+def test_load_image_loads_a_real_asset_and_caches_by_path(renderer):
+    image = renderer.loadImage("assets/images/player_down.png")
+    assert image.get_width() > 0 and image.get_height() > 0
+    # Same path returns the cached surface instance.
+    assert renderer.loadImage("assets/images/player_down.png") is image
+
+
+def test_load_image_returns_a_placeholder_for_a_missing_asset(renderer):
+    placeholder = renderer.loadImage("assets/images/does-not-exist.png")
+    assert placeholder.get_size() == (32, 32)
+    assert placeholder.get_at((0, 0))[:3] == palette.DEBUG_MAGENTA
+
+
+def test_scale_image_resizes(renderer):
+    image = renderer.loadImage("assets/images/player_down.png")
+    scaled = renderer.scaleImage(image, (24, 24))
+    assert scaled.get_size() == (24, 24)
+
+
 def test_all_draw_operations_run_against_a_real_surface(renderer):
     # Drives every drawing/lifecycle method offscreen (SDL dummy). Catches
     # wrapper bugs and surface-API misuse that the logic-only screen tests miss.

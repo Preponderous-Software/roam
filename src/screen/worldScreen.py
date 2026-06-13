@@ -1172,7 +1172,7 @@ class WorldScreen:
 
         gameArea = self.renderer.getGameAreaRect()
         minimapSize = gameArea.width * self.minimapScaleFactor
-        mapImage = pygame.transform.scale(
+        mapImage = self.renderer.scaleImage(
             mapImage,
             (
                 minimapSize,
@@ -1480,8 +1480,9 @@ class WorldScreen:
                 )
             else:
                 item = inventorySlot.getContents()[0]
-                scaledImage = pygame.transform.scale(
-                    item.getImage(), (HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE)
+                scaledImage = self.renderer.scaleImage(
+                    self.renderer.loadImage(item.getImagePath()),
+                    (HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE),
                 )
                 self.renderer.drawImage(scaledImage, (slotX, slotY))
                 self.renderer.drawText(
@@ -1639,8 +1640,8 @@ class WorldScreen:
         if self.cursorSlot.isEmpty():
             return
         item = self.cursorSlot.getContents()[0]
-        image = item.getImage()
-        scaledImage = pygame.transform.scale(image, (50, 50))
+        image = self.renderer.loadImage(item.getImagePath())
+        scaledImage = self.renderer.scaleImage(image, (50, 50))
         self.renderer.drawImage(scaledImage, pygame.mouse.get_pos())
         numItems = self.cursorSlot.getNumItems()
         if numItems > 1:
