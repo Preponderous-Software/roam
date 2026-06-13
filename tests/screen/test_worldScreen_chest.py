@@ -92,3 +92,34 @@ def test_save_active_chest_room_is_noop_when_no_chest_room():
     ws.saveActiveChestRoom()
 
     ws.saveRoomToFileAsync.assert_not_called()
+
+
+def test_gather_on_non_empty_chest_advises_emptying_it_first():
+    ws = createWorldScreen()
+    room = createMockRoom()
+    loc = room.getGrid().getLocationByCoordinates(1, 1)
+    chest = Chest()
+    chest.getStoredInventory().placeIntoFirstAvailableInventorySlot(Apple())
+    room.addEntityToLocation(chest, loc)
+
+    ws.getLocationAndRoomAtMousePosition = lambda: (loc, room)
+    ws.isLocationTooFar = lambda location, targetRoom: False
+    ws._tryHarvestCrop = lambda location, targetRoom: False
+
+    ws.executeGatherAction()
+
+    ws.status.set.assert_called_with("Empty the chest before picking it up")
+
+
+def test_gather_on_empty_location_still_reports_nothing_to_pick_up():
+    ws = createWorldScreen()
+    room = createMockRoom()
+    loc = room.getGrid().getLocationByCoordinates(1, 1)
+
+    ws.getLocationAndRoomAtMousePosition = lambda: (loc, room)
+    ws.isLocationTooFar = lambda location, targetRoom: False
+    ws._tryHarvestCrop = lambda location, targetRoom: False
+
+    ws.executeGatherAction()
+
+    ws.status.set.assert_called_with("Nothing to pick up here")

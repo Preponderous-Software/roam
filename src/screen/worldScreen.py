@@ -575,7 +575,18 @@ class WorldScreen:
                 break
 
         if toRemove is None:
-            self.status.set("Nothing to pick up here")
+            nonEmptyChestPresent = any(
+                isinstance(targetLocation.getEntity(entityId), Chest)
+                and targetLocation.getEntity(entityId)
+                .getStoredInventory()
+                .getNumItems()
+                > 0
+                for entityId in targetLocation.getEntities()
+            )
+            if nonEmptyChestPresent:
+                self.status.set("Empty the chest before picking it up")
+            else:
+                self.status.set("Nothing to pick up here")
             return
 
         if not self.player.getInventory().placeIntoFirstAvailableInventorySlot(
