@@ -2,6 +2,7 @@ from appContainer import component
 from config.config import Config
 from rendering.renderer import Renderer
 from screen.screenType import ScreenType
+from screen.screen import Screen
 from ui.status import Status
 import pygame
 from ui import palette
@@ -9,7 +10,7 @@ from ui import palette
 
 # @author Daniel McCoy Stephenson
 @component
-class OptionsScreen:
+class OptionsScreen(Screen):
     def __init__(self, renderer: Renderer, config: Config, status: Status):
         self.renderer = renderer
         self.config = config
@@ -173,24 +174,19 @@ class OptionsScreen:
             self.cancelMainMenuConfirmation,
         )
 
-    def run(self):
-        while not self.changeScreen:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    return ScreenType.NONE
-                elif event.type == pygame.KEYDOWN:
-                    self.handleKeyDownEvent(event.key)
+    def handleEvent(self, event):
+        if event.type == pygame.KEYDOWN:
+            self.handleKeyDownEvent(event.key)
 
-            self.renderer.clearScreen(palette.BLACK)
-            self.drawTitle()
-            if self.confirmingMainMenu:
-                # Skip the menu buttons while confirming so their click
-                # rects don't fire through the overlay.
-                self.drawMainMenuConfirmation()
-            else:
-                self.drawMenuButtons()
-            self.renderer.present()
+    def draw(self):
+        self.renderer.clearScreen(palette.BLACK)
+        self.drawTitle()
+        if self.confirmingMainMenu:
+            # Skip the menu buttons while confirming so their click
+            # rects don't fire through the overlay.
+            self.drawMainMenuConfirmation()
+        else:
+            self.drawMenuButtons()
 
-        self.changeScreen = False
+    def onExit(self):
         self.confirmingMainMenu = False
-        return self.nextScreen

@@ -3,6 +3,7 @@ from config.config import Config
 from config.keyBindings import KeyBindings
 from rendering.renderer import Renderer
 from screen.screenType import ScreenType
+from screen.screen import Screen
 from stats.stats import Stats
 from goals.goals import Goals
 from ui.status import Status
@@ -12,7 +13,7 @@ from ui import palette
 
 # @author Daniel McCoy Stephenson
 @component
-class StatsScreen:
+class StatsScreen(Screen):
     def __init__(
         self,
         renderer: Renderer,
@@ -128,19 +129,11 @@ class StatsScreen:
             self.switchToOptionsScreen,
         )
 
-    def run(self):
-        while not self.changeScreen:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.nextScreen = ScreenType.NONE
-                    self.changeScreen = True
-                elif event.type == pygame.KEYDOWN:
-                    self.handleKeyDownEvent(event.key)
+    def handleEvent(self, event):
+        if event.type == pygame.KEYDOWN:
+            self.handleKeyDownEvent(event.key)
 
-            self.renderer.clearScreen(palette.BLACK)
-            self.drawStats()
-            self.drawBackButton()
-            self.renderer.present()
-
-        self.changeScreen = False
-        return self.nextScreen
+    def draw(self):
+        self.renderer.clearScreen(palette.BLACK)
+        self.drawStats()
+        self.drawBackButton()
