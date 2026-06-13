@@ -20,13 +20,12 @@ from jsonPersistence import writeJsonAtomically
 from mapimage.mapImageUpdater import MapImageUpdater
 from screen.pickupableEntities import canBePickedUp as _canBePickedUp
 from screen.screenType import ScreenType
-from screen.screenshotHelper import takeScreenshot
 from screen.worldScreenPersistence import WorldScreenPersistence
 from stats.stats import Stats
 from ui.energyBar import EnergyBar
 from goals.goals import Goals
 from goals.goalsJsonReaderWriter import GoalsJsonReaderWriter
-from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
 from entity.grass import Grass
 from lib.pyenvlib.grid import Grid
 from entity.stone import Stone
@@ -68,7 +67,7 @@ MIDDLE_MOUSE_BUTTON = 2
 class WorldScreen:
     def __init__(
         self,
-        graphik: Graphik,
+        renderer: Renderer,
         config: Config,
         status: Status,
         tickCounter: TickCounter,
@@ -77,7 +76,7 @@ class WorldScreen:
         container: Container,
         keyBindings: KeyBindings,
     ):
-        self.graphik = graphik
+        self.renderer = renderer
         self.config = config
         self.status = status
         self.tickCounter = tickCounter
@@ -185,7 +184,7 @@ class WorldScreen:
         )
 
     def initializeLocationWidthAndHeight(self):
-        gameArea = self.graphik.getGameAreaRect()
+        gameArea = self.renderer.getGameAreaRect()
         locationWidth = gameArea.width / self.currentRoom.getGrid().getRows()
         locationHeight = gameArea.height / self.currentRoom.getGrid().getColumns()
 
@@ -203,7 +202,7 @@ class WorldScreen:
             Room._scaledImageCache.clear()
 
     def updateConfigWindowSize(self):
-        w, h = self.graphik.getGameDisplay().get_size()
+        w, h = self.renderer.getDisplaySize()
         minSize = self.config.MIN_WINDOW_SIZE
         self.config.displayWidth = max(w, minSize)
         self.config.displayHeight = max(h, minSize)
@@ -471,7 +470,7 @@ class WorldScreen:
 
     def getLocationAndRoomAtMousePosition(self):
         x, y = pygame.mouse.get_pos()
-        gameArea = self.graphik.getGameAreaRect()
+        gameArea = self.renderer.getGameAreaRect()
         if self.config.cameraFollowPlayer:
             playerLocation = self.getLocationOfPlayer()
             playerPixelX = (
@@ -906,7 +905,7 @@ class WorldScreen:
         elif key == kb.getKey("move_right") or key == kb.getKey("alt_move_right"):
             self._handleMovementKey(3)
         elif key == kb.getKey("screenshot"):
-            takeScreenshot(self.graphik.getGameDisplay())
+            self.renderer.captureScreenshot()
             self.status.set("Screenshot saved")
         elif key == kb.getKey("run"):
             self.player.setMovementSpeed(
@@ -1097,16 +1096,16 @@ class WorldScreen:
 
         # render the room onto a clean off-screen surface so the day/night
         # overlay (and any other display artefacts) are not captured
-        gameArea = self.graphik.getGameAreaRect()
+        gameArea = self.renderer.getGameAreaRect()
         size = (int(gameArea.width), int(gameArea.height))
         offscreen = pygame.Surface(size)
-        originalDisplay = self.graphik.gameDisplay
+        originalTarget = self.renderer.getRenderTarget()
         try:
-            self.graphik.gameDisplay = offscreen
-            offscreen.fill(self.currentRoom.getBackgroundColor())
+            self.renderer.setRenderTarget(offscreen)
+            self.renderer.clearScreen(self.currentRoom.getBackgroundColor())
             self.currentRoom.draw(self.locationWidth, self.locationHeight)
         finally:
-            self.graphik.gameDisplay = originalDisplay
+            self.renderer.setRenderTarget(originalTarget)
 
         path = (
             self.config.pathToSaveDirectory
@@ -1170,7 +1169,7 @@ class WorldScreen:
             else:
                 mapImage = self._cachedMiniMapImage
 
-        gameArea = self.graphik.getGameAreaRect()
+        gameArea = self.renderer.getGameAreaRect()
         minimapSize = gameArea.width * self.minimapScaleFactor
         mapImage = pygame.transform.scale(
             mapImage,
@@ -1185,7 +1184,7 @@ class WorldScreen:
         drawY = self.minimapY + minimapOy
 
         backgroundColor = palette.GRAY
-        self.graphik.drawRectangle(
+        self.renderer.drawRectangle(
             drawX,
             drawY,
             mapImage.get_width() + 20,
@@ -1194,7 +1193,7 @@ class WorldScreen:
         )
 
         # blit in top left corner with 10px padding
-        self.graphik.getGameDisplay().blit(mapImage, (drawX + 10, drawY + 10))
+        self.renderer.drawImage(mapImage, (drawX + 10, drawY + 10))
 
     def _iterateVisibleRoomOffsets(self, gameArea):
         """Yield (roomX, roomY, roomOffsetX, roomOffsetY) for visible rooms."""
@@ -1257,7 +1256,7 @@ class WorldScreen:
                     )
 
     def drawFollowMode(self):
-        gameArea = self.graphik.getGameAreaRect()
+        gameArea = self.renderer.getGameAreaRect()
         collectLights = self.config.dayNightCycleEnabled
         if collectLights:
             self._frameLightSources = []
@@ -1280,15 +1279,14 @@ class WorldScreen:
                 )
 
     def _drawPausedOverlay(self):
-        display = self.graphik.getGameDisplay()
-        width, height = display.get_size()
+        width, height = self.renderer.getDisplaySize()
         dim = pygame.Surface((width, height), pygame.SRCALPHA)
         dim.fill((0, 0, 0, 140))
-        display.blit(dim, (0, 0))
-        self.graphik.drawText(
+        self.renderer.drawImage(dim, (0, 0))
+        self.renderer.drawText(
             "PAUSED", width / 2, height / 2 - 20, 56, palette.LIGHT_GRAY
         )
-        self.graphik.drawText(
+        self.renderer.drawText(
             "Click the window to resume",
             width / 2,
             height / 2 + 28,
@@ -1306,15 +1304,16 @@ class WorldScreen:
             "dawn": (255, 180, 140),
         }
         color = phaseColors.get(phase, palette.LIGHT_GRAY)
-        self.graphik.drawText(label, 30, 20, 18, color)
+        self.renderer.drawText(label, 30, 20, 18, color)
 
     def _drawDeathOverlay(self):
-        display = self.graphik.getGameDisplay()
-        width, height = display.get_size()
+        width, height = self.renderer.getDisplaySize()
         dim = pygame.Surface((width, height), pygame.SRCALPHA)
         dim.fill((0, 0, 0, 160))
-        display.blit(dim, (0, 0))
-        self.graphik.drawText("YOU DIED", width / 2, height / 2 - 30, 64, (220, 60, 60))
+        self.renderer.drawImage(dim, (0, 0))
+        self.renderer.drawText(
+            "YOU DIED", width / 2, height / 2 - 30, 64, (220, 60, 60)
+        )
         secondsLeft = max(
             1,
             int(
@@ -1322,7 +1321,7 @@ class WorldScreen:
                 / self.config.ticksPerSecond
             ),
         )
-        self.graphik.drawText(
+        self.renderer.drawText(
             f"Respawning in {secondsLeft}...",
             width / 2,
             height / 2 + 30,
@@ -1331,13 +1330,13 @@ class WorldScreen:
         )
 
     def drawHelpOverlay(self):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         overlayWidth = x * 0.6
         overlayHeight = y * 0.75
         overlayX = x / 2 - overlayWidth / 2
         overlayY = y / 2 - overlayHeight / 2
 
-        self.graphik.drawRectangle(
+        self.renderer.drawRectangle(
             overlayX, overlayY, overlayWidth, overlayHeight, palette.NEAR_BLACK
         )
 
@@ -1345,7 +1344,7 @@ class WorldScreen:
 
         titleY = overlayY + 25
         closeKeyName = kb.getKeyName("toggle_help").upper()
-        self.graphik.drawText(
+        self.renderer.drawText(
             f"Controls  ({closeKeyName} to close)",
             x / 2,
             titleY,
@@ -1379,13 +1378,13 @@ class WorldScreen:
         lineY = titleY + 40
         lineSpacing = 24
         for line in helpLines:
-            self.graphik.drawText(line, x / 2, lineY, 20, palette.LIGHT_GRAY)
+            self.renderer.drawText(line, x / 2, lineY, 20, palette.LIGHT_GRAY)
             lineY += lineSpacing
 
     def _getHotbarDefaultRect(self):
         """Return the default bounding rect for the hotbar (no drag offset)."""
-        displayWidth = self.graphik.getGameDisplay().get_width()
-        displayHeight = self.graphik.getGameDisplay().get_height()
+        displayWidth = self.renderer.getDisplayWidth()
+        displayHeight = self.renderer.getDisplayHeight()
         itemPreviewXPos = displayWidth / 2 - HOTBAR_SLOT_SIZE * 5 - HOTBAR_SLOT_SIZE / 2
         itemPreviewYPos = displayHeight - HOTBAR_BOTTOM_OFFSET
         barXPos = itemPreviewXPos - HOTBAR_PADDING
@@ -1396,7 +1395,7 @@ class WorldScreen:
 
     def _getMinimapDefaultRect(self):
         """Return the default bounding rect for the minimap (no drag offset)."""
-        gameArea = self.graphik.getGameAreaRect()
+        gameArea = self.renderer.getGameAreaRect()
         minimapSize = gameArea.width * self.minimapScaleFactor
         return pygame.Rect(
             self.minimapX,
@@ -1439,45 +1438,43 @@ class WorldScreen:
                 (overlayX - radiusPx, overlayY - radiusPx),
                 special_flags=pygame.BLEND_RGBA_MIN,
             )
-        self.graphik.getGameDisplay().blit(
-            self._dayNightOverlay, (gameArea.x, gameArea.y)
-        )
+        self.renderer.drawImage(self._dayNightOverlay, (gameArea.x, gameArea.y))
 
     def _drawHotbarSelectionIndicator(self, xPos, yPos, slotWidth, slotHeight):
         borderWidth = 3
         color = (255, 255, 0)
-        self.graphik.drawRectangle(xPos, yPos, slotWidth, borderWidth, color)
-        self.graphik.drawRectangle(
+        self.renderer.drawRectangle(xPos, yPos, slotWidth, borderWidth, color)
+        self.renderer.drawRectangle(
             xPos, yPos + slotHeight - borderWidth, slotWidth, borderWidth, color
         )
-        self.graphik.drawRectangle(xPos, yPos, borderWidth, slotHeight, color)
-        self.graphik.drawRectangle(
+        self.renderer.drawRectangle(xPos, yPos, borderWidth, slotHeight, color)
+        self.renderer.drawRectangle(
             xPos + slotWidth - borderWidth, yPos, borderWidth, slotHeight, color
         )
 
     def _drawHotbar(self):
         hotbarOx, hotbarOy = self.hudDragManager.getOffset("hotbar")
         slotStartX = (
-            self.graphik.getGameDisplay().get_width() / 2
+            self.renderer.getDisplayWidth() / 2
             - HOTBAR_SLOT_SIZE * 5
             - HOTBAR_SLOT_SIZE / 2
         ) + hotbarOx
-        slotY = (
-            self.graphik.getGameDisplay().get_height() - HOTBAR_BOTTOM_OFFSET + hotbarOy
-        )
+        slotY = self.renderer.getDisplayHeight() - HOTBAR_BOTTOM_OFFSET + hotbarOy
 
         barXPos = slotStartX - HOTBAR_PADDING
         barYPos = slotY - HOTBAR_PADDING
         barWidth = HOTBAR_SLOT_SIZE * 11 + HOTBAR_PADDING
         barHeight = HOTBAR_SLOT_SIZE + HOTBAR_PADDING * 2
-        self.graphik.drawRectangle(barXPos, barYPos, barWidth, barHeight, palette.BLACK)
+        self.renderer.drawRectangle(
+            barXPos, barYPos, barWidth, barHeight, palette.BLACK
+        )
 
         selectedIndex = self.player.getInventory().getSelectedInventorySlotIndex()
         firstTenInventorySlots = self.player.getInventory().getFirstTenInventorySlots()
         slotX = slotStartX
         for i, inventorySlot in enumerate(firstTenInventorySlots):
             if inventorySlot.isEmpty():
-                self.graphik.drawRectangle(
+                self.renderer.drawRectangle(
                     slotX, slotY, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE, palette.WHITE
                 )
             else:
@@ -1485,8 +1482,8 @@ class WorldScreen:
                 scaledImage = pygame.transform.scale(
                     item.getImage(), (HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE)
                 )
-                self.graphik.gameDisplay.blit(scaledImage, (slotX, slotY))
-                self.graphik.drawText(
+                self.renderer.drawImage(scaledImage, (slotX, slotY))
+                self.renderer.drawText(
                     str(inventorySlot.getNumItems()),
                     slotX + HOTBAR_SLOT_SIZE - 20,
                     slotY + HOTBAR_SLOT_SIZE - 20,
@@ -1502,33 +1499,33 @@ class WorldScreen:
             slotX += HOTBAR_SLOT_SIZE + HOTBAR_SLOT_GAP
 
     def _drawDebugInfo(self):
-        displayWidth = self.graphik.getGameDisplay().get_width()
-        displayHeight = self.graphik.getGameDisplay().get_height()
+        displayWidth = self.renderer.getDisplayWidth()
+        displayHeight = self.renderer.getDisplayHeight()
         tickValue = self.tickCounter.getTick()
         measuredTps = int(self.tickCounter.getMeasuredTicksPerSecond())
         peakTps = int(self.tickCounter.getHighestMeasuredTicksPerSecond())
         rightX = displayWidth - 100
         white = palette.WHITE
 
-        self.graphik.drawText(
+        self.renderer.drawText(
             "Tick: " + str(tickValue) + " (" + str(measuredTps) + " TPS)",
             rightX,
             20,
             20,
             white,
         )
-        self.graphik.drawText("Peak TPS: " + str(peakTps), rightX, 40, 20, white)
+        self.renderer.drawText("Peak TPS: " + str(peakTps), rightX, 40, 20, white)
 
         roomX = self.currentRoom.getX()
         roomY = self.currentRoom.getY() * -1
         coordinatesText = "(" + str(roomX) + ", " + str(roomY) + ")"
         coordY = displayHeight - 40 if self.config.showMiniMap else 20
-        self.graphik.drawText(coordinatesText, 30, coordY, 20, white)
+        self.renderer.drawText(coordinatesText, 30, coordY, 20, white)
 
         if self.config.dayNightCycleEnabled:
             cyclePhase = self.dayNightCycle.getPhase(tickValue)
             cycleOpacity = self.dayNightCycle.getOverlayOpacity(tickValue)
-            self.graphik.drawText(
+            self.renderer.drawText(
                 "Cycle: " + cyclePhase + " (" + str(cycleOpacity) + ")",
                 rightX,
                 60,
@@ -1537,15 +1534,15 @@ class WorldScreen:
             )
 
     def draw(self):
-        gameArea = self.graphik.getGameAreaRect()
+        gameArea = self.renderer.getGameAreaRect()
 
         if self.config.showMiniMap and not self.isCurrentRoomSavedAsPNG():
             self.saveCurrentRoomAsPNG()
 
-        self.graphik.getGameDisplay().fill(palette.BLACK)
+        self.renderer.clearScreen(palette.BLACK)
 
-        self.graphik.getGameDisplay().set_clip(gameArea)
-        self.graphik.getGameDisplay().fill(self.currentRoom.getBackgroundColor())
+        self.renderer.setClipRegion(gameArea)
+        self.renderer.clearScreen(self.currentRoom.getBackgroundColor())
 
         if self.config.cameraFollowPlayer:
             self.drawFollowMode()
@@ -1562,7 +1559,7 @@ class WorldScreen:
         if self.config.dayNightCycleEnabled:
             self._drawDayNightOverlay(gameArea)
 
-        self.graphik.getGameDisplay().set_clip(None)
+        self.renderer.setClipRegion(None)
 
         statusOx, statusOy = self.hudDragManager.getOffset("status")
         self.status.draw(statusOx, statusOy)
@@ -1583,9 +1580,9 @@ class WorldScreen:
         if not self.showHelp:
             helpKeyName = self.keyBindings.getKeyName("toggle_help").upper()
             hintLabel = f"{helpKeyName}: Help"
-            hintX = self.graphik.getGameDisplay().get_width() - 50
-            hintY = self.graphik.getGameDisplay().get_height() - 20
-            self.graphik.drawText(hintLabel, hintX, hintY, 16, palette.MEDIUM_GRAY)
+            hintX = self.renderer.getDisplayWidth() - 50
+            hintY = self.renderer.getDisplayHeight() - 20
+            self.renderer.drawText(hintLabel, hintX, hintY, 16, palette.MEDIUM_GRAY)
 
         self.drawCursorSlot()
 
@@ -1598,12 +1595,12 @@ class WorldScreen:
         if self.showHelp:
             self.drawHelpOverlay()
 
-        pygame.display.update()
+        self.renderer.present()
 
     def getHotbarSlotAtMousePosition(self):
         x, y = pygame.mouse.get_pos()
-        displayWidth = self.graphik.getGameDisplay().get_width()
-        displayHeight = self.graphik.getGameDisplay().get_height()
+        displayWidth = self.renderer.getDisplayWidth()
+        displayHeight = self.renderer.getDisplayHeight()
         hotbarOx, hotbarOy = self.hudDragManager.getOffset("hotbar")
         itemPreviewXPos = (
             displayWidth / 2 - HOTBAR_SLOT_SIZE * 5 - HOTBAR_SLOT_SIZE / 2 + hotbarOx
@@ -1643,11 +1640,11 @@ class WorldScreen:
         item = self.cursorSlot.getContents()[0]
         image = item.getImage()
         scaledImage = pygame.transform.scale(image, (50, 50))
-        self.graphik.gameDisplay.blit(scaledImage, pygame.mouse.get_pos())
+        self.renderer.drawImage(scaledImage, pygame.mouse.get_pos())
         numItems = self.cursorSlot.getNumItems()
         if numItems > 1:
             mouseX, mouseY = pygame.mouse.get_pos()
-            self.graphik.drawText(
+            self.renderer.drawText(
                 str(numItems),
                 mouseX + 30,
                 mouseY + 30,
@@ -1736,8 +1733,8 @@ class WorldScreen:
         # Finish HUD drag on middle-button release
         if event.button == MIDDLE_MOUSE_BUTTON and self.hudDragManager.isDragging():
             mx, my = pygame.mouse.get_pos()
-            sw = self.graphik.getGameDisplay().get_width()
-            sh = self.graphik.getGameDisplay().get_height()
+            sw = self.renderer.getDisplayWidth()
+            sh = self.renderer.getDisplayHeight()
             self.hudDragManager.handleMouseUp(mx, my, sw, sh)
             return
         if not pygame.mouse.get_pressed()[0]:
@@ -1748,8 +1745,8 @@ class WorldScreen:
     def handleMouseMotionEvent(self):
         if self.hudDragManager.isDragging():
             mx, my = pygame.mouse.get_pos()
-            sw = self.graphik.getGameDisplay().get_width()
-            sh = self.graphik.getGameDisplay().get_height()
+            sw = self.renderer.getDisplayWidth()
+            sh = self.renderer.getDisplayHeight()
             self.hudDragManager.handleMouseMotion(mx, my, sw, sh)
 
     def handleMouseWheelEvent(self, event):
@@ -2073,7 +2070,7 @@ class WorldScreen:
         self._updateGoals()
         if self.pausedByFocusLoss:
             self.draw()
-            pygame.display.update()
+            self.renderer.present()
             if self.config.limitTps:
                 self.clock.tick(self.config.ticksPerSecond)
             return
@@ -2091,7 +2088,7 @@ class WorldScreen:
         self.status.checkForExpiration(self.tickCounter.getTick())
         self.draw()
 
-        pygame.display.update()
+        self.renderer.present()
         self.tickCounter.incrementTick()
 
         if self.config.limitTps:

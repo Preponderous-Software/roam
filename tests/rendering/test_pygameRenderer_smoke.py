@@ -62,6 +62,23 @@ def test_capture_screenshot_delegates_without_touching_disk(renderer, monkeypatc
     assert captured["surface"] is renderer.graphik.getGameDisplay()
 
 
+def test_render_target_redirects_drawing_offscreen_and_restores(renderer):
+    # worldScreen.saveCurrentRoomAsPNG relies on this: drawing must land on the
+    # offscreen target while it is set, and the display must be restored after.
+    windowTarget = renderer.getRenderTarget()
+    offscreen = pygame.Surface((40, 40))
+
+    renderer.setRenderTarget(offscreen)
+    assert renderer.getRenderTarget() is offscreen
+    renderer.clearScreen((10, 20, 30))
+    assert offscreen.get_at((5, 5))[:3] == (10, 20, 30)
+    # The real window surface was not painted while redirected.
+    assert windowTarget.get_at((5, 5))[:3] != (10, 20, 30)
+
+    renderer.setRenderTarget(windowTarget)
+    assert renderer.getRenderTarget() is windowTarget
+
+
 def test_main_menu_screen_draw_path_runs(renderer):
     # A representative screen draw path exercised end-to-end through the real
     # renderer, confirming the migrated screen code calls the interface correctly.

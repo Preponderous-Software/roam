@@ -66,6 +66,16 @@ class PygameRenderer(Renderer):
     def setClipRegion(self, rect):
         self._display().set_clip(rect)
 
+    # --- offscreen render target ---
+
+    def getRenderTarget(self):
+        return self.graphik.getGameDisplay()
+
+    def setRenderTarget(self, target):
+        # Swap the surface the composed Graphik draws onto, so anything that
+        # renders through the shared Graphik (e.g. Room.draw) targets it too.
+        self.graphik.gameDisplay = target
+
     # --- screenshots ---
 
     def captureScreenshot(self):

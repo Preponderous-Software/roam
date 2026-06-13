@@ -68,6 +68,18 @@ class Renderer(ABC):
     def setClipRegion(self, rect):
         """Restrict drawing to rect; pass None to clear the clip region."""
 
+    # --- offscreen render target ---
+
+    @abstractmethod
+    def getRenderTarget(self):
+        """Return an opaque handle to the current drawing target (for save/restore)."""
+
+    @abstractmethod
+    def setRenderTarget(self, target):
+        """Redirect subsequent drawing to target (an opaque handle from
+        getRenderTarget, or a backend surface) so a frame can be rendered
+        off-screen; pass the saved handle back to restore the display."""
+
     # --- screenshots ---
 
     @abstractmethod
