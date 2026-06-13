@@ -113,8 +113,8 @@ class ChestScreen:
                 )
                 continue
             item = slot.getContents()[0]
-            scaledImage = pygame.transform.scale(
-                item.getImage(), (itemWidth, itemHeight)
+            scaledImage = self.renderer.scaleImage(
+                self.renderer.loadImage(item.getImagePath()), (itemWidth, itemHeight)
             )
             self.renderer.drawImage(scaledImage, (itemX, itemY))
             if (
@@ -356,7 +356,9 @@ class ChestScreen:
             return
         item = self.cursorSlot.getContents()[0]
         cursorX, cursorY = pygame.mouse.get_pos()
-        scaledImage = pygame.transform.scale(item.getImage(), (50, 50))
+        scaledImage = self.renderer.scaleImage(
+            self.renderer.loadImage(item.getImagePath()), (50, 50)
+        )
         self.renderer.drawImage(scaledImage, (cursorX, cursorY))
         count = self.cursorSlot.getNumItems()
         if count > 1:

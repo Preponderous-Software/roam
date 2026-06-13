@@ -59,6 +59,16 @@ class Renderer(ABC):
         """Draw an image at position (an (x, y) tuple or a rect-like dest)."""
 
     @abstractmethod
+    def loadImage(self, path):
+        """Load (and cache) a static image asset by path, returning an opaque
+        image handle. A missing/unreadable asset yields a visible placeholder
+        rather than raising, so a bad asset is obvious in-game."""
+
+    @abstractmethod
+    def scaleImage(self, image, size):
+        """Return a copy of image scaled to size (a (width, height) tuple)."""
+
+    @abstractmethod
     def getGameAreaRect(self):
         """Return the centered square play-area rect for the current display."""
 

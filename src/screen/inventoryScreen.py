@@ -129,8 +129,8 @@ class InventoryScreen:
                 continue
 
             item = inventorySlot.getContents()[0]
-            image = item.getImage()
-            scaledImage = pygame.transform.scale(image, (itemWidth, itemHeight))
+            image = self.renderer.loadImage(item.getImagePath())
+            scaledImage = self.renderer.scaleImage(image, (itemWidth, itemHeight))
             self.renderer.drawImage(scaledImage, (itemX, itemY))
 
             if (
@@ -537,9 +537,9 @@ class InventoryScreen:
             return
 
         item = self.cursorSlot.getContents()[0]
-        image = item.getImage()
+        image = self.renderer.loadImage(item.getImagePath())
         cursorX, cursorY = pygame.mouse.get_pos()
-        scaledImage = pygame.transform.scale(image, (50, 50))
+        scaledImage = self.renderer.scaleImage(image, (50, 50))
         self.renderer.drawImage(scaledImage, (cursorX, cursorY))
 
         count = self.cursorSlot.getNumItems()
