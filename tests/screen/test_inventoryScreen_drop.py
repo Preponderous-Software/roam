@@ -228,3 +228,26 @@ def test_handleMouseClickEvent_empty_cursor_left_click_outside_is_noop():
 
     assert screen.cursorSlot.isEmpty()
     assert screen.inventory.getNumItems() == 0
+
+
+# --- right-click slot selection announces the selection (Nielsen #1) ---
+
+
+def test_right_click_slot_announces_selected_item():
+    screen = createInventoryScreen()
+    screen.inventory.placeIntoFirstAvailableInventorySlot(createGrass())  # slot 0
+
+    # Slot 0 centre for an 800x600 display.
+    screen.handleMouseClickEvent((240, 180), button=3)
+
+    assert screen.inventory.getSelectedInventorySlotIndex() == 0
+    screen.status.set.assert_called_with("Selected " + createGrass().getName())
+
+
+def test_right_click_empty_slot_announces_empty():
+    screen = createInventoryScreen()
+
+    screen.handleMouseClickEvent((240, 180), button=3)
+
+    assert screen.inventory.getSelectedInventorySlotIndex() == 0
+    screen.status.set.assert_called_with("Empty slot")

@@ -443,6 +443,15 @@ class InventoryScreen:
                 # select that inventory slot if right mouse button was clicked
                 if button == 3:
                     self.inventory.setSelectedInventorySlotIndex(index)
+                    # Confirm the selection in the status line — the help text
+                    # advertises this action, so a silent success leaves the
+                    # player unsure it registered (Nielsen #1).
+                    if inventorySlot.isEmpty():
+                        self.status.set("Empty slot")
+                    else:
+                        self.status.set(
+                            "Selected " + inventorySlot.getContents()[0].getName()
+                        )
                     return
 
                 # merge matching cursor and inventory slot items, otherwise swap them
