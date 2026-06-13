@@ -221,3 +221,29 @@ def test_close_returns_cursor_items_to_player_and_calls_on_close():
     assert screen.cursorSlot.isEmpty()
     assert player.getNumItems() == 1
     onClose.assert_called_once()
+
+
+def _fill_inventory(inventory):
+    for slot in inventory.getInventorySlots():
+        while slot.getNumItems() < slot.getMaxStackSize():
+            slot.add(Apple())
+
+
+def test_close_falls_back_to_chest_when_player_inventory_is_full():
+    player = Inventory()
+    _fill_inventory(player)
+    chest = Chest()
+    screen = createChestScreen(playerInventory=player, chest=chest)
+    screen.cursorSlot.add(OakWood())
+    screen.changeScreen = True  # cause run() to exit immediately
+
+    screen.run()
+
+    # The held item could not fit in the full inventory, so it returns to the
+    # chest rather than being silently destroyed.
+    assert screen.cursorSlot.isEmpty()
+    assert chest.getStoredInventory().getNumItems() == 1
+    assert (
+        chest.getStoredInventory().getInventorySlots()[0].getContents()[0].getName()
+        == "Oak Wood"
+    )

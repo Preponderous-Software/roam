@@ -298,10 +298,13 @@ class ChestScreen:
             self.status.draw()
             pygame.display.update()
 
-        # Return any held cursor items to the player so nothing is lost on close.
+        # Return any held cursor items on close so nothing is lost: prefer the
+        # player's inventory, but if it's full, fall back to the chest the items
+        # came from rather than silently discarding them.
         if not self.cursorSlot.isEmpty():
             for item in self.cursorSlot.getContents():
-                self.inventory.placeIntoFirstAvailableInventorySlot(item)
+                if not self.inventory.placeIntoFirstAvailableInventorySlot(item):
+                    self.getChestInventory().placeIntoFirstAvailableInventorySlot(item)
             self.cursorSlot.setContents([])
 
         if self.onClose is not None:
