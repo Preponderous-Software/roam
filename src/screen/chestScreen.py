@@ -208,11 +208,61 @@ class ChestScreen:
             and buttonY <= pos[1] <= buttonY + buttonHeight
         )
 
+    def _takeAllButtonRect(self):
+        _, height = self.graphik.getGameDisplay().get_size()
+        return 10, height - 60, 120, 50
+
+    def drawTakeAllButton(self):
+        buttonX, buttonY, buttonWidth, buttonHeight = self._takeAllButtonRect()
+        self.graphik.drawButton(
+            buttonX,
+            buttonY,
+            buttonWidth,
+            buttonHeight,
+            (255, 255, 255),
+            (0, 0, 0),
+            24,
+            "Take All",
+            self.takeAll,
+        )
+
+    def isInsideTakeAllButton(self, pos):
+        buttonX, buttonY, buttonWidth, buttonHeight = self._takeAllButtonRect()
+        return (
+            buttonX <= pos[0] <= buttonX + buttonWidth
+            and buttonY <= pos[1] <= buttonY + buttonHeight
+        )
+
+    def takeAll(self):
+        chestInventory = self.getChestInventory()
+        items = [
+            item
+            for slot in chestInventory.getInventorySlots()
+            for item in list(slot.getContents())
+        ]
+        if not items:
+            self.status.set("Chest is empty")
+            return
+        movedAny = False
+        leftover = False
+        for item in items:
+            if self.inventory.placeIntoFirstAvailableInventorySlot(item):
+                chestInventory.removeByItem(item)
+                movedAny = True
+            else:
+                leftover = True
+        if leftover:
+            self.status.set(
+                "Inventory full — took what fit" if movedAny else "Inventory full"
+            )
+        else:
+            self.status.set("Took all items")
+
     def handleMouseClickEvent(self, pos, button=1):
-        # The Back button itself is actioned by graphik.drawButton during the
-        # draw phase; intercept the click here so it isn't also read as a
-        # click-outside that would drop the cursor stack.
-        if self.isInsideBackButton(pos):
+        # The Back / Take All buttons are actioned by graphik.drawButton during
+        # the draw phase; intercept their clicks here so they aren't also read as
+        # a click-outside that would drop the cursor stack.
+        if self.isInsideBackButton(pos) or self.isInsideTakeAllButton(pos):
             return
 
         panels = (
@@ -291,6 +341,7 @@ class ChestScreen:
             )
             self.drawInstructions()
             self.drawBackButton()
+            self.drawTakeAllButton()
             hoveredItemName = hoveredChestItem or hoveredPlayerItem
             if hoveredItemName is not None and self.cursorSlot.isEmpty():
                 self._drawTooltip(hoveredItemName)

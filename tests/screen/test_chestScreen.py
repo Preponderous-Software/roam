@@ -177,6 +177,70 @@ def test_click_on_back_button_does_not_drop_cursor_stack():
     assert screen.cursorSlot.getNumItems() == 2
 
 
+def test_take_all_moves_chest_contents_to_player():
+    chest = Chest()
+    chest.getStoredInventory().placeIntoFirstAvailableInventorySlot(Apple())
+    chest.getStoredInventory().placeIntoFirstAvailableInventorySlot(OakWood())
+    player = Inventory()
+    screen = createChestScreen(playerInventory=player, chest=chest)
+
+    screen.takeAll()
+
+    assert chest.getStoredInventory().getNumItems() == 0
+    assert player.getNumItems() == 2
+    screen.status.set.assert_called_with("Took all items")
+
+
+def test_take_all_on_empty_chest_reports_empty():
+    screen = createChestScreen(chest=Chest())
+
+    screen.takeAll()
+
+    screen.status.set.assert_called_with("Chest is empty")
+
+
+def test_take_all_with_full_inventory_leaves_items_in_chest():
+    chest = Chest()
+    chest.getStoredInventory().placeIntoFirstAvailableInventorySlot(OakWood())
+    player = Inventory()
+    _fill_inventory(player)
+    screen = createChestScreen(playerInventory=player, chest=chest)
+
+    screen.takeAll()
+
+    assert chest.getStoredInventory().getNumItems() == 1
+    screen.status.set.assert_called_with("Inventory full")
+
+
+def test_take_all_partial_reports_took_what_fit():
+    chest = Chest()
+    chest.getStoredInventory().placeIntoFirstAvailableInventorySlot(Apple())
+    chest.getStoredInventory().placeIntoFirstAvailableInventorySlot(OakWood())
+    # Player has exactly one free slot, already full of apples elsewhere so the
+    # OakWood cannot stack anywhere — only the Apple fits.
+    player = Inventory()
+    _fill_inventory(player)
+    player.getInventorySlots()[0].clear()
+    screen = createChestScreen(playerInventory=player, chest=chest)
+
+    screen.takeAll()
+
+    assert chest.getStoredInventory().getNumItems() == 1
+    screen.status.set.assert_called_with("Inventory full — took what fit")
+
+
+def test_click_on_take_all_button_does_not_drop_cursor_stack():
+    screen = createChestScreen()
+    screen.cursorSlot.add(Apple())
+    screen.cursorSlot.add(Apple())
+
+    buttonX, buttonY, buttonWidth, buttonHeight = screen._takeAllButtonRect()
+    centre = (buttonX + buttonWidth / 2, buttonY + buttonHeight / 2)
+    screen.handleMouseClickEvent(centre, button=1)
+
+    assert screen.cursorSlot.getNumItems() == 2
+
+
 def test_left_click_outside_panels_drops_cursor_stack():
     screen = createChestScreen()
     screen.cursorSlot.add(Apple())
