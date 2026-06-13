@@ -21,9 +21,9 @@ _logger = getLogger(__name__)
 
 
 class RoomFactory:
-    def __init__(self, gridSize, graphik, tickCounter):
+    def __init__(self, gridSize, renderer, tickCounter):
         self.gridSize = gridSize
-        self.graphik = graphik
+        self.renderer = renderer
         self.tickCounter = tickCounter
         self.lastRoomTypeCreated = RoomType.GRASSLAND
 
@@ -71,7 +71,7 @@ class RoomFactory:
             color,
             x,
             y,
-            self.graphik,
+            self.renderer,
         )
         return newRoom
 

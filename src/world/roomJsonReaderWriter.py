@@ -34,7 +34,7 @@ from entity.wheat import Wheat
 from entity.wheatSeed import WheatSeed
 from entity.woodFloor import WoodFloor
 from entity.youngCrop import YoungCrop
-from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
 from lib.pyenvlib.grid import Grid
 from lib.pyenvlib.location import Location
 from gameLogging.logger import getLogger
@@ -48,10 +48,10 @@ _logger = getLogger(__name__)
 
 class RoomJsonReaderWriter:
     def __init__(
-        self, gridSize, graphik: Graphik, tickCounter: TickCounter, config: Config
+        self, gridSize, renderer: Renderer, tickCounter: TickCounter, config: Config
     ):
         self.gridSize = gridSize
-        self.graphik = graphik
+        self.renderer = renderer
         self.tickCounter = tickCounter
         self.config = config
         with open("schemas/room.json", encoding="utf-8") as roomSchemaFile:
@@ -174,7 +174,7 @@ class RoomJsonReaderWriter:
             backgroundColor,
             roomJson["x"],
             roomJson["y"],
-            self.graphik,
+            self.renderer,
         )
         room.setID(roomJson["id"])
         room.setGrid(self.generateGridFromJson(roomJson["grid"]))
