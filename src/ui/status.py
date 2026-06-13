@@ -1,9 +1,9 @@
-import pygame
 from appContainer import component
 from rendering.renderer import Renderer
 from ui.hotbarLayout import getHotbarTop
 from world.tickCounter import TickCounter
 from ui import palette
+from ui.geometry import Rect
 
 
 # @author Daniel McCoy Stephenson
@@ -29,14 +29,14 @@ class Status:
     def getDefaultRect(self):
         """Return the default bounding rect for the status text (no drag offset)."""
         if self.text == -1:
-            return pygame.Rect(0, 0, 0, 0)
+            return Rect(0, 0, 0, 0)
         x, y = self.renderer.getDisplaySize()
         width = len(self.text) * 10
         height = self.textSize * 2
         xpos = x / 2 - width / 2
         hotbarTop = getHotbarTop(y)
         ypos = hotbarTop - height - 10
-        return pygame.Rect(xpos, ypos, width, height)
+        return Rect(xpos, ypos, width, height)
 
     def draw(self, offsetX=0, offsetY=0):
         if self.text == -1:

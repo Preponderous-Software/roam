@@ -54,7 +54,7 @@ class HudDragManager:
         self.dragStartOffsetY = 0
 
     def register(self, name, rectFunc):
-        """Register a HUD element by name with a callable that returns its default pygame.Rect."""
+        """Register a HUD element by name with a callable that returns its default Rect."""
         self.elements[name] = HudElement(name, rectFunc)
 
     def getOffset(self, name):

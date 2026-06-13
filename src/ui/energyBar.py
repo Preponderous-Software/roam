@@ -1,9 +1,9 @@
 from math import ceil
-import pygame
 from appContainer import component
 from rendering.renderer import Renderer
 from player.player import Player
 from ui import palette
+from ui.geometry import Rect
 
 
 # @author Daniel McCoy Stephenson
@@ -21,7 +21,7 @@ class EnergyBar:
         ypos = y - y / 64
         width = x
         height = y / 64
-        return pygame.Rect(xpos, ypos, width, height)
+        return Rect(xpos, ypos, width, height)
 
     def draw(self, offsetX=0, offsetY=0):
         x, y = self.renderer.getDisplaySize()
