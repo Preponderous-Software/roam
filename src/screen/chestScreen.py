@@ -171,7 +171,42 @@ class ChestScreen:
         elif key == kb.getKey("screenshot"):
             takeScreenshot(self.graphik.getGameDisplay())
 
+    def drawBackButton(self):
+        width, height = self.graphik.getGameDisplay().get_size()
+        buttonWidth = 100
+        buttonHeight = 50
+        buttonX = width - buttonWidth - 10
+        buttonY = height - buttonHeight - 10
+        self.graphik.drawButton(
+            buttonX,
+            buttonY,
+            buttonWidth,
+            buttonHeight,
+            (255, 255, 255),
+            (0, 0, 0),
+            30,
+            "Back",
+            self.switchToWorldScreen,
+        )
+
+    def isInsideBackButton(self, pos):
+        width, height = self.graphik.getGameDisplay().get_size()
+        buttonWidth = 100
+        buttonHeight = 50
+        buttonX = width - buttonWidth - 10
+        buttonY = height - buttonHeight - 10
+        return (
+            buttonX <= pos[0] <= buttonX + buttonWidth
+            and buttonY <= pos[1] <= buttonY + buttonHeight
+        )
+
     def handleMouseClickEvent(self, pos, button=1):
+        # The Back button itself is actioned by graphik.drawButton during the
+        # draw phase; intercept the click here so it isn't also read as a
+        # click-outside that would drop the cursor stack.
+        if self.isInsideBackButton(pos):
+            return
+
         panels = (
             (self.getChestInventory(), self.getChestPanelRect()),
             (self.inventory, self.getPlayerPanelRect()),
@@ -247,6 +282,7 @@ class ChestScreen:
                 self.inventory, self.getPlayerPanelRect(), "Inventory"
             )
             self.drawInstructions()
+            self.drawBackButton()
             hoveredItemName = hoveredChestItem or hoveredPlayerItem
             if hoveredItemName is not None and self.cursorSlot.isEmpty():
                 self._drawTooltip(hoveredItemName)

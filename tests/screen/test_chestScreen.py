@@ -29,6 +29,7 @@ def createChestScreen(playerInventory=None, chest=None):
     gameDisplay = MagicMock()
     gameDisplay.get_width.return_value = 800
     gameDisplay.get_height.return_value = 600
+    gameDisplay.get_size.return_value = (800, 600)
     graphik.getGameDisplay.return_value = gameDisplay
 
     screen = ChestScreen.__new__(ChestScreen)
@@ -140,6 +141,26 @@ def test_draw_panel_returns_none_when_not_hovering_an_item(monkeypatch):
     )
 
     assert hovered is None
+
+
+def test_back_button_geometry_is_bottom_right():
+    screen = createChestScreen()
+
+    # Bottom-right 100x50 button inset 10px (800x600 display).
+    assert screen.isInsideBackButton((740, 560)) is True
+    assert screen.isInsideBackButton((400, 300)) is False
+
+
+def test_click_on_back_button_does_not_drop_cursor_stack():
+    screen = createChestScreen()
+    screen.cursorSlot.add(Apple())
+    screen.cursorSlot.add(Apple())
+
+    # Centre of the bottom-right Back button; the actual close is fired by
+    # graphik.drawButton, so the click handler must simply not drop the stack.
+    screen.handleMouseClickEvent((740, 560), button=1)
+
+    assert screen.cursorSlot.getNumItems() == 2
 
 
 def test_left_click_outside_panels_drops_cursor_stack():
