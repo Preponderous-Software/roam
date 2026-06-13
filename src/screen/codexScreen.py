@@ -6,6 +6,7 @@ from config.keyBindings import KeyBindings
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
 from gameLogging.logger import getLogger
+from ui import palette
 
 _logger = getLogger(__name__)
 
@@ -41,7 +42,7 @@ class CodexScreen:
 
     def drawTitle(self):
         x, y = self.graphik.getGameDisplay().get_size()
-        self.graphik.drawText("Codex", x / 2, 25, 36, (255, 255, 255))
+        self.graphik.drawText("Codex", x / 2, 25, 36, palette.WHITE)
         discoveredCount = len(self.codex.getDiscoveredEntities())
         totalCount = len(ALL_LIVING_ENTITY_TYPES)
         self.graphik.drawText(
@@ -49,7 +50,7 @@ class CodexScreen:
             x / 2,
             50,
             16,
-            (180, 180, 180),
+            palette.MEDIUM_GRAY,
         )
 
     def _getEntityImage(self, entityName):
@@ -117,7 +118,7 @@ class CodexScreen:
                     nameX,
                     rowY + rowHeight / 2,
                     22,
-                    (255, 255, 255),
+                    palette.WHITE,
                 )
             else:
                 # Undiscovered entry
@@ -126,7 +127,7 @@ class CodexScreen:
                     nameX,
                     rowY + rowHeight / 2,
                     22,
-                    (100, 100, 100),
+                    palette.DARK_GRAY,
                 )
 
         if maxOffset > 0:
@@ -137,9 +138,9 @@ class CodexScreen:
                 + " of "
                 + str(len(entries))
             )
-            self.graphik.drawText(scrollInfo, x / 2, y - 70, 16, (180, 180, 180))
+            self.graphik.drawText(scrollInfo, x / 2, y - 70, 16, palette.MEDIUM_GRAY)
             self.graphik.drawText(
-                "Scroll to see more", x / 2, y - 92, 14, (140, 140, 140)
+                "Scroll to see more", x / 2, y - 92, 14, palette.DIM_GRAY
             )
 
     def drawBackButton(self):
@@ -153,8 +154,8 @@ class CodexScreen:
             bottomY,
             buttonWidth,
             buttonHeight,
-            (255, 255, 255),
-            (0, 0, 0),
+            palette.WHITE,
+            palette.BLACK,
             20,
             "Back",
             self.switchToReturnScreen,
@@ -181,7 +182,7 @@ class CodexScreen:
                 elif event.type == pygame.MOUSEWHEEL:
                     self.handleScrollEvent(event)
 
-            self.graphik.getGameDisplay().fill((0, 0, 0))
+            self.graphik.getGameDisplay().fill(palette.BLACK)
             self.drawTitle()
             self.drawEntries()
             self.drawBackButton()

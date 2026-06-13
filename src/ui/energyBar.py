@@ -3,6 +3,7 @@ import pygame
 from appContainer import component
 from lib.graphik.src.graphik import Graphik
 from player.player import Player
+from ui import palette
 
 
 # @author Daniel McCoy Stephenson
@@ -38,11 +39,11 @@ class EnergyBar:
             color = (255, 215, 73)
 
         # draw black bar
-        self.graphik.drawRectangle(xpos, ypos, fullWidth, height, (0, 0, 0))
+        self.graphik.drawRectangle(xpos, ypos, fullWidth, height, palette.BLACK)
 
         # draw white interior
         self.graphik.drawRectangle(
-            xpos + 1, ypos + 1, fullWidth - 2, height - 2, (255, 255, 255)
+            xpos + 1, ypos + 1, fullWidth - 2, height - 2, palette.WHITE
         )
 
         # fill interior with energy
@@ -55,5 +56,9 @@ class EnergyBar:
             + str(self.player.getTargetEnergy())
         )
         self.graphik.drawText(
-            text, xpos + fullWidth / 2, ypos + height / 2, ceil(height) - 1, (0, 0, 0)
+            text,
+            xpos + fullWidth / 2,
+            ypos + height / 2,
+            ceil(height) - 1,
+            palette.BLACK,
         )

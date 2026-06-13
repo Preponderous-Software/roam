@@ -5,6 +5,7 @@ from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
 from ui.status import Status
 import pygame
+from ui import palette
 
 
 # @author Daniel McCoy Stephenson
@@ -42,9 +43,9 @@ class ConfigScreen:
 
     def drawTitle(self):
         x, y = self.graphik.getGameDisplay().get_size()
-        self.graphik.drawText("Settings", x / 2, 25, 36, (255, 255, 255))
+        self.graphik.drawText("Settings", x / 2, 25, 36, palette.WHITE)
         self.graphik.drawText(
-            "Click a setting to toggle it", x / 2, 50, 14, (180, 180, 180)
+            "Click a setting to toggle it", x / 2, 50, 14, palette.MEDIUM_GRAY
         )
 
     def drawMenuButtons(self):
@@ -67,11 +68,15 @@ class ConfigScreen:
             ("Day/Night Cycle", "dayNightCycleEnabled"),
         ]
 
-        visibleRows = max(1, int((y - startY - 80) / rowHeight))  # 80px reserved for bottom Back button
+        visibleRows = max(
+            1, int((y - startY - 80) / rowHeight)
+        )  # 80px reserved for bottom Back button
         maxOffset = max(0, len(toggleButtons) - visibleRows)
         self.scrollOffset = max(0, min(self.scrollOffset, maxOffset))
 
-        visibleToggles = toggleButtons[self.scrollOffset : self.scrollOffset + visibleRows]
+        visibleToggles = toggleButtons[
+            self.scrollOffset : self.scrollOffset + visibleRows
+        ]
 
         for i, (label, attribute) in enumerate(visibleToggles):
             rowY = startY + i * rowHeight
@@ -83,7 +88,7 @@ class ConfigScreen:
                 rowY,
                 width,
                 buttonHeight,
-                (255, 255, 255),
+                palette.WHITE,
                 color,
                 20,
                 label + ": " + stateText,
@@ -98,7 +103,7 @@ class ConfigScreen:
                 + " of "
                 + str(len(toggleButtons))
             )
-            self.graphik.drawText(scrollInfo, x / 2, y - 70, 16, (180, 180, 180))
+            self.graphik.drawText(scrollInfo, x / 2, y - 70, 16, palette.MEDIUM_GRAY)
 
     def drawBottomButtons(self):
         x, y = self.graphik.getGameDisplay().get_size()
@@ -110,8 +115,8 @@ class ConfigScreen:
             bottomY,
             buttonWidth,
             buttonHeight,
-            (255, 255, 255),
-            (0, 0, 0),
+            palette.WHITE,
+            palette.BLACK,
             20,
             "Back",
             self.switchToMainMenuScreen,
@@ -134,7 +139,7 @@ class ConfigScreen:
                 elif event.type == pygame.MOUSEWHEEL:
                     self.handleScrollEvent(event)
 
-            self.graphik.getGameDisplay().fill((0, 0, 0))
+            self.graphik.getGameDisplay().fill(palette.BLACK)
             self.drawTitle()
             self.drawMenuButtons()
             self.drawBottomButtons()

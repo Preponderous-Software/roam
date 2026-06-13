@@ -3,6 +3,7 @@ from appContainer import component
 from lib.graphik.src.graphik import Graphik
 from ui.hotbarLayout import getHotbarTop
 from world.tickCounter import TickCounter
+from ui import palette
 
 
 # @author Daniel McCoy Stephenson
@@ -13,7 +14,7 @@ class Status:
         self.graphik = graphik
         self.text = -1
         self.textSize = 18
-        self.textColor = (0, 0, 0)
+        self.textColor = palette.BLACK
         self.tickLastSet = -1
         self.durationInTicks = 60
         self.tickCounter = tickCounter
@@ -51,7 +52,7 @@ class Status:
             ypos,
             width,
             height,
-            (255, 255, 255),
+            palette.WHITE,
             self.textColor,
             self.textSize,
             self.text,
