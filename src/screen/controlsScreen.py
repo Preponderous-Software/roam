@@ -4,6 +4,7 @@ from config.config import Config
 from config.keyBindings import KeyBindings
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
+from ui import palette
 
 
 # @author Copilot
@@ -52,7 +53,7 @@ class ControlsScreen:
 
     def drawTitle(self):
         x, y = self.graphik.getGameDisplay().get_size()
-        self.graphik.drawText("Controls", x / 2, 25, 36, (255, 255, 255))
+        self.graphik.drawText("Controls", x / 2, 25, 36, palette.WHITE)
 
     def drawBindings(self):
         x, y = self.graphik.getGameDisplay().get_size()
@@ -80,7 +81,7 @@ class ControlsScreen:
             keyName = pygame.key.name(key) if key is not None else "None"
 
             isConflict = action in conflicts
-            labelColor = (255, 100, 100) if isConflict else (255, 255, 255)
+            labelColor = (255, 100, 100) if isConflict else palette.WHITE
             self.graphik.drawText(
                 label, labelX, rowY + buttonHeight / 2, 20, labelColor
             )
@@ -89,7 +90,7 @@ class ControlsScreen:
                 bgColor = (100, 100, 255)
                 displayText = "Press a key  (Esc cancels)"
             else:
-                bgColor = (255, 50, 50) if isConflict else (60, 60, 60)
+                bgColor = (255, 50, 50) if isConflict else palette.DARKER_GRAY
                 displayText = keyName
 
             self.graphik.drawButton(
@@ -98,7 +99,7 @@ class ControlsScreen:
                 buttonWidth,
                 buttonHeight,
                 bgColor,
-                (255, 255, 255),
+                palette.WHITE,
                 18,
                 displayText,
                 lambda a=action: self.startRemap(a),
@@ -112,9 +113,9 @@ class ControlsScreen:
                 + " of "
                 + str(len(actions))
             )
-            self.graphik.drawText(scrollInfo, x / 2, y - 70, 16, (180, 180, 180))
+            self.graphik.drawText(scrollInfo, x / 2, y - 70, 16, palette.MEDIUM_GRAY)
             self.graphik.drawText(
-                "Scroll to see more", x / 2, y - 92, 14, (140, 140, 140)
+                "Scroll to see more", x / 2, y - 92, 14, palette.DIM_GRAY
             )
 
     def drawBottomButtons(self):
@@ -147,24 +148,24 @@ class ControlsScreen:
             bottomY,
             buttonWidth,
             buttonHeight,
-            (255, 255, 255),
-            (0, 0, 0),
+            palette.WHITE,
+            palette.BLACK,
             20,
             "Reset Defaults",
             self.resetToDefaults,
         )
 
         if hasConflicts:
-            saveColor = (100, 100, 100)
+            saveColor = palette.DARK_GRAY
         else:
-            saveColor = (0, 200, 0)
+            saveColor = palette.GREEN
         self.graphik.drawButton(
             startX + buttonWidth + margin,
             bottomY,
             buttonWidth,
             buttonHeight,
             saveColor,
-            (0, 0, 0) if not hasConflicts else (180, 180, 180),
+            palette.BLACK if not hasConflicts else palette.MEDIUM_GRAY,
             20,
             "Save",
             self.saveAndReturn if not hasConflicts else (lambda: None),
@@ -175,8 +176,8 @@ class ControlsScreen:
             bottomY,
             buttonWidth,
             buttonHeight,
-            (255, 255, 255),
-            (0, 0, 0),
+            palette.WHITE,
+            palette.BLACK,
             20,
             "Cancel",
             self.cancelAndReturn,
@@ -219,7 +220,7 @@ class ControlsScreen:
                 elif event.type == pygame.MOUSEWHEEL:
                     self.handleScrollEvent(event)
 
-            self.graphik.getGameDisplay().fill((0, 0, 0))
+            self.graphik.getGameDisplay().fill(palette.BLACK)
             self.drawTitle()
             self.drawBindings()
             self.drawBottomButtons()

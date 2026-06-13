@@ -8,6 +8,7 @@ from screen.screenType import ScreenType
 from screen.screenshotHelper import takeScreenshot
 from ui.status import Status
 import pygame
+from ui import palette
 
 
 # @author Claude
@@ -97,9 +98,11 @@ class ChestScreen:
     def _drawPanel(self, inventory, panelRect, title):
         panelX, panelY, panelWidth, panelHeight = panelRect
         self.graphik.drawText(
-            title, panelX + panelWidth / 2, panelY - 15, 20, (255, 255, 255)
+            title, panelX + panelWidth / 2, panelY - 15, 20, palette.WHITE
         )
-        self.graphik.drawRectangle(panelX, panelY, panelWidth, panelHeight, (0, 0, 0))
+        self.graphik.drawRectangle(
+            panelX, panelY, panelWidth, panelHeight, palette.BLACK
+        )
         mouseX, mouseY = pygame.mouse.get_pos()
         hoveredItemName = None
         for index, slot, itemX, itemY, itemWidth, itemHeight in self._slotGeometry(
@@ -107,7 +110,7 @@ class ChestScreen:
         ):
             if slot.isEmpty():
                 self.graphik.drawRectangle(
-                    itemX, itemY, itemWidth, itemHeight, (255, 255, 255)
+                    itemX, itemY, itemWidth, itemHeight, palette.WHITE
                 )
                 continue
             item = slot.getContents()[0]
@@ -125,7 +128,7 @@ class ChestScreen:
                 itemX + itemWidth - 20,
                 itemY + itemHeight - 20,
                 20,
-                (255, 255, 255),
+                palette.WHITE,
             )
         return hoveredItemName
 
@@ -139,9 +142,11 @@ class ChestScreen:
             tooltipX = max(0, mouseX - textWidth - 8)
         if tooltipY + 22 > screenHeight:
             tooltipY = max(0, mouseY - 30)
-        self.graphik.drawRectangle(tooltipX, tooltipY, textWidth, 22, (30, 30, 30))
+        self.graphik.drawRectangle(
+            tooltipX, tooltipY, textWidth, 22, palette.NEAR_BLACK
+        )
         self.graphik.drawText(
-            itemName, tooltipX + textWidth / 2, tooltipY + 11, 14, (255, 255, 255)
+            itemName, tooltipX + textWidth / 2, tooltipY + 11, 14, palette.WHITE
         )
 
     def isInsidePanel(self, pos, panelRect):
@@ -190,8 +195,8 @@ class ChestScreen:
             buttonY,
             buttonWidth,
             buttonHeight,
-            (255, 255, 255),
-            (0, 0, 0),
+            palette.WHITE,
+            palette.BLACK,
             30,
             "Back",
             self.switchToWorldScreen,
@@ -219,8 +224,8 @@ class ChestScreen:
             buttonY,
             buttonWidth,
             buttonHeight,
-            (255, 255, 255),
-            (0, 0, 0),
+            palette.WHITE,
+            palette.BLACK,
             24,
             "Take All",
             self.takeAll,
@@ -296,7 +301,7 @@ class ChestScreen:
             buttonX + buttonWidth / 2,
             buttonY + buttonHeight / 2,
             24,
-            (255, 255, 255),
+            palette.WHITE,
         )
 
     def isInsideDropButton(self, pos):
@@ -357,7 +362,7 @@ class ChestScreen:
         count = self.cursorSlot.getNumItems()
         if count > 1:
             self.graphik.drawText(
-                str(count), cursorX + 40, cursorY + 40, 18, (255, 255, 255)
+                str(count), cursorX + 40, cursorY + 40, 18, palette.WHITE
             )
 
     def drawInstructions(self):
@@ -370,14 +375,14 @@ class ChestScreen:
             width / 2,
             14,
             16,
-            (180, 180, 180),
+            palette.MEDIUM_GRAY,
         )
         self.graphik.drawText(
             "press [" + closeKeyName + "] or [Esc] to close",
             width / 2,
             32,
             14,
-            (180, 180, 180),
+            palette.MEDIUM_GRAY,
         )
 
     def run(self):
@@ -392,7 +397,7 @@ class ChestScreen:
                     shift = bool(pygame.key.get_mods() & pygame.KMOD_SHIFT)
                     self.handleMouseClickEvent(event.pos, event.button, shift)
 
-            self.graphik.getGameDisplay().fill((0, 0, 0))
+            self.graphik.getGameDisplay().fill(palette.BLACK)
             hoveredChestItem = self._drawPanel(
                 self.getChestInventory(), self.getChestPanelRect(), self._chestTitle()
             )

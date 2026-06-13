@@ -7,6 +7,7 @@ from config.config import Config
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
 from update.updateChecker import UpdateChecker
+from ui import palette
 
 
 # @author Daniel McCoy Stephenson
@@ -37,10 +38,10 @@ class MainMenuScreen:
         x, y = self.graphik.getGameDisplay().get_size()
         xpos = x / 2
         ypos = y / 10
-        self.graphik.drawText("Roam", xpos, ypos, 64, (255, 255, 255))
+        self.graphik.drawText("Roam", xpos, ypos, 64, palette.WHITE)
         ypos = y / 3
         self.graphik.drawText(
-            "Explore a procedurally-generated world", xpos, ypos, 24, (200, 200, 200)
+            "Explore a procedurally-generated world", xpos, ypos, 24, palette.GRAY
         )
 
     def drawMenuButtons(self):
@@ -50,14 +51,14 @@ class MainMenuScreen:
         xpos = x / 2 - width / 2
         ypos = y / 2 - height / 2
         margin = 10
-        backgroundColor = (255, 255, 255)
+        backgroundColor = palette.WHITE
         self.graphik.drawButton(
             xpos,
             ypos,
             width,
             height,
             backgroundColor,
-            (0, 0, 0),
+            palette.BLACK,
             30,
             "Play",
             self.switchToSaveSelectionScreen,
@@ -69,7 +70,7 @@ class MainMenuScreen:
             width,
             height,
             backgroundColor,
-            (0, 0, 0),
+            palette.BLACK,
             30,
             "Settings",
             self.switchToConfigScreen,
@@ -81,7 +82,7 @@ class MainMenuScreen:
             width,
             height,
             backgroundColor,
-            (0, 0, 0),
+            palette.BLACK,
             30,
             "Quit",
             self.quitApplication,
@@ -107,7 +108,7 @@ class MainMenuScreen:
             self.graphik.getGameDisplay().get_size()[0] / 2,
             self.graphik.getGameDisplay().get_size()[1] - 10,
             16,
-            (255, 255, 255),
+            palette.WHITE,
         )
 
     def drawUpdateBanner(self):
@@ -148,7 +149,7 @@ class MainMenuScreen:
                 elif event.type == pygame.KEYDOWN:
                     self.handleKeyDownEvent(event.key)
 
-            self.graphik.getGameDisplay().fill((0, 0, 0))
+            self.graphik.getGameDisplay().fill(palette.BLACK)
             self.drawText()
             self.drawMenuButtons()
             self.drawUpdateBanner()

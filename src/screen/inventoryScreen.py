@@ -10,6 +10,7 @@ from screen.screenType import ScreenType
 from screen.screenshotHelper import takeScreenshot
 from ui.status import Status
 import pygame
+from ui import palette
 
 
 # @author Daniel McCoy Stephenson
@@ -98,7 +99,7 @@ class InventoryScreen:
         backgroundWidth = self.graphik.getGameDisplay().get_width() / 2
         backgroundHeight = self.graphik.getGameDisplay().get_height() / 2
         self.graphik.drawRectangle(
-            backgroundX, backgroundY, backgroundWidth, backgroundHeight, (0, 0, 0)
+            backgroundX, backgroundY, backgroundWidth, backgroundHeight, palette.BLACK
         )
 
         itemsPerRow = 5
@@ -115,7 +116,7 @@ class InventoryScreen:
 
             if inventorySlot.isEmpty():
                 self.graphik.drawRectangle(
-                    itemX, itemY, itemWidth, itemHeight, (255, 255, 255)
+                    itemX, itemY, itemWidth, itemHeight, palette.WHITE
                 )
                 if (
                     row * itemsPerRow + column
@@ -150,7 +151,7 @@ class InventoryScreen:
                 itemX + itemWidth - 20,
                 itemY + itemHeight - 20,
                 20,
-                (255, 255, 255),
+                palette.WHITE,
             )
 
             column += 1
@@ -164,14 +165,14 @@ class InventoryScreen:
             backgroundX,
             backgroundY + backgroundHeight + 20,
             20,
-            (255, 255, 255),
+            palette.WHITE,
         )
         self.graphik.drawText(
             "Left-click: swap  -  Right-click: select hotbar  -  Drop button: discard",
             backgroundX,
             backgroundY + backgroundHeight + 45,
             16,
-            (180, 180, 180),
+            palette.MEDIUM_GRAY,
         )
 
         if hoveredItemName is not None:
@@ -184,14 +185,14 @@ class InventoryScreen:
             if tooltipY + 22 > screenH:
                 tooltipY = max(0, mouseY - 30)
             self.graphik.drawRectangle(
-                tooltipX, tooltipY, textWidth, 22, (30, 30, 30)
+                tooltipX, tooltipY, textWidth, 22, palette.NEAR_BLACK
             )
             self.graphik.drawText(
                 hoveredItemName,
                 tooltipX + textWidth / 2,
                 tooltipY + 11,
                 14,
-                (255, 255, 255),
+                palette.WHITE,
             )
 
     def toggleCraftPanel(self):
@@ -215,8 +216,8 @@ class InventoryScreen:
             buttonY,
             buttonWidth,
             buttonHeight,
-            (255, 255, 255),
-            (0, 0, 0),
+            palette.WHITE,
+            palette.BLACK,
             20,
             "Craft",
             self.toggleCraftPanel,
@@ -255,26 +256,26 @@ class InventoryScreen:
             return
 
         panelX, panelY, panelWidth, panelHeight = self.getCraftPanelRect()
-        self.graphik.drawRectangle(panelX, panelY, panelWidth, panelHeight, (0, 0, 0))
+        self.graphik.drawRectangle(
+            panelX, panelY, panelWidth, panelHeight, palette.BLACK
+        )
 
         self.graphik.drawText(
             "Recipes",
             panelX + panelWidth / 2,
             panelY + 20,
             24,
-            (255, 255, 255),
+            palette.WHITE,
         )
 
         recipes = self.recipeRegistry.getRecipes()
-        craftableCount = sum(
-            1 for r in recipes if r.canCraft(self.inventory)
-        )
+        craftableCount = sum(1 for r in recipes if r.canCraft(self.inventory))
         self.graphik.drawText(
             f"{craftableCount} / {len(recipes)} craftable",
             panelX + panelWidth / 2,
             panelY + 40,
             14,
-            (180, 180, 180),
+            palette.MEDIUM_GRAY,
         )
         startY, rowStride, recipeButtonHeight, recipeMargin = self._craftRowLayout(
             len(recipes)
@@ -299,8 +300,8 @@ class InventoryScreen:
                     recipeY,
                     panelWidth - 2 * recipeMargin,
                     recipeButtonHeight,
-                    (255, 255, 255),
-                    (0, 0, 0),
+                    palette.WHITE,
+                    palette.BLACK,
                     16,
                     label,
                     lambda r=recipe: self.craftRecipe(r),
@@ -321,7 +322,7 @@ class InventoryScreen:
                     recipeY,
                     panelWidth - 2 * recipeMargin,
                     recipeButtonHeight,
-                    (60, 60, 60),
+                    palette.DARKER_GRAY,
                 )
                 self.graphik.drawText(
                     disabledLabel,
@@ -366,8 +367,8 @@ class InventoryScreen:
             ypos,
             width,
             height,
-            (255, 255, 255),
-            (0, 0, 0),
+            palette.WHITE,
+            palette.BLACK,
             30,
             "Back",
             self.switchToWorldScreen,
@@ -445,7 +446,7 @@ class InventoryScreen:
             buttonX + buttonWidth / 2,
             buttonY + buttonHeight / 2,
             24,
-            (255, 255, 255),
+            palette.WHITE,
         )
 
     def isInsideDropButton(self, pos):
@@ -549,7 +550,7 @@ class InventoryScreen:
                 cursorX + 40,
                 cursorY + 40,
                 18,
-                (255, 255, 255),
+                palette.WHITE,
             )
 
     def run(self):
@@ -563,7 +564,7 @@ class InventoryScreen:
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     self.handleMouseClickEvent(event.pos, event.button)
 
-            self.graphik.getGameDisplay().fill((0, 0, 0))
+            self.graphik.getGameDisplay().fill(palette.BLACK)
             self.drawPlayerInventory()
             self.drawCraftButton()
             self.drawCraftPanel()

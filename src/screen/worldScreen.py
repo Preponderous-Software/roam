@@ -55,6 +55,7 @@ from entity.wheatSeed import WheatSeed
 from entity.youngCrop import YoungCrop
 from entity.matureCrop import MatureCrop
 from gameLogging.logger import getLogger
+from ui import palette
 
 _logger = getLogger(__name__)
 
@@ -928,9 +929,7 @@ class WorldScreen:
             self.status.set("Debug info " + ("ON" if self.config.debug else "OFF"))
         elif key == kb.getKey("toggle_minimap"):
             self.config.showMiniMap = not self.config.showMiniMap
-            self.status.set(
-                "Minimap " + ("ON" if self.config.showMiniMap else "OFF")
-            )
+            self.status.set("Minimap " + ("ON" if self.config.showMiniMap else "OFF"))
         elif key == kb.getKey("minimap_zoom_in"):
             if self.minimapScaleFactor < 1.0:
                 self.minimapScaleFactor = min(1.0, self.minimapScaleFactor + 0.1)
@@ -946,8 +945,7 @@ class WorldScreen:
         elif key == kb.getKey("toggle_camera_follow"):
             self.config.cameraFollowPlayer = not self.config.cameraFollowPlayer
             self.status.set(
-                "Camera follow "
-                + ("ON" if self.config.cameraFollowPlayer else "OFF")
+                "Camera follow " + ("ON" if self.config.cameraFollowPlayer else "OFF")
             )
         elif key == kb.getKey("toggle_help"):
             self.showHelp = not self.showHelp
@@ -1186,7 +1184,7 @@ class WorldScreen:
         drawX = self.minimapX + minimapOx
         drawY = self.minimapY + minimapOy
 
-        backgroundColor = (200, 200, 200)
+        backgroundColor = palette.GRAY
         self.graphik.drawRectangle(
             drawX,
             drawY,
@@ -1287,13 +1285,15 @@ class WorldScreen:
         dim = pygame.Surface((width, height), pygame.SRCALPHA)
         dim.fill((0, 0, 0, 140))
         display.blit(dim, (0, 0))
-        self.graphik.drawText("PAUSED", width / 2, height / 2 - 20, 56, (220, 220, 220))
+        self.graphik.drawText(
+            "PAUSED", width / 2, height / 2 - 20, 56, palette.LIGHT_GRAY
+        )
         self.graphik.drawText(
             "Click the window to resume",
             width / 2,
             height / 2 + 28,
             22,
-            (180, 180, 180),
+            palette.MEDIUM_GRAY,
         )
 
     def _drawDayNightPhaseIndicator(self):
@@ -1305,7 +1305,7 @@ class WorldScreen:
             "night": (140, 160, 255),
             "dawn": (255, 180, 140),
         }
-        color = phaseColors.get(phase, (220, 220, 220))
+        color = phaseColors.get(phase, palette.LIGHT_GRAY)
         self.graphik.drawText(label, 30, 20, 18, color)
 
     def _drawDeathOverlay(self):
@@ -1327,7 +1327,7 @@ class WorldScreen:
             width / 2,
             height / 2 + 30,
             28,
-            (220, 220, 220),
+            palette.LIGHT_GRAY,
         )
 
     def drawHelpOverlay(self):
@@ -1338,7 +1338,7 @@ class WorldScreen:
         overlayY = y / 2 - overlayHeight / 2
 
         self.graphik.drawRectangle(
-            overlayX, overlayY, overlayWidth, overlayHeight, (30, 30, 30)
+            overlayX, overlayY, overlayWidth, overlayHeight, palette.NEAR_BLACK
         )
 
         kb = self.keyBindings
@@ -1350,7 +1350,7 @@ class WorldScreen:
             x / 2,
             titleY,
             28,
-            (255, 255, 255),
+            palette.WHITE,
         )
 
         def keyName(action):
@@ -1379,7 +1379,7 @@ class WorldScreen:
         lineY = titleY + 40
         lineSpacing = 24
         for line in helpLines:
-            self.graphik.drawText(line, x / 2, lineY, 20, (220, 220, 220))
+            self.graphik.drawText(line, x / 2, lineY, 20, palette.LIGHT_GRAY)
             lineY += lineSpacing
 
     def _getHotbarDefaultRect(self):
@@ -1470,7 +1470,7 @@ class WorldScreen:
         barYPos = slotY - HOTBAR_PADDING
         barWidth = HOTBAR_SLOT_SIZE * 11 + HOTBAR_PADDING
         barHeight = HOTBAR_SLOT_SIZE + HOTBAR_PADDING * 2
-        self.graphik.drawRectangle(barXPos, barYPos, barWidth, barHeight, (0, 0, 0))
+        self.graphik.drawRectangle(barXPos, barYPos, barWidth, barHeight, palette.BLACK)
 
         selectedIndex = self.player.getInventory().getSelectedInventorySlotIndex()
         firstTenInventorySlots = self.player.getInventory().getFirstTenInventorySlots()
@@ -1478,7 +1478,7 @@ class WorldScreen:
         for i, inventorySlot in enumerate(firstTenInventorySlots):
             if inventorySlot.isEmpty():
                 self.graphik.drawRectangle(
-                    slotX, slotY, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE, (255, 255, 255)
+                    slotX, slotY, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE, palette.WHITE
                 )
             else:
                 item = inventorySlot.getContents()[0]
@@ -1491,7 +1491,7 @@ class WorldScreen:
                     slotX + HOTBAR_SLOT_SIZE - 20,
                     slotY + HOTBAR_SLOT_SIZE - 20,
                     20,
-                    (255, 255, 255),
+                    palette.WHITE,
                 )
 
             if i == selectedIndex:
@@ -1508,7 +1508,7 @@ class WorldScreen:
         measuredTps = int(self.tickCounter.getMeasuredTicksPerSecond())
         peakTps = int(self.tickCounter.getHighestMeasuredTicksPerSecond())
         rightX = displayWidth - 100
-        white = (255, 255, 255)
+        white = palette.WHITE
 
         self.graphik.drawText(
             "Tick: " + str(tickValue) + " (" + str(measuredTps) + " TPS)",
@@ -1542,7 +1542,7 @@ class WorldScreen:
         if self.config.showMiniMap and not self.isCurrentRoomSavedAsPNG():
             self.saveCurrentRoomAsPNG()
 
-        self.graphik.getGameDisplay().fill((0, 0, 0))
+        self.graphik.getGameDisplay().fill(palette.BLACK)
 
         self.graphik.getGameDisplay().set_clip(gameArea)
         self.graphik.getGameDisplay().fill(self.currentRoom.getBackgroundColor())
@@ -1585,7 +1585,7 @@ class WorldScreen:
             hintLabel = f"{helpKeyName}: Help"
             hintX = self.graphik.getGameDisplay().get_width() - 50
             hintY = self.graphik.getGameDisplay().get_height() - 20
-            self.graphik.drawText(hintLabel, hintX, hintY, 16, (180, 180, 180))
+            self.graphik.drawText(hintLabel, hintX, hintY, 16, palette.MEDIUM_GRAY)
 
         self.drawCursorSlot()
 
@@ -1652,7 +1652,7 @@ class WorldScreen:
                 mouseX + 30,
                 mouseY + 30,
                 20,
-                (255, 255, 255),
+                palette.WHITE,
             )
 
     def _handleHotbarClick(self, hotbarIndex):
@@ -2016,7 +2016,9 @@ class WorldScreen:
                     if self.config.debug:
                         _logger.debug("error moving entity to new room", error=str(e))
                     continue
-                newRoom = self._loadOrGenerateRoom(newRoomX, newRoomY, updateStats=False)
+                newRoom = self._loadOrGenerateRoom(
+                    newRoomX, newRoomY, updateStats=False
+                )
 
                 currentLocationId = entityToMove.getLocationID()
                 currentLocation = self.currentRoom.getGrid().getLocation(

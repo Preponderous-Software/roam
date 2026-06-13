@@ -4,6 +4,7 @@ from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
 from ui.status import Status
 import pygame
+from ui import palette
 
 
 # @author Daniel McCoy Stephenson
@@ -61,7 +62,7 @@ class OptionsScreen:
 
     def drawTitle(self):
         x, y = self.graphik.getGameDisplay().get_size()
-        self.graphik.drawText("Menu", x / 2, 25, 36, (255, 255, 255))
+        self.graphik.drawText("Menu", x / 2, 25, 36, palette.WHITE)
 
     def drawMenuButtons(self):
         x, y = self.graphik.getGameDisplay().get_size()
@@ -85,8 +86,8 @@ class OptionsScreen:
                 ypos,
                 width,
                 height,
-                (255, 255, 255),
-                (0, 0, 0),
+                palette.WHITE,
+                palette.BLACK,
                 30,
                 label,
                 callback,
@@ -106,8 +107,8 @@ class OptionsScreen:
             ypos,
             width,
             height,
-            (255, 255, 255),
-            (0, 0, 0),
+            palette.WHITE,
+            palette.BLACK,
             30,
             "Back",
             self.switchToWorldScreen,
@@ -120,21 +121,21 @@ class OptionsScreen:
         overlayX = x / 2 - overlayWidth / 2
         overlayY = y / 2 - overlayHeight / 2
         self.graphik.drawRectangle(
-            overlayX, overlayY, overlayWidth, overlayHeight, (50, 50, 50)
+            overlayX, overlayY, overlayWidth, overlayHeight, palette.CHARCOAL
         )
         self.graphik.drawText(
             "Return to main menu?",
             x / 2,
             overlayY + overlayHeight * 0.22,
             28,
-            (255, 255, 255),
+            palette.WHITE,
         )
         self.graphik.drawText(
             "Your current session will end.",
             x / 2,
             overlayY + overlayHeight * 0.42,
             18,
-            (200, 200, 200),
+            palette.GRAY,
         )
         self.graphik.drawText(
             "Your progress will be saved automatically.",
@@ -154,8 +155,8 @@ class OptionsScreen:
             btnY,
             buttonWidth,
             buttonHeight,
-            (200, 0, 0),
-            (255, 255, 255),
+            palette.RED,
+            palette.WHITE,
             22,
             "Quit to Menu",
             self.switchToMainMenuScreen,
@@ -165,8 +166,8 @@ class OptionsScreen:
             btnY,
             buttonWidth,
             buttonHeight,
-            (255, 255, 255),
-            (0, 0, 0),
+            palette.WHITE,
+            palette.BLACK,
             22,
             "Cancel",
             self.cancelMainMenuConfirmation,
@@ -180,7 +181,7 @@ class OptionsScreen:
                 elif event.type == pygame.KEYDOWN:
                     self.handleKeyDownEvent(event.key)
 
-            self.graphik.getGameDisplay().fill((0, 0, 0))
+            self.graphik.getGameDisplay().fill(palette.BLACK)
             self.drawTitle()
             if self.confirmingMainMenu:
                 # Skip the menu buttons while confirming so their click

@@ -8,6 +8,7 @@ from stats.stats import Stats
 from goals.goals import Goals
 from ui.status import Status
 import pygame
+from ui import palette
 
 
 # @author Daniel McCoy Stephenson
@@ -48,14 +49,14 @@ class StatsScreen:
     def drawStats(self):
         x, y = self.graphik.getGameDisplay().get_size()
 
-        self.graphik.drawText("Statistics", x / 2, 25, 36, (255, 255, 255))
+        self.graphik.drawText("Statistics", x / 2, 25, 36, palette.WHITE)
 
         lineSpacing = y / 10
         xpos = x / 2
         ypos = 70
 
         text = "Score: " + str(self.stats.getScore())
-        self.graphik.drawText(text, xpos, ypos, 30, (255, 255, 255))
+        self.graphik.drawText(text, xpos, ypos, 30, palette.WHITE)
         self.graphik.drawText(
             "(+1 per new area or meal, -10% per death)",
             xpos,
@@ -65,13 +66,13 @@ class StatsScreen:
         )
 
         text = "Rooms Explored: " + str(self.stats.getRoomsExplored())
-        self.graphik.drawText(text, xpos, ypos + lineSpacing, 30, (255, 255, 255))
+        self.graphik.drawText(text, xpos, ypos + lineSpacing, 30, palette.WHITE)
 
         text = "Food Eaten: " + str(self.stats.getFoodEaten())
-        self.graphik.drawText(text, xpos, ypos + lineSpacing * 2, 30, (255, 255, 255))
+        self.graphik.drawText(text, xpos, ypos + lineSpacing * 2, 30, palette.WHITE)
 
         text = "Deaths: " + str(self.stats.getNumberOfDeaths())
-        self.graphik.drawText(text, xpos, ypos + lineSpacing * 3, 30, (255, 255, 255))
+        self.graphik.drawText(text, xpos, ypos + lineSpacing * 3, 30, palette.WHITE)
 
         self.drawGoals(xpos, ypos + lineSpacing * 3 + 60)
 
@@ -82,7 +83,7 @@ class StatsScreen:
         header = "Goals (" + str(completed) + "/" + str(total) + ")"
         if allComplete:
             header += " - All complete!"
-        headerColor = (120, 220, 120) if allComplete else (255, 255, 255)
+        headerColor = (120, 220, 120) if allComplete else palette.WHITE
         self.graphik.drawText(header, xpos, startY, 26, headerColor)
 
         goals = self.goals.getGoals()
@@ -100,7 +101,7 @@ class StatsScreen:
                 color = (120, 220, 120)
             else:
                 marker = "[ ] "
-                color = (200, 200, 200)
+                color = palette.GRAY
             line = marker + goal.getDescription()
             if goal.getTarget() > 1:
                 line += " (" + str(progress) + "/" + str(goal.getTarget()) + ")"
@@ -121,8 +122,8 @@ class StatsScreen:
             ypos,
             width,
             height,
-            (255, 255, 255),
-            (0, 0, 0),
+            palette.WHITE,
+            palette.BLACK,
             30,
             "Back",
             self.switchToOptionsScreen,
@@ -137,7 +138,7 @@ class StatsScreen:
                 elif event.type == pygame.KEYDOWN:
                     self.handleKeyDownEvent(event.key)
 
-            self.graphik.getGameDisplay().fill((0, 0, 0))
+            self.graphik.getGameDisplay().fill(palette.BLACK)
             self.drawStats()
             self.drawBackButton()
             pygame.display.update()

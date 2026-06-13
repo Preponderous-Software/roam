@@ -6,6 +6,7 @@ from config.config import Config
 from gameLogging.logger import getLogger
 from lib.graphik.src.graphik import Graphik
 from screen.screenType import ScreenType
+from ui import palette
 
 _logger = getLogger(__name__)
 
@@ -187,20 +188,20 @@ class SaveSelectionScreen:
         x, y = self.graphik.getGameDisplay().get_size()
         xpos = x / 2
         ypos = y / 12
-        self.graphik.drawText("Select Save", xpos, ypos, 48, (255, 255, 255))
+        self.graphik.drawText("Select Save", xpos, ypos, 48, palette.WHITE)
 
     def drawNoSavesMessage(self):
         x, y = self.graphik.getGameDisplay().get_size()
         xpos = x / 2
         ypos = y / 3
-        self.graphik.drawText("No save files found.", xpos, ypos, 28, (255, 255, 255))
+        self.graphik.drawText("No save files found.", xpos, ypos, 28, palette.WHITE)
         ypos += 40
         self.graphik.drawText(
             'Click "New Game" to start playing!',
             xpos,
             ypos,
             24,
-            (200, 200, 200),
+            palette.GRAY,
         )
 
     def drawSaveList(self, saves):
@@ -223,7 +224,7 @@ class SaveSelectionScreen:
                 f"{self.scrollOffset + 1}-{shownEnd} of {len(saves)}"
                 "  -  scroll or arrow keys"
             )
-            self.graphik.drawText(scrollInfo, x / 2, ypos - 18, 14, (180, 180, 180))
+            self.graphik.drawText(scrollInfo, x / 2, ypos - 18, 14, palette.MEDIUM_GRAY)
 
         for save in visibleSaves:
             label = save["name"] + "  |  " + save["lastPlayed"]
@@ -234,8 +235,8 @@ class SaveSelectionScreen:
                     ypos,
                     saveWidth,
                     height,
-                    (255, 255, 255),
-                    (0, 0, 0),
+                    palette.WHITE,
+                    palette.BLACK,
                     24,
                     label,
                     lambda p=savePath: self.selectSave(p),
@@ -245,22 +246,22 @@ class SaveSelectionScreen:
                     ypos,
                     deleteWidth,
                     height,
-                    (200, 0, 0),
-                    (255, 255, 255),
+                    palette.RED,
+                    palette.WHITE,
                     20,
                     "X",
                     lambda p=savePath: self._requestDelete(p),
                 )
             else:
                 self.graphik.drawRectangle(
-                    xpos, ypos, saveWidth, height, (180, 180, 180)
+                    xpos, ypos, saveWidth, height, palette.MEDIUM_GRAY
                 )
                 self.graphik.drawText(
                     label,
                     xpos + saveWidth // 2,
                     ypos + height // 2,
                     24,
-                    (0, 0, 0),
+                    palette.BLACK,
                 )
                 self.graphik.drawRectangle(
                     xpos + saveWidth + margin,
@@ -274,7 +275,7 @@ class SaveSelectionScreen:
                     xpos + saveWidth + margin + deleteWidth // 2,
                     ypos + height // 2,
                     20,
-                    (180, 180, 180),
+                    palette.MEDIUM_GRAY,
                 )
             ypos += height + margin
 
@@ -288,7 +289,7 @@ class SaveSelectionScreen:
         overlayX = x / 2 - overlayWidth / 2
         overlayY = y / 2 - overlayHeight / 2
         self.graphik.drawRectangle(
-            overlayX, overlayY, overlayWidth, overlayHeight, (50, 50, 50)
+            overlayX, overlayY, overlayWidth, overlayHeight, palette.CHARCOAL
         )
         saveName = os.path.basename(self.confirmingDelete)
         self.graphik.drawText(
@@ -296,7 +297,7 @@ class SaveSelectionScreen:
             x / 2,
             overlayY + overlayHeight * 0.25,
             28,
-            (255, 255, 255),
+            palette.WHITE,
         )
         self.graphik.drawText(
             "This cannot be undone.",
@@ -316,8 +317,8 @@ class SaveSelectionScreen:
             btnY,
             buttonWidth,
             buttonHeight,
-            (200, 0, 0),
-            (255, 255, 255),
+            palette.RED,
+            palette.WHITE,
             24,
             "Delete",
             lambda: self.deleteSave(self.confirmingDelete),
@@ -327,8 +328,8 @@ class SaveSelectionScreen:
             btnY,
             buttonWidth,
             buttonHeight,
-            (255, 255, 255),
-            (0, 0, 0),
+            palette.WHITE,
+            palette.BLACK,
             24,
             "Cancel",
             lambda: setattr(self, "confirmingDelete", None),
@@ -341,21 +342,21 @@ class SaveSelectionScreen:
         overlayX = x / 2 - overlayWidth / 2
         overlayY = y / 2 - overlayHeight / 2
         self.graphik.drawRectangle(
-            overlayX, overlayY, overlayWidth, overlayHeight, (50, 50, 50)
+            overlayX, overlayY, overlayWidth, overlayHeight, palette.CHARCOAL
         )
         self.graphik.drawText(
             "Enter save name:",
             x / 2,
             overlayY + overlayHeight * 0.2,
             28,
-            (255, 255, 255),
+            palette.WHITE,
         )
         inputWidth = overlayWidth * 0.8
         inputHeight = overlayHeight * 0.18
         inputX = x / 2 - inputWidth / 2
         inputY = overlayY + overlayHeight * 0.38
         self.graphik.drawRectangle(
-            inputX, inputY, inputWidth, inputHeight, (255, 255, 255)
+            inputX, inputY, inputWidth, inputHeight, palette.WHITE
         )
         displayText = self.newSaveNameInput + "_"
         self.graphik.drawText(
@@ -363,7 +364,7 @@ class SaveSelectionScreen:
             x / 2,
             inputY + inputHeight / 2,
             24,
-            (0, 0, 0),
+            palette.BLACK,
         )
         if self.newSaveNameError:
             self.graphik.drawText(
@@ -378,7 +379,7 @@ class SaveSelectionScreen:
             x / 2,
             overlayY + overlayHeight * 0.68,
             16,
-            (180, 180, 180),
+            palette.MEDIUM_GRAY,
         )
         buttonWidth = overlayWidth * 0.35
         buttonHeight = overlayHeight * 0.18
@@ -391,8 +392,8 @@ class SaveSelectionScreen:
             btnY,
             buttonWidth,
             buttonHeight,
-            (255, 255, 255),
-            (0, 0, 0),
+            palette.WHITE,
+            palette.BLACK,
             24,
             "Create",
             self.confirmNewSaveName,
@@ -402,8 +403,8 @@ class SaveSelectionScreen:
             btnY,
             buttonWidth,
             buttonHeight,
-            (255, 255, 255),
-            (0, 0, 0),
+            palette.WHITE,
+            palette.BLACK,
             24,
             "Cancel",
             self.cancelNamingNewSave,
@@ -425,25 +426,23 @@ class SaveSelectionScreen:
                 ypos,
                 buttonWidth,
                 buttonHeight,
-                (255, 255, 255),
-                (0, 0, 0),
+                palette.WHITE,
+                palette.BLACK,
                 30,
                 "New Game",
                 self.startNamingNewSave,
             )
 
             sortLabel = (
-                "Sorted: Date"
-                if self.sortMode == self.SORT_BY_DATE
-                else "Sorted: Name"
+                "Sorted: Date" if self.sortMode == self.SORT_BY_DATE else "Sorted: Name"
             )
             self.graphik.drawButton(
                 startX + buttonWidth + margin,
                 ypos,
                 buttonWidth,
                 buttonHeight,
-                (255, 255, 255),
-                (0, 0, 0),
+                palette.WHITE,
+                palette.BLACK,
                 26,
                 sortLabel,
                 self.toggleSort,
@@ -454,22 +453,20 @@ class SaveSelectionScreen:
                 ypos,
                 buttonWidth,
                 buttonHeight,
-                (255, 255, 255),
-                (0, 0, 0),
+                palette.WHITE,
+                palette.BLACK,
                 30,
                 "Back",
                 self.switchToMainMenuScreen,
             )
         else:
             sortLabel = (
-                "Sorted: Date"
-                if self.sortMode == self.SORT_BY_DATE
-                else "Sorted: Name"
+                "Sorted: Date" if self.sortMode == self.SORT_BY_DATE else "Sorted: Name"
             )
             for i, label in enumerate(["New Game", sortLabel, "Back"]):
                 bx = startX + (buttonWidth + margin) * i
                 self.graphik.drawRectangle(
-                    bx, ypos, buttonWidth, buttonHeight, (180, 180, 180)
+                    bx, ypos, buttonWidth, buttonHeight, palette.MEDIUM_GRAY
                 )
                 self.graphik.drawText(
                     label,
@@ -516,7 +513,7 @@ class SaveSelectionScreen:
                                 self.newSaveNameInput += ch
                                 self.newSaveNameError = ""
 
-            self.graphik.getGameDisplay().fill((0, 0, 0))
+            self.graphik.getGameDisplay().fill(palette.BLACK)
             self.drawTitle()
 
             saves = self.getSaveDirectories()

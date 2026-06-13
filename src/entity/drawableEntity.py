@@ -1,6 +1,7 @@
 import pygame
 from lib.pyenvlib.entity import Entity
 from gameLogging.logger import getLogger
+from ui import palette
 
 _logger = getLogger(__name__)
 
@@ -43,7 +44,7 @@ class DrawableEntity(Entity):
         # load is not retried and the warning is logged only once.
         size = DrawableEntity._FALLBACK_SIZE
         surface = pygame.Surface((size, size))
-        surface.fill((255, 0, 255))
+        surface.fill(palette.DEBUG_MAGENTA)
         return surface
 
     def getImagePath(self):
