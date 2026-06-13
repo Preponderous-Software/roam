@@ -5,11 +5,13 @@
 # (frontend-abstraction epic #433).
 #
 # HUD layout and hit-testing previously used pygame.Rect, which pulled pygame
-# into otherwise backend-agnostic code. Rect mirrors the small slice of the
-# pygame.Rect API the codebase actually uses (mutable x/y/width/height, the
-# common edge/center accessors, collidepoint, copy, move) so a text or web
-# frontend can lay out HUD elements without importing pygame. The pygame
-# renderer converts to a real pygame.Rect only where it draws.
+# into otherwise backend-agnostic code. Rect mirrors the slice of the
+# pygame.Rect API the codebase actually uses on these rects (mutable
+# x/y/width/height, collidepoint, move, copy) so a text or web frontend can lay
+# out HUD elements without importing pygame. The pygame renderer converts to a
+# real pygame.Rect only where it draws. Edge/center accessors are intentionally
+# omitted until a consumer needs one (and would be added as explicit getters,
+# per the codebase's explicit-getter convention).
 
 
 class Rect:
@@ -20,35 +22,6 @@ class Rect:
         self.y = y
         self.width = width
         self.height = height
-
-    # Edge / center accessors (read-only; mutate x/y directly to move).
-    @property
-    def left(self):
-        return self.x
-
-    @property
-    def top(self):
-        return self.y
-
-    @property
-    def right(self):
-        return self.x + self.width
-
-    @property
-    def bottom(self):
-        return self.y + self.height
-
-    @property
-    def centerx(self):
-        return self.x + self.width // 2
-
-    @property
-    def centery(self):
-        return self.y + self.height // 2
-
-    @property
-    def center(self):
-        return (self.centerx, self.centery)
 
     def collidepoint(self, px, py):
         return (

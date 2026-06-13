@@ -7,17 +7,6 @@ def test_construction_and_basic_attributes():
     assert (r.x, r.y, r.width, r.height) == (10, 20, 30, 40)
 
 
-def test_edge_and_center_accessors():
-    r = Rect(10, 20, 30, 40)
-    assert r.left == 10
-    assert r.top == 20
-    assert r.right == 40
-    assert r.bottom == 60
-    assert r.centerx == 25
-    assert r.centery == 40
-    assert r.center == (25, 40)
-
-
 def test_collidepoint_is_inclusive_of_top_left_and_exclusive_of_bottom_right():
     r = Rect(10, 10, 20, 20)
     assert r.collidepoint(10, 10)
