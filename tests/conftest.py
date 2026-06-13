@@ -10,6 +10,8 @@ from config.config import Config
 from inventory.inventoryJsonReaderWriter import InventoryJsonReaderWriter
 from config.keyBindings import KeyBindings
 from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
+from rendering.pygameRenderer import PygameRenderer
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
@@ -42,9 +44,23 @@ def test_graphik():
 
 
 @pytest.fixture
-def test_di_container(test_config, test_graphik):
+def test_renderer():
+    # PygameRenderer-spec mock for screens/HUD migrated to the Renderer
+    # interface (epic #433). Defaults mirror the test_graphik display size so
+    # layout math resolves; tests that need other dimensions override these.
+    renderer = MagicMock(spec=PygameRenderer)
+    renderer.getDisplaySize.return_value = (1280, 720)
+    renderer.getDisplayWidth.return_value = 1280
+    renderer.getDisplayHeight.return_value = 720
+    renderer.getGameAreaRect.return_value = (280, 0, 720, 720)
+    return renderer
+
+
+@pytest.fixture
+def test_di_container(test_config, test_graphik, test_renderer):
     createContainer(test_config)
     container.registerInstance(Graphik, test_graphik)
+    container.registerInstance(Renderer, test_renderer)
     container.register(
         InventoryJsonReaderWriter,
         lambda: InventoryJsonReaderWriter(container.resolve(Config)),

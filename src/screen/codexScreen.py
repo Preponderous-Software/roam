@@ -3,7 +3,7 @@ from appContainer import component
 from codex.codex import Codex, ALL_LIVING_ENTITY_TYPES, ENTITY_IMAGE_PATHS
 from config.config import Config
 from config.keyBindings import KeyBindings
-from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
 from screen.screenType import ScreenType
 from gameLogging.logger import getLogger
 from ui import palette
@@ -17,12 +17,12 @@ _logger = getLogger(__name__)
 class CodexScreen:
     def __init__(
         self,
-        graphik: Graphik,
+        renderer: Renderer,
         config: Config,
         codex: Codex,
         keyBindings: KeyBindings,
     ):
-        self.graphik = graphik
+        self.renderer = renderer
         self.config = config
         self.codex = codex
         self.keyBindings = keyBindings
@@ -41,11 +41,11 @@ class CodexScreen:
         self.changeScreen = True
 
     def drawTitle(self):
-        x, y = self.graphik.getGameDisplay().get_size()
-        self.graphik.drawText("Codex", x / 2, 25, 36, palette.WHITE)
+        x, y = self.renderer.getDisplaySize()
+        self.renderer.drawText("Codex", x / 2, 25, 36, palette.WHITE)
         discoveredCount = len(self.codex.getDiscoveredEntities())
         totalCount = len(ALL_LIVING_ENTITY_TYPES)
-        self.graphik.drawText(
+        self.renderer.drawText(
             f"{discoveredCount} of {totalCount} discovered",
             x / 2,
             50,
@@ -83,10 +83,10 @@ class CodexScreen:
         rect = surface.get_rect()
         rect.left = int(leftX)
         rect.centery = int(centerY)
-        self.graphik.getGameDisplay().blit(surface, rect)
+        self.renderer.drawImage(surface, rect)
 
     def drawEntries(self):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         entries = ALL_LIVING_ENTITY_TYPES
 
         rowHeight = 45
@@ -109,9 +109,7 @@ class CodexScreen:
                 # Draw entity image
                 img = self._getEntityImage(entityName)
                 if img is not None:
-                    self.graphik.getGameDisplay().blit(
-                        img, (int(imageX), int(rowY + 2))
-                    )
+                    self.renderer.drawImage(img, (int(imageX), int(rowY + 2)))
                 # Draw entity name left-aligned after the image
                 self._drawTextLeftAligned(
                     entityName,
@@ -138,18 +136,18 @@ class CodexScreen:
                 + " of "
                 + str(len(entries))
             )
-            self.graphik.drawText(scrollInfo, x / 2, y - 70, 16, palette.MEDIUM_GRAY)
-            self.graphik.drawText(
+            self.renderer.drawText(scrollInfo, x / 2, y - 70, 16, palette.MEDIUM_GRAY)
+            self.renderer.drawText(
                 "Scroll to see more", x / 2, y - 92, 14, palette.DIM_GRAY
             )
 
     def drawBackButton(self):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         buttonWidth = x / 5
         buttonHeight = 35
         bottomY = y - 45
         startX = (x - buttonWidth) / 2
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             startX,
             bottomY,
             buttonWidth,
@@ -182,11 +180,11 @@ class CodexScreen:
                 elif event.type == pygame.MOUSEWHEEL:
                     self.handleScrollEvent(event)
 
-            self.graphik.getGameDisplay().fill(palette.BLACK)
+            self.renderer.clearScreen(palette.BLACK)
             self.drawTitle()
             self.drawEntries()
             self.drawBackButton()
-            pygame.display.update()
+            self.renderer.present()
 
         self.changeScreen = False
         return self.nextScreen

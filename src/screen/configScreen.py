@@ -1,7 +1,7 @@
 import time
 from appContainer import component
 from config.config import Config
-from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
 from screen.screenType import ScreenType
 from ui.status import Status
 import pygame
@@ -11,8 +11,8 @@ from ui import palette
 # @author Daniel McCoy Stephenson
 @component
 class ConfigScreen:
-    def __init__(self, graphik: Graphik, config: Config, status: Status):
-        self.graphik = graphik
+    def __init__(self, renderer: Renderer, config: Config, status: Status):
+        self.renderer = renderer
         self.config = config
         self.status = status
         self.running = True
@@ -42,14 +42,14 @@ class ConfigScreen:
         setattr(self.config, attributeName, not getattr(self.config, attributeName))
 
     def drawTitle(self):
-        x, y = self.graphik.getGameDisplay().get_size()
-        self.graphik.drawText("Settings", x / 2, 25, 36, palette.WHITE)
-        self.graphik.drawText(
+        x, y = self.renderer.getDisplaySize()
+        self.renderer.drawText("Settings", x / 2, 25, 36, palette.WHITE)
+        self.renderer.drawText(
             "Click a setting to toggle it", x / 2, 50, 14, palette.MEDIUM_GRAY
         )
 
     def drawMenuButtons(self):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         width = x / 2
         xpos = x / 2 - width / 2
         rowHeight = 35
@@ -83,7 +83,7 @@ class ConfigScreen:
             isOn = bool(getattr(self.config, attribute))
             color = (0, 255, 0) if isOn else (255, 0, 0)
             stateText = "ON" if isOn else "OFF"
-            self.graphik.drawButton(
+            self.renderer.drawButton(
                 xpos,
                 rowY,
                 width,
@@ -103,14 +103,14 @@ class ConfigScreen:
                 + " of "
                 + str(len(toggleButtons))
             )
-            self.graphik.drawText(scrollInfo, x / 2, y - 70, 16, palette.MEDIUM_GRAY)
+            self.renderer.drawText(scrollInfo, x / 2, y - 70, 16, palette.MEDIUM_GRAY)
 
     def drawBottomButtons(self):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         buttonWidth = x / 5
         buttonHeight = 35
         bottomY = y - 45  # 45px from the bottom edge, matching ControlsScreen
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             x / 2 - buttonWidth / 2,
             bottomY,
             buttonWidth,
@@ -139,11 +139,11 @@ class ConfigScreen:
                 elif event.type == pygame.MOUSEWHEEL:
                     self.handleScrollEvent(event)
 
-            self.graphik.getGameDisplay().fill(palette.BLACK)
+            self.renderer.clearScreen(palette.BLACK)
             self.drawTitle()
             self.drawMenuButtons()
             self.drawBottomButtons()
-            pygame.display.update()
+            self.renderer.present()
 
         self.changeScreen = False
         return self.nextScreen

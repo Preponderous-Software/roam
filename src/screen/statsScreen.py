@@ -1,9 +1,8 @@
 from appContainer import component
 from config.config import Config
 from config.keyBindings import KeyBindings
-from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
 from screen.screenType import ScreenType
-from screen.screenshotHelper import takeScreenshot
 from stats.stats import Stats
 from goals.goals import Goals
 from ui.status import Status
@@ -16,14 +15,14 @@ from ui import palette
 class StatsScreen:
     def __init__(
         self,
-        graphik: Graphik,
+        renderer: Renderer,
         config: Config,
         status: Status,
         stats: Stats,
         keyBindings: KeyBindings,
         goals: Goals,
     ):
-        self.graphik = graphik
+        self.renderer = renderer
         self.config = config
         self.status = status
         self.stats = stats
@@ -36,7 +35,7 @@ class StatsScreen:
         if key == pygame.K_ESCAPE:
             self.switchToOptionsScreen()
         elif key == self.keyBindings.getKey("screenshot"):
-            takeScreenshot(self.graphik.getGameDisplay())
+            self.renderer.captureScreenshot()
 
     def switchToOptionsScreen(self):
         self.nextScreen = ScreenType.OPTIONS_SCREEN
@@ -47,17 +46,17 @@ class StatsScreen:
         quit()
 
     def drawStats(self):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
 
-        self.graphik.drawText("Statistics", x / 2, 25, 36, palette.WHITE)
+        self.renderer.drawText("Statistics", x / 2, 25, 36, palette.WHITE)
 
         lineSpacing = y / 10
         xpos = x / 2
         ypos = 70
 
         text = "Score: " + str(self.stats.getScore())
-        self.graphik.drawText(text, xpos, ypos, 30, palette.WHITE)
-        self.graphik.drawText(
+        self.renderer.drawText(text, xpos, ypos, 30, palette.WHITE)
+        self.renderer.drawText(
             "(+1 per new area or meal, -10% per death)",
             xpos,
             ypos + 24,
@@ -66,13 +65,13 @@ class StatsScreen:
         )
 
         text = "Rooms Explored: " + str(self.stats.getRoomsExplored())
-        self.graphik.drawText(text, xpos, ypos + lineSpacing, 30, palette.WHITE)
+        self.renderer.drawText(text, xpos, ypos + lineSpacing, 30, palette.WHITE)
 
         text = "Food Eaten: " + str(self.stats.getFoodEaten())
-        self.graphik.drawText(text, xpos, ypos + lineSpacing * 2, 30, palette.WHITE)
+        self.renderer.drawText(text, xpos, ypos + lineSpacing * 2, 30, palette.WHITE)
 
         text = "Deaths: " + str(self.stats.getNumberOfDeaths())
-        self.graphik.drawText(text, xpos, ypos + lineSpacing * 3, 30, palette.WHITE)
+        self.renderer.drawText(text, xpos, ypos + lineSpacing * 3, 30, palette.WHITE)
 
         self.drawGoals(xpos, ypos + lineSpacing * 3 + 60)
 
@@ -84,12 +83,12 @@ class StatsScreen:
         if allComplete:
             header += " - All complete!"
         headerColor = (120, 220, 120) if allComplete else palette.WHITE
-        self.graphik.drawText(header, xpos, startY, 26, headerColor)
+        self.renderer.drawText(header, xpos, startY, 26, headerColor)
 
         goals = self.goals.getGoals()
         columnCount = 2
         perColumn = (len(goals) + columnCount - 1) // columnCount
-        displayWidth = self.graphik.getGameDisplay().get_size()[0]
+        displayWidth = self.renderer.getDisplaySize()[0]
         columnX = [displayWidth / 4, displayWidth * 3 / 4]
         rowSpacing = 26
         rowsStartY = startY + 34
@@ -107,17 +106,17 @@ class StatsScreen:
                 line += " (" + str(progress) + "/" + str(goal.getTarget()) + ")"
             column = i // perColumn
             row = i % perColumn
-            self.graphik.drawText(
+            self.renderer.drawText(
                 line, columnX[column], rowsStartY + row * rowSpacing, 18, color
             )
 
     def drawBackButton(self):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         width = x / 5
         height = y / 10
         xpos = x / 2 - width / 2
         ypos = y / 2 - height / 2 + width
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             xpos,
             ypos,
             width,
@@ -138,10 +137,10 @@ class StatsScreen:
                 elif event.type == pygame.KEYDOWN:
                     self.handleKeyDownEvent(event.key)
 
-            self.graphik.getGameDisplay().fill(palette.BLACK)
+            self.renderer.clearScreen(palette.BLACK)
             self.drawStats()
             self.drawBackButton()
-            pygame.display.update()
+            self.renderer.present()
 
         self.changeScreen = False
         return self.nextScreen

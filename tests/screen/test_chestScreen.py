@@ -25,15 +25,13 @@ def init_pygame():
 
 
 def createChestScreen(playerInventory=None, chest=None):
-    graphik = MagicMock()
-    gameDisplay = MagicMock()
-    gameDisplay.get_width.return_value = 800
-    gameDisplay.get_height.return_value = 600
-    gameDisplay.get_size.return_value = (800, 600)
-    graphik.getGameDisplay.return_value = gameDisplay
+    renderer = MagicMock()
+    renderer.getDisplayWidth.return_value = 800
+    renderer.getDisplayHeight.return_value = 600
+    renderer.getDisplaySize.return_value = (800, 600)
 
     screen = ChestScreen.__new__(ChestScreen)
-    screen.graphik = graphik
+    screen.renderer = renderer
     screen.config = MagicMock()
     screen.status = MagicMock()
     screen.keyBindings = MagicMock()

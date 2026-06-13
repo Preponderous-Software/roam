@@ -7,13 +7,13 @@ from unittest.mock import MagicMock
 from ui.hotbarLayout import getHotbarTop
 from ui.status import Status
 from world.tickCounter import TickCounter
-from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
 
 
-def createMockGraphik(width, height):
-    graphik = MagicMock()
-    graphik.getGameDisplay().get_size.return_value = (width, height)
-    return graphik
+def createMockRenderer(width, height):
+    renderer = MagicMock()
+    renderer.getDisplaySize.return_value = (width, height)
+    return renderer
 
 
 def createMockTickCounter(tick=0):
@@ -23,24 +23,24 @@ def createMockTickCounter(tick=0):
 
 
 def createStatus(resolve, override_dependency, width, height, tick=0):
-    graphik = createMockGraphik(width, height)
+    renderer = createMockRenderer(width, height)
     tickCounter = createMockTickCounter(tick)
-    override_dependency(Graphik, graphik)
+    override_dependency(Renderer, renderer)
     override_dependency(TickCounter, tickCounter)
     status = resolve(Status)
-    return status, graphik
+    return status, renderer
 
 
 def test_status_text_does_not_overlap_hotbar_at_720(resolve, override_dependency):
-    graphik = createMockGraphik(1280, 720)
+    renderer = createMockRenderer(1280, 720)
     tickCounter = createMockTickCounter()
-    override_dependency(Graphik, graphik)
+    override_dependency(Renderer, renderer)
     override_dependency(TickCounter, tickCounter)
     status = resolve(Status)
     status.set("test message")
     status.draw()
 
-    drawButtonCall = graphik.drawButton.call_args
+    drawButtonCall = renderer.drawButton.call_args
     statusYPos = drawButtonCall[0][1]
     statusHeight = drawButtonCall[0][3]
     statusBottom = statusYPos + statusHeight
@@ -50,11 +50,11 @@ def test_status_text_does_not_overlap_hotbar_at_720(resolve, override_dependency
 
 
 def test_status_text_does_not_overlap_hotbar_at_1080(resolve, override_dependency):
-    status, graphik = createStatus(resolve, override_dependency, 1920, 1080)
+    status, renderer = createStatus(resolve, override_dependency, 1920, 1080)
     status.set("test message")
     status.draw()
 
-    drawButtonCall = graphik.drawButton.call_args
+    drawButtonCall = renderer.drawButton.call_args
     statusYPos = drawButtonCall[0][1]
     statusHeight = drawButtonCall[0][3]
     statusBottom = statusYPos + statusHeight
@@ -64,11 +64,11 @@ def test_status_text_does_not_overlap_hotbar_at_1080(resolve, override_dependenc
 
 
 def test_status_text_does_not_overlap_hotbar_at_500(resolve, override_dependency):
-    status, graphik = createStatus(resolve, override_dependency, 800, 500)
+    status, renderer = createStatus(resolve, override_dependency, 800, 500)
     status.set("test message")
     status.draw()
 
-    drawButtonCall = graphik.drawButton.call_args
+    drawButtonCall = renderer.drawButton.call_args
     statusYPos = drawButtonCall[0][1]
     statusHeight = drawButtonCall[0][3]
     statusBottom = statusYPos + statusHeight
@@ -78,25 +78,25 @@ def test_status_text_does_not_overlap_hotbar_at_500(resolve, override_dependency
 
 
 def test_status_draw_not_called_when_no_text(resolve, override_dependency):
-    status, graphik = createStatus(resolve, override_dependency, 1280, 720)
+    status, renderer = createStatus(resolve, override_dependency, 1280, 720)
     status.draw()
-    graphik.drawButton.assert_not_called()
+    renderer.drawButton.assert_not_called()
 
 
 def test_status_draw_not_called_after_clear(resolve, override_dependency):
-    status, graphik = createStatus(resolve, override_dependency, 1280, 720)
+    status, renderer = createStatus(resolve, override_dependency, 1280, 720)
     status.set("test")
     status.clear()
     status.draw()
-    graphik.drawButton.assert_not_called()
+    renderer.drawButton.assert_not_called()
 
 
 def test_status_centered_horizontally(resolve, override_dependency):
-    status, graphik = createStatus(resolve, override_dependency, 1000, 800)
+    status, renderer = createStatus(resolve, override_dependency, 1000, 800)
     status.set("hello")
     status.draw()
 
-    drawButtonCall = graphik.drawButton.call_args
+    drawButtonCall = renderer.drawButton.call_args
     statusXPos = drawButtonCall[0][0]
     statusWidth = drawButtonCall[0][2]
     center = statusXPos + statusWidth / 2

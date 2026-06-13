@@ -5,9 +5,8 @@ from config.keyBindings import KeyBindings
 from crafting.recipeRegistry import RecipeRegistry
 from inventory.inventory import Inventory
 from inventory.inventorySlot import InventorySlot
-from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
 from screen.screenType import ScreenType
-from screen.screenshotHelper import takeScreenshot
 from ui.status import Status
 import pygame
 from ui import palette
@@ -18,13 +17,13 @@ from ui import palette
 class InventoryScreen:
     def __init__(
         self,
-        graphik: Graphik,
+        renderer: Renderer,
         config: Config,
         status: Status,
         inventory: Inventory,
         keyBindings: KeyBindings,
     ):
-        self.graphik = graphik
+        self.renderer = renderer
         self.config = config
         self.status = status
         self.inventory = inventory
@@ -39,12 +38,12 @@ class InventoryScreen:
     def _drawSelectionBorder(self, x, y, width, height):
         borderWidth = 3
         color = (255, 255, 0)
-        self.graphik.drawRectangle(x, y, width, borderWidth, color)
-        self.graphik.drawRectangle(
+        self.renderer.drawRectangle(x, y, width, borderWidth, color)
+        self.renderer.drawRectangle(
             x, y + height - borderWidth, width, borderWidth, color
         )
-        self.graphik.drawRectangle(x, y, borderWidth, height, color)
-        self.graphik.drawRectangle(
+        self.renderer.drawRectangle(x, y, borderWidth, height, color)
+        self.renderer.drawRectangle(
             x + width - borderWidth, y, borderWidth, height, color
         )
 
@@ -72,7 +71,7 @@ class InventoryScreen:
         if key == kb.getKey("inventory") or key == pygame.K_ESCAPE:
             self.switchToWorldScreen()
         elif key == kb.getKey("screenshot"):
-            takeScreenshot(self.graphik.getGameDisplay())
+            self.renderer.captureScreenshot()
         else:
             self._handleHotbarKey(key)
 
@@ -94,11 +93,11 @@ class InventoryScreen:
         quit()
 
     def drawPlayerInventory(self):
-        backgroundX = self.graphik.getGameDisplay().get_width() / 4
-        backgroundY = self.graphik.getGameDisplay().get_height() / 4
-        backgroundWidth = self.graphik.getGameDisplay().get_width() / 2
-        backgroundHeight = self.graphik.getGameDisplay().get_height() / 2
-        self.graphik.drawRectangle(
+        backgroundX = self.renderer.getDisplayWidth() / 4
+        backgroundY = self.renderer.getDisplayHeight() / 4
+        backgroundWidth = self.renderer.getDisplayWidth() / 2
+        backgroundHeight = self.renderer.getDisplayHeight() / 2
+        self.renderer.drawRectangle(
             backgroundX, backgroundY, backgroundWidth, backgroundHeight, palette.BLACK
         )
 
@@ -115,7 +114,7 @@ class InventoryScreen:
             itemHeight = backgroundHeight / itemsPerRow - 2 * margin
 
             if inventorySlot.isEmpty():
-                self.graphik.drawRectangle(
+                self.renderer.drawRectangle(
                     itemX, itemY, itemWidth, itemHeight, palette.WHITE
                 )
                 if (
@@ -132,7 +131,7 @@ class InventoryScreen:
             item = inventorySlot.getContents()[0]
             image = item.getImage()
             scaledImage = pygame.transform.scale(image, (itemWidth, itemHeight))
-            self.graphik.gameDisplay.blit(scaledImage, (itemX, itemY))
+            self.renderer.drawImage(scaledImage, (itemX, itemY))
 
             if (
                 itemX <= mouseX < itemX + itemWidth
@@ -146,7 +145,7 @@ class InventoryScreen:
             ):
                 self._drawSelectionBorder(itemX, itemY, itemWidth, itemHeight)
 
-            self.graphik.drawText(
+            self.renderer.drawText(
                 str(inventorySlot.getNumItems()),
                 itemX + itemWidth - 20,
                 itemY + itemHeight - 20,
@@ -160,14 +159,14 @@ class InventoryScreen:
                 row += 1
 
         closeKeyName = self.keyBindings.getKeyName("inventory").upper()
-        self.graphik.drawText(
+        self.renderer.drawText(
             "press [" + closeKeyName + "] or [Esc] to close",
             backgroundX,
             backgroundY + backgroundHeight + 20,
             20,
             palette.WHITE,
         )
-        self.graphik.drawText(
+        self.renderer.drawText(
             "Left-click: swap  -  Right-click: select hotbar  -  Drop button: discard",
             backgroundX,
             backgroundY + backgroundHeight + 45,
@@ -176,7 +175,7 @@ class InventoryScreen:
         )
 
         if hoveredItemName is not None:
-            screenW, screenH = self.graphik.getGameDisplay().get_size()
+            screenW, screenH = self.renderer.getDisplaySize()
             textWidth = len(hoveredItemName) * 8 + 12
             tooltipX = mouseX + 18
             tooltipY = mouseY + 18
@@ -184,10 +183,10 @@ class InventoryScreen:
                 tooltipX = max(0, mouseX - textWidth - 8)
             if tooltipY + 22 > screenH:
                 tooltipY = max(0, mouseY - 30)
-            self.graphik.drawRectangle(
+            self.renderer.drawRectangle(
                 tooltipX, tooltipY, textWidth, 22, palette.NEAR_BLACK
             )
-            self.graphik.drawText(
+            self.renderer.drawText(
                 hoveredItemName,
                 tooltipX + textWidth / 2,
                 tooltipY + 11,
@@ -203,15 +202,15 @@ class InventoryScreen:
         self.craftPanelOpen = not self.craftPanelOpen
 
     def drawCraftButton(self):
-        backgroundX = self.graphik.getGameDisplay().get_width() / 4
-        backgroundY = self.graphik.getGameDisplay().get_height() / 4
-        backgroundWidth = self.graphik.getGameDisplay().get_width() / 2
-        backgroundHeight = self.graphik.getGameDisplay().get_height() / 2
+        backgroundX = self.renderer.getDisplayWidth() / 4
+        backgroundY = self.renderer.getDisplayHeight() / 4
+        backgroundWidth = self.renderer.getDisplayWidth() / 2
+        backgroundHeight = self.renderer.getDisplayHeight() / 2
         buttonWidth = 100
         buttonHeight = 30
         buttonX = backgroundX + backgroundWidth - buttonWidth
         buttonY = backgroundY + backgroundHeight + 20
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             buttonX,
             buttonY,
             buttonWidth,
@@ -224,10 +223,10 @@ class InventoryScreen:
         )
 
     def getCraftPanelRect(self):
-        backgroundX = self.graphik.getGameDisplay().get_width() / 4
-        backgroundY = self.graphik.getGameDisplay().get_height() / 4
-        backgroundWidth = self.graphik.getGameDisplay().get_width() / 2
-        backgroundHeight = self.graphik.getGameDisplay().get_height() / 2
+        backgroundX = self.renderer.getDisplayWidth() / 4
+        backgroundY = self.renderer.getDisplayHeight() / 4
+        backgroundWidth = self.renderer.getDisplayWidth() / 2
+        backgroundHeight = self.renderer.getDisplayHeight() / 2
         panelX = backgroundX + backgroundWidth + 10
         panelY = backgroundY
         panelWidth = backgroundWidth * 0.6
@@ -256,11 +255,11 @@ class InventoryScreen:
             return
 
         panelX, panelY, panelWidth, panelHeight = self.getCraftPanelRect()
-        self.graphik.drawRectangle(
+        self.renderer.drawRectangle(
             panelX, panelY, panelWidth, panelHeight, palette.BLACK
         )
 
-        self.graphik.drawText(
+        self.renderer.drawText(
             "Recipes",
             panelX + panelWidth / 2,
             panelY + 20,
@@ -270,7 +269,7 @@ class InventoryScreen:
 
         recipes = self.recipeRegistry.getRecipes()
         craftableCount = sum(1 for r in recipes if r.canCraft(self.inventory))
-        self.graphik.drawText(
+        self.renderer.drawText(
             f"{craftableCount} / {len(recipes)} craftable",
             panelX + panelWidth / 2,
             panelY + 40,
@@ -295,7 +294,7 @@ class InventoryScreen:
             label = namePrefix + " (" + ingredientText + ")"
 
             if recipe.canCraft(self.inventory):
-                self.graphik.drawButton(
+                self.renderer.drawButton(
                     panelX + recipeMargin,
                     recipeY,
                     panelWidth - 2 * recipeMargin,
@@ -317,14 +316,14 @@ class InventoryScreen:
                     if missingParts
                     else label
                 )
-                self.graphik.drawRectangle(
+                self.renderer.drawRectangle(
                     panelX + recipeMargin,
                     recipeY,
                     panelWidth - 2 * recipeMargin,
                     recipeButtonHeight,
                     palette.DARKER_GRAY,
                 )
-                self.graphik.drawText(
+                self.renderer.drawText(
                     disabledLabel,
                     panelX + panelWidth / 2,
                     recipeY + recipeButtonHeight / 2,
@@ -357,12 +356,12 @@ class InventoryScreen:
             self.status.set("Crafted " + recipe.getName())
 
     def drawBackButton(self):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         width = 100
         height = 50
         xpos = x - width - 10
         ypos = y - height - 10
-        self.graphik.drawButton(
+        self.renderer.drawButton(
             xpos,
             ypos,
             width,
@@ -375,10 +374,10 @@ class InventoryScreen:
         )
 
     def isInsideInventoryPanel(self, pos):
-        backgroundX = self.graphik.getGameDisplay().get_width() / 4
-        backgroundY = self.graphik.getGameDisplay().get_height() / 4
-        backgroundWidth = self.graphik.getGameDisplay().get_width() / 2
-        backgroundHeight = self.graphik.getGameDisplay().get_height() / 2
+        backgroundX = self.renderer.getDisplayWidth() / 4
+        backgroundY = self.renderer.getDisplayHeight() / 4
+        backgroundWidth = self.renderer.getDisplayWidth() / 2
+        backgroundHeight = self.renderer.getDisplayHeight() / 2
         return (
             pos[0] >= backgroundX
             and pos[0] <= backgroundX + backgroundWidth
@@ -387,7 +386,7 @@ class InventoryScreen:
         )
 
     def isInsideBackButton(self, pos):
-        x, y = self.graphik.getGameDisplay().get_size()
+        x, y = self.renderer.getDisplaySize()
         width = 100
         height = 50
         xpos = x - width - 10
@@ -400,10 +399,10 @@ class InventoryScreen:
         )
 
     def isInsideCraftButton(self, pos):
-        backgroundX = self.graphik.getGameDisplay().get_width() / 4
-        backgroundY = self.graphik.getGameDisplay().get_height() / 4
-        backgroundWidth = self.graphik.getGameDisplay().get_width() / 2
-        backgroundHeight = self.graphik.getGameDisplay().get_height() / 2
+        backgroundX = self.renderer.getDisplayWidth() / 4
+        backgroundY = self.renderer.getDisplayHeight() / 4
+        backgroundWidth = self.renderer.getDisplayWidth() / 2
+        backgroundHeight = self.renderer.getDisplayHeight() / 2
         buttonWidth = 100
         buttonHeight = 30
         buttonX = backgroundX + backgroundWidth - buttonWidth
@@ -427,7 +426,7 @@ class InventoryScreen:
         )
 
     def _dropButtonRect(self):
-        _, height = self.graphik.getGameDisplay().get_size()
+        _, height = self.renderer.getDisplaySize()
         return 10, height - 60, 100, 50
 
     def drawDropButton(self):
@@ -440,8 +439,8 @@ class InventoryScreen:
         # Muted red marks it as the destructive option, distinct from the white
         # Back / Craft buttons; it brightens on hover.
         color = (200, 110, 110) if hovering else (150, 80, 80)
-        self.graphik.drawRectangle(buttonX, buttonY, buttonWidth, buttonHeight, color)
-        self.graphik.drawText(
+        self.renderer.drawRectangle(buttonX, buttonY, buttonWidth, buttonHeight, color)
+        self.renderer.drawText(
             "Drop",
             buttonX + buttonWidth / 2,
             buttonY + buttonHeight / 2,
@@ -475,10 +474,10 @@ class InventoryScreen:
                     self.dropCursorSlot()
             return
 
-        backgroundX = self.graphik.getGameDisplay().get_width() / 4
-        backgroundY = self.graphik.getGameDisplay().get_height() / 4
-        backgroundWidth = self.graphik.getGameDisplay().get_width() / 2
-        backgroundHeight = self.graphik.getGameDisplay().get_height() / 2
+        backgroundX = self.renderer.getDisplayWidth() / 4
+        backgroundY = self.renderer.getDisplayHeight() / 4
+        backgroundWidth = self.renderer.getDisplayWidth() / 2
+        backgroundHeight = self.renderer.getDisplayHeight() / 2
         itemsPerRow = 5
         row = 0
         column = 0
@@ -541,11 +540,11 @@ class InventoryScreen:
         image = item.getImage()
         cursorX, cursorY = pygame.mouse.get_pos()
         scaledImage = pygame.transform.scale(image, (50, 50))
-        self.graphik.gameDisplay.blit(scaledImage, (cursorX, cursorY))
+        self.renderer.drawImage(scaledImage, (cursorX, cursorY))
 
         count = self.cursorSlot.getNumItems()
         if count > 1:
-            self.graphik.drawText(
+            self.renderer.drawText(
                 str(count),
                 cursorX + 40,
                 cursorY + 40,
@@ -564,7 +563,7 @@ class InventoryScreen:
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     self.handleMouseClickEvent(event.pos, event.button)
 
-            self.graphik.getGameDisplay().fill(palette.BLACK)
+            self.renderer.clearScreen(palette.BLACK)
             self.drawPlayerInventory()
             self.drawCraftButton()
             self.drawCraftPanel()
@@ -572,7 +571,7 @@ class InventoryScreen:
             self.drawDropButton()
             self.drawCursorSlot()
             self.status.draw()
-            pygame.display.update()
+            self.renderer.present()
 
         if not self.cursorSlot.isEmpty():
             for item in self.cursorSlot.getContents():
