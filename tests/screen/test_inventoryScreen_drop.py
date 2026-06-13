@@ -140,23 +140,39 @@ def test_dropOneFromCursorSlot_does_not_affect_inventory():
 # --- handleMouseClickEvent integration tests ---
 
 
-def test_handleMouseClickEvent_left_click_outside_drops_all():
+def test_handleMouseClickEvent_left_click_empty_space_keeps_items():
+    # Clicking empty space must no longer discard cursor items — dropping is
+    # now only possible via the explicit Drop button.
     screen = createInventoryScreen()
     for i in range(5):
         screen.cursorSlot.add(createGrass())
 
-    # (10, 10) is outside the inventory panel for 800x600
+    # (10, 10) is empty space (the Drop button sits at the bottom edge).
     screen.handleMouseClickEvent((10, 10), button=1)
+
+    assert screen.cursorSlot.getNumItems() == 5
+
+
+def test_handleMouseClickEvent_left_click_on_drop_button_drops_all():
+    screen = createInventoryScreen()
+    for i in range(5):
+        screen.cursorSlot.add(createGrass())
+
+    buttonX, buttonY, buttonWidth, buttonHeight = screen._dropButtonRect()
+    centre = (buttonX + buttonWidth / 2, buttonY + buttonHeight / 2)
+    screen.handleMouseClickEvent(centre, button=1)
 
     assert screen.cursorSlot.isEmpty()
 
 
-def test_handleMouseClickEvent_middle_click_outside_drops_one():
+def test_handleMouseClickEvent_middle_click_on_drop_button_drops_one():
     screen = createInventoryScreen()
     for i in range(5):
         screen.cursorSlot.add(createGrass())
 
-    screen.handleMouseClickEvent((10, 10), button=2)
+    buttonX, buttonY, buttonWidth, buttonHeight = screen._dropButtonRect()
+    centre = (buttonX + buttonWidth / 2, buttonY + buttonHeight / 2)
+    screen.handleMouseClickEvent(centre, button=2)
 
     assert screen.cursorSlot.getNumItems() == 4
 
