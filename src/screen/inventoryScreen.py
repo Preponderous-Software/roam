@@ -167,7 +167,7 @@ class InventoryScreen:
             (255, 255, 255),
         )
         self.graphik.drawText(
-            "Left-click: swap  -  Right-click: select hotbar  -  click outside: drop",
+            "Left-click: swap  -  Right-click: select hotbar  -  Drop button: discard",
             backgroundX,
             backgroundY + backgroundHeight + 45,
             16,
@@ -425,6 +425,36 @@ class InventoryScreen:
             and pos[1] <= panelY + panelHeight
         )
 
+    def _dropButtonRect(self):
+        _, height = self.graphik.getGameDisplay().get_size()
+        return 10, height - 60, 100, 50
+
+    def drawDropButton(self):
+        buttonX, buttonY, buttonWidth, buttonHeight = self._dropButtonRect()
+        mouseX, mouseY = pygame.mouse.get_pos()
+        hovering = (
+            buttonX <= mouseX <= buttonX + buttonWidth
+            and buttonY <= mouseY <= buttonY + buttonHeight
+        )
+        # Muted red marks it as the destructive option, distinct from the white
+        # Back / Craft buttons; it brightens on hover.
+        color = (200, 110, 110) if hovering else (150, 80, 80)
+        self.graphik.drawRectangle(buttonX, buttonY, buttonWidth, buttonHeight, color)
+        self.graphik.drawText(
+            "Drop",
+            buttonX + buttonWidth / 2,
+            buttonY + buttonHeight / 2,
+            24,
+            (255, 255, 255),
+        )
+
+    def isInsideDropButton(self, pos):
+        buttonX, buttonY, buttonWidth, buttonHeight = self._dropButtonRect()
+        return (
+            buttonX <= pos[0] <= buttonX + buttonWidth
+            and buttonY <= pos[1] <= buttonY + buttonHeight
+        )
+
     def dropCursorSlot(self):
         self.cursorSlot.clear()
 
@@ -433,6 +463,17 @@ class InventoryScreen:
             self.cursorSlot.pop()
 
     def handleMouseClickEvent(self, pos, button=1):
+        # Dropping (discarding) cursor items now happens only via the explicit
+        # Drop button, so a stray click in empty space can no longer silently
+        # destroy a held stack (Nielsen #5, error prevention).
+        if self.isInsideDropButton(pos):
+            if not self.cursorSlot.isEmpty():
+                if button == 2:  # middle mouse button drops a single item
+                    self.dropOneFromCursorSlot()
+                elif button == 1:  # left mouse button drops the whole stack
+                    self.dropCursorSlot()
+            return
+
         backgroundX = self.graphik.getGameDisplay().get_width() / 4
         backgroundY = self.graphik.getGameDisplay().get_height() / 4
         backgroundWidth = self.graphik.getGameDisplay().get_width() / 2
@@ -441,7 +482,6 @@ class InventoryScreen:
         row = 0
         column = 0
         margin = 5
-        clickedSlot = False
         for inventorySlot in self.inventory.getInventorySlots():
             itemX = backgroundX + column * backgroundWidth / itemsPerRow + margin
             itemY = backgroundY + row * backgroundHeight / itemsPerRow + margin
@@ -454,12 +494,20 @@ class InventoryScreen:
                 and pos[1] > itemY
                 and pos[1] < itemY + itemHeight
             ):
-                clickedSlot = True
                 index = row * itemsPerRow + column
 
                 # select that inventory slot if right mouse button was clicked
                 if button == 3:
                     self.inventory.setSelectedInventorySlotIndex(index)
+                    # Confirm the selection in the status line — the help text
+                    # advertises this action, so a silent success leaves the
+                    # player unsure it registered (Nielsen #1).
+                    if inventorySlot.isEmpty():
+                        self.status.set("Empty slot")
+                    else:
+                        self.status.set(
+                            "Selected " + inventorySlot.getContents()[0].getName()
+                        )
                     return
 
                 # merge matching cursor and inventory slot items, otherwise swap them
@@ -481,17 +529,8 @@ class InventoryScreen:
                 column = 0
                 row += 1
 
-        # drop items from cursor slot when clicking outside the inventory panel
-        if not clickedSlot and not self.isInsideInventoryPanel(pos):
-            if self.isInsideBackButton(pos) or self.isInsideCraftButton(pos):
-                return
-            if self.isInsideCraftPanel(pos):
-                return
-            if not self.cursorSlot.isEmpty():
-                if button == 2:  # middle mouse button
-                    self.dropOneFromCursorSlot()
-                elif button == 1:  # left mouse button
-                    self.dropCursorSlot()
+        # A click in empty space (outside any slot) intentionally does nothing
+        # now — held cursor items are kept, not dropped.
 
     def drawCursorSlot(self):
         if self.cursorSlot.isEmpty():
@@ -529,6 +568,7 @@ class InventoryScreen:
             self.drawCraftButton()
             self.drawCraftPanel()
             self.drawBackButton()
+            self.drawDropButton()
             self.drawCursorSlot()
             self.status.draw()
             pygame.display.update()

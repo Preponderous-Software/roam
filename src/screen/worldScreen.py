@@ -933,10 +933,16 @@ class WorldScreen:
             )
         elif key == kb.getKey("minimap_zoom_in"):
             if self.minimapScaleFactor < 1.0:
-                self.minimapScaleFactor += 0.1
+                self.minimapScaleFactor = min(1.0, self.minimapScaleFactor + 0.1)
+            else:
+                self.status.set("Minimap at maximum size")
         elif key == kb.getKey("minimap_zoom_out"):
-            if self.minimapScaleFactor > 0:
-                self.minimapScaleFactor -= 0.1
+            # Floor at the default 0.1 so the minimap can't be shrunk away to
+            # nothing, and tell the player when they've hit the limit.
+            if self.minimapScaleFactor > 0.1:
+                self.minimapScaleFactor = max(0.1, self.minimapScaleFactor - 0.1)
+            else:
+                self.status.set("Minimap at minimum size")
         elif key == kb.getKey("toggle_camera_follow"):
             self.config.cameraFollowPlayer = not self.config.cameraFollowPlayer
             self.status.set(
@@ -1750,9 +1756,9 @@ class WorldScreen:
         if event.y != 0:
             current = self.player.getInventory().getSelectedInventorySlotIndex()
             delta = -1 if event.y > 0 else 1
-            self.player.getInventory().setSelectedInventorySlotIndex(
-                (current + delta) % 10
-            )
+            # Route through changeSelectedInventorySlot so a wheel-cycle announces
+            # the newly selected slot the same way the number keys do.
+            self.changeSelectedInventorySlot((current + delta) % 10)
 
     def handleMouseOver(self):
         location = self.getLocationAtMousePosition()
