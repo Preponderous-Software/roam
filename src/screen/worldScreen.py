@@ -55,6 +55,7 @@ from entity.youngCrop import YoungCrop
 from entity.matureCrop import MatureCrop
 from gameLogging.logger import getLogger
 from ui import palette
+from ui.geometry import Rect
 
 _logger = getLogger(__name__)
 
@@ -1391,13 +1392,13 @@ class WorldScreen:
         barYPos = itemPreviewYPos - HOTBAR_PADDING
         barWidth = HOTBAR_SLOT_SIZE * 11 + HOTBAR_PADDING
         barHeight = HOTBAR_SLOT_SIZE + HOTBAR_PADDING * 2
-        return pygame.Rect(barXPos, barYPos, barWidth, barHeight)
+        return Rect(barXPos, barYPos, barWidth, barHeight)
 
     def _getMinimapDefaultRect(self):
         """Return the default bounding rect for the minimap (no drag offset)."""
         gameArea = self.renderer.getGameAreaRect()
         minimapSize = gameArea.width * self.minimapScaleFactor
-        return pygame.Rect(
+        return Rect(
             self.minimapX,
             self.minimapY,
             minimapSize + 20,
