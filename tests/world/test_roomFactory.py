@@ -150,3 +150,73 @@ def test_create_mountain_room_has_entities(resolve, test_config):
 
     # mountain rooms should have rocks filling the grid
     assert room.getNumEntities() > 0
+
+
+def _forceSpawns(monkeypatch):
+    # randrange(1, 101) -> 1 is <= every spawnChance, so every roll spawns.
+    monkeypatch.setattr(random, "randrange", lambda *args, **kwargs: 1)
+
+
+def test_spawn_living_entities_helper_respects_attempts(
+    resolve, test_config, monkeypatch
+):
+    from entity.living.rabbit import Rabbit
+
+    factory = createRoomFactory(resolve, test_config)
+    room = factory.createEmptyRoom((0, 0, 0), 0, 0)
+    _forceSpawns(monkeypatch)
+
+    factory._spawnLivingEntities(room, Rabbit, attempts=4, spawnChance=100)
+
+    living = list(room.getLivingEntities().values())
+    assert len(living) == 4
+    assert all(type(creature).__name__ == "Rabbit" for creature in living)
+
+
+def test_spawn_living_entities_helper_can_spawn_nothing(
+    resolve, test_config, monkeypatch
+):
+    from entity.living.rabbit import Rabbit
+
+    factory = createRoomFactory(resolve, test_config)
+    room = factory.createEmptyRoom((0, 0, 0), 0, 0)
+    # randrange always returns a value above any spawnChance -> never spawns.
+    monkeypatch.setattr(random, "randrange", lambda *args, **kwargs: 100)
+
+    factory._spawnLivingEntities(room, Rabbit, attempts=5, spawnChance=20)
+
+    assert len(room.getLivingEntities()) == 0
+
+
+def test_grassland_spawns_rabbits(resolve, test_config, monkeypatch):
+    factory = createRoomFactory(resolve, test_config)
+    room = factory.createEmptyRoom((0, 0, 0), 0, 0)
+    _forceSpawns(monkeypatch)
+
+    factory.spawnRabbits(room)
+
+    names = {type(c).__name__ for c in room.getLivingEntities().values()}
+    assert names == {"Rabbit"}
+
+
+def test_forest_spawns_deer_and_wolves(resolve, test_config, monkeypatch):
+    factory = createRoomFactory(resolve, test_config)
+    room = factory.createEmptyRoom((0, 0, 0), 0, 0)
+    _forceSpawns(monkeypatch)
+
+    factory.spawnDeer(room)
+    factory.spawnWolves(room)
+
+    names = {type(c).__name__ for c in room.getLivingEntities().values()}
+    assert names == {"Deer", "Wolf"}
+
+
+def test_jungle_spawns_snakes(resolve, test_config, monkeypatch):
+    factory = createRoomFactory(resolve, test_config)
+    room = factory.createEmptyRoom((0, 0, 0), 0, 0)
+    _forceSpawns(monkeypatch)
+
+    factory.spawnSnakes(room)
+
+    names = {type(c).__name__ for c in room.getLivingEntities().values()}
+    assert names == {"Snake"}

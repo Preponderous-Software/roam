@@ -1,4 +1,5 @@
 # @author Daniel McCoy Stephenson
+from codex.codex import ALL_LIVING_ENTITY_TYPES
 from goals.goal import Goal
 from goals.goalContext import GoalContext
 from goals.goalRegistry import GoalRegistry
@@ -131,9 +132,17 @@ def test_specific_creature_discovery_goal_completes():
 
 
 def test_discover_all_creatures_completes_when_all_found():
-    goals = makeGoals(discovered=["Bear", "Chicken"])
+    goals = makeGoals(discovered=list(ALL_LIVING_ENTITY_TYPES))
     ids = [g.getIdentifier() for g in goals.evaluate()]
     assert "discover_all_creatures" in ids
+
+
+def test_discover_all_creatures_incomplete_when_some_missing():
+    # Discovering only a subset must not complete the "every creature" goal.
+    partial = list(ALL_LIVING_ENTITY_TYPES)[:-1]
+    goals = makeGoals(discovered=partial)
+    ids = [g.getIdentifier() for g in goals.evaluate()]
+    assert "discover_all_creatures" not in ids
 
 
 def test_score_and_dawn_goals_complete():

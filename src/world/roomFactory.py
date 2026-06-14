@@ -9,6 +9,10 @@ from entity.jungleWood import JungleWood
 from entity.leaves import Leaves
 from entity.living.bear import Bear
 from entity.living.chicken import Chicken
+from entity.living.deer import Deer
+from entity.living.rabbit import Rabbit
+from entity.living.snake import Snake
+from entity.living.wolf import Wolf
 from entity.stone import Stone
 from entity.oakWood import OakWood
 from gameLogging.logger import getLogger
@@ -85,6 +89,7 @@ class RoomFactory:
         self.spawnGrass(newRoom)
         self.spawnSomeRocks(newRoom)
         self.spawnChickens(newRoom)
+        self.spawnRabbits(newRoom)
 
         return newRoom
 
@@ -93,7 +98,9 @@ class RoomFactory:
         maxTrees = ceil(self.gridSize / 3)
         for _ in range(maxTrees):
             self.spawnOakTree(newRoom)
+        self.spawnDeer(newRoom)
         self.spawnBears(newRoom)
+        self.spawnWolves(newRoom)
         return newRoom
 
     def createJungleRoom(self, x, y):
@@ -102,6 +109,7 @@ class RoomFactory:
         maxTrees = ceil(self.gridSize / 3)
         for _ in range(maxTrees * 4):
             self.spawnJungleTree(newRoom)
+        self.spawnSnakes(newRoom)
         return newRoom
 
     def createMountainRoom(self, x, y):
@@ -195,27 +203,42 @@ class RoomFactory:
             if random.randrange(0, 2) == 0:
                 room.addEntityToLocation(Banana(), bananaSpawnLocation)
 
-    def spawnChickens(self, room: Room):
+    def _spawnLivingEntities(self, room: Room, creatureClass, attempts, spawnChance):
+        # Make `attempts` independent rolls, each spawning one creature with
+        # probability `spawnChance` (1-100). Shared by every per-creature
+        # spawner so spawn density is tuned in one place.
         count = 0
-        for _ in range(5):
-            if random.randrange(1, 101) > 75:
-                newChicken = Chicken(self.tickCounter.getTick())
-                room.addEntity(newChicken)
-                room.addLivingEntity(newChicken)
+        for _ in range(attempts):
+            if random.randrange(1, 101) <= spawnChance:
+                creature = creatureClass(self.tickCounter.getTick())
+                room.addEntity(creature)
+                room.addLivingEntity(creature)
                 count += 1
         if count > 0:
-            _logger.debug("spawned chickens", count=count, roomName=room.getName())
+            _logger.debug(
+                "spawned creatures",
+                creature=creatureClass.__name__,
+                count=count,
+                roomName=room.getName(),
+            )
+
+    def spawnChickens(self, room: Room):
+        self._spawnLivingEntities(room, Chicken, attempts=5, spawnChance=25)
+
+    def spawnRabbits(self, room: Room):
+        self._spawnLivingEntities(room, Rabbit, attempts=5, spawnChance=20)
+
+    def spawnDeer(self, room: Room):
+        self._spawnLivingEntities(room, Deer, attempts=3, spawnChance=20)
 
     def spawnBears(self, room: Room):
-        count = 0
-        for _ in range(2):
-            if random.randrange(1, 101) > 90:
-                newBear = Bear(self.tickCounter.getTick())
-                room.addEntity(newBear)
-                room.addLivingEntity(newBear)
-                count += 1
-        if count > 0:
-            _logger.debug("spawned bears", count=count, roomName=room.getName())
+        self._spawnLivingEntities(room, Bear, attempts=2, spawnChance=10)
+
+    def spawnWolves(self, room: Room):
+        self._spawnLivingEntities(room, Wolf, attempts=2, spawnChance=10)
+
+    def spawnSnakes(self, room: Room):
+        self._spawnLivingEntities(room, Snake, attempts=3, spawnChance=15)
 
     def spawnLeaves(self, room: Room):
         for locationId in room.getGrid().getLocations():
