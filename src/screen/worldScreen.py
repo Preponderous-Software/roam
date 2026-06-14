@@ -1286,9 +1286,7 @@ class WorldScreen:
 
     def _drawPausedOverlay(self):
         width, height = self.renderer.getDisplaySize()
-        dim = pygame.Surface((width, height), pygame.SRCALPHA)
-        dim.fill((0, 0, 0, 140))
-        self.renderer.drawImage(dim, (0, 0))
+        self.renderer.drawTranslucentOverlay((0, 0, 0, 140))
         self.renderer.drawText(
             "PAUSED", width / 2, height / 2 - 20, 56, palette.LIGHT_GRAY
         )
@@ -1314,9 +1312,7 @@ class WorldScreen:
 
     def _drawDeathOverlay(self):
         width, height = self.renderer.getDisplaySize()
-        dim = pygame.Surface((width, height), pygame.SRCALPHA)
-        dim.fill((0, 0, 0, 160))
-        self.renderer.drawImage(dim, (0, 0))
+        self.renderer.drawTranslucentOverlay((0, 0, 0, 160))
         self.renderer.drawText(
             "YOU DIED", width / 2, height / 2 - 30, 64, (220, 60, 60)
         )
