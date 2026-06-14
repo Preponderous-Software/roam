@@ -106,9 +106,14 @@ def _readStdinChars():
     import select
 
     fd = sys.stdin.fileno()
-    ready, _, _ = select.select([fd], [], [], _POLL_TIMEOUT_SECONDS)
-    if not ready:
+    try:
+        ready, _, _ = select.select([fd], [], [], _POLL_TIMEOUT_SECONDS)
+        if not ready:
+            return ""
+        # The whole pending burst (a typed char, or an arrow's 3-byte sequence)
+        # is available in one non-blocking read.
+        return os.read(fd, 64).decode("utf-8", errors="ignore")
+    except (OSError, ValueError):
+        # A signal interrupting the read (EINTR), or a closed/invalid fd during
+        # shutdown — treat as "no input this frame" rather than crashing the loop.
         return ""
-    # The whole pending burst (a typed char, or an arrow's 3-byte sequence) is
-    # available in one non-blocking read.
-    return os.read(fd, 64).decode("utf-8", errors="ignore")

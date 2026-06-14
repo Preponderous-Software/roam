@@ -447,3 +447,23 @@ def test_enter_with_no_saves_starts_naming(temp_saves_dir):
     screen = createSaveSelectionScreen(temp_saves_dir)  # empty dir
     screen.handleKeyDownEvent(KeyCode.RETURN)
     assert screen.namingNewSave is True
+
+
+def test_c_that_opens_naming_does_not_type_itself_into_the_name(temp_saves_dir):
+    # In text mode a single 'c' keystroke arrives as a KEY_DOWN(C) plus a paired
+    # TEXT_INPUT('c') in the same poll batch. The KEY_DOWN opens the name field;
+    # the paired TEXT_INPUT must be suppressed so the field starts empty rather
+    # than pre-filled with "c". A later keystroke (after the draw frame) types
+    # normally.
+    from rendering.inputEvent import EventType, InputEvent
+
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.handleEvent(InputEvent(EventType.KEY_DOWN, key=KeyCode.C))
+    screen.handleEvent(InputEvent(EventType.TEXT_INPUT, text="c"))
+
+    assert screen.namingNewSave is True
+    assert screen.newSaveNameInput == ""  # the opening 'c' did not leak in
+
+    screen.draw()  # suppression only lasts the frame naming opened in
+    screen.handleEvent(InputEvent(EventType.TEXT_INPUT, text="a"))
+    assert screen.newSaveNameInput == "a"

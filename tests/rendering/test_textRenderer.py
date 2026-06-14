@@ -11,7 +11,8 @@ def test_text_renderer_is_a_concrete_renderer():
 def test_display_size_is_columns_times_cell_size():
     renderer = TextRenderer(columns=80, rows=24, cellWidth=8, cellHeight=16)
     assert renderer.getDisplaySize() == (640, 384)
-    assert renderer.getGameAreaRect() == (128, 0, 384, 384)
+    r = renderer.getGameAreaRect()
+    assert (r.x, r.y, r.width, r.height) == (128, 0, 384, 384)
 
 
 def test_draw_text_is_centered_on_the_pixel_position():

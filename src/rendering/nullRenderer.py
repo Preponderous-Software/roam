@@ -1,4 +1,5 @@
 from rendering.renderer import Renderer
+from ui.geometry import Rect
 
 
 # @author Daniel McCoy Stephenson
@@ -84,7 +85,7 @@ class NullRenderer(Renderer):
         side = min(self._width, self._height)
         xpos = (self._width - side) // 2
         ypos = (self._height - side) // 2
-        return (xpos, ypos, side, side)
+        return Rect(xpos, ypos, side, side)
 
     # --- region clipping ---
 

@@ -42,6 +42,10 @@ class SaveSelectionScreen(Screen):
         self.namingNewSave = False
         self.newSaveNameInput = ""
         self.newSaveNameError = ""
+        # When naming opens via the 'C' key, that keypress also arrives as a
+        # text-input event in the same batch; suppress text input for the frame
+        # it opens so 'c' isn't typed into the new name. Cleared each draw().
+        self._suppressTextInput = False
 
     def refreshSaveCache(self):
         self.cachedSaves = self._scanSaveDirectories()
@@ -86,6 +90,7 @@ class SaveSelectionScreen(Screen):
 
     def startNamingNewSave(self):
         self.namingNewSave = True
+        self._suppressTextInput = True
         self.newSaveNameInput = ""
         self.newSaveNameError = ""
 
@@ -538,13 +543,15 @@ class SaveSelectionScreen(Screen):
             elif event.scrollY < 0:
                 self.scrollDown()
         elif event.type == EventType.TEXT_INPUT:
-            if self.namingNewSave:
+            if self.namingNewSave and not self._suppressTextInput:
                 for ch in event.text:
                     if ch.isalnum() or ch in "-_ ":
                         self.newSaveNameInput += ch
                         self.newSaveNameError = ""
 
     def draw(self):
+        # The text-input suppression only lasts the frame naming opened in.
+        self._suppressTextInput = False
         self.renderer.clearScreen(palette.BLACK)
         self.drawTitle()
 

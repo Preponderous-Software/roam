@@ -3,6 +3,7 @@ import sys
 
 from rendering.renderer import Renderer
 from rendering.textGrid import TextGrid
+from ui.geometry import Rect
 
 
 # @author Daniel McCoy Stephenson
@@ -71,7 +72,7 @@ class TextRenderer(Renderer):
     def getGameAreaRect(self):
         width, height = self.getDisplaySize()
         side = min(width, height)
-        return ((width - side) // 2, (height - side) // 2, side, side)
+        return Rect((width - side) // 2, (height - side) // 2, side, side)
 
     # --- drawing primitives ---
 

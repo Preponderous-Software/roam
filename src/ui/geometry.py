@@ -15,13 +15,18 @@
 
 
 class Rect:
-    __slots__ = ("x", "y", "width", "height")
+    __slots__ = ("x", "y", "width", "height", "right", "bottom")
 
     def __init__(self, x, y, width, height):
         self.x = x
         self.y = y
         self.width = width
         self.height = height
+        # Convenience edges, mirroring pygame.Rect (consumers read gameArea.right
+        # / .bottom). Rects here are used immutably — move()/copy() build a new
+        # one — so these stay in sync.
+        self.right = x + width
+        self.bottom = y + height
 
     def collidepoint(self, px, py):
         return (

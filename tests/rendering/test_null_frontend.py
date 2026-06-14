@@ -41,7 +41,8 @@ def test_null_renderer_implements_the_renderer_interface():
     assert renderer.getDisplayWidth() == 640
     assert renderer.getDisplayHeight() == 480
     # getGameAreaRect is the centered square play area.
-    assert renderer.getGameAreaRect() == (80, 0, 480, 480)
+    r = renderer.getGameAreaRect()
+    assert (r.x, r.y, r.width, r.height) == (80, 0, 480, 480)
     # Drawing calls are no-ops that must not raise.
     renderer.clearScreen((0, 0, 0))
     renderer.drawRectangle(0, 0, 10, 10, (1, 2, 3))

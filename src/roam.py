@@ -204,11 +204,19 @@ def main(argv):
 
     config = Config()
     roam = Roam(config, textMode="--text" in argv)
-    while True:
-        result = roam.run()
-        if result != "restart":
-            break
-        roam.restart()
+    try:
+        while True:
+            result = roam.run()
+            if result != "restart":
+                break
+            roam.restart()
+    except KeyboardInterrupt:
+        # Ctrl+C: exit cleanly rather than dumping a traceback.
+        _logger.info("interrupted; shutting down")
+    finally:
+        # Always restore the frontend (e.g. put the terminal back to normal mode
+        # in text mode), even on an interrupt or unexpected error.
+        roam.frontend.quit()
     return 0
 
 
