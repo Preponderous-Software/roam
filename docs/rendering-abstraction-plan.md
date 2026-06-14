@@ -1,5 +1,11 @@
 # Frontend Abstraction Plan — decoupling Roam from pygame
 
+> 📊 **Visual companion:** [`renderer-architecture.html`](renderer-architecture.html)
+> — an interactive diagram of the shipped seam (Renderer / InputSource / Clock)
+> and how Pygame, Null, SDL, Web, and Text frontends each implement it. Open it
+> in any browser (self-contained, no dependencies).
+
+
 > Status: **proposal / not yet implemented.** No source has been changed. This
 > document is the agreed target architecture and phased migration plan for
 > letting Roam run behind multiple frontends (pygame today; text and web
