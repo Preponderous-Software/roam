@@ -219,6 +219,11 @@ class Config:
     def __init__(self):
         self.ensureUserConfigExists()
         configValues = self.readConfigFile()
+        # Config is constructed before the frontend creates the window, so the
+        # video subsystem may not be up yet. Initialize the display module
+        # (idempotent) before querying it, so the default window size can be
+        # computed regardless of construction order.
+        pygame.display.init()
         screenHeight = pygame.display.Info().current_h
         displayDimensionDefault = screenHeight * 0.90
 
