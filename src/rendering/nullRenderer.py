@@ -67,6 +67,16 @@ class NullRenderer(Renderer):
     def scaleImage(self, image, size):
         return image
 
+    def createSurface(self, size):
+        # An opaque headless surface; nothing is actually drawn to it.
+        return object()
+
+    def saveImage(self, image, path):
+        pass
+
+    def tryLoadImage(self, path):
+        return None
+
     def getGameAreaRect(self):
         side = min(self._width, self._height)
         xpos = (self._width - side) // 2

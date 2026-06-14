@@ -19,6 +19,10 @@ def _makeWorldScreen(test_config, tmp_path):
     ws._miniMapLoadFailed = False
     ws.tickCounter = MagicMock()
     ws.tickCounter.getTick.return_value = 100  # >= 60 so a reload is due
+    # Default the renderer to a failing load (tryLoadImage -> None); the failure
+    # tests rely on this, the success test overrides ws.renderer.
+    ws.renderer = MagicMock()
+    ws.renderer.tryLoadImage.return_value = None
     return ws
 
 

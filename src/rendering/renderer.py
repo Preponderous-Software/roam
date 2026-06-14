@@ -80,6 +80,21 @@ class Renderer(ABC):
         """Return a copy of image scaled to size (a (width, height) tuple)."""
 
     @abstractmethod
+    def createSurface(self, size):
+        """Create a blank offscreen drawable of (width, height) — usable as a
+        setRenderTarget target and savable with saveImage."""
+
+    @abstractmethod
+    def saveImage(self, image, path):
+        """Save an image/surface to disk at path (e.g. a rendered room PNG)."""
+
+    @abstractmethod
+    def tryLoadImage(self, path):
+        """Load an image from path WITHOUT caching, returning None if it is
+        missing or unreadable. For dynamic images (e.g. the regenerated minimap)
+        where loadImage's caching + placeholder behavior is not wanted."""
+
+    @abstractmethod
     def getGameAreaRect(self):
         """Return the centered square play-area rect for the current display."""
 
