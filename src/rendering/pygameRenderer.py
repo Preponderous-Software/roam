@@ -55,6 +55,14 @@ class PygameRenderer(Renderer):
     def drawText(self, text, xpos, ypos, size, color):
         self.graphik.drawText(text, xpos, ypos, size, color)
 
+    def drawTextLeftAligned(self, text, leftX, centerY, size, color):
+        font = pygame.font.Font("freesansbold.ttf", size)
+        surface = font.render(text, True, color)
+        rect = surface.get_rect()
+        rect.left = int(leftX)
+        rect.centery = int(centerY)
+        self.drawImage(surface, rect)
+
     def drawButton(
         self, xpos, ypos, width, height, colorBox, colorText, sizeText, text, function
     ):

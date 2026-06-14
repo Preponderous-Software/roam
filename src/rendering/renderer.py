@@ -49,6 +49,11 @@ class Renderer(ABC):
         """Draw text centered on (xpos, ypos)."""
 
     @abstractmethod
+    def drawTextLeftAligned(self, text, leftX, centerY, size, color):
+        """Draw text with its left edge at leftX, vertically centered on centerY.
+        Text metrics stay inside the backend so callers need no pixel math."""
+
+    @abstractmethod
     def drawButton(
         self, xpos, ypos, width, height, colorBox, colorText, sizeText, text, function
     ):

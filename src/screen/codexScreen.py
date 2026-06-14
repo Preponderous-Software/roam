@@ -1,4 +1,3 @@
-import pygame
 from appContainer import component
 from codex.codex import Codex, ALL_LIVING_ENTITY_TYPES, ENTITY_IMAGE_PATHS
 from config.config import Config
@@ -9,10 +8,7 @@ from rendering.inputEvent import EventType
 from rendering.keyCode import KeyCode
 from screen.screenType import ScreenType
 from screen.screen import Screen
-from gameLogging.logger import getLogger
 from ui import palette
-
-_logger = getLogger(__name__)
 
 
 # @author Copilot
@@ -37,7 +33,6 @@ class CodexScreen(Screen):
         self.changeScreen = False
         self.scrollOffset = 0
         self._imageCache = {}
-        self._fontCache = {}
 
     def setReturnScreen(self, screenType):
         self.returnScreen = screenType
@@ -60,36 +55,17 @@ class CodexScreen(Screen):
         )
 
     def _getEntityImage(self, entityName):
+        # Load + scale through the Renderer (cached per entity). A missing path
+        # yields None (the entry is drawn without an icon); a load failure is
+        # handled by the Renderer, which returns its visible placeholder.
         if entityName not in self._imageCache:
             imagePath = ENTITY_IMAGE_PATHS.get(entityName)
-            if imagePath is not None:
-                try:
-                    img = pygame.image.load(imagePath)
-                    self._imageCache[entityName] = pygame.transform.scale(img, (32, 32))
-                except (pygame.error, FileNotFoundError) as e:
-                    _logger.error(
-                        "failed to load codex entity image",
-                        entity=entityName,
-                        error=str(e),
-                    )
-                    self._imageCache[entityName] = None
-            else:
+            if imagePath is None:
                 self._imageCache[entityName] = None
+            else:
+                image = self.renderer.loadImage(imagePath)
+                self._imageCache[entityName] = self.renderer.scaleImage(image, (32, 32))
         return self._imageCache[entityName]
-
-    def _getFont(self, size):
-        if size not in self._fontCache:
-            self._fontCache[size] = pygame.font.Font("freesansbold.ttf", size)
-        return self._fontCache[size]
-
-    def _drawTextLeftAligned(self, text, leftX, centerY, size, color):
-        """Draw text left-aligned starting at leftX, vertically centered at centerY."""
-        font = self._getFont(size)
-        surface = font.render(text, True, color)
-        rect = surface.get_rect()
-        rect.left = int(leftX)
-        rect.centery = int(centerY)
-        self.renderer.drawImage(surface, rect)
 
     def drawEntries(self):
         x, y = self.renderer.getDisplaySize()
@@ -117,7 +93,7 @@ class CodexScreen(Screen):
                 if img is not None:
                     self.renderer.drawImage(img, (int(imageX), int(rowY + 2)))
                 # Draw entity name left-aligned after the image
-                self._drawTextLeftAligned(
+                self.renderer.drawTextLeftAligned(
                     entityName,
                     nameX,
                     rowY + rowHeight / 2,
@@ -126,7 +102,7 @@ class CodexScreen(Screen):
                 )
             else:
                 # Undiscovered entry
-                self._drawTextLeftAligned(
+                self.renderer.drawTextLeftAligned(
                     "???",
                     nameX,
                     rowY + rowHeight / 2,
