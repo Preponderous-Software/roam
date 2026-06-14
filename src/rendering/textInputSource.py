@@ -19,6 +19,17 @@ _ARROW_SEQUENCES = {
     "\x1bOD": KeyCode.LEFT,
 }
 
+# Control bytes whose terminal value differs from the KeyCode (SDL) value. In
+# cbreak mode the Enter key arrives as "\n" (CR translated to LF), not the
+# "\r" KeyCode.RETURN expects; the terminal sends DEL ("\x7f") for Backspace,
+# not "\x08". Map both forms so menus, save naming, etc. respond.
+_CONTROL_CHARS = {
+    "\n": KeyCode.RETURN,
+    "\r": KeyCode.RETURN,
+    "\x7f": KeyCode.BACKSPACE,
+    "\x08": KeyCode.BACKSPACE,
+}
+
 
 # @author Daniel McCoy Stephenson
 # @since June 14th, 2026
@@ -51,7 +62,10 @@ class TextInputSource(InputSource):
                 events.append(InputEvent(EventType.KEY_DOWN, key=KeyCode.ESCAPE))
                 index += 1
                 continue
-            events.append(InputEvent(EventType.KEY_DOWN, key=fromInt(ord(char))))
+            keyCode = _CONTROL_CHARS.get(char)
+            if keyCode is None:
+                keyCode = fromInt(ord(char))
+            events.append(InputEvent(EventType.KEY_DOWN, key=keyCode))
             if char.isprintable():
                 events.append(InputEvent(EventType.TEXT_INPUT, text=char))
             index += 1

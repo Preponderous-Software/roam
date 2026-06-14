@@ -97,3 +97,53 @@ def test_default_reader_decodes_an_arrow_over_a_real_pty():
         sys.stdin.close()
         sys.stdin = savedStdin
         os.close(master)
+
+
+def test_newline_and_carriage_return_map_to_return():
+    # cbreak delivers Enter as "\n"; raw mode as "\r" — both are Return.
+    for ch in ("\n", "\r"):
+        keys = [
+            e.key
+            for e in _sourceFeeding(ch).pollEvents()
+            if e.type is EventType.KEY_DOWN
+        ]
+        assert keys == [KeyCode.RETURN]
+
+
+def test_newline_does_not_also_emit_text_input():
+    types = [e.type for e in _sourceFeeding("\n").pollEvents()]
+    assert EventType.TEXT_INPUT not in types
+
+
+def test_del_and_backspace_bytes_map_to_backspace():
+    for ch in ("\x7f", "\x08"):
+        keys = [
+            e.key
+            for e in _sourceFeeding(ch).pollEvents()
+            if e.type is EventType.KEY_DOWN
+        ]
+        assert keys == [KeyCode.BACKSPACE]
+
+
+@pytest.mark.skipif(not hasattr(os, "openpty"), reason="needs a unix pty")
+def test_default_reader_decodes_enter_over_a_real_pty():
+    # The Enter key sends CR; under cbreak the terminal hands us LF. The real
+    # os.read path must still resolve it to Return.
+    import tty
+
+    master, slave = os.openpty()
+    tty.setcbreak(slave)
+    savedStdin = sys.stdin
+    try:
+        sys.stdin = os.fdopen(slave, "rb", buffering=0)
+        os.write(master, b"\r")
+        keys = [
+            e.key
+            for e in TextInputSource().pollEvents()
+            if e.type is EventType.KEY_DOWN
+        ]
+        assert keys == [KeyCode.RETURN]
+    finally:
+        sys.stdin.close()
+        sys.stdin = savedStdin
+        os.close(master)
