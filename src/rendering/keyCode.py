@@ -62,6 +62,7 @@ class KeyCode(IntEnum):
     MINUS = 45
     ESCAPE = 27
     RETURN = 13
+    KP_ENTER = 1073741912
     BACKSPACE = 8
     SPACE = 32
 
@@ -103,6 +104,7 @@ _DISPLAY_NAMES = {
     KeyCode.MINUS: "-",
     KeyCode.ESCAPE: "escape",
     KeyCode.RETURN: "return",
+    KeyCode.KP_ENTER: "enter",
     KeyCode.BACKSPACE: "backspace",
     KeyCode.SPACE: "space",
 }

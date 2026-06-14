@@ -1,18 +1,23 @@
 from appContainer import component
 from config.config import Config
 from rendering.renderer import Renderer
+from rendering.inputSource import InputSource
+from rendering.inputEvent import EventType
+from rendering.keyCode import KeyCode
 from screen.screenType import ScreenType
 from screen.screen import Screen
 from ui.status import Status
-import pygame
 from ui import palette
 
 
 # @author Daniel McCoy Stephenson
 @component
 class OptionsScreen(Screen):
-    def __init__(self, renderer: Renderer, config: Config, status: Status):
+    def __init__(
+        self, renderer: Renderer, inputSource: InputSource, config: Config, status: Status
+    ):
         self.renderer = renderer
+        self.inputSource = inputSource
         self.config = config
         self.status = status
         self.running = True
@@ -21,7 +26,7 @@ class OptionsScreen(Screen):
         self.confirmingMainMenu = False
 
     def handleKeyDownEvent(self, key):
-        if key == pygame.K_ESCAPE:
+        if key == KeyCode.ESCAPE:
             if self.confirmingMainMenu:
                 self.confirmingMainMenu = False
             else:
@@ -175,7 +180,7 @@ class OptionsScreen(Screen):
         )
 
     def handleEvent(self, event):
-        if event.type == pygame.KEYDOWN:
+        if event.type == EventType.KEY_DOWN:
             self.handleKeyDownEvent(event.key)
 
     def draw(self):

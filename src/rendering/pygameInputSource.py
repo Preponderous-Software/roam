@@ -2,7 +2,7 @@ import pygame
 
 from rendering.inputEvent import EventType, InputEvent
 from rendering.inputSource import InputSource
-from rendering.keyCode import fromInt
+from rendering.keyCode import KeyCode, fromInt
 
 
 # @author Daniel McCoy Stephenson
@@ -57,14 +57,26 @@ class PygameInputSource(InputSource):
             return InputEvent(self._SIMPLE_TYPES[eventType])
         return InputEvent(EventType.OTHER)
 
+    # Modifier KeyCodes are read from the key-mods bitmask, not get_pressed():
+    # their SDL keycodes are too large to index the get_pressed() array.
+    _MODIFIER_MASKS = {
+        KeyCode.LSHIFT: pygame.KMOD_LSHIFT,
+        KeyCode.RSHIFT: pygame.KMOD_RSHIFT,
+        KeyCode.LCTRL: pygame.KMOD_LCTRL,
+        KeyCode.RCTRL: pygame.KMOD_RCTRL,
+    }
+
     def isPressed(self, keyCode):
         if keyCode is None:
             return False
+        mask = self._MODIFIER_MASKS.get(keyCode)
+        if mask is not None:
+            return bool(pygame.key.get_mods() & mask)
         pressed = pygame.key.get_pressed()
         index = int(keyCode)
         # pygame.key.get_pressed() is indexed by keycode but only spans the
-        # lower range; large SDL keycodes (arrows, modifiers) fall outside it.
-        # Guard so an out-of-range query is a clean False rather than a crash.
+        # lower range; large SDL keycodes (arrows) fall outside it. Guard so an
+        # out-of-range query is a clean False rather than a crash.
         if 0 <= index < len(pressed):
             return bool(pressed[index])
         return False

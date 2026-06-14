@@ -1,6 +1,7 @@
 import os
 import shutil
 import tempfile
+from unittest.mock import MagicMock
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 import pygame
@@ -32,7 +33,13 @@ def createSaveSelectionScreen(savesDir):
     gameDisplay = pygame.display.set_mode((800, 600))
     graphik = Graphik(gameDisplay)
     initializeWorldScreen = lambda: None
-    screen = SaveSelectionScreen(PygameRenderer(graphik), config, initializeWorldScreen)
+    inputSource = MagicMock()
+    inputSource.getMousePosition.return_value = (0, 0)
+    inputSource.getMouseButtons.return_value = (False, False, False)
+    inputSource.pollEvents.return_value = []
+    screen = SaveSelectionScreen(
+        PygameRenderer(graphik), inputSource, config, initializeWorldScreen
+    )
     screen.savesBaseDirectory = savesDir
     return screen
 

@@ -5,6 +5,9 @@ from appContainer import component
 from config.config import Config
 
 from rendering.renderer import Renderer
+from rendering.inputSource import InputSource
+from rendering.inputEvent import EventType
+from rendering.keyCode import KeyCode
 from screen.screenType import ScreenType
 from screen.screen import Screen
 from update.updateChecker import UpdateChecker
@@ -15,9 +18,14 @@ from ui import palette
 @component
 class MainMenuScreen(Screen):
     def __init__(
-        self, renderer: Renderer, config: Config, updateChecker: UpdateChecker
+        self,
+        renderer: Renderer,
+        inputSource: InputSource,
+        config: Config,
+        updateChecker: UpdateChecker,
     ):
         self.renderer = renderer
+        self.inputSource = inputSource
         self.config = config
         self.updateChecker = updateChecker
         self.running = True
@@ -134,18 +142,18 @@ class MainMenuScreen(Screen):
         webbrowser.open(self.updateChecker.getReleasesUrl())
 
     def handleKeyDownEvent(self, key):
-        if key == pygame.K_ESCAPE:
+        if key == KeyCode.ESCAPE:
             self.quitApplication()
-        elif key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+        elif key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
             self.switchToSaveSelectionScreen()
-        elif key == pygame.K_u:
+        elif key == KeyCode.U:
             self.openUpdatePage()
 
     def onStart(self):
         self.updateChecker.checkForUpdatesAsync()
 
     def handleEvent(self, event):
-        if event.type == pygame.KEYDOWN:
+        if event.type == EventType.KEY_DOWN:
             self.handleKeyDownEvent(event.key)
 
     def draw(self):

@@ -4,10 +4,12 @@ from config.keyBindings import KeyBindings
 from inventory.inventory import Inventory
 from inventory.inventorySlot import InventorySlot
 from rendering.renderer import Renderer
+from rendering.inputSource import InputSource
+from rendering.inputEvent import EventType
+from rendering.keyCode import KeyCode
 from screen.screenType import ScreenType
 from screen.screen import Screen
 from ui.status import Status
-import pygame
 from ui import palette
 
 
@@ -29,12 +31,14 @@ class ChestScreen(Screen):
     def __init__(
         self,
         renderer: Renderer,
+        inputSource: InputSource,
         config: Config,
         status: Status,
         inventory: Inventory,
         keyBindings: KeyBindings,
     ):
         self.renderer = renderer
+        self.inputSource = inputSource
         self.config = config
         self.status = status
         self.inventory = inventory
@@ -103,7 +107,7 @@ class ChestScreen(Screen):
         self.renderer.drawRectangle(
             panelX, panelY, panelWidth, panelHeight, palette.BLACK
         )
-        mouseX, mouseY = pygame.mouse.get_pos()
+        mouseX, mouseY = self.inputSource.getMousePosition()
         hoveredItemName = None
         for index, slot, itemX, itemY, itemWidth, itemHeight in self._slotGeometry(
             inventory, panelRect
@@ -134,7 +138,7 @@ class ChestScreen(Screen):
 
     def _drawTooltip(self, itemName):
         screenWidth, screenHeight = self.renderer.getDisplaySize()
-        mouseX, mouseY = pygame.mouse.get_pos()
+        mouseX, mouseY = self.inputSource.getMousePosition()
         textWidth = len(itemName) * 8 + 12
         tooltipX = mouseX + 18
         tooltipY = mouseY + 18
@@ -179,7 +183,7 @@ class ChestScreen(Screen):
 
     def handleKeyDownEvent(self, key):
         kb = self.keyBindings
-        if key == kb.getKey("inventory") or key == pygame.K_ESCAPE:
+        if key == kb.getKey("inventory") or key == KeyCode.ESCAPE:
             self.switchToWorldScreen()
         elif key == kb.getKey("screenshot"):
             self.renderer.captureScreenshot()
@@ -287,7 +291,7 @@ class ChestScreen(Screen):
 
     def drawDropButton(self):
         buttonX, buttonY, buttonWidth, buttonHeight = self._dropButtonRect()
-        mouseX, mouseY = pygame.mouse.get_pos()
+        mouseX, mouseY = self.inputSource.getMousePosition()
         hovering = (
             buttonX <= mouseX <= buttonX + buttonWidth
             and buttonY <= mouseY <= buttonY + buttonHeight
@@ -356,7 +360,7 @@ class ChestScreen(Screen):
         if self.cursorSlot.isEmpty():
             return
         item = self.cursorSlot.getContents()[0]
-        cursorX, cursorY = pygame.mouse.get_pos()
+        cursorX, cursorY = self.inputSource.getMousePosition()
         scaledImage = self.renderer.scaleImage(
             self.renderer.loadImage(item.getImagePath()), (50, 50)
         )
@@ -388,11 +392,13 @@ class ChestScreen(Screen):
         )
 
     def handleEvent(self, event):
-        if event.type == pygame.KEYDOWN:
+        if event.type == EventType.KEY_DOWN:
             self.handleKeyDownEvent(event.key)
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            shift = bool(pygame.key.get_mods() & pygame.KMOD_SHIFT)
-            self.handleMouseClickEvent(event.pos, event.button, shift)
+        elif event.type == EventType.MOUSE_DOWN:
+            shift = self.inputSource.isPressed(KeyCode.LSHIFT) or self.inputSource.isPressed(
+                KeyCode.RSHIFT
+            )
+            self.handleMouseClickEvent(event.position, event.button, shift)
 
     def draw(self):
         self.renderer.clearScreen(palette.BLACK)

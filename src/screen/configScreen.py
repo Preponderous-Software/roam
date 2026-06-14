@@ -2,18 +2,23 @@ import time
 from appContainer import component
 from config.config import Config
 from rendering.renderer import Renderer
+from rendering.inputSource import InputSource
+from rendering.inputEvent import EventType
+from rendering.keyCode import KeyCode
 from screen.screenType import ScreenType
 from screen.screen import Screen
 from ui.status import Status
-import pygame
 from ui import palette
 
 
 # @author Daniel McCoy Stephenson
 @component
 class ConfigScreen(Screen):
-    def __init__(self, renderer: Renderer, config: Config, status: Status):
+    def __init__(
+        self, renderer: Renderer, inputSource: InputSource, config: Config, status: Status
+    ):
         self.renderer = renderer
+        self.inputSource = inputSource
         self.config = config
         self.status = status
         self.running = True
@@ -24,7 +29,7 @@ class ConfigScreen(Screen):
         self._toggleCooldown = 0.25
 
     def handleKeyDownEvent(self, key):
-        if key == pygame.K_ESCAPE:
+        if key == KeyCode.ESCAPE:
             self.switchToMainMenuScreen()
 
     def switchToMainMenuScreen(self):
@@ -124,18 +129,18 @@ class ConfigScreen(Screen):
         )
 
     def handleScrollEvent(self, event):
-        if event.y > 0:
+        if event.scrollY > 0:
             self.scrollOffset = max(0, self.scrollOffset - 1)
-        elif event.y < 0:
+        elif event.scrollY < 0:
             self.scrollOffset += 1
 
     def onStart(self):
         self.scrollOffset = 0
 
     def handleEvent(self, event):
-        if event.type == pygame.KEYDOWN:
+        if event.type == EventType.KEY_DOWN:
             self.handleKeyDownEvent(event.key)
-        elif event.type == pygame.MOUSEWHEEL:
+        elif event.type == EventType.MOUSE_WHEEL:
             self.handleScrollEvent(event)
 
     def draw(self):

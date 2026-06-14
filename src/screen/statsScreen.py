@@ -2,6 +2,9 @@ from appContainer import component
 from config.config import Config
 from config.keyBindings import KeyBindings
 from rendering.renderer import Renderer
+from rendering.inputSource import InputSource
+from rendering.inputEvent import EventType
+from rendering.keyCode import KeyCode
 from screen.screenType import ScreenType
 from screen.screen import Screen
 from stats.stats import Stats
@@ -17,6 +20,7 @@ class StatsScreen(Screen):
     def __init__(
         self,
         renderer: Renderer,
+        inputSource: InputSource,
         config: Config,
         status: Status,
         stats: Stats,
@@ -24,6 +28,7 @@ class StatsScreen(Screen):
         goals: Goals,
     ):
         self.renderer = renderer
+        self.inputSource = inputSource
         self.config = config
         self.status = status
         self.stats = stats
@@ -33,7 +38,7 @@ class StatsScreen(Screen):
         self.changeScreen = False
 
     def handleKeyDownEvent(self, key):
-        if key == pygame.K_ESCAPE:
+        if key == KeyCode.ESCAPE:
             self.switchToOptionsScreen()
         elif key == self.keyBindings.getKey("screenshot"):
             self.renderer.captureScreenshot()
@@ -130,7 +135,7 @@ class StatsScreen(Screen):
         )
 
     def handleEvent(self, event):
-        if event.type == pygame.KEYDOWN:
+        if event.type == EventType.KEY_DOWN:
             self.handleKeyDownEvent(event.key)
 
     def draw(self):

@@ -99,6 +99,7 @@ class Roam:
             SaveSelectionScreen,
             lambda: SaveSelectionScreen(
                 self.container.resolve(Renderer),
+                self.container.resolve(InputSource),
                 self.container.resolve(Config),
                 self.initializeWorldScreen,
             ),

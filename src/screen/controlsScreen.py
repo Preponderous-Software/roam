@@ -1,8 +1,10 @@
-import pygame
 from appContainer import component
 from config.config import Config
 from config.keyBindings import KeyBindings
 from rendering.renderer import Renderer
+from rendering.inputSource import InputSource
+from rendering.inputEvent import EventType
+from rendering.keyCode import KeyCode, displayName, fromInt
 from screen.screenType import ScreenType
 from screen.screen import Screen
 from ui import palette
@@ -12,8 +14,15 @@ from ui import palette
 # @since April 19th, 2026
 @component
 class ControlsScreen(Screen):
-    def __init__(self, renderer: Renderer, config: Config, keyBindings: KeyBindings):
+    def __init__(
+        self,
+        renderer: Renderer,
+        inputSource: InputSource,
+        config: Config,
+        keyBindings: KeyBindings,
+    ):
         self.renderer = renderer
+        self.inputSource = inputSource
         self.config = config
         self.keyBindings = keyBindings
         self.nextScreen = ScreenType.OPTIONS_SCREEN
@@ -79,7 +88,7 @@ class ControlsScreen(Screen):
             rowY = startY + i * rowHeight
             label = self.keyBindings.getLabel(action)
             key = bindings.get(action, self.keyBindings.DEFAULT_BINDINGS.get(action))
-            keyName = pygame.key.name(key) if key is not None else "None"
+            keyName = displayName(key if isinstance(key, KeyCode) else fromInt(key))
 
             isConflict = action in conflicts
             labelColor = (255, 100, 100) if isConflict else palette.WHITE
@@ -191,21 +200,24 @@ class ControlsScreen(Screen):
 
     def handleKeyDownEvent(self, key):
         if self.waitingForKey is not None:
-            if key == pygame.K_ESCAPE:
+            if key == KeyCode.ESCAPE:
                 self.waitingForKey = None
+                return
+            if key is None:
+                # An unmodeled key can't be bound; keep waiting for a real one.
                 return
             if self.pendingBindings is None:
                 self.pendingBindings = dict(self.keyBindings.bindings)
             self.pendingBindings[self.waitingForKey] = key
             self.waitingForKey = None
             return
-        if key == pygame.K_ESCAPE:
+        if key == KeyCode.ESCAPE:
             self.cancelAndReturn()
 
     def handleScrollEvent(self, event):
-        if event.y > 0:
+        if event.scrollY > 0:
             self.scrollOffset = max(0, self.scrollOffset - 1)
-        elif event.y < 0:
+        elif event.scrollY < 0:
             self.scrollOffset += 1
 
     def onStart(self):
@@ -214,9 +226,9 @@ class ControlsScreen(Screen):
         self.scrollOffset = 0
 
     def handleEvent(self, event):
-        if event.type == pygame.KEYDOWN:
+        if event.type == EventType.KEY_DOWN:
             self.handleKeyDownEvent(event.key)
-        elif event.type == pygame.MOUSEWHEEL:
+        elif event.type == EventType.MOUSE_WHEEL:
             self.handleScrollEvent(event)
 
     def draw(self):

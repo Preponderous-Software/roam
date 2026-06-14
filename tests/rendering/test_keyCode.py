@@ -11,6 +11,7 @@ def test_values_are_sdl_keycodes_for_config_back_compat():
     assert KeyCode.UP == 1073741906
     assert KeyCode.LSHIFT == 1073742049
     assert KeyCode.NUM_0 == 48
+    assert KeyCode.KP_ENTER == 1073741912
 
 
 def test_int_enum_compares_equal_to_raw_int():
