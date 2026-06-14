@@ -185,15 +185,36 @@ class SaveSelectionScreen(Screen):
                 self.newSaveNameInput = self.newSaveNameInput[:-1]
                 self.newSaveNameError = ""
             return
-        if key == KeyCode.ESCAPE:
-            if self.confirmingDelete is not None:
+        if self.confirmingDelete is not None:
+            # While confirming a delete, Esc cancels and any other key is ignored
+            # (the confirm/cancel buttons remain mouse-driven).
+            if key == KeyCode.ESCAPE:
                 self.confirmingDelete = None
-            else:
-                self.switchToMainMenuScreen()
+            return
+        if key == KeyCode.ESCAPE:
+            self.switchToMainMenuScreen()
         elif key == KeyCode.UP:
             self.scrollUp()
         elif key == KeyCode.DOWN:
             self.scrollDown()
+        elif key == KeyCode.RETURN:
+            self.selectHighlightedSave()
+        elif key == KeyCode.C:
+            self.startNamingNewSave()
+
+    def getHighlightedSaveIndex(self):
+        """The save the keyboard cursor is on — the first visible row."""
+        return self.scrollOffset
+
+    def selectHighlightedSave(self):
+        """Enter the world with the keyboard-highlighted save, or start naming a
+        new one if there are no saves yet (so Enter always does something)."""
+        saves = self.getSaveDirectories()
+        if saves:
+            index = min(self.getHighlightedSaveIndex(), len(saves) - 1)
+            self.selectSave(saves[index]["path"])
+        else:
+            self.startNamingNewSave()
 
     def drawTitle(self):
         x, y = self.renderer.getDisplaySize()
@@ -239,8 +260,10 @@ class SaveSelectionScreen(Screen):
                 scrollInfo, x / 2, ypos - 18, 14, palette.MEDIUM_GRAY
             )
 
-        for save in visibleSaves:
-            label = save["name"] + "  |  " + save["lastPlayed"]
+        for rowIndex, save in enumerate(visibleSaves):
+            # The first visible row is the keyboard-highlighted selection.
+            marker = "> " if interactive and rowIndex == 0 else ""
+            label = marker + save["name"] + "  |  " + save["lastPlayed"]
             savePath = save["path"]
             if interactive:
                 self.renderer.drawButton(
@@ -537,6 +560,18 @@ class SaveSelectionScreen(Screen):
             self.drawDeleteConfirmation()
         elif self.namingNewSave:
             self.drawNamingDialog()
+        else:
+            self.drawControlsHint()
+
+    def drawControlsHint(self):
+        x, y = self.renderer.getDisplaySize()
+        self.renderer.drawText(
+            "Up/Down: choose  -  Enter: play  -  C: new save  -  Esc: back",
+            x / 2,
+            y - 14,
+            16,
+            palette.MEDIUM_GRAY,
+        )
 
     def onExit(self):
         if self.nextScreen == ScreenType.WORLD_SCREEN:

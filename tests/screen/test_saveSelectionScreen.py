@@ -13,6 +13,9 @@ from src.screen.screenType import ScreenType
 from src.lib.graphik.src.graphik import Graphik
 from src.rendering.pygameRenderer import PygameRenderer
 
+# Production root so KeyCode identity matches what the screen compares against.
+from rendering.keyCode import KeyCode
+
 
 @pytest.fixture(scope="module", autouse=True)
 def init_pygame():
@@ -407,3 +410,40 @@ def test_deleteSave_rejects_outside_base(temp_saves_dir):
 
     assert os.path.exists(outsidePath)
     shutil.rmtree(outsidePath)
+
+
+def test_enter_selects_the_highlighted_save(temp_saves_dir):
+    os.makedirs(os.path.join(temp_saves_dir, "save_a"))
+    os.makedirs(os.path.join(temp_saves_dir, "save_b"))
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.refreshSaveCache()
+
+    screen.handleKeyDownEvent(KeyCode.RETURN)  # selects the top/highlighted save
+
+    assert screen.nextScreen == ScreenType.WORLD_SCREEN
+    assert screen.changeScreen is True
+
+
+def test_down_then_enter_selects_the_next_save(temp_saves_dir):
+    for name in ("save_a", "save_b"):
+        os.makedirs(os.path.join(temp_saves_dir, name))
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.refreshSaveCache()
+    expected = screen.getSaveDirectories()[1]["path"]
+
+    screen.handleKeyDownEvent(KeyCode.DOWN)
+    screen.handleKeyDownEvent(KeyCode.RETURN)
+
+    assert screen.config.pathToSaveDirectory == expected
+
+
+def test_c_starts_naming_a_new_save(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.handleKeyDownEvent(KeyCode.C)
+    assert screen.namingNewSave is True
+
+
+def test_enter_with_no_saves_starts_naming(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)  # empty dir
+    screen.handleKeyDownEvent(KeyCode.RETURN)
+    assert screen.namingNewSave is True
