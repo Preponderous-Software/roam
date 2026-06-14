@@ -1,3 +1,8 @@
+import os
+import sys
+
+import pytest
+
 from rendering.inputEvent import EventType
 from rendering.inputSource import InputSource
 from rendering.keyCode import KeyCode
@@ -67,3 +72,28 @@ def test_a_drained_burst_decodes_arrow_then_letter():
     source = _sourceFeeding("\x1b[Bw")  # down arrow immediately followed by 'w'
     keys = [e.key for e in source.pollEvents() if e.type is EventType.KEY_DOWN]
     assert keys == [KeyCode.DOWN, KeyCode.W]
+
+
+@pytest.mark.skipif(not hasattr(os, "openpty"), reason="needs a unix pty")
+def test_default_reader_decodes_an_arrow_over_a_real_pty():
+    # Exercises the actual os.read path (not the injected mock): a real tty fd,
+    # so this catches the buffering bug where select() and a buffered
+    # sys.stdin.read split an arrow's ESC [ A into a bare Escape.
+    import tty
+
+    master, slave = os.openpty()
+    tty.setcbreak(slave)  # what TextFrontend does — non-canonical, so no newline needed
+    savedStdin = sys.stdin
+    try:
+        sys.stdin = os.fdopen(slave, "rb", buffering=0)
+        os.write(master, b"\x1b[A")  # up arrow
+        keys = [
+            e.key
+            for e in TextInputSource().pollEvents()
+            if e.type is EventType.KEY_DOWN
+        ]
+        assert keys == [KeyCode.UP]
+    finally:
+        sys.stdin.close()
+        sys.stdin = savedStdin
+        os.close(master)

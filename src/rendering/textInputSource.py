@@ -75,22 +75,26 @@ _POLL_TIMEOUT_SECONDS = 0.02
 
 def _readStdinChars():
     """Return the characters currently waiting on stdin, blocking up to a short
-    timeout for the first one and then draining the rest (so a multi-byte arrow
-    escape sequence arrives as one unit). Returns "" when stdin is not an
-    interactive terminal (tests, pipes, CI)."""
+    timeout. Returns "" when stdin is not an interactive terminal (tests, pipes,
+    CI).
+
+    Reads via os.read on the raw file descriptor rather than sys.stdin.read so
+    select() and the read see the same bytes: sys.stdin is buffered, so it can
+    pull a whole escape sequence into Python's buffer while select() — which
+    only sees the fd — then reports nothing more, splitting an arrow key's
+    ESC [ A into a bare ESC. os.read grabs the entire pending burst at once."""
     try:
         if not sys.stdin.isatty():
             return ""
     except (ValueError, AttributeError):
         return ""
+    import os
     import select
 
-    ready, _, _ = select.select([sys.stdin], [], [], _POLL_TIMEOUT_SECONDS)
+    fd = sys.stdin.fileno()
+    ready, _, _ = select.select([fd], [], [], _POLL_TIMEOUT_SECONDS)
     if not ready:
         return ""
-    chars = []
-    while True:
-        chars.append(sys.stdin.read(1))
-        if not select.select([sys.stdin], [], [], 0)[0]:
-            break
-    return "".join(chars)
+    # The whole pending burst (a typed char, or an arrow's 3-byte sequence) is
+    # available in one non-blocking read.
+    return os.read(fd, 64).decode("utf-8", errors="ignore")
