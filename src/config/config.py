@@ -4,10 +4,9 @@ import os
 import shutil
 import sys
 
-import pygame
-
 from appPaths import getBundleDirectory
 from gameLogging.logger import getLogger
+from rendering.displayInfo import getScreenSize
 
 _logger = getLogger(__name__)
 
@@ -220,11 +219,10 @@ class Config:
         self.ensureUserConfigExists()
         configValues = self.readConfigFile()
         # Config is constructed before the frontend creates the window, so the
-        # video subsystem may not be up yet. Initialize the display module
-        # (idempotent) before querying it, so the default window size can be
-        # computed regardless of construction order.
-        pygame.display.init()
-        screenHeight = pygame.display.Info().current_h
+        # default window size is computed from the OS screen size via the
+        # frontend-adjacent displayInfo helper (which keeps the pygame display
+        # query out of this backend-neutral module — epic #433 / #463).
+        screenWidth, screenHeight = getScreenSize()
         displayDimensionDefault = screenHeight * 0.90
 
         # Resolve effective display dimensions: manual displayWidth /
@@ -242,7 +240,6 @@ class Config:
             savedH = float(savedH)
             savedW = max(savedW, self.MIN_WINDOW_SIZE)
             savedH = max(savedH, self.MIN_WINDOW_SIZE)
-            screenWidth = pygame.display.Info().current_w
             if savedW <= screenWidth and savedH <= screenHeight:
                 displayDimensionDefaultW = savedW
                 displayDimensionDefaultH = savedH
