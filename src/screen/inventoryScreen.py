@@ -12,7 +12,6 @@ from rendering.keyCode import KeyCode
 from screen.screenType import ScreenType
 from screen.screen import Screen
 from ui.status import Status
-import pygame
 from ui import palette
 
 
@@ -93,10 +92,6 @@ class InventoryScreen(Screen):
     def switchToWorldScreen(self):
         self.nextScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = True
-
-    def quitApplication(self):
-        pygame.quit()
-        quit()
 
     def drawPlayerInventory(self):
         backgroundX = self.renderer.getDisplayWidth() / 4

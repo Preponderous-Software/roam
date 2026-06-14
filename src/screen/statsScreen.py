@@ -10,7 +10,6 @@ from screen.screen import Screen
 from stats.stats import Stats
 from goals.goals import Goals
 from ui.status import Status
-import pygame
 from ui import palette
 
 
@@ -46,10 +45,6 @@ class StatsScreen(Screen):
     def switchToOptionsScreen(self):
         self.nextScreen = ScreenType.OPTIONS_SCREEN
         self.changeScreen = True
-
-    def quitApplication(self):
-        pygame.quit()
-        quit()
 
     def drawStats(self):
         x, y = self.renderer.getDisplaySize()
