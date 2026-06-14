@@ -12,7 +12,7 @@ from gameLogging.logger import getLogger
 from player.player import Player
 from lib.graphik.src.graphik import Graphik
 from rendering.renderer import Renderer
-from rendering.pygameRenderer import PygameRenderer
+from rendering.pygameFrontend import createFrontend
 from screen.configScreen import ConfigScreen
 from screen.controlsScreen import ControlsScreen
 from screen.codexScreen import CodexScreen
@@ -35,38 +35,37 @@ _logger = getLogger(__name__)
 # @since August 8th, 2022
 class Roam:
     def __init__(self, config: Config):
-        pygame.init()
-        pygame.display.set_icon(pygame.image.load("assets/images/player_down.png"))
         self.config = config
-        self.gameDisplay = self.initializeGameDisplay()
+        # The frontend owns the pygame window lifecycle; the game depends only
+        # on the Renderer it provides (epic #433).
+        self.frontend = createFrontend(config)
         self._initializeDependencies()
         _logger.info("game initialized", savePath=config.pathToSaveDirectory)
 
     def restart(self):
         """Reset all state for a new game session.
 
-        Re-initializes the pygame display with the current config dimensions
-        and clears cached singleton instances so all services are freshly
-        constructed via the DI container.
+        Rebuilds the display via the frontend with the current config
+        dimensions and clears cached singleton instances so all services are
+        freshly constructed via the DI container.
         """
-        self.gameDisplay = self.initializeGameDisplay()
+        self.frontend.reset()
         self._initializeDependencies()
 
     def _initializeDependencies(self):
         """Wire up the DI container and resolve all services and screens."""
         self.running = True
-        pygame.display.set_caption(
-            "Roam" + " (" + self.config.pathToSaveDirectory + ")"
-        )
+        self.frontend.setCaption("Roam" + " (" + self.config.pathToSaveDirectory + ")")
 
         # Create the DI container and register runtime dependencies.
         self.container = createContainer(self.config)
         self.tickCounter = self.container.resolve(TickCounter)
-        self.container.registerInstance(Graphik, Graphik(self.gameDisplay))
-        self.graphik = self.container.resolve(Graphik)
-        # Register the pygame Renderer (composes Graphik) so screens and HUD
-        # widgets can auto-wire the backend-neutral interface (epic #433).
-        self.container.registerInstance(Renderer, PygameRenderer(self.graphik))
+        # The frontend built the Graphik + Renderer; register both so the room
+        # pipeline (Graphik) and screens/HUD (Renderer) can auto-wire (epic #433).
+        self.graphik = self.frontend.getGraphik()
+        self.container.registerInstance(Graphik, self.graphik)
+        self.renderer = self.frontend.getRenderer()
+        self.container.registerInstance(Renderer, self.renderer)
         self.status = self.container.resolve(Status)
         self.stats = self.container.resolve(Stats)
         self.player = self.container.resolve(Player)
@@ -102,23 +101,13 @@ class Roam:
         self.saveSelectionScreen = self.container.resolve(SaveSelectionScreen)
         self.currentScreen = self.mainMenuScreen
 
-    def initializeGameDisplay(self):
-        if self.config.fullscreen:
-            return pygame.display.set_mode(
-                (self.config.displayWidth, self.config.displayHeight), pygame.FULLSCREEN
-            )
-        else:
-            return pygame.display.set_mode(
-                (self.config.displayWidth, self.config.displayHeight), pygame.RESIZABLE
-            )
-
     def initializeWorldScreen(self):
         self.worldScreen.initialize()
 
     def quitApplication(self):
-        w, h = self.gameDisplay.get_size()
+        w, h = self.renderer.getDisplaySize()
         self.config.saveWindowSize(w, h)
-        pygame.quit()
+        self.frontend.quit()
         quit()
 
     def run(self):
@@ -127,7 +116,7 @@ class Roam:
             if result == ScreenType.MAIN_MENU_SCREEN:
                 # Preserve current window dimensions so the restart
                 # does not shrink a maximized/resized window.
-                w, h = self.gameDisplay.get_size()
+                w, h = self.renderer.getDisplaySize()
                 self.config.displayWidth = w
                 self.config.displayHeight = h
                 self.config.saveWindowSize(w, h)
@@ -198,7 +187,6 @@ prepareWorkingDirectory()
 if "--selftest" in sys.argv:
     sys.exit(runSelfTest())
 
-pygame.init()
 config = Config()
 roam = Roam(config)
 while True:
