@@ -70,6 +70,11 @@ class PygameRenderer(Renderer):
             xpos, ypos, width, height, colorBox, colorText, sizeText, text, function
         )
 
+    def drawTranslucentOverlay(self, color):
+        overlay = pygame.Surface(self.getDisplaySize(), pygame.SRCALPHA)
+        overlay.fill(color)
+        self.drawImage(overlay, (0, 0))
+
     def drawImage(self, image, position):
         self._display().blit(image, position)
 

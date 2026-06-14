@@ -60,6 +60,12 @@ class Renderer(ABC):
         """Draw an immediate-mode button and invoke function when clicked."""
 
     @abstractmethod
+    def drawTranslucentOverlay(self, color):
+        """Fill the whole display with a translucent (R, G, B, A) color — e.g. a
+        pause/death dimming layer. Backends without alpha may approximate or
+        skip it."""
+
+    @abstractmethod
     def drawImage(self, image, position):
         """Draw an image at position (an (x, y) tuple or a rect-like dest)."""
 

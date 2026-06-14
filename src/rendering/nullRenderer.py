@@ -54,6 +54,9 @@ class NullRenderer(Renderer):
         # never invoked (mirrors the §5.1 "draw is pure" intent).
         pass
 
+    def drawTranslucentOverlay(self, color):
+        pass
+
     def drawImage(self, image, position):
         pass
 

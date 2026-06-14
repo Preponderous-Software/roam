@@ -58,6 +58,7 @@ def test_all_draw_operations_run_against_a_real_surface(renderer):
     renderer.drawRectangle(10, 10, 50, 50, palette.RED)
     renderer.drawText("smoke", 100, 100, 18, palette.WHITE)
     renderer.drawTextLeftAligned("left", 20, 120, 18, palette.WHITE)
+    renderer.drawTranslucentOverlay((0, 0, 0, 120))
     renderer.drawButton(
         10, 10, 80, 30, palette.WHITE, palette.BLACK, 16, "Ok", lambda: None
     )

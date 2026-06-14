@@ -47,6 +47,7 @@ def test_null_renderer_implements_the_renderer_interface():
     renderer.drawRectangle(0, 0, 10, 10, (1, 2, 3))
     renderer.drawText("x", 1, 1, 8, (1, 2, 3))
     renderer.drawTextLeftAligned("x", 1, 1, 8, (1, 2, 3))
+    renderer.drawTranslucentOverlay((0, 0, 0, 100))
     renderer.drawButton(0, 0, 1, 1, (0, 0, 0), (0, 0, 0), 8, "ok", lambda: None)
     renderer.setClipRegion(None)
     renderer.captureScreenshot()
