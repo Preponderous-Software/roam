@@ -2,14 +2,19 @@
 # @since April 20th, 2026
 from appContainer import component
 
-# All known living entity types for the codex.
-ALL_LIVING_ENTITY_TYPES = ["Bear", "Chicken"]
-
 # Maps entity class names to their asset image paths.
 ENTITY_IMAGE_PATHS = {
     "Bear": "assets/images/bear.png",
     "Chicken": "assets/images/chicken.png",
+    "Deer": "assets/images/deer.png",
+    "Rabbit": "assets/images/rabbit.png",
+    "Snake": "assets/images/snake.png",
+    "Wolf": "assets/images/wolf.png",
 }
+
+# All known living entity types for the codex (derived from the image map so the
+# two stay in sync as creatures are added).
+ALL_LIVING_ENTITY_TYPES = sorted(ENTITY_IMAGE_PATHS)
 
 
 @component

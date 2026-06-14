@@ -11,8 +11,7 @@ from entity.grass import Grass
 from entity.ironOre import IronOre
 from entity.jungleWood import JungleWood
 from entity.leaves import Leaves
-from entity.living.bear import Bear
-from entity.living.chicken import Chicken
+from entity.living.livingEntityRegistry import LIVING_ENTITY_TYPES
 from entity.matureCrop import MatureCrop
 from entity.oakWood import OakWood
 from entity.stone import Stone
@@ -34,8 +33,9 @@ PICKUPABLE_TYPES = (
     Stone,
     CoalOre,
     IronOre,
-    Chicken,
-    Bear,
+    # Every spawnable creature (Chicken, Bear + the rest) from the shared
+    # registry; excludes Player, which is not in the registry.
+    *LIVING_ENTITY_TYPES.values(),
     Banana,
     ChickenMeat,
     BearMeat,

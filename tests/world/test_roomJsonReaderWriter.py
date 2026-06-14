@@ -17,6 +17,10 @@ from entity.jungleWood import JungleWood
 from entity.leaves import Leaves
 from entity.living.bear import Bear
 from entity.living.chicken import Chicken
+from entity.living.deer import Deer
+from entity.living.rabbit import Rabbit
+from entity.living.snake import Snake
+from entity.living.wolf import Wolf
 from entity.matureCrop import MatureCrop
 from entity.oakWood import OakWood
 from entity.stone import Stone
@@ -46,7 +50,7 @@ def createEntityJson(entityClass):
     }
     if entityClass in ["Apple", "Banana", "ChickenMeat", "BearMeat", "Wheat"]:
         entityJson["energy"] = 25
-    if entityClass in ["Bear", "Chicken"]:
+    if entityClass in ["Bear", "Chicken", "Deer", "Rabbit", "Snake", "Wolf"]:
         entityJson["energy"] = 80
         entityJson["tickCreated"] = 100
         entityJson["tickLastReproduced"] = 200
@@ -80,6 +84,10 @@ def createEntityJson(entityClass):
         ("Campfire", Campfire),
         ("Bear", Bear),
         ("Chicken", Chicken),
+        ("Deer", Deer),
+        ("Rabbit", Rabbit),
+        ("Snake", Snake),
+        ("Wolf", Wolf),
         ("Excrement", Excrement),
         ("WheatSeed", WheatSeed),
         ("Wheat", Wheat),

@@ -1,10 +1,45 @@
 import jsonschema
+import pytest
 
+from entity.living.livingEntityRegistry import LIVING_ENTITY_TYPES
 from inventory.inventoryJsonReaderWriter import InventoryJsonReaderWriter
 
 
 def _raiseValidationError(*args, **kwargs):
     raise jsonschema.exceptions.ValidationError("forced validation failure")
+
+
+def _itemsIn(inventory):
+    return [
+        item
+        for slot in inventory.getInventorySlots()
+        for item in slot.getContents()
+    ]
+
+
+@pytest.mark.parametrize("creatureName", sorted(LIVING_ENTITY_TYPES))
+def test_picked_up_creature_round_trips(
+    creatureName, resolve, tmp_path, test_config
+):
+    # A creature carried in the inventory must survive save/load as the same
+    # species with its tick metadata intact.
+    test_config.pathToSaveDirectory = str(tmp_path)
+    readerWriter = resolve(InventoryJsonReaderWriter)
+    inventory = readerWriter.loadInventory("tests/inventory/inventory.json")
+
+    creature = LIVING_ENTITY_TYPES[creatureName](123)
+    creature.setTickLastReproduced(456)
+    inventory.placeIntoFirstAvailableInventorySlot(creature)
+
+    savePath = str(tmp_path / "creature_inventory.json")
+    readerWriter.saveInventory(inventory, savePath)
+    restored = readerWriter.loadInventory(savePath)
+
+    items = _itemsIn(restored)
+    assert len(items) == 1
+    assert type(items[0]).__name__ == creatureName
+    assert items[0].getTickCreated() == 123
+    assert items[0].getTickLastReproduced() == 456
 
 
 def test_initialization(resolve):

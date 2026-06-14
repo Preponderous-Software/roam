@@ -20,9 +20,8 @@ from entity.gravestone import Gravestone
 from entity.ironOre import IronOre
 from entity.jungleWood import JungleWood
 from entity.leaves import Leaves
-from entity.living.bear import Bear
-from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
+from entity.living.livingEntityRegistry import LIVING_ENTITY_TYPES
 from entity.matureCrop import MatureCrop
 from entity.oakWood import OakWood
 from entity.stone import Stone
@@ -252,10 +251,9 @@ class RoomJsonReaderWriter:
         return red, green, blue
 
     def _createEntity(self, entityClass, entityJson):
-        if entityClass == "Bear":
-            return Bear(entityJson["tickCreated"])
-        if entityClass == "Chicken":
-            return Chicken(entityJson["tickCreated"])
+        livingEntityConstructor = LIVING_ENTITY_TYPES.get(entityClass)
+        if livingEntityConstructor is not None:
+            return livingEntityConstructor(entityJson["tickCreated"])
         if entityClass == "Excrement":
             return Excrement(entityJson["tickCreated"])
         if entityClass == "YoungCrop":
@@ -312,13 +310,9 @@ class RoomJsonReaderWriter:
     def _createStoredItem(self, itemJson):
         entityClass = itemJson["entityClass"]
 
-        if entityClass == "Bear":
-            item = Bear(itemJson["tickCreated"])
-            item.setEnergy(itemJson["energy"])
-            item.setTickLastReproduced(itemJson["tickLastReproduced"])
-            item.setImagePath(itemJson["imagePath"])
-        elif entityClass == "Chicken":
-            item = Chicken(itemJson["tickCreated"])
+        livingEntityConstructor = LIVING_ENTITY_TYPES.get(entityClass)
+        if livingEntityConstructor is not None:
+            item = livingEntityConstructor(itemJson["tickCreated"])
             item.setEnergy(itemJson["energy"])
             item.setTickLastReproduced(itemJson["tickLastReproduced"])
             item.setImagePath(itemJson["imagePath"])

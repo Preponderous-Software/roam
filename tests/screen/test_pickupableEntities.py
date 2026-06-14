@@ -1,12 +1,28 @@
+import pytest
+
 from entity.apple import Apple
 from entity.chest import Chest
 from entity.gravestone import Gravestone
+from entity.living.livingEntityRegistry import LIVING_ENTITY_TYPES
 from entity.oakWood import OakWood
+from player.player import Player
 from screen.pickupableEntities import canBePickedUp
 
 
 def test_common_resource_can_be_picked_up():
     assert canBePickedUp(OakWood()) is True
+
+
+@pytest.mark.parametrize("creatureClass", LIVING_ENTITY_TYPES.values())
+def test_every_registered_creature_can_be_picked_up(creatureClass):
+    # All spawnable creatures (chickens, bears, and the newer fauna) are
+    # carryable, so each must report as pickupable.
+    assert canBePickedUp(creatureClass(0)) is True
+
+
+def test_player_cannot_be_picked_up():
+    # The player is a LivingEntity but must never be pickupable.
+    assert canBePickedUp(Player(0)) is False
 
 
 def test_gravestone_cannot_be_picked_up():

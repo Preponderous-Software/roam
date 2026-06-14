@@ -16,9 +16,8 @@ from entity.grass import Grass
 from entity.ironOre import IronOre
 from entity.jungleWood import JungleWood
 from entity.leaves import Leaves
-from entity.living.bear import Bear
-from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
+from entity.living.livingEntityRegistry import LIVING_ENTITY_TYPES
 from entity.matureCrop import MatureCrop
 from entity.oakWood import OakWood
 from entity.stone import Stone
@@ -65,11 +64,10 @@ _SIMPLE_ENTITY_CONSTRUCTORS = {
 # Food entity classes that have a restorable energy value
 _FOOD_ENTITY_CLASSES = {"Apple", "Banana", "ChickenMeat", "BearMeat", "Wheat"}
 
-# Living entity classes that need a tickCreated constructor argument
-_LIVING_ENTITY_CONSTRUCTORS = {
-    "Bear": Bear,
-    "Chicken": Chicken,
-}
+# Living entity classes that need a tickCreated constructor argument. Sourced
+# from the shared registry so picked-up creatures persist without re-listing
+# each one here.
+_LIVING_ENTITY_CONSTRUCTORS = LIVING_ENTITY_TYPES
 
 # Crop entity classes that need a tickPlanted constructor argument
 _CROP_ENTITY_CONSTRUCTORS = {
