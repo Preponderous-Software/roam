@@ -6,6 +6,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from rendering.inputEvent import EventType, InputEvent
+
 from entity.apple import Apple
 from inventory.inventory import Inventory
 from screen.worldScreen import WorldScreen
@@ -19,9 +21,7 @@ def _worldScreen():
 
 
 def _wheelEvent(y):
-    event = MagicMock()
-    event.y = y
-    return event
+    return InputEvent(EventType.MOUSE_WHEEL, scrollY=y)
 
 
 # ---------------------------------------------------------------------------

@@ -26,6 +26,9 @@ from ui.energyBar import EnergyBar
 from goals.goals import Goals
 from goals.goalsJsonReaderWriter import GoalsJsonReaderWriter
 from rendering.renderer import Renderer
+from rendering.inputSource import InputSource
+from rendering.inputEvent import EventType
+from rendering.keyCode import KeyCode
 from entity.grass import Grass
 from lib.pyenvlib.grid import Grid
 from entity.stone import Stone
@@ -69,6 +72,7 @@ class WorldScreen:
     def __init__(
         self,
         renderer: Renderer,
+        inputSource: InputSource,
         config: Config,
         status: Status,
         tickCounter: TickCounter,
@@ -78,6 +82,7 @@ class WorldScreen:
         keyBindings: KeyBindings,
     ):
         self.renderer = renderer
+        self.inputSource = inputSource
         self.config = config
         self.status = status
         self.tickCounter = tickCounter
@@ -470,7 +475,7 @@ class WorldScreen:
         return _canBePickedUp(entity)
 
     def getLocationAndRoomAtMousePosition(self):
-        x, y = pygame.mouse.get_pos()
+        x, y = self.inputSource.getMousePosition()
         gameArea = self.renderer.getGameAreaRect()
         if self.config.cameraFollowPlayer:
             playerLocation = self.getLocationOfPlayer()
@@ -891,7 +896,7 @@ class WorldScreen:
 
     def handleKeyDownEvent(self, key):
         kb = self.keyBindings
-        if key == pygame.K_ESCAPE:
+        if key == KeyCode.ESCAPE:
             if self.showHelp:
                 self.showHelp = False
                 return
@@ -1600,7 +1605,7 @@ class WorldScreen:
         self.renderer.present()
 
     def getHotbarSlotAtMousePosition(self):
-        x, y = pygame.mouse.get_pos()
+        x, y = self.inputSource.getMousePosition()
         displayWidth = self.renderer.getDisplayWidth()
         displayHeight = self.renderer.getDisplayHeight()
         hotbarOx, hotbarOy = self.hudDragManager.getOffset("hotbar")
@@ -1642,10 +1647,10 @@ class WorldScreen:
         item = self.cursorSlot.getContents()[0]
         image = self.renderer.loadImage(item.getImagePath())
         scaledImage = self.renderer.scaleImage(image, (50, 50))
-        self.renderer.drawImage(scaledImage, pygame.mouse.get_pos())
+        self.renderer.drawImage(scaledImage, self.inputSource.getMousePosition())
         numItems = self.cursorSlot.getNumItems()
         if numItems > 1:
-            mouseX, mouseY = pygame.mouse.get_pos()
+            mouseX, mouseY = self.inputSource.getMousePosition()
             self.renderer.drawText(
                 str(numItems),
                 mouseX + 30,
@@ -1657,7 +1662,7 @@ class WorldScreen:
     def _handleHotbarClick(self, hotbarIndex):
         inventory = self.player.getInventory()
         hotbarSlot = inventory.getInventorySlots()[hotbarIndex]
-        if pygame.mouse.get_pressed()[2]:  # right click
+        if self.inputSource.getMouseButtons()[2]:  # right click
             if not self.cursorSlot.isEmpty():
                 # place cursor item into clicked hotbar slot
                 if hotbarSlot.isEmpty():
@@ -1685,7 +1690,7 @@ class WorldScreen:
                     self.status.set("Inventory full")
                 else:
                     self.status.set("Moved to inventory")
-        elif pygame.mouse.get_pressed()[0]:  # left click
+        elif self.inputSource.getMouseButtons()[0]:  # left click
             if self.cursorSlot.isEmpty():
                 if not hotbarSlot.isEmpty():
                     self.cursorSlot.setContents(hotbarSlot.getContents())
@@ -1702,15 +1707,15 @@ class WorldScreen:
                 self.cursorSlot.setContents(temp)
 
     def _handleWorldClick(self):
-        if pygame.mouse.get_pressed()[0]:  # left click
+        if self.inputSource.getMouseButtons()[0]:  # left click
             self.player.setGathering(True)
-        elif pygame.mouse.get_pressed()[2]:  # right click
+        elif self.inputSource.getMouseButtons()[2]:  # right click
             self.player.setPlacing(True)
 
     def handleMouseDownEvent(self, event):
         # Middle-click initiates HUD drag
         if event.button == MIDDLE_MOUSE_BUTTON:
-            mx, my = pygame.mouse.get_pos()
+            mx, my = self.inputSource.getMousePosition()
             self.hudDragManager.handleMouseDown(mx, my)
             return
 
@@ -1734,27 +1739,27 @@ class WorldScreen:
     def handleMouseUpEvent(self, event):
         # Finish HUD drag on middle-button release
         if event.button == MIDDLE_MOUSE_BUTTON and self.hudDragManager.isDragging():
-            mx, my = pygame.mouse.get_pos()
+            mx, my = self.inputSource.getMousePosition()
             sw = self.renderer.getDisplayWidth()
             sh = self.renderer.getDisplayHeight()
             self.hudDragManager.handleMouseUp(mx, my, sw, sh)
             return
-        if not pygame.mouse.get_pressed()[0]:
+        if not self.inputSource.getMouseButtons()[0]:
             self.player.setGathering(False)
-        if not pygame.mouse.get_pressed()[2]:
+        if not self.inputSource.getMouseButtons()[2]:
             self.player.setPlacing(False)
 
     def handleMouseMotionEvent(self):
         if self.hudDragManager.isDragging():
-            mx, my = pygame.mouse.get_pos()
+            mx, my = self.inputSource.getMousePosition()
             sw = self.renderer.getDisplayWidth()
             sh = self.renderer.getDisplayHeight()
             self.hudDragManager.handleMouseMotion(mx, my, sw, sh)
 
     def handleMouseWheelEvent(self, event):
-        if event.y != 0:
+        if event.scrollY != 0:
             current = self.player.getInventory().getSelectedInventorySlotIndex()
-            delta = -1 if event.y > 0 else 1
+            delta = -1 if event.scrollY > 0 else 1
             # Route through changeSelectedInventorySlot so a wheel-cycle announces
             # the newly selected slot the same way the number keys do.
             self.changeSelectedInventorySlot((current + delta) % 10)
@@ -1970,32 +1975,29 @@ class WorldScreen:
         self.mapImageUpdater.shutdown(wait=True)
 
     def _processEvents(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+        for event in self.inputSource.pollEvents():
+            if event.type == EventType.QUIT:
                 self.printStatsToConsole()
                 self.nextScreen = ScreenType.NONE
                 self.changeScreen = True
-            elif event.type == pygame.KEYDOWN:
+            elif event.type == EventType.KEY_DOWN:
                 self.handleKeyDownEvent(event.key)
-            elif event.type == pygame.KEYUP:
+            elif event.type == EventType.KEY_UP:
                 self.handleKeyUpEvent(event.key)
-            elif event.type == pygame.WINDOWRESIZED:
+            elif event.type == EventType.WINDOW_RESIZE:
                 self.initializeLocationWidthAndHeight()
                 self.updateConfigWindowSize()
-            elif event.type == pygame.VIDEORESIZE:
-                self.initializeLocationWidthAndHeight()
-                self.updateConfigWindowSize()
-            elif event.type == pygame.WINDOWFOCUSLOST:
+            elif event.type == EventType.FOCUS_LOST:
                 self.pausedByFocusLoss = True
-            elif event.type == pygame.WINDOWFOCUSGAINED:
+            elif event.type == EventType.FOCUS_GAINED:
                 self.pausedByFocusLoss = False
-            elif event.type == pygame.MOUSEBUTTONDOWN:
+            elif event.type == EventType.MOUSE_DOWN:
                 self.handleMouseDownEvent(event)
-            elif event.type == pygame.MOUSEBUTTONUP:
+            elif event.type == EventType.MOUSE_UP:
                 self.handleMouseUpEvent(event)
-            elif event.type == pygame.MOUSEMOTION:
+            elif event.type == EventType.MOUSE_MOTION:
                 self.handleMouseMotionEvent()
-            elif event.type == pygame.MOUSEWHEEL:
+            elif event.type == EventType.MOUSE_WHEEL:
                 self.handleMouseWheelEvent(event)
 
     def _updateLivingEntities(self):
