@@ -22,12 +22,19 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="${{ github.ref_name }}"
+          # While the major version is 0 (pre-1.0), publish as a pre-release.
+          # Drops off automatically at 1.0.0 — no edit needed.
+          prerelease=()
+          if [[ "$tag" == 0.* ]]; then
+            prerelease=(--prerelease)
+          fi
           if ! gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             gh release create "$tag" \
               --repo "${{ github.repository }}" \
               --title "Roam $tag" \
               --generate-notes \
-              --verify-tag
+              --verify-tag \
+              "${prerelease[@]}"
           fi
 
   windows:
