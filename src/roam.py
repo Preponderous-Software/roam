@@ -12,6 +12,7 @@ from gameLogging.logger import getLogger
 from player.player import Player
 from lib.graphik.src.graphik import Graphik
 from rendering.renderer import Renderer
+from rendering.inputSource import InputSource
 from rendering.pygameFrontend import createFrontend
 from screen.configScreen import ConfigScreen
 from screen.controlsScreen import ControlsScreen
@@ -66,6 +67,10 @@ class Roam:
         self.container.registerInstance(Graphik, self.graphik)
         self.renderer = self.frontend.getRenderer()
         self.container.registerInstance(Renderer, self.renderer)
+        # The input seam (epic #433, Phase 4): register the InputSource so
+        # screens can read events/key state through it instead of pygame.
+        self.inputSource = self.frontend.getInputSource()
+        self.container.registerInstance(InputSource, self.inputSource)
         self.status = self.container.resolve(Status)
         self.stats = self.container.resolve(Stats)
         self.player = self.container.resolve(Player)
