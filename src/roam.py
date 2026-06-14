@@ -13,6 +13,7 @@ from player.player import Player
 from lib.graphik.src.graphik import Graphik
 from rendering.renderer import Renderer
 from rendering.inputSource import InputSource
+from rendering.clock import Clock
 from rendering.pygameFrontend import createFrontend
 from screen.configScreen import ConfigScreen
 from screen.controlsScreen import ControlsScreen
@@ -71,6 +72,10 @@ class Roam:
         # screens can read events/key state through it instead of pygame.
         self.inputSource = self.frontend.getInputSource()
         self.container.registerInstance(InputSource, self.inputSource)
+        # Frame pacing through the Clock seam (#463) so worldScreen's game loop
+        # no longer references pygame.time directly.
+        self.clock = self.frontend.getClock()
+        self.container.registerInstance(Clock, self.clock)
         self.status = self.container.resolve(Status)
         self.stats = self.container.resolve(Stats)
         self.player = self.container.resolve(Player)
