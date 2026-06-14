@@ -25,6 +25,20 @@ def isolate_config_file(tmp_path, monkeypatch):
     )
 
 
+def test_init_brings_up_display_when_video_not_initialized():
+    # Regression: Config is constructed before the frontend initializes pygame,
+    # so the video subsystem may be down. Config must bring up the display
+    # itself rather than raising "video system not initialized".
+    pygame.display.quit()
+    assert not pygame.display.get_init()
+
+    config = Config()  # must not raise pygame.error
+
+    assert pygame.display.get_init()
+    assert config.displayHeight > 0
+    assert config.displayWidth > 0
+
+
 def test_defaults():
     config = Config()
 
@@ -127,7 +141,9 @@ def test_ensure_user_config_seeds_from_bundled(monkeypatch, tmp_path):
     bundled.write_text("debug: false\n", encoding="utf-8")
     user = tmp_path / "user" / "config.yml"
     monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: user))
-    monkeypatch.setattr(Config, "getBundledConfigFilePath", staticmethod(lambda: bundled))
+    monkeypatch.setattr(
+        Config, "getBundledConfigFilePath", staticmethod(lambda: bundled)
+    )
 
     Config.ensureUserConfigExists()
 
@@ -153,7 +169,9 @@ def test_ensure_user_config_noop_when_user_already_exists(monkeypatch, tmp_path)
     user = tmp_path / "user.yml"
     user.write_text("debug: true\n", encoding="utf-8")
     monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: user))
-    monkeypatch.setattr(Config, "getBundledConfigFilePath", staticmethod(lambda: bundled))
+    monkeypatch.setattr(
+        Config, "getBundledConfigFilePath", staticmethod(lambda: bundled)
+    )
 
     Config.ensureUserConfigExists()
 
@@ -227,9 +245,7 @@ def test_handles_read_errors_with_defaults(tmp_path, monkeypatch):
     # IsADirectoryError (an OSError), so Config must fall back to defaults.
     unreadable = tmp_path / "config_dir"
     unreadable.mkdir()
-    monkeypatch.setattr(
-        Config, "getConfigFilePath", staticmethod(lambda: unreadable)
-    )
+    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: unreadable))
 
     config = Config()
 
