@@ -1,6 +1,5 @@
 import random
 
-import pygame
 from entity.excrement import Excrement
 from entity.grass import Grass
 from entity.matureCrop import MatureCrop
@@ -11,7 +10,7 @@ from entity.living.livingEntity import LivingEntity
 from entity.stoneFloor import StoneFloor
 from entity.woodFloor import WoodFloor
 from lib.pyenvlib.environment import Environment
-from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
 from gameLogging.logger import getLogger
 
 _logger = getLogger(__name__)
@@ -22,12 +21,12 @@ _logger = getLogger(__name__)
 class Room(Environment):
     _scaledImageCache = {}
 
-    def __init__(self, name, gridSize, backgroundColor, x, y, graphik: Graphik):
+    def __init__(self, name, gridSize, backgroundColor, x, y, renderer: Renderer):
         Environment.__init__(self, name, gridSize)
         self.backgroundColor = backgroundColor
         self.x = x
         self.y = y
-        self.graphik = graphik
+        self.renderer = renderer
         self.livingEntities = dict()
 
     def getBackgroundColor(self):
@@ -75,7 +74,7 @@ class Room(Environment):
 
     def drawLocation(self, location, xPos, yPos, width, height):
         # transparent images require the background color to be drawn first
-        self.graphik.drawRectangle(xPos, yPos, width, height, self.backgroundColor)
+        self.renderer.drawRectangle(xPos, yPos, width, height, self.backgroundColor)
         if location.getNumEntities() > 0:
             topEntityId = list(location.getEntities().keys())[-1]
             topEntity = location.getEntities()[topEntityId]
@@ -84,13 +83,11 @@ class Room(Environment):
             scaledHeight = int(height)
             cacheKey = (imagePath, scaledWidth, scaledHeight)
             if cacheKey not in Room._scaledImageCache:
-                image = topEntity.getImage()
-                Room._scaledImageCache[cacheKey] = pygame.transform.scale(
+                image = self.renderer.loadImage(imagePath)
+                Room._scaledImageCache[cacheKey] = self.renderer.scaleImage(
                     image, (scaledWidth, scaledHeight)
                 )
-            self.graphik.gameDisplay.blit(
-                Room._scaledImageCache[cacheKey], (xPos, yPos)
-            )
+            self.renderer.drawImage(Room._scaledImageCache[cacheKey], (xPos, yPos))
 
     def addLivingEntity(self, entity):
         self.livingEntities[entity.getID()] = entity

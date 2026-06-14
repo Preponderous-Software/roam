@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from config.config import Config
 from gameLogging.logger import getLogger
-from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
 from world.map import Map
 from world.tickCounter import TickCounter
 
@@ -22,13 +22,13 @@ class RoomPreloader:
     def __init__(
         self,
         gridSize,
-        graphik: Graphik,
+        renderer: Renderer,
         tickCounter: TickCounter,
         config: Config,
         roomJsonReaderWriterFactory=None,
     ):
         self.gridSize = gridSize
-        self.graphik = graphik
+        self.renderer = renderer
         self.tickCounter = tickCounter
         self.config = config
         self._roomJsonReaderWriterFactory = roomJsonReaderWriterFactory

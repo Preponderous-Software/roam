@@ -3,7 +3,7 @@ import random
 import threading
 from config.config import Config
 from gameLogging.logger import getLogger
-from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
 from lib.pyenvlib.entity import Entity
 from world.roomFactory import RoomFactory
 from world.roomJsonReaderWriter import RoomJsonReaderWriter
@@ -19,7 +19,7 @@ class Map:
     def __init__(
         self,
         gridSize,
-        graphik: Graphik,
+        renderer: Renderer,
         tickCounter: TickCounter,
         config: Config,
         roomFactory: RoomFactory = None,
@@ -30,11 +30,11 @@ class Map:
         self._lock = threading.Lock()
         self._freshlyGeneratedRooms = set()
         self.gridSize = gridSize
-        self.graphik = graphik
+        self.renderer = renderer
         self.tickCounter = tickCounter
         self.config = config
         self.roomFactory = roomFactory or RoomFactory(
-            self.gridSize, self.graphik, self.tickCounter
+            self.gridSize, self.renderer, self.tickCounter
         )
         self._roomJsonReaderWriterFactory = roomJsonReaderWriterFactory
 
@@ -59,7 +59,7 @@ class Map:
                 roomJsonReaderWriter = self._roomJsonReaderWriterFactory()
             else:
                 roomJsonReaderWriter = RoomJsonReaderWriter(
-                    self.gridSize, self.graphik, self.tickCounter, self.config
+                    self.gridSize, self.renderer, self.tickCounter, self.config
                 )
             room = roomJsonReaderWriter.loadRoom(nextRoomPath)
             if room is None:

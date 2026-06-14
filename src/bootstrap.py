@@ -10,7 +10,7 @@ from appContainer import container
 from di import Container
 
 from config.config import Config
-from lib.graphik.src.graphik import Graphik
+from rendering.renderer import Renderer
 from gameLogging.logger import LoggerFactory
 from player.player import Player
 from world.map import Map
@@ -41,7 +41,7 @@ def createContainer(config):
         RoomJsonReaderWriter,
         lambda: RoomJsonReaderWriter(
             container.resolve(Config).gridSize,
-            container.resolve(Graphik),
+            container.resolve(Renderer),
             container.resolve(TickCounter),
             container.resolve(Config),
         ),
@@ -51,7 +51,7 @@ def createContainer(config):
         RoomFactory,
         lambda: RoomFactory(
             container.resolve(Config).gridSize,
-            container.resolve(Graphik),
+            container.resolve(Renderer),
             container.resolve(TickCounter),
         ),
         lifetime="transient",
@@ -60,7 +60,7 @@ def createContainer(config):
         Map,
         lambda: Map(
             container.resolve(Config).gridSize,
-            container.resolve(Graphik),
+            container.resolve(Renderer),
             container.resolve(TickCounter),
             container.resolve(Config),
             roomFactory=container.resolve(RoomFactory),
@@ -72,7 +72,7 @@ def createContainer(config):
         RoomPreloader,
         lambda: RoomPreloader(
             container.resolve(Config).gridSize,
-            container.resolve(Graphik),
+            container.resolve(Renderer),
             container.resolve(TickCounter),
             container.resolve(Config),
             roomJsonReaderWriterFactory=lambda: container.resolve(RoomJsonReaderWriter),
