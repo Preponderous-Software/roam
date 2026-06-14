@@ -1,6 +1,5 @@
 import webbrowser
 
-import pygame
 from appContainer import component
 from config.config import Config
 
@@ -42,8 +41,11 @@ class MainMenuScreen(Screen):
         self.changeScreen = True
 
     def quitApplication(self):
-        pygame.quit()
-        quit()
+        # Request shutdown the backend-neutral way: returning NONE to the main
+        # loop lets Roam.quitApplication do the real teardown (save window size,
+        # frontend.quit()) instead of calling pygame directly here.
+        self.nextScreen = ScreenType.NONE
+        self.changeScreen = True
 
     def drawText(self):
         x, y = self.renderer.getDisplaySize()
