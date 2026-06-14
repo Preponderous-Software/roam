@@ -3,7 +3,7 @@ import pygame
 from gameLogging.logger import getLogger
 from lib.graphik.src.graphik import Graphik
 from rendering.renderer import Renderer
-from screen.screenshotHelper import takeScreenshot
+from rendering.screenshotHelper import takeScreenshot
 from ui import palette
 
 _logger = getLogger(__name__)
