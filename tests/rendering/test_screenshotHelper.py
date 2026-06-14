@@ -4,7 +4,7 @@ import sys
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 from src.config.config import Config
-from src.screen.screenshotHelper import getScreenshotsFolder
+from src.rendering.screenshotHelper import getScreenshotsFolder
 
 
 def test_screenshots_folder_is_in_user_data_directory(monkeypatch):
