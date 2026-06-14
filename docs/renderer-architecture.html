@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Roam — Backend-Agnostic Frontend Architecture</title>
+<style>
+  :root {
+    --bg: #0e1116; --panel: #161b22; --panel2: #1c232d; --border: #2b333d;
+    --text: #e6edf3; --muted: #9aa7b4; --accent: #f0b429; --accent2: #58a6ff;
+    --green: #3fb950; --yellow: #d29922; --gray: #6e7681; --red: #f85149;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  a { color: var(--accent2); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 22px 90px; }
+  header.hero {
+    padding: 64px 22px 40px; text-align: center;
+    background: radial-gradient(1200px 380px at 50% -120px, #1d2735 0%, var(--bg) 70%);
+    border-bottom: 1px solid var(--border);
+  }
+  header.hero h1 { font-size: 2.3rem; margin: 0 0 8px; letter-spacing: -0.5px; }
+  header.hero .tag { color: var(--accent); font-family: var(--mono); font-size: 0.85rem; letter-spacing: 2px; text-transform: uppercase; }
+  header.hero p { color: var(--muted); max-width: 680px; margin: 14px auto 0; }
+  h2 { font-size: 1.5rem; margin: 56px 0 6px; letter-spacing: -0.3px; }
+  h2 .num { color: var(--accent); font-family: var(--mono); font-size: 1rem; margin-right: 10px; }
+  h3 { font-size: 1.05rem; margin: 26px 0 8px; }
+  .lede { color: var(--muted); margin: 0 0 18px; }
+  code, .mono { font-family: var(--mono); font-size: 0.86em; }
+  code { background: #0b0f14; border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; color: #c9d4df; }
+
+  /* layered architecture diagram */
+  .diagram { display: grid; gap: 14px; margin: 26px 0 8px; }
+  .layer { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); padding: 16px 18px; }
+  .layer .ltitle { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; }
+  .box { flex: 1 1 180px; border: 1px solid var(--border); border-radius: 9px; padding: 13px 14px; background: var(--panel2); }
+  .box.logic { border-color: #3a4a5e; background: linear-gradient(180deg, #1a2533, #161f2b); }
+  .box .bt { font-weight: 650; margin-bottom: 3px; }
+  .box .bd { color: var(--muted); font-size: 0.82rem; }
+  .iface { flex: 1 1 200px; border: 1px solid #4a3d1f; background: linear-gradient(180deg, #221d12, #1a160e); border-radius: 9px; padding: 13px 14px; }
+  .iface .bt { color: var(--accent); font-family: var(--mono); }
+  .iface .bd { color: var(--muted); font-size: 0.82rem; margin-top: 2px; }
+  .conn { text-align: center; color: var(--gray); font-size: 1.3rem; line-height: 1; margin: -4px 0; }
+  .impl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .chip { border-radius: 8px; padding: 11px 12px; border: 1px solid var(--border); background: var(--panel2); }
+  .chip .ct { font-family: var(--mono); font-weight: 600; font-size: 0.9rem; }
+  .chip .cs { font-size: 0.74rem; margin-top: 5px; display: inline-block; }
+
+  .badge { font-family: var(--mono); font-size: 0.68rem; padding: 2px 7px; border-radius: 20px; border: 1px solid; letter-spacing: 0.4px; white-space: nowrap; }
+  .b-shipped { color: var(--green); border-color: #1f5e2b; background: #11271726; }
+  .b-proof   { color: var(--accent2); border-color: #1f4b7a; background: #102a4626; }
+  .b-proposed{ color: var(--muted); border-color: var(--border); background: #1c232d66; }
+
+  /* backend explorer */
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 18px; }
+  .tab {
+    cursor: pointer; border: 1px solid var(--border); background: var(--panel);
+    color: var(--text); padding: 9px 15px; border-radius: 9px; font-size: 0.92rem;
+    display: flex; align-items: center; gap: 9px; transition: border-color .15s, background .15s;
+  }
+  .tab:hover { border-color: #44505c; }
+  .tab.active { border-color: var(--accent); background: #221d12; }
+  .tab .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .panel { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); overflow: hidden; }
+  .panel .phead { padding: 16px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .panel .phead h3 { margin: 0; font-size: 1.15rem; }
+  .panel .phead p { margin: 0; color: var(--muted); font-size: 0.86rem; flex-basis: 100%; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 10px 18px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.6px; }
+  tr:last-child td { border-bottom: none; }
+  td.method { font-family: var(--mono); font-size: 0.82rem; color: #c9d4df; white-space: nowrap; }
+  td.iface-tag { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); }
+  .lvl { font-family: var(--mono); font-size: 0.68rem; padding: 2px 7px; border-radius: 5px; white-space: nowrap; }
+  .l-native { color: var(--green); background: #11271766; border: 1px solid #1f5e2b; }
+  .l-approx { color: var(--yellow); background: #2a200a66; border: 1px solid #5e4a1f; }
+  .l-skip   { color: var(--gray); background: #1c232d; border: 1px solid var(--border); }
+
+  ul.clean { list-style: none; padding: 0; margin: 10px 0; }
+  ul.clean li { padding: 8px 0 8px 26px; position: relative; border-bottom: 1px solid #1c232d; color: var(--muted); }
+  ul.clean li:before { content: "→"; position: absolute; left: 4px; color: var(--accent); }
+  ul.clean li b { color: var(--text); }
+  .steps { counter-reset: s; display: grid; gap: 12px; margin-top: 14px; }
+  .step { border: 1px solid var(--border); border-radius: 10px; background: var(--panel); padding: 14px 16px 14px 56px; position: relative; }
+  .step:before { counter-increment: s; content: counter(s); position: absolute; left: 14px; top: 14px; width: 28px; height: 28px; border-radius: 50%; background: #221d12; border: 1px solid var(--accent); color: var(--accent); font-family: var(--mono); display: grid; place-items: center; }
+  .step b { display: block; margin-bottom: 2px; }
+  .step p { margin: 0; color: var(--muted); font-size: 0.88rem; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 0.8rem; margin: 4px 0 0; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  footer { color: var(--muted); font-size: 0.82rem; border-top: 1px solid var(--border); margin-top: 60px; padding-top: 20px; }
+  .pill { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="tag">Frontend-abstraction epic · #433</div>
+  <h1>Roam runs on interfaces, not pygame</h1>
+  <p>Game and screen logic depend on three small backend-neutral interfaces — <b>Renderer</b>, <b>InputSource</b>, and <b>Clock</b> — plus a handful of value types. Swap the backend behind them and the same game drives a different frontend, with <b>zero changes to game logic</b>.</p>
+</header>
+
+<div class="wrap">
+
+  <h2><span class="num">01</span>The core idea</h2>
+  <p class="lede">Before the epic, every screen called pygame directly — for drawing <em>and</em> input. Now the dependency arrow is inverted: logic points at an interface; a backend implements it.</p>
+
+  <div class="diagram">
+    <div class="layer">
+      <div class="ltitle">Game &amp; Screen logic — imports no backend</div>
+      <div class="row">
+        <div class="box logic"><div class="bt">Screens</div><div class="bd">menus, world loop, HUD widgets</div></div>
+        <div class="box logic"><div class="bt">World &amp; entities</div><div class="bd">rooms, creatures, day/night model</div></div>
+        <div class="box logic"><div class="bt">Config · KeyBindings</div><div class="bd">backend-neutral data &amp; KeyCode</div></div>
+      </div>
+    </div>
+    <div class="conn">▼ &nbsp; depends only on &nbsp; ▼</div>
+    <div class="layer">
+      <div class="ltitle">The seam — backend-neutral interfaces &amp; value types</div>
+      <div class="row">
+        <div class="iface"><div class="bt">Renderer</div><div class="bd">output: clear, draw*, images, overlays, surfaces</div></div>
+        <div class="iface"><div class="bt">InputSource</div><div class="bd">input: pollEvents → InputEvent, key/mouse state</div></div>
+        <div class="iface"><div class="bt">Clock</div><div class="bd">frame pacing: tick(fps)</div></div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <div class="box"><div class="bt">InputEvent · EventType · KeyCode</div><div class="bd">neutral input model (KeyCode values are SDL codes for config back-compat)</div></div>
+        <div class="box"><div class="bt">geometry.Rect · palette</div><div class="bd">neutral layout &amp; colors</div></div>
+      </div>
+    </div>
+    <div class="conn">▼ &nbsp; implemented by &nbsp; ▼</div>
+    <div class="layer">
+      <div class="ltitle">Frontends — each implements the three interfaces</div>
+      <div class="impl-grid">
+        <div class="chip"><div class="ct">Pygame*</div><div class="cs"><span class="badge b-shipped">shipped · live</span></div></div>
+        <div class="chip"><div class="ct">Null*</div><div class="cs"><span class="badge b-proof">shipped · proof</span></div></div>
+        <div class="chip"><div class="ct">SDL*</div><div class="cs"><span class="badge b-proposed">proposed</span></div></div>
+        <div class="chip"><div class="ct">Web*</div><div class="cs"><span class="badge b-proposed">proposed</span></div></div>
+        <div class="chip"><div class="ct">Text*</div><div class="cs"><span class="badge b-proposed">proposed</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="lede" style="margin-top:18px">The abstraction is not just asserted — it's <b>proven</b>. A test poisons <code>pygame</code> in <code>sys.modules</code>, then drives the <code>Screen</code> run loop one full frame through the <b>Null</b> frontend. If any module on that path imported pygame, the subprocess dies with <code>ImportError</code> instead of printing its sentinel. Game logic genuinely doesn't touch pygame.</p>
+
+  <h2><span class="num">02</span>Explore the backends</h2>
+  <p class="lede">Two are shipped; three are sketches of what a new frontend would implement. Pick one to see how each interface method maps onto that backend's primitives.</p>
+  <div class="legend">
+    <span><span class="lvl l-native">native</span> first-class on this backend</span>
+    <span><span class="lvl l-approx">approx</span> representable, but degraded/symbolic</span>
+    <span><span class="lvl l-skip">no-op</span> not meaningful here; safely skipped</span>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="panel">
+    <div class="phead" id="phead"></div>
+    <table>
+      <thead><tr><th style="width:30%">Interface method</th><th style="width:12%">Layer</th><th style="width:14%">Level</th><th>How this backend does it</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <h2><span class="num">03</span>The interfaces, briefly</h2>
+  <p class="lede">The full surface a frontend implements. Small on purpose.</p>
+
+  <h3>Renderer <span class="pill">output</span></h3>
+  <ul class="clean">
+    <li><b>Lifecycle:</b> <code>getDisplaySize / Width / Height</code>, <code>clearScreen(color)</code>, <code>present()</code>, <code>setCaption(text)</code>, <code>getGameAreaRect()</code></li>
+    <li><b>Primitives:</b> <code>drawRectangle</code>, <code>drawText</code>, <code>drawTextLeftAligned</code>, <code>drawButton</code>, <code>drawTranslucentOverlay(rgba)</code>, <code>drawImage</code></li>
+    <li><b>Images:</b> <code>loadImage</code> (cached, placeholder-on-miss), <code>scaleImage</code>, <code>createSurface</code>, <code>saveImage</code>, <code>tryLoadImage</code> (uncached, None-on-miss)</li>
+    <li><b>Targets &amp; misc:</b> <code>getRenderTarget / setRenderTarget</code> (offscreen render), <code>setClipRegion</code>, <code>captureScreenshot</code></li>
+  </ul>
+
+  <h3>InputSource <span class="pill">input</span></h3>
+  <ul class="clean">
+    <li><code>pollEvents()</code> → a list of neutral <code>InputEvent</code>s (replaces <code>pygame.event.get()</code>)</li>
+    <li><code>isPressed(keyCode)</code>, <code>getMousePosition()</code>, <code>getMouseButtons()</code> — current device state</li>
+    <li>Events carry an <code>EventType</code> and a backend-neutral <code>KeyCode</code>; the backend maps native input at the boundary.</li>
+  </ul>
+
+  <h3>Clock <span class="pill">timing</span></h3>
+  <ul class="clean">
+    <li><code>tick(fps)</code> — pace the loop to at most <code>fps</code>/sec; returns elapsed ms. The pygame backend wraps <code>pygame.time.Clock</code>; a headless one never blocks.</li>
+  </ul>
+
+  <h2><span class="num">04</span>Add a frontend in three steps</h2>
+  <p class="lede">No game-logic changes — only new files plus one factory branch.</p>
+  <div class="steps">
+    <div class="step"><b>Implement the three interfaces</b><p>An <code>XRenderer(Renderer)</code>, <code>XInputSource(InputSource)</code>, and <code>XClock(Clock)</code> against your backend's primitives. The renderer-contract test checks every method screens call is on the interface.</p></div>
+    <div class="step"><b>Build them in a frontend factory</b><p>Add an <code>XFrontend</code> exposing <code>getRenderer()/getInputSource()/getClock()</code>, and a branch in <code>createFrontend(config)</code> selecting it.</p></div>
+    <div class="step"><b>Register the instances in DI</b><p><code>roam.py</code> registers the three with the container, exactly as it does the pygame ones today. Screens auto-wire the interfaces — nothing else moves.</p></div>
+  </div>
+
+  <h2><span class="num">05</span>What survives, what degrades</h2>
+  <p class="lede">An honest map: not every effect is meaningful on every backend, and that's fine — the seam lets a backend skip what it can't express.</p>
+  <ul class="clean">
+    <li><b>Universal:</b> the run loop, screen transitions, input dispatch, layout math, text, rectangles — every backend does these.</li>
+    <li><b>Images:</b> native on Pygame/SDL/Web; on Text they become a glyph or label; Null no-ops.</li>
+    <li><b>Day/night light masks:</b> per-pixel alpha + blend compositing — intrinsically pixel-graphics. Native on Pygame/SDL/Web; Text/Null skip it. This is the one effect deliberately left as a documented pygame exception in the live renderer rather than forced behind a leaky primitive.</li>
+    <li><b>Frame pacing &amp; screenshots:</b> trivially per-backend (or no-op for headless/text).</li>
+  </ul>
+
+  <footer>
+    <p>Generated for <b>Preponderous-Software/roam</b> · companion to <code>docs/rendering-abstraction-plan.md</code>. Interfaces reflect <code>src/rendering/{renderer,inputSource,clock}.py</code>. Pygame &amp; Null frontends are shipped (epic #433); SDL / Web / Text are illustrative sketches of the same seam. Open this file in any browser — it is fully self-contained.</p>
+  </footer>
+</div>
+
+<script>
+const LEVELS = { native: "l-native", approx: "l-approx", skip: "l-skip" };
+const BACKENDS = [
+  {
+    id: "pygame", name: "Pygame", color: "#3fb950", badge: "b-shipped", status: "Shipped · the live desktop frontend",
+    blurb: "SDL2 via pygame. Composes the vendored Graphik primitive provider; the seam wraps the display-surface lifecycle so screens never touch the raw surface.",
+    rows: [
+      ["clearScreen / present", "Renderer", "native", "display.fill(color) / pygame.display.update()"],
+      ["drawText / drawTextLeftAligned", "Renderer", "native", "pygame.font.Font(...).render, blit centered or left/center-anchored"],
+      ["drawImage / loadImage / scaleImage", "Renderer", "native", "Surface.blit, pygame.image.load (cached, magenta placeholder), transform.scale"],
+      ["drawTranslucentOverlay", "Renderer", "native", "Surface(size, SRCALPHA).fill(rgba) then blit"],
+      ["createSurface / saveImage / tryLoadImage", "Renderer", "native", "pygame.Surface, image.save, image.load (uncached, None on error)"],
+      ["getRenderTarget / setRenderTarget", "Renderer", "native", "swap the surface the composed Graphik draws onto (offscreen room PNGs)"],
+      ["day/night light masks", "Renderer*", "native", "SRCALPHA surfaces + BLEND_RGBA_MULT/MIN — the documented pygame exception"],
+      ["pollEvents / isPressed / mouse", "InputSource", "native", "pygame.event.get → InputEvent, key.get_mods/get_pressed, mouse.get_pos"],
+      ["tick(fps)", "Clock", "native", "pygame.time.Clock().tick(fps)"],
+    ],
+  },
+  {
+    id: "null", name: "Null", color: "#58a6ff", badge: "b-proof", status: "Shipped · the executable proof",
+    blurb: "Draws nothing, reports no input, never blocks. Exists to prove a screen renders a full frame with pygame poisoned in sys.modules — and as the skeleton a real frontend fills in.",
+    rows: [
+      ["clearScreen / present", "Renderer", "skip", "no-op; queries return sensible defaults so layout math resolves"],
+      ["drawText / drawTextLeftAligned", "Renderer", "skip", "no-op"],
+      ["drawImage / loadImage / scaleImage", "Renderer", "skip", "loadImage returns the path as an opaque handle; scaleImage returns it unchanged"],
+      ["drawTranslucentOverlay", "Renderer", "skip", "no-op"],
+      ["createSurface / saveImage / tryLoadImage", "Renderer", "skip", "createSurface → opaque object; saveImage no-op; tryLoadImage → None"],
+      ["getRenderTarget / setRenderTarget", "Renderer", "skip", "stores/returns a sentinel handle (round-trips)"],
+      ["day/night light masks", "Renderer*", "skip", "not invoked headless"],
+      ["pollEvents / isPressed / mouse", "InputSource", "skip", "[] events, isPressed False, mouse (0,0) — optional scripted frames for tests"],
+      ["tick(fps)", "Clock", "skip", "returns 0 immediately — run as fast as possible"],
+    ],
+  },
+  {
+    id: "sdl", name: "SDL", color: "#9aa7b4", badge: "b-proposed", status: "Proposed · closest to pygame",
+    blurb: "Direct SDL2 (PySDL2 / ctypes), skipping the pygame layer. Nearly 1:1 with the current backend — pygame already is SDL2, so every primitive has a native counterpart.",
+    rows: [
+      ["clearScreen / present", "Renderer", "native", "SDL_RenderClear / SDL_RenderPresent"],
+      ["drawText / drawTextLeftAligned", "Renderer", "native", "SDL_ttf render to texture, RenderCopy at the anchor"],
+      ["drawImage / loadImage / scaleImage", "Renderer", "native", "SDL_image load → texture cache; RenderCopy with dest rect"],
+      ["drawTranslucentOverlay", "Renderer", "native", "SetRenderDrawBlendMode(BLEND) + filled rect with alpha"],
+      ["createSurface / saveImage / tryLoadImage", "Renderer", "native", "SDL_CreateTexture (target), SDL_image SavePNG, IMG_Load (None on fail)"],
+      ["getRenderTarget / setRenderTarget", "Renderer", "native", "SDL_SetRenderTarget(texture)"],
+      ["day/night light masks", "Renderer*", "native", "render-target textures + custom blend modes (MOD / MIN)"],
+      ["pollEvents / isPressed / mouse", "InputSource", "native", "SDL_PollEvent → InputEvent; GetKeyboardState; GetMouseState"],
+      ["tick(fps)", "Clock", "native", "SDL_Delay against SDL_GetTicks, or a frame-time accumulator"],
+    ],
+  },
+  {
+    id: "web", name: "Web", color: "#9aa7b4", badge: "b-proposed", status: "Proposed · server pushes draw-ops to a canvas",
+    blurb: "Headless server runs the game; the Renderer serializes draw calls and streams them over a WebSocket to a browser <canvas> client, which echoes input events back. The interface maps cleanly onto the Canvas 2D API.",
+    rows: [
+      ["clearScreen / present", "Renderer", "native", "clearRect + fill; present() flushes the batched op list down the socket → requestAnimationFrame"],
+      ["drawText / drawTextLeftAligned", "Renderer", "native", "ctx.fillText with textAlign 'center' / 'left', textBaseline 'middle'"],
+      ["drawImage / loadImage / scaleImage", "Renderer", "native", "client Image cache by URL; ctx.drawImage with dest size"],
+      ["drawTranslucentOverlay", "Renderer", "native", "ctx.fillStyle rgba() over the whole canvas"],
+      ["createSurface / saveImage / tryLoadImage", "Renderer", "approx", "offscreen Canvas; saveImage → toBlob upload; tryLoadImage → fetch (resolve null on 404)"],
+      ["getRenderTarget / setRenderTarget", "Renderer", "approx", "switch the active OffscreenCanvas the op-stream targets"],
+      ["day/night light masks", "Renderer*", "native", "offscreen canvas + globalCompositeOperation 'multiply'/'lighten'"],
+      ["pollEvents / isPressed / mouse", "InputSource", "native", "browser keydown/up, pointer events → InputEvent over the socket; held-key set on the server"],
+      ["tick(fps)", "Clock", "approx", "server-side frame timer; the client paces with requestAnimationFrame"],
+    ],
+  },
+  {
+    id: "text", name: "Text / Curses", color: "#9aa7b4", badge: "b-proposed", status: "Proposed · the terminal frontend",
+    blurb: "A curses/ANSI terminal frontend — the original motivation for the seam. Pixels collapse to character cells; rich graphics degrade to symbols or labels, but the whole game loop, menus, and input work unchanged.",
+    rows: [
+      ["clearScreen / present", "Renderer", "native", "stdscr.erase() / stdscr.refresh()"],
+      ["drawText / drawTextLeftAligned", "Renderer", "native", "addstr at a cell derived from (x,y) ÷ cell size; alignment is trivial in a grid"],
+      ["drawImage / loadImage / scaleImage", "Renderer", "approx", "map an entity sprite to a glyph/color pair; loadImage returns a symbolic handle"],
+      ["drawTranslucentOverlay", "Renderer", "approx", "dim the region's color attributes, or overlay a centered banner (PAUSED / YOU DIED)"],
+      ["createSurface / saveImage / tryLoadImage", "Renderer", "skip", "no offscreen pixel buffer; saveImage no-op, tryLoadImage → None (no minimap PNG)"],
+      ["getRenderTarget / setRenderTarget", "Renderer", "skip", "no-op (single text plane)"],
+      ["day/night light masks", "Renderer*", "skip", "no per-pixel alpha; optionally tint cell colors by phase instead"],
+      ["pollEvents / isPressed / mouse", "InputSource", "approx", "getch() → KeyCode events; mouse via curses mousemask (limited); no smooth held-key state"],
+      ["tick(fps)", "Clock", "native", "time.sleep against a frame budget"],
+    ],
+  },
+];
+
+const tabsEl = document.getElementById("tabs");
+const pheadEl = document.getElementById("phead");
+const tbodyEl = document.getElementById("tbody");
+
+function render(b) {
+  pheadEl.innerHTML =
+    '<span class="badge ' + b.badge + '">' + b.status + '</span>' +
+    '<h3>' + b.name + ' frontend</h3>' +
+    '<p>' + b.blurb + '</p>';
+  tbodyEl.innerHTML = b.rows.map(function (r) {
+    return '<tr><td class="method">' + r[0] + '</td>' +
+           '<td class="iface-tag">' + r[1] + '</td>' +
+           '<td><span class="lvl ' + LEVELS[r[2]] + '">' + r[2] + '</span></td>' +
+           '<td>' + r[3] + '</td></tr>';
+  }).join("");
+}
+
+BACKENDS.forEach(function (b, i) {
+  const t = document.createElement("div");
+  t.className = "tab" + (i === 0 ? " active" : "");
+  t.innerHTML = '<span class="dot" style="background:' + b.color + '"></span>' + b.name;
+  t.onclick = function () {
+    document.querySelectorAll(".tab").forEach(function (x) { x.classList.remove("active"); });
+    t.classList.add("active");
+    render(b);
+  };
+  tabsEl.appendChild(t);
+});
+render(BACKENDS[0]);
+</script>
+</body>
+</html>
