@@ -1,18 +1,20 @@
 import math
 
-import pygame
-
 from appContainer import component
 from config.config import Config
 
 
 # @author Copilot
 # @since April 20th, 2026
+#
+# Game-logic side of the day/night cycle: it decides *how dark* it is
+# (getOverlayOpacity) and *what phase* it is (getPhase). The per-pixel dimming
+# and light-mask compositing live in the Renderer (epic #433 / #463), so this
+# class is backend-neutral and pygame-free.
 @component
 class DayNightCycle:
     def __init__(self, config: Config):
         self.config = config
-        self._lightMaskCache = {}
 
     def getOverlayOpacity(self, tick):
         """Return overlay opacity (0–200) for the given tick.
@@ -43,38 +45,3 @@ class DayNightCycle:
             return "night"
         else:
             return "dawn"
-
-    def clearLightMaskCache(self):
-        """Clear the cached light mask surfaces (e.g. after a window resize)."""
-        self._lightMaskCache.clear()
-
-    def getLightMask(self, radiusPx):
-        """Return a cached radial light mask surface for the given pixel radius.
-
-        The mask is filled with (0,0,0,255) and the light area uses a
-        per-pixel distance field so that the centre is alpha 0 (fully
-        transparent → lit) and the edge is alpha 255 (fully dark).  When
-        blitted onto the overlay with ``BLEND_RGBA_MIN`` this punches a
-        smooth circular hole.
-        """
-        if radiusPx <= 0:
-            radiusPx = 1
-        if radiusPx in self._lightMaskCache:
-            return self._lightMaskCache[radiusPx]
-        size = radiusPx * 2
-        mask = pygame.Surface((size, size), pygame.SRCALPHA)
-        mask.fill((0, 0, 0, 255))
-        center = radiusPx
-        radiusSq = radiusPx * radiusPx
-        invRadius = 255.0 / radiusPx
-        for y in range(size):
-            dy = y - center
-            dySq = dy * dy
-            for x in range(size):
-                dx = x - center
-                distSq = dx * dx + dySq
-                if distSq < radiusSq:
-                    alpha = int(math.sqrt(distSq) * invRadius + 0.5)
-                    mask.set_at((x, y), (0, 0, 0, alpha))
-        self._lightMaskCache[radiusPx] = mask
-        return mask

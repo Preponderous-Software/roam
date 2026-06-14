@@ -57,6 +57,9 @@ class NullRenderer(Renderer):
     def drawTranslucentOverlay(self, color):
         pass
 
+    def drawDayNightOverlay(self, gameAreaRect, opacity, lightSources):
+        pass
+
     def drawImage(self, image, position):
         pass
 

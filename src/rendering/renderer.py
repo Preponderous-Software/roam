@@ -66,6 +66,14 @@ class Renderer(ABC):
         skip it."""
 
     @abstractmethod
+    def drawDayNightOverlay(self, gameAreaRect, opacity, lightSources):
+        """Dim the game area to `opacity` (0-255) and punch smooth circular
+        light holes for each (screenX, screenY, radiusPx) in lightSources. The
+        per-pixel alpha + blend compositing is the backend's concern; a backend
+        without it (text/null) skips the effect. gameAreaRect is
+        (x, y, width, height)."""
+
+    @abstractmethod
     def drawImage(self, image, position):
         """Draw an image at position (an (x, y) tuple or a rect-like dest)."""
 

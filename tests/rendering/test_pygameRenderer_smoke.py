@@ -69,7 +69,31 @@ def test_all_draw_operations_run_against_a_real_surface(renderer):
     renderer.setClipRegion(None)
     renderer.setCaption("Roam smoke")
     assert renderer.getGameAreaRect() is not None
+    renderer.drawDayNightOverlay((100, 0, 200, 200), 120, [(150, 100, 40)])
     renderer.present()
+
+
+def test_day_night_overlay_dims_the_area_but_leaves_a_light_hole(renderer):
+    # The compositing moved off worldScreen: a light should stay brighter than
+    # an unlit corner under the same dimming opacity.
+    gx, gy, gw, gh = renderer.getGameAreaRect()
+    renderer.clearScreen((255, 255, 255))
+    lightX, lightY = gx + gw // 2, gy + gh // 2
+    renderer.drawDayNightOverlay((gx, gy, gw, gh), 150, [(lightX, lightY, 100)])
+
+    display = renderer.graphik.getGameDisplay()
+    litCenter = display.get_at((lightX, lightY))[0]
+    dimCorner = display.get_at((gx + 5, gy + 5))[0]
+    assert litCenter > dimCorner  # the light punched a hole in the dimming
+    assert dimCorner < 200  # the unlit corner is meaningfully darkened
+
+
+def test_day_night_overlay_with_zero_opacity_is_a_noop(renderer):
+    renderer.clearScreen((255, 255, 255))
+    gx, gy, gw, gh = renderer.getGameAreaRect()
+    renderer.drawDayNightOverlay((gx, gy, gw, gh), 0, [(gx, gy, 10)])
+    display = renderer.graphik.getGameDisplay()
+    assert display.get_at((gx + 5, gy + 5))[0] == 255  # untouched
 
 
 def test_create_save_and_load_image_round_trip(renderer, tmp_path):

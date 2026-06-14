@@ -2,7 +2,6 @@ import math
 import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
-import pygame
 from appContainer import component
 from di import Container
 from config.config import Config
@@ -107,10 +106,6 @@ class WorldScreen:
         self.goalsJsonReaderWriter = self.container.resolve(GoalsJsonReaderWriter)
         self.deathRespawnTicksRemaining = 0
         self.pausedByFocusLoss = False
-        self._dayNightOverlay = None
-        self._dayNightOverlaySize = (0, 0)
-        self._scaledMaskCache = {}
-        self._lastScaledOpacity = -1
         self._frameLightSources = []
         self.minimapScaleFactor = 0.10
         self.minimapX = 5
@@ -1129,7 +1124,7 @@ class WorldScreen:
         self.currentRoom.addEntityToLocation(self.player, locationOfPlayer)
 
     def _saveSurfaceToDisk(self, surface, path, roomKey):
-        """Save a pygame surface to disk. Runs on a background thread.
+        """Save a rendered surface to disk. Runs on a background thread.
         Acquires roompngsLock to avoid racing with clearRoomImages()."""
         try:
             with self.mapImageUpdater.roompngsLock:
@@ -1414,37 +1409,18 @@ class WorldScreen:
         opacity = self.dayNightCycle.getOverlayOpacity(self.tickCounter.getTick())
         if opacity <= 0:
             return
-        overlaySize = (gameArea.width, gameArea.height)
-        if self._dayNightOverlay is None or self._dayNightOverlaySize != overlaySize:
-            self._dayNightOverlay = pygame.Surface(overlaySize, pygame.SRCALPHA)
-            self._dayNightOverlaySize = overlaySize
-            self.dayNightCycle.clearLightMaskCache()
-            self._scaledMaskCache.clear()
-        self._dayNightOverlay.fill((0, 0, 0, opacity))
-        if opacity != self._lastScaledOpacity:
-            self._scaledMaskCache.clear()
-            self._lastScaledOpacity = opacity
-        for screenX, screenY, radiusTiles in self._frameLightSources:
-            overlayX = screenX - gameArea.x
-            overlayY = screenY - gameArea.y
-            radiusPx = int(radiusTiles * self.locationWidth)
-            if radiusPx <= 0:
-                continue
-            cacheKey = (radiusPx, opacity)
-            if cacheKey not in self._scaledMaskCache:
-                mask = self.dayNightCycle.getLightMask(radiusPx)
-                scaledMask = mask.copy()
-                scaledMask.fill(
-                    (255, 255, 255, opacity),
-                    special_flags=pygame.BLEND_RGBA_MULT,
-                )
-                self._scaledMaskCache[cacheKey] = scaledMask
-            self._dayNightOverlay.blit(
-                self._scaledMaskCache[cacheKey],
-                (overlayX - radiusPx, overlayY - radiusPx),
-                special_flags=pygame.BLEND_RGBA_MIN,
-            )
-        self.renderer.drawImage(self._dayNightOverlay, (gameArea.x, gameArea.y))
+        # Game logic decides how dark it is and where the lights are; the
+        # Renderer owns the per-pixel dimming + light-mask compositing (so a
+        # text/null backend simply skips it — epic #433 / #463).
+        lightSources = [
+            (screenX, screenY, int(radiusTiles * self.locationWidth))
+            for screenX, screenY, radiusTiles in self._frameLightSources
+        ]
+        self.renderer.drawDayNightOverlay(
+            (gameArea.x, gameArea.y, gameArea.width, gameArea.height),
+            opacity,
+            lightSources,
+        )
 
     def _drawHotbarSelectionIndicator(self, xPos, yPos, slotWidth, slotHeight):
         borderWidth = 3
