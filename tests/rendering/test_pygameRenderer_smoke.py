@@ -72,6 +72,25 @@ def test_all_draw_operations_run_against_a_real_surface(renderer):
     renderer.present()
 
 
+def test_create_save_and_load_image_round_trip(renderer, tmp_path):
+    # createSurface -> saveImage -> tryLoadImage round-trips a surface to disk
+    # and back (the room-PNG / minimap path).
+    surface = renderer.createSurface((8, 8))
+    assert surface.get_size() == (8, 8)
+    path = str(tmp_path / "roundtrip.png")
+    renderer.saveImage(surface, path)
+    assert os.path.isfile(path)
+    loaded = renderer.tryLoadImage(path)
+    assert loaded is not None and loaded.get_size() == (8, 8)
+
+
+def test_try_load_image_returns_none_for_missing_or_unreadable(renderer, tmp_path):
+    assert renderer.tryLoadImage(str(tmp_path / "does-not-exist.png")) is None
+    corrupt = tmp_path / "corrupt.png"
+    corrupt.write_text("not a real png")
+    assert renderer.tryLoadImage(str(corrupt)) is None
+
+
 def test_capture_screenshot_delegates_without_touching_disk(renderer, monkeypatch):
     captured = {}
     monkeypatch.setattr(

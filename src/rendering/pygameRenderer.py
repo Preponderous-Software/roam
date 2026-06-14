@@ -97,6 +97,18 @@ class PygameRenderer(Renderer):
     def scaleImage(self, image, size):
         return pygame.transform.scale(image, size)
 
+    def createSurface(self, size):
+        return pygame.Surface(size)
+
+    def saveImage(self, image, path):
+        pygame.image.save(image, path)
+
+    def tryLoadImage(self, path):
+        try:
+            return pygame.image.load(path)
+        except (FileNotFoundError, pygame.error):
+            return None
+
     @staticmethod
     def _createFallbackImage():
         surface = pygame.Surface((_FALLBACK_IMAGE_SIZE, _FALLBACK_IMAGE_SIZE))

@@ -1106,7 +1106,7 @@ class WorldScreen:
         # overlay (and any other display artefacts) are not captured
         gameArea = self.renderer.getGameAreaRect()
         size = (int(gameArea.width), int(gameArea.height))
-        offscreen = pygame.Surface(size)
+        offscreen = self.renderer.createSurface(size)
         originalTarget = self.renderer.getRenderTarget()
         try:
             self.renderer.setRenderTarget(offscreen)
@@ -1133,7 +1133,7 @@ class WorldScreen:
         Acquires roompngsLock to avoid racing with clearRoomImages()."""
         try:
             with self.mapImageUpdater.roompngsLock:
-                pygame.image.save(surface, path)
+                self.renderer.saveImage(surface, path)
         except Exception as e:
             _logger.error("error saving room PNG", error=str(e), path=path)
         finally:
@@ -1153,12 +1153,13 @@ class WorldScreen:
                 self._cachedMiniMapImage is None
                 or currentTick - self._miniMapLastLoadTick >= 60
             ):
-                try:
-                    mapImage = pygame.image.load(mapImagePath)
+                loaded = self.renderer.tryLoadImage(mapImagePath)
+                if loaded is not None:
+                    mapImage = loaded
                     self._cachedMiniMapImage = mapImage
                     self._miniMapLastLoadTick = currentTick
                     self._miniMapLoadFailed = False
-                except (FileNotFoundError, pygame.error) as e:
+                else:
                     # Log once on the good->failed transition so a persistently
                     # missing/corrupt mapImage.png is diagnosable, without
                     # spamming a log line on every 60-tick reload attempt.
@@ -1167,7 +1168,6 @@ class WorldScreen:
                             "could not load minimap image; "
                             "keeping last good frame if available",
                             path=mapImagePath,
-                            error=str(e),
                         )
                         self._miniMapLoadFailed = True
                     if self._cachedMiniMapImage is not None:
@@ -1192,11 +1192,13 @@ class WorldScreen:
         drawY = self.minimapY + minimapOy
 
         backgroundColor = palette.GRAY
+        # mapImage was scaled to (minimapSize, minimapSize) above, so its drawn
+        # footprint is minimapSize on each side (avoids reading surface metrics).
         self.renderer.drawRectangle(
             drawX,
             drawY,
-            mapImage.get_width() + 20,
-            mapImage.get_height() + 20,
+            minimapSize + 20,
+            minimapSize + 20,
             backgroundColor,
         )
 

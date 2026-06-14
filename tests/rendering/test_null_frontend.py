@@ -56,6 +56,11 @@ def test_null_renderer_implements_the_renderer_interface():
     image = renderer.loadImage("assets/images/player_down.png")
     assert image is not None
     assert renderer.scaleImage(image, (24, 24)) is not None
+    # createSurface yields a headless surface; saveImage is a no-op; tryLoadImage
+    # never finds anything.
+    assert renderer.createSurface((4, 4)) is not None
+    renderer.saveImage(renderer.createSurface((2, 2)), "ignored.png")
+    assert renderer.tryLoadImage("anything.png") is None
 
 
 def test_null_renderer_render_target_round_trips():
