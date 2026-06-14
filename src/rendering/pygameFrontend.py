@@ -2,6 +2,7 @@ import pygame
 
 from config.config import Config
 from lib.graphik.src.graphik import Graphik
+from rendering.pygameInputSource import PygameInputSource
 from rendering.pygameRenderer import PygameRenderer
 
 _ICON_PATH = "assets/images/player_down.png"
@@ -21,6 +22,7 @@ class PygameFrontend:
         self._config = config
         pygame.init()
         pygame.display.set_icon(pygame.image.load(_ICON_PATH))
+        self._inputSource = PygameInputSource()
         self._buildRenderer()
 
     def _buildRenderer(self):
@@ -41,6 +43,9 @@ class PygameFrontend:
 
     def getRenderer(self):
         return self._renderer
+
+    def getInputSource(self):
+        return self._inputSource
 
     def getGraphik(self):
         return self._graphik

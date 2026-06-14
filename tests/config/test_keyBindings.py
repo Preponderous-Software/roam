@@ -7,6 +7,11 @@ import pytest
 from src.config.config import Config
 from src.config.keyBindings import KeyBindings
 
+# Import KeyCode via the production `rendering.*` root (not `src.rendering.*`)
+# so its members are identity-equal to the ones keyBindings stores internally
+# (the two roots resolve to distinct class objects under this repo's pythonpath).
+from rendering.keyCode import KeyCode
+
 
 @pytest.fixture(scope="module", autouse=True)
 def init_pygame():
@@ -206,3 +211,59 @@ def test_no_conflict_when_all_unique():
     # Remap one without collision
     kb.setKey("move_up", pygame.K_KP8)
     assert not kb.hasConflicts()
+
+
+# --- Phase 4 (epic #433): bindings store KeyCode; config stays int-compatible ---
+
+
+def test_defaults_are_keycode_members():
+    kb = KeyBindings()
+    assert kb.getKey("move_up") is KeyCode.W
+    assert isinstance(kb.getKey("inventory"), KeyCode)
+
+
+def test_set_key_coerces_raw_int_to_keycode():
+    # A captured frontend key int is stored as a KeyCode when we model it.
+    kb = KeyBindings()
+    kb.setKey("move_up", pygame.K_UP)
+    assert kb.getKey("move_up") is KeyCode.UP
+
+
+def test_load_from_config_rehydrates_old_int_as_keycode():
+    # config.yml written by earlier versions stores raw SDL ints; they must come
+    # back as KeyCode members, not bare ints.
+    kb = KeyBindings()
+    kb.loadFromConfig({"key_move_up": int(pygame.K_UP)})
+    assert kb.getKey("move_up") is KeyCode.UP
+
+
+def test_save_writes_int_not_enum_repr(tmp_path, monkeypatch):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text("", encoding="utf-8")
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
+
+    kb = KeyBindings()  # defaults are KeyCode members
+    kb.saveToConfigFile(Config())
+
+    content = configFilePath.read_text(encoding="utf-8")
+    assert "KeyCode" not in content  # never "key_move_up: KeyCode.W"
+    assert "key_move_up: " + str(int(KeyCode.W)) in content
+
+
+def test_unmodeled_key_round_trips_as_raw_int(tmp_path, monkeypatch):
+    # A key the enum doesn't model (e.g. TAB) must still save and reload by int.
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text("", encoding="utf-8")
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
+
+    kb = KeyBindings()
+    kb.setKey("inventory", pygame.K_TAB)
+    kb.saveToConfigFile(Config())
+
+    reloaded = KeyBindings()
+    reloaded.loadFromConfig(Config.readConfigFile())
+    assert reloaded.getKey("inventory") == pygame.K_TAB

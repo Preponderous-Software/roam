@@ -1,41 +1,46 @@
-import pygame
+from rendering.keyCode import KeyCode, displayName, fromInt
 
 
 # @author Copilot
 # @since April 19th, 2026
 class KeyBindings:
-    """Manages keybinding defaults, remapping, conflict detection, and persistence."""
+    """Manages keybinding defaults, remapping, conflict detection, and persistence.
+
+    Bindings are stored as backend-neutral KeyCode members (frontend-abstraction
+    epic #433, Phase 4). KeyCode is an IntEnum whose values are the SDL keycodes
+    pygame already used, so existing `key_*` ints in config.yml keep working and
+    comparisons against a frontend's raw key int still hold."""
 
     DEFAULT_BINDINGS = {
-        "move_up": pygame.K_w,
-        "move_left": pygame.K_a,
-        "move_down": pygame.K_s,
-        "move_right": pygame.K_d,
-        "alt_move_up": pygame.K_UP,
-        "alt_move_left": pygame.K_LEFT,
-        "alt_move_down": pygame.K_DOWN,
-        "alt_move_right": pygame.K_RIGHT,
-        "run": pygame.K_LSHIFT,
-        "crouch": pygame.K_LCTRL,
-        "inventory": pygame.K_i,
-        "hotbar_1": pygame.K_1,
-        "hotbar_2": pygame.K_2,
-        "hotbar_3": pygame.K_3,
-        "hotbar_4": pygame.K_4,
-        "hotbar_5": pygame.K_5,
-        "hotbar_6": pygame.K_6,
-        "hotbar_7": pygame.K_7,
-        "hotbar_8": pygame.K_8,
-        "hotbar_9": pygame.K_9,
-        "hotbar_0": pygame.K_0,
-        "toggle_minimap": pygame.K_m,
-        "minimap_zoom_in": pygame.K_EQUALS,
-        "minimap_zoom_out": pygame.K_MINUS,
-        "screenshot": pygame.K_PRINTSCREEN,
-        "toggle_camera_follow": pygame.K_c,
-        "toggle_debug": pygame.K_F3,
-        "toggle_help": pygame.K_F1,
-        "codex": pygame.K_l,
+        "move_up": KeyCode.W,
+        "move_left": KeyCode.A,
+        "move_down": KeyCode.S,
+        "move_right": KeyCode.D,
+        "alt_move_up": KeyCode.UP,
+        "alt_move_left": KeyCode.LEFT,
+        "alt_move_down": KeyCode.DOWN,
+        "alt_move_right": KeyCode.RIGHT,
+        "run": KeyCode.LSHIFT,
+        "crouch": KeyCode.LCTRL,
+        "inventory": KeyCode.I,
+        "hotbar_1": KeyCode.NUM_1,
+        "hotbar_2": KeyCode.NUM_2,
+        "hotbar_3": KeyCode.NUM_3,
+        "hotbar_4": KeyCode.NUM_4,
+        "hotbar_5": KeyCode.NUM_5,
+        "hotbar_6": KeyCode.NUM_6,
+        "hotbar_7": KeyCode.NUM_7,
+        "hotbar_8": KeyCode.NUM_8,
+        "hotbar_9": KeyCode.NUM_9,
+        "hotbar_0": KeyCode.NUM_0,
+        "toggle_minimap": KeyCode.M,
+        "minimap_zoom_in": KeyCode.EQUALS,
+        "minimap_zoom_out": KeyCode.MINUS,
+        "screenshot": KeyCode.PRINTSCREEN,
+        "toggle_camera_follow": KeyCode.C,
+        "toggle_debug": KeyCode.F3,
+        "toggle_help": KeyCode.F1,
+        "codex": KeyCode.L,
     }
 
     ACTION_LABELS = {
@@ -80,6 +85,11 @@ class KeyBindings:
 
     def setKey(self, action, key):
         if action in self.bindings:
+            # Accept either a KeyCode or a raw frontend int (e.g. a captured
+            # key event); store as a KeyCode when we model it, otherwise keep
+            # the raw value so unmodeled keys still rebind and compare.
+            if not isinstance(key, KeyCode):
+                key = fromInt(key) or key
             self.bindings[action] = key
 
     def getActions(self):
@@ -92,7 +102,7 @@ class KeyBindings:
         key = self.bindings.get(action)
         if key is None:
             return "None"
-        return pygame.key.name(key)
+        return displayName(key if isinstance(key, KeyCode) else fromInt(key))
 
     def getConflicts(self):
         """Return a set of actions that share a key with another action."""
@@ -116,18 +126,25 @@ class KeyBindings:
         self.bindings = dict(self.DEFAULT_BINDINGS)
 
     def loadFromConfig(self, configValues):
-        """Load keybinding overrides from config values dict."""
+        """Load keybinding overrides from config values dict.
+
+        Stored values are the raw SDL ints written by earlier versions (and by
+        saveToConfigFile); map each back to a KeyCode so the in-memory model is
+        uniform. An int we don't model is kept as-is so a custom binding still
+        round-trips."""
         for action in self.DEFAULT_BINDINGS:
             configKey = self.CONFIG_PREFIX + action
             value = configValues.get(configKey)
             if isinstance(value, int) and not isinstance(value, bool):
-                self.bindings[action] = value
+                self.bindings[action] = fromInt(value) or value
 
     def saveToConfigFile(self, config):
         """Save current keybindings to config.yml."""
         savedValues = {}
         for action, key in self.bindings.items():
-            savedValues[self.CONFIG_PREFIX + action] = str(key)
+            # Persist the SDL int (KeyCode is an IntEnum) so config.yml stays
+            # backward/forward compatible; str(KeyCode) would write "KeyCode.W".
+            savedValues[self.CONFIG_PREFIX + action] = str(int(key))
 
         config._writeKeyValues(
             savedValues, "failed to save key bindings to config file"
