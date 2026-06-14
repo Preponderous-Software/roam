@@ -25,6 +25,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pygame pytest pytest-cov jsonschema Pillow structlog
+          pip install "black==23.1.0"
+
+      - name: Check formatting (black)
+        # Pinned to the version the repo's format.sh contributors use, so the
+        # gate's verdict matches a local `./format.sh` run. Fails the build on
+        # any formatting drift (the gap that let drift accumulate on main).
+        run: python -m black --check src tests
 
       - name: Run tests
         env:
