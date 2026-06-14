@@ -1,6 +1,5 @@
 import pygame
 import pytest
-from unittest.mock import MagicMock
 
 from codex.codex import ALL_LIVING_ENTITY_TYPES
 from rendering.inputEvent import EventType, InputEvent

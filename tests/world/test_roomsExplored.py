@@ -118,7 +118,9 @@ def test_loaded_from_disk_room_does_not_increment(resolve, test_config, tmp_path
     rooms_dir.mkdir(parents=True, exist_ok=True)
     from world.roomJsonReaderWriter import RoomJsonReaderWriter
 
-    rw = RoomJsonReaderWriter(test_config.gridSize, MagicMock(), MagicMock(), test_config)
+    rw = RoomJsonReaderWriter(
+        test_config.gridSize, MagicMock(), MagicMock(), test_config
+    )
     room_path = str(rooms_dir / "room_3_3.json")
     rw.saveRoom(room, room_path)
 

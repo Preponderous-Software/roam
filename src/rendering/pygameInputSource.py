@@ -31,7 +31,9 @@ class PygameInputSource(InputSource):
     def _translate(self, event):
         eventType = event.type
         if eventType in (pygame.KEYDOWN, pygame.KEYUP):
-            neutral = EventType.KEY_DOWN if eventType == pygame.KEYDOWN else EventType.KEY_UP
+            neutral = (
+                EventType.KEY_DOWN if eventType == pygame.KEYDOWN else EventType.KEY_UP
+            )
             return InputEvent(neutral, key=fromInt(event.key))
         if eventType in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
             neutral = (
