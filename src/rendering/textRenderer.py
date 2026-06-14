@@ -24,6 +24,7 @@ class TextRenderer(Renderer):
         self.grid = TextGrid(columns, rows)
         self._caption = "Roam"
         self._renderTarget = self.grid
+        self._lastFrame = None
         # present() writes here; defaults to a terminal repaint. Tests inspect
         # self.grid directly and need no output.
         self._output = output if output is not None else _printToTerminal
@@ -57,7 +58,12 @@ class TextRenderer(Renderer):
         self.grid.clear()
 
     def present(self):
-        self._output(self.grid.toString())
+        # Only repaint when the frame actually changed, so a static screen
+        # (e.g. a menu polled every loop) doesn't flood the terminal.
+        frame = self.grid.toString()
+        if frame != self._lastFrame:
+            self._output(frame)
+            self._lastFrame = frame
 
     def setCaption(self, text):
         self._caption = text

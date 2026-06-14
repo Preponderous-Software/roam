@@ -42,6 +42,20 @@ def test_load_image_collapses_to_a_glyph_and_draw_image_places_it():
     assert renderer.grid.getChar(2, 1) == "@"
 
 
+def test_present_only_outputs_when_the_frame_changes():
+    frames = []
+    renderer = TextRenderer(output=frames.append)
+    renderer.clearScreen((0, 0, 0))
+    renderer.drawText("hi", 80, 16, 12, (255, 255, 255))
+    renderer.present()
+    renderer.present()  # nothing changed -> no repaint
+    assert len(frames) == 1
+    renderer.clearScreen((0, 0, 0))
+    renderer.drawText("bye", 80, 16, 12, (255, 255, 255))
+    renderer.present()  # changed -> repaint
+    assert len(frames) == 2
+
+
 def test_a_real_screen_renders_to_text_with_no_pygame():
     # The payoff: MainMenuScreen drawn through the text frontend produces a
     # recognizable menu — same screen logic, different backend, no pygame.

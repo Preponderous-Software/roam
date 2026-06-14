@@ -38,9 +38,14 @@ class TextInputSource(InputSource):
         return (False, False, False)
 
 
+# A short poll wait so a loop driven by pollEvents (notably the menu screens,
+# which have no Clock) paces itself instead of busy-spinning the terminal.
+_POLL_TIMEOUT_SECONDS = 0.02
+
+
 def _readStdinChars():
-    """Return any characters waiting on stdin without blocking. Returns "" when
-    stdin is not an interactive terminal (tests, pipes, CI)."""
+    """Return characters waiting on stdin, blocking up to a short timeout.
+    Returns "" when stdin is not an interactive terminal (tests, pipes, CI)."""
     try:
         if not sys.stdin.isatty():
             return ""
@@ -48,7 +53,7 @@ def _readStdinChars():
         return ""
     import select
 
-    ready, _, _ = select.select([sys.stdin], [], [], 0)
+    ready, _, _ = select.select([sys.stdin], [], [], _POLL_TIMEOUT_SECONDS)
     if not ready:
         return ""
     return sys.stdin.read(1)
