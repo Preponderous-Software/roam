@@ -11,16 +11,12 @@ def _raiseValidationError(*args, **kwargs):
 
 def _itemsIn(inventory):
     return [
-        item
-        for slot in inventory.getInventorySlots()
-        for item in slot.getContents()
+        item for slot in inventory.getInventorySlots() for item in slot.getContents()
     ]
 
 
 @pytest.mark.parametrize("creatureName", sorted(LIVING_ENTITY_TYPES))
-def test_picked_up_creature_round_trips(
-    creatureName, resolve, tmp_path, test_config
-):
+def test_picked_up_creature_round_trips(creatureName, resolve, tmp_path, test_config):
     # A creature carried in the inventory must survive save/load as the same
     # species with its tick metadata intact.
     test_config.pathToSaveDirectory = str(tmp_path)
@@ -65,12 +61,8 @@ def test_saveInventory(resolve, tmp_path, test_config):
         "tests/inventory/inventory.json"
     )
     savePath = str(tmp_path / "inventory2.json")
-    inventoryJsonReaderWriterInstance.saveInventory(
-        inventoryInstance, savePath
-    )
-    inventoryInstance2 = inventoryJsonReaderWriterInstance.loadInventory(
-        savePath
-    )
+    inventoryJsonReaderWriterInstance.saveInventory(inventoryInstance, savePath)
+    inventoryInstance2 = inventoryJsonReaderWriterInstance.loadInventory(savePath)
     assert inventoryInstance2 != None
     assert inventoryInstance2.getNumInventorySlots() == 25
     assert inventoryInstance2.getNumFreeInventorySlots() == 25

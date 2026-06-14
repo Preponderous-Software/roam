@@ -395,9 +395,9 @@ class ChestScreen(Screen):
         if event.type == EventType.KEY_DOWN:
             self.handleKeyDownEvent(event.key)
         elif event.type == EventType.MOUSE_DOWN:
-            shift = self.inputSource.isPressed(KeyCode.LSHIFT) or self.inputSource.isPressed(
-                KeyCode.RSHIFT
-            )
+            shift = self.inputSource.isPressed(
+                KeyCode.LSHIFT
+            ) or self.inputSource.isPressed(KeyCode.RSHIFT)
             self.handleMouseClickEvent(event.position, event.button, shift)
 
     def draw(self):

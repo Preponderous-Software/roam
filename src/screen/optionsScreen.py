@@ -14,7 +14,11 @@ from ui import palette
 @component
 class OptionsScreen(Screen):
     def __init__(
-        self, renderer: Renderer, inputSource: InputSource, config: Config, status: Status
+        self,
+        renderer: Renderer,
+        inputSource: InputSource,
+        config: Config,
+        status: Status,
     ):
         self.renderer = renderer
         self.inputSource = inputSource

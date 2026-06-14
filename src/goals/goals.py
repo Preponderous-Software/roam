@@ -30,9 +30,7 @@ class Goals:
         self.goals = GoalRegistry().getGoals()
 
     def _buildContext(self):
-        return GoalContext(
-            self.stats, self.codex, self.dayNightCycle, self.tickCounter
-        )
+        return GoalContext(self.stats, self.codex, self.dayNightCycle, self.tickCounter)
 
     def evaluate(self):
         """Re-evaluate every goal.

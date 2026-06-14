@@ -54,12 +54,15 @@ class InputEvent:
         self.size = size
 
     def __repr__(self):
-        return "InputEvent(%r, key=%r, position=%r, button=%r, scrollY=%r, text=%r, size=%r)" % (
-            self.type,
-            self.key,
-            self.position,
-            self.button,
-            self.scrollY,
-            self.text,
-            self.size,
+        return (
+            "InputEvent(%r, key=%r, position=%r, button=%r, scrollY=%r, text=%r, size=%r)"
+            % (
+                self.type,
+                self.key,
+                self.position,
+                self.button,
+                self.scrollY,
+                self.text,
+                self.size,
+            )
         )
