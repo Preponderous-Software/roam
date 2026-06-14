@@ -5,6 +5,8 @@ from src.inventory.inventory import Inventory
 from src.entity.grass import Grass
 from src.lib.graphik.src.graphik import Graphik
 from src.rendering.pygameRenderer import PygameRenderer
+from rendering.inputEvent import EventType, InputEvent
+from rendering.keyCode import KeyCode
 from src.screen.inventoryScreen import InventoryScreen
 
 
@@ -14,11 +16,16 @@ def createInventoryScreen():
     gameDisplay.get_height.return_value = 600
     gameDisplay.get_size.return_value = (800, 600)
     renderer = PygameRenderer(Graphik(gameDisplay))
+    inputSource = MagicMock()
+    inputSource.getMousePosition.return_value = (0, 0)
+    inputSource.getMouseButtons.return_value = (False, False, False)
     config = MagicMock()
     status = MagicMock()
     inventory = Inventory()
     keyBindings = KeyBindings()
-    return InventoryScreen(renderer, config, status, inventory, keyBindings)
+    return InventoryScreen(
+        renderer, inputSource, config, status, inventory, keyBindings
+    )
 
 
 def createGrass():
@@ -136,6 +143,28 @@ def test_dropOneFromCursorSlot_does_not_affect_inventory():
 
     assert screen.cursorSlot.getNumItems() == 2
     assert screen.inventory.getNumItems() == 1
+
+
+# --- handleEvent dispatch (input seam, epic #433 Phase 4) ---
+
+
+def test_handleEvent_keydown_escape_closes_to_world_screen():
+    # A neutral KEY_DOWN InputEvent carrying KeyCode.ESCAPE routes through the
+    # converted handleEvent -> handleKeyDownEvent and requests the transition.
+    screen = createInventoryScreen()
+    screen.handleEvent(InputEvent(EventType.KEY_DOWN, key=KeyCode.ESCAPE))
+    assert screen.changeScreen is True
+
+
+def test_handleEvent_mouse_down_dispatches_with_position_and_button():
+    # A MOUSE_DOWN InputEvent's position/button reach handleMouseClickEvent.
+    screen = createInventoryScreen()
+    captured = {}
+    screen.handleMouseClickEvent = lambda pos, button: captured.update(
+        pos=pos, button=button
+    )
+    screen.handleEvent(InputEvent(EventType.MOUSE_DOWN, position=(42, 99), button=3))
+    assert captured == {"pos": (42, 99), "button": 3}
 
 
 # --- handleMouseClickEvent integration tests ---

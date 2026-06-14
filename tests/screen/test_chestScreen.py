@@ -30,8 +30,14 @@ def createChestScreen(playerInventory=None, chest=None):
     renderer.getDisplayHeight.return_value = 600
     renderer.getDisplaySize.return_value = (800, 600)
 
+    inputSource = MagicMock()
+    inputSource.getMousePosition.return_value = (0, 0)
+    inputSource.getMouseButtons.return_value = (False, False, False)
+    inputSource.isPressed.return_value = False
+
     screen = ChestScreen.__new__(ChestScreen)
     screen.renderer = renderer
+    screen.inputSource = inputSource
     screen.config = MagicMock()
     screen.status = MagicMock()
     screen.keyBindings = MagicMock()
@@ -119,7 +125,7 @@ def test_draw_panel_returns_hovered_item_name(monkeypatch):
     )
     _, _, itemX, itemY, itemWidth, itemHeight = geometry[0]
     centre = (int(itemX + itemWidth / 2), int(itemY + itemHeight / 2))
-    monkeypatch.setattr(pygame.mouse, "get_pos", lambda: centre)
+    screen.inputSource.getMousePosition.return_value = centre
 
     hovered = screen._drawPanel(
         screen.getChestInventory(), screen.getChestPanelRect(), "Chest"

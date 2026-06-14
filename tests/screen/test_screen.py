@@ -1,31 +1,25 @@
 from unittest.mock import MagicMock
 
-import pygame
-
+from rendering.inputEvent import EventType, InputEvent
 from screen.screen import Screen
 from screen.screenType import ScreenType
 
 
-class _FakeEvent:
-    def __init__(self, eventType):
-        self.type = eventType
+class _FakeInputSource:
+    """Returns each frame's InputEvent list in turn, then [] forever — so the
+    base loop is driven deterministically without touching pygame."""
 
+    def __init__(self, *frames):
+        self._frames = list(frames)
 
-def _eventGetReturning(*frames):
-    """Build a pygame.event.get replacement that returns each frame's event
-    list in turn, then [] forever — so the loop is driven deterministically
-    without touching the global pygame event queue (which leaks across tests)."""
-    queue = list(frames)
-
-    def fake_get():
-        return queue.pop(0) if queue else []
-
-    return fake_get
+    def pollEvents(self):
+        return self._frames.pop(0) if self._frames else []
 
 
 class _RecordingScreen(Screen):
-    def __init__(self, stopAfterFrames=1):
+    def __init__(self, inputSource, stopAfterFrames=1):
         self.renderer = MagicMock()
+        self.inputSource = inputSource
         self.nextScreen = ScreenType.OPTIONS_SCREEN
         self.changeScreen = False
         self.starts = 0
@@ -49,9 +43,8 @@ class _RecordingScreen(Screen):
             self.changeScreen = True
 
 
-def test_loop_draws_presents_and_returns_next_screen(monkeypatch):
-    monkeypatch.setattr(pygame.event, "get", _eventGetReturning())
-    screen = _RecordingScreen(stopAfterFrames=1)
+def test_loop_draws_presents_and_returns_next_screen():
+    screen = _RecordingScreen(_FakeInputSource(), stopAfterFrames=1)
     result = screen.run()
     assert result == ScreenType.OPTIONS_SCREEN
     assert screen.frames == 1
@@ -61,21 +54,17 @@ def test_loop_draws_presents_and_returns_next_screen(monkeypatch):
     assert screen.changeScreen is False
 
 
-def test_quit_event_requests_shutdown_without_dispatching_to_handle_event(monkeypatch):
-    monkeypatch.setattr(
-        pygame.event, "get", _eventGetReturning([_FakeEvent(pygame.QUIT)])
-    )
-    screen = _RecordingScreen(stopAfterFrames=99)
+def test_quit_event_requests_shutdown_without_dispatching_to_handle_event():
+    inputSource = _FakeInputSource([InputEvent(EventType.QUIT)])
+    screen = _RecordingScreen(inputSource, stopAfterFrames=99)
     result = screen.run()
     assert result == ScreenType.NONE
     assert screen.handled == []  # QUIT handled by the base, not the subclass
 
 
-def test_non_quit_events_are_dispatched_to_handle_event(monkeypatch):
-    monkeypatch.setattr(
-        pygame.event, "get", _eventGetReturning([_FakeEvent(pygame.KEYDOWN)])
-    )
-    screen = _RecordingScreen(stopAfterFrames=99)
+def test_non_quit_events_are_dispatched_to_handle_event():
+    inputSource = _FakeInputSource([InputEvent(EventType.KEY_DOWN)])
+    screen = _RecordingScreen(inputSource, stopAfterFrames=99)
 
     def handle(event):
         screen.handled.append(event.type)
@@ -83,5 +72,5 @@ def test_non_quit_events_are_dispatched_to_handle_event(monkeypatch):
 
     screen.handleEvent = handle
     result = screen.run()
-    assert pygame.KEYDOWN in screen.handled
+    assert EventType.KEY_DOWN in screen.handled
     assert result == ScreenType.OPTIONS_SCREEN

@@ -89,11 +89,21 @@ def test_poll_drains_and_preserves_order():
 
 
 def test_is_pressed_is_safe_for_large_keycodes():
-    # Arrow/modifier keycodes fall outside pygame.key.get_pressed()'s range;
-    # the query must return a clean False, never raise.
+    # Arrow keycodes fall outside pygame.key.get_pressed()'s range; the query
+    # must return a clean False, never raise.
     source = PygameInputSource()
     assert source.isPressed(KeyCode.UP) is False
     assert source.isPressed(None) is False
+
+
+def test_is_pressed_reads_modifiers_from_key_mods(monkeypatch):
+    # Shift/ctrl can't be read via get_pressed() (their keycodes are too large),
+    # so isPressed routes modifier queries through pygame.key.get_mods().
+    source = PygameInputSource()
+    monkeypatch.setattr(pygame.key, "get_mods", lambda: pygame.KMOD_LSHIFT)
+    assert source.isPressed(KeyCode.LSHIFT) is True
+    assert source.isPressed(KeyCode.RSHIFT) is False
+    assert source.isPressed(KeyCode.LCTRL) is False
 
 
 def test_mouse_helpers_return_state():

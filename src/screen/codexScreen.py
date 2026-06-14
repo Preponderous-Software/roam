@@ -4,6 +4,9 @@ from codex.codex import Codex, ALL_LIVING_ENTITY_TYPES, ENTITY_IMAGE_PATHS
 from config.config import Config
 from config.keyBindings import KeyBindings
 from rendering.renderer import Renderer
+from rendering.inputSource import InputSource
+from rendering.inputEvent import EventType
+from rendering.keyCode import KeyCode
 from screen.screenType import ScreenType
 from screen.screen import Screen
 from gameLogging.logger import getLogger
@@ -19,11 +22,13 @@ class CodexScreen(Screen):
     def __init__(
         self,
         renderer: Renderer,
+        inputSource: InputSource,
         config: Config,
         codex: Codex,
         keyBindings: KeyBindings,
     ):
         self.renderer = renderer
+        self.inputSource = inputSource
         self.config = config
         self.codex = codex
         self.keyBindings = keyBindings
@@ -161,22 +166,22 @@ class CodexScreen(Screen):
         )
 
     def handleKeyDownEvent(self, key):
-        if key == pygame.K_ESCAPE or key == self.keyBindings.getKey("codex"):
+        if key == KeyCode.ESCAPE or key == self.keyBindings.getKey("codex"):
             self.switchToReturnScreen()
 
     def handleScrollEvent(self, event):
-        if event.y > 0:
+        if event.scrollY > 0:
             self.scrollOffset = max(0, self.scrollOffset - 1)
-        elif event.y < 0:
+        elif event.scrollY < 0:
             self.scrollOffset += 1
 
     def onStart(self):
         self.scrollOffset = 0
 
     def handleEvent(self, event):
-        if event.type == pygame.KEYDOWN:
+        if event.type == EventType.KEY_DOWN:
             self.handleKeyDownEvent(event.key)
-        elif event.type == pygame.MOUSEWHEEL:
+        elif event.type == EventType.MOUSE_WHEEL:
             self.handleScrollEvent(event)
 
     def draw(self):

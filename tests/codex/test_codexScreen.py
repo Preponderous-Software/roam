@@ -3,6 +3,7 @@ import pytest
 from unittest.mock import MagicMock
 
 from codex.codex import ALL_LIVING_ENTITY_TYPES
+from rendering.inputEvent import EventType, InputEvent
 from screen.codexScreen import CodexScreen
 
 
@@ -48,26 +49,20 @@ def test_handle_escape_key(pygame_init, resolve, test_graphik):
 
 def test_handle_scroll_event_down(pygame_init, resolve, test_graphik):
     screen = createCodexScreen(pygame_init, resolve, test_graphik)
-    event = MagicMock()
-    event.y = -1
-    screen.handleScrollEvent(event)
+    screen.handleScrollEvent(InputEvent(EventType.MOUSE_WHEEL, scrollY=-1))
     assert screen.scrollOffset == 1
 
 
 def test_handle_scroll_event_up(pygame_init, resolve, test_graphik):
     screen = createCodexScreen(pygame_init, resolve, test_graphik)
     screen.scrollOffset = 1
-    event = MagicMock()
-    event.y = 1
-    screen.handleScrollEvent(event)
+    screen.handleScrollEvent(InputEvent(EventType.MOUSE_WHEEL, scrollY=1))
     assert screen.scrollOffset == 0
 
 
 def test_scroll_does_not_go_below_zero(pygame_init, resolve, test_graphik):
     screen = createCodexScreen(pygame_init, resolve, test_graphik)
-    event = MagicMock()
-    event.y = 1
-    screen.handleScrollEvent(event)
+    screen.handleScrollEvent(InputEvent(EventType.MOUSE_WHEEL, scrollY=1))
     assert screen.scrollOffset == 0
 
 

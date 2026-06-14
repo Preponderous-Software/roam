@@ -6,6 +6,9 @@ from crafting.recipeRegistry import RecipeRegistry
 from inventory.inventory import Inventory
 from inventory.inventorySlot import InventorySlot
 from rendering.renderer import Renderer
+from rendering.inputSource import InputSource
+from rendering.inputEvent import EventType
+from rendering.keyCode import KeyCode
 from screen.screenType import ScreenType
 from screen.screen import Screen
 from ui.status import Status
@@ -19,12 +22,14 @@ class InventoryScreen(Screen):
     def __init__(
         self,
         renderer: Renderer,
+        inputSource: InputSource,
         config: Config,
         status: Status,
         inventory: Inventory,
         keyBindings: KeyBindings,
     ):
         self.renderer = renderer
+        self.inputSource = inputSource
         self.config = config
         self.status = status
         self.inventory = inventory
@@ -66,10 +71,10 @@ class InventoryScreen(Screen):
 
     def handleKeyDownEvent(self, key):
         kb = self.keyBindings
-        if key == pygame.K_ESCAPE and self.craftPanelOpen:
+        if key == KeyCode.ESCAPE and self.craftPanelOpen:
             self.craftPanelOpen = False
             return
-        if key == kb.getKey("inventory") or key == pygame.K_ESCAPE:
+        if key == kb.getKey("inventory") or key == KeyCode.ESCAPE:
             self.switchToWorldScreen()
         elif key == kb.getKey("screenshot"):
             self.renderer.captureScreenshot()
@@ -106,7 +111,7 @@ class InventoryScreen(Screen):
         row = 0
         column = 0
         margin = 5
-        mouseX, mouseY = pygame.mouse.get_pos()
+        mouseX, mouseY = self.inputSource.getMousePosition()
         hoveredItemName = None
         for inventorySlot in self.inventory.getInventorySlots():
             itemX = backgroundX + column * backgroundWidth / itemsPerRow + margin
@@ -432,7 +437,7 @@ class InventoryScreen(Screen):
 
     def drawDropButton(self):
         buttonX, buttonY, buttonWidth, buttonHeight = self._dropButtonRect()
-        mouseX, mouseY = pygame.mouse.get_pos()
+        mouseX, mouseY = self.inputSource.getMousePosition()
         hovering = (
             buttonX <= mouseX <= buttonX + buttonWidth
             and buttonY <= mouseY <= buttonY + buttonHeight
@@ -539,7 +544,7 @@ class InventoryScreen(Screen):
 
         item = self.cursorSlot.getContents()[0]
         image = self.renderer.loadImage(item.getImagePath())
-        cursorX, cursorY = pygame.mouse.get_pos()
+        cursorX, cursorY = self.inputSource.getMousePosition()
         scaledImage = self.renderer.scaleImage(image, (50, 50))
         self.renderer.drawImage(scaledImage, (cursorX, cursorY))
 
@@ -554,10 +559,10 @@ class InventoryScreen(Screen):
             )
 
     def handleEvent(self, event):
-        if event.type == pygame.KEYDOWN:
+        if event.type == EventType.KEY_DOWN:
             self.handleKeyDownEvent(event.key)
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            self.handleMouseClickEvent(event.pos, event.button)
+        elif event.type == EventType.MOUSE_DOWN:
+            self.handleMouseClickEvent(event.position, event.button)
 
     def draw(self):
         self.renderer.clearScreen(palette.BLACK)

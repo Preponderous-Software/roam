@@ -108,7 +108,10 @@ def test_main_menu_screen_draw_path_runs(renderer):
     updateChecker.getLatestVersion.return_value = "9.9.9"
     updateChecker.getReleasesUrl.return_value = "https://example.invalid/releases"
 
-    screen = MainMenuScreen(renderer, config, updateChecker)
+    inputSource = MagicMock()
+    inputSource.getMousePosition.return_value = (0, 0)
+    inputSource.getMouseButtons.return_value = (False, False, False)
+    screen = MainMenuScreen(renderer, inputSource, config, updateChecker)
     renderer.clearScreen(palette.BLACK)
     screen.drawText()
     screen.drawMenuButtons()

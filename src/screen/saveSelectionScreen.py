@@ -1,10 +1,13 @@
 import os
 import shutil
 import datetime
-import pygame
+import time
 from config.config import Config
 from gameLogging.logger import getLogger
 from rendering.renderer import Renderer
+from rendering.inputSource import InputSource
+from rendering.inputEvent import EventType
+from rendering.keyCode import KeyCode
 from screen.screenType import ScreenType
 from screen.screen import Screen
 from ui import palette
@@ -18,8 +21,15 @@ class SaveSelectionScreen(Screen):
     SORT_BY_DATE = "date"
     SORT_BY_NAME = "name"
 
-    def __init__(self, renderer: Renderer, config: Config, initializeWorldScreen):
+    def __init__(
+        self,
+        renderer: Renderer,
+        inputSource: InputSource,
+        config: Config,
+        initializeWorldScreen,
+    ):
         self.renderer = renderer
+        self.inputSource = inputSource
         self.config = config
         self.initializeWorldScreen = initializeWorldScreen
         self.nextScreen = ScreenType.MAIN_MENU_SCREEN
@@ -167,22 +177,22 @@ class SaveSelectionScreen(Screen):
 
     def handleKeyDownEvent(self, key):
         if self.namingNewSave:
-            if key == pygame.K_ESCAPE:
+            if key == KeyCode.ESCAPE:
                 self.cancelNamingNewSave()
-            elif key == pygame.K_RETURN:
+            elif key == KeyCode.RETURN:
                 self.confirmNewSaveName()
-            elif key == pygame.K_BACKSPACE:
+            elif key == KeyCode.BACKSPACE:
                 self.newSaveNameInput = self.newSaveNameInput[:-1]
                 self.newSaveNameError = ""
             return
-        if key == pygame.K_ESCAPE:
+        if key == KeyCode.ESCAPE:
             if self.confirmingDelete is not None:
                 self.confirmingDelete = None
             else:
                 self.switchToMainMenuScreen()
-        elif key == pygame.K_UP:
+        elif key == KeyCode.UP:
             self.scrollUp()
-        elif key == pygame.K_DOWN:
+        elif key == KeyCode.DOWN:
             self.scrollDown()
 
     def drawTitle(self):
@@ -484,9 +494,9 @@ class SaveSelectionScreen(Screen):
 
         # Wait for mouse button release to prevent click pass-through
         # from the previous screen (e.g. the main menu "play" button).
-        while pygame.mouse.get_pressed()[0]:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
+        while self.inputSource.getMouseButtons()[0]:
+            for event in self.inputSource.pollEvents():
+                if event.type == EventType.QUIT:
                     self.nextScreen = ScreenType.NONE
                     self.changeScreen = True
                     break
@@ -494,17 +504,17 @@ class SaveSelectionScreen(Screen):
             if self.changeScreen:
                 break
 
-            pygame.time.wait(10)
+            time.sleep(0.01)
 
     def handleEvent(self, event):
-        if event.type == pygame.KEYDOWN:
+        if event.type == EventType.KEY_DOWN:
             self.handleKeyDownEvent(event.key)
-        elif event.type == pygame.MOUSEWHEEL:
-            if event.y > 0:
+        elif event.type == EventType.MOUSE_WHEEL:
+            if event.scrollY > 0:
                 self.scrollUp()
-            elif event.y < 0:
+            elif event.scrollY < 0:
                 self.scrollDown()
-        elif event.type == pygame.TEXTINPUT:
+        elif event.type == EventType.TEXT_INPUT:
             if self.namingNewSave:
                 for ch in event.text:
                     if ch.isalnum() or ch in "-_ ":
