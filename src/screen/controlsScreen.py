@@ -4,13 +4,14 @@ from config.config import Config
 from config.keyBindings import KeyBindings
 from rendering.renderer import Renderer
 from screen.screenType import ScreenType
+from screen.screen import Screen
 from ui import palette
 
 
 # @author Copilot
 # @since April 19th, 2026
 @component
-class ControlsScreen:
+class ControlsScreen(Screen):
     def __init__(self, renderer: Renderer, config: Config, keyBindings: KeyBindings):
         self.renderer = renderer
         self.config = config
@@ -207,24 +208,19 @@ class ControlsScreen:
         elif event.y < 0:
             self.scrollOffset += 1
 
-    def run(self):
+    def onStart(self):
         self.pendingBindings = None
         self.waitingForKey = None
         self.scrollOffset = 0
-        while not self.changeScreen:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    return ScreenType.NONE
-                elif event.type == pygame.KEYDOWN:
-                    self.handleKeyDownEvent(event.key)
-                elif event.type == pygame.MOUSEWHEEL:
-                    self.handleScrollEvent(event)
 
-            self.renderer.clearScreen(palette.BLACK)
-            self.drawTitle()
-            self.drawBindings()
-            self.drawBottomButtons()
-            self.renderer.present()
+    def handleEvent(self, event):
+        if event.type == pygame.KEYDOWN:
+            self.handleKeyDownEvent(event.key)
+        elif event.type == pygame.MOUSEWHEEL:
+            self.handleScrollEvent(event)
 
-        self.changeScreen = False
-        return self.nextScreen
+    def draw(self):
+        self.renderer.clearScreen(palette.BLACK)
+        self.drawTitle()
+        self.drawBindings()
+        self.drawBottomButtons()

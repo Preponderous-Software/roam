@@ -3,6 +3,7 @@ from appContainer import component
 from config.config import Config
 from rendering.renderer import Renderer
 from screen.screenType import ScreenType
+from screen.screen import Screen
 from ui.status import Status
 import pygame
 from ui import palette
@@ -10,7 +11,7 @@ from ui import palette
 
 # @author Daniel McCoy Stephenson
 @component
-class ConfigScreen:
+class ConfigScreen(Screen):
     def __init__(self, renderer: Renderer, config: Config, status: Status):
         self.renderer = renderer
         self.config = config
@@ -128,22 +129,17 @@ class ConfigScreen:
         elif event.y < 0:
             self.scrollOffset += 1
 
-    def run(self):
+    def onStart(self):
         self.scrollOffset = 0
-        while not self.changeScreen:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    return ScreenType.NONE
-                elif event.type == pygame.KEYDOWN:
-                    self.handleKeyDownEvent(event.key)
-                elif event.type == pygame.MOUSEWHEEL:
-                    self.handleScrollEvent(event)
 
-            self.renderer.clearScreen(palette.BLACK)
-            self.drawTitle()
-            self.drawMenuButtons()
-            self.drawBottomButtons()
-            self.renderer.present()
+    def handleEvent(self, event):
+        if event.type == pygame.KEYDOWN:
+            self.handleKeyDownEvent(event.key)
+        elif event.type == pygame.MOUSEWHEEL:
+            self.handleScrollEvent(event)
 
-        self.changeScreen = False
-        return self.nextScreen
+    def draw(self):
+        self.renderer.clearScreen(palette.BLACK)
+        self.drawTitle()
+        self.drawMenuButtons()
+        self.drawBottomButtons()
