@@ -2,6 +2,7 @@ import pygame
 
 from config.config import Config
 from lib.graphik.src.graphik import Graphik
+from rendering.pygameClock import PygameClock
 from rendering.pygameInputSource import PygameInputSource
 from rendering.pygameRenderer import PygameRenderer
 
@@ -23,6 +24,7 @@ class PygameFrontend:
         pygame.init()
         pygame.display.set_icon(pygame.image.load(_ICON_PATH))
         self._inputSource = PygameInputSource()
+        self._clock = PygameClock()
         self._buildRenderer()
 
     def _buildRenderer(self):
@@ -46,6 +48,9 @@ class PygameFrontend:
 
     def getInputSource(self):
         return self._inputSource
+
+    def getClock(self):
+        return self._clock
 
     def getGraphik(self):
         return self._graphik

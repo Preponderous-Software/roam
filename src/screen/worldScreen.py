@@ -27,6 +27,7 @@ from goals.goals import Goals
 from goals.goalsJsonReaderWriter import GoalsJsonReaderWriter
 from rendering.renderer import Renderer
 from rendering.inputSource import InputSource
+from rendering.clock import Clock
 from rendering.inputEvent import EventType
 from rendering.keyCode import KeyCode
 from entity.grass import Grass
@@ -73,6 +74,7 @@ class WorldScreen:
         self,
         renderer: Renderer,
         inputSource: InputSource,
+        clock: Clock,
         config: Config,
         status: Status,
         tickCounter: TickCounter,
@@ -125,7 +127,7 @@ class WorldScreen:
         self._saveLock = threading.Lock()
         self._pngSavePending = set()
         self.cursorSlot = InventorySlot()
-        self.clock = pygame.time.Clock()
+        self.clock = clock
         self.showHelp = False
         # The chest most recently opened via right-click, and the room it lives
         # in, so the ChestScreen can persist its contents on close.

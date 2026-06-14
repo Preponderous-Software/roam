@@ -14,6 +14,8 @@ from rendering.renderer import Renderer
 from rendering.pygameRenderer import PygameRenderer
 from rendering.inputSource import InputSource
 from rendering.pygameInputSource import PygameInputSource
+from rendering.clock import Clock
+from rendering.nullClock import NullClock
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
@@ -78,6 +80,9 @@ def test_di_container(test_config, test_graphik, test_renderer, test_input_sourc
     container.registerInstance(Graphik, test_graphik)
     container.registerInstance(Renderer, test_renderer)
     container.registerInstance(InputSource, test_input_source)
+    # Headless frame pacing (never blocks) so resolve(WorldScreen) and any
+    # loop-driving test run at full speed.
+    container.registerInstance(Clock, NullClock())
     container.register(
         InventoryJsonReaderWriter,
         lambda: InventoryJsonReaderWriter(container.resolve(Config)),
