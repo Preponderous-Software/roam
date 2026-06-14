@@ -6,13 +6,14 @@ from config.config import Config
 
 from rendering.renderer import Renderer
 from screen.screenType import ScreenType
+from screen.screen import Screen
 from update.updateChecker import UpdateChecker
 from ui import palette
 
 
 # @author Daniel McCoy Stephenson
 @component
-class MainMenuScreen:
+class MainMenuScreen(Screen):
     def __init__(
         self, renderer: Renderer, config: Config, updateChecker: UpdateChecker
     ):
@@ -140,22 +141,16 @@ class MainMenuScreen:
         elif key == pygame.K_u:
             self.openUpdatePage()
 
-    def run(self):
+    def onStart(self):
         self.updateChecker.checkForUpdatesAsync()
-        while not self.changeScreen:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.nextScreen = ScreenType.NONE
-                    self.changeScreen = True
-                    break
-                elif event.type == pygame.KEYDOWN:
-                    self.handleKeyDownEvent(event.key)
 
-            self.renderer.clearScreen(palette.BLACK)
-            self.drawText()
-            self.drawMenuButtons()
-            self.drawUpdateBanner()
-            self.drawVersion()
-            self.renderer.present()
-        self.changeScreen = False
-        return self.nextScreen
+    def handleEvent(self, event):
+        if event.type == pygame.KEYDOWN:
+            self.handleKeyDownEvent(event.key)
+
+    def draw(self):
+        self.renderer.clearScreen(palette.BLACK)
+        self.drawText()
+        self.drawMenuButtons()
+        self.drawUpdateBanner()
+        self.drawVersion()

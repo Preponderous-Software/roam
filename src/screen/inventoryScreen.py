@@ -7,6 +7,7 @@ from inventory.inventory import Inventory
 from inventory.inventorySlot import InventorySlot
 from rendering.renderer import Renderer
 from screen.screenType import ScreenType
+from screen.screen import Screen
 from ui.status import Status
 import pygame
 from ui import palette
@@ -14,7 +15,7 @@ from ui import palette
 
 # @author Daniel McCoy Stephenson
 @component
-class InventoryScreen:
+class InventoryScreen(Screen):
     def __init__(
         self,
         renderer: Renderer,
@@ -552,34 +553,27 @@ class InventoryScreen:
                 palette.WHITE,
             )
 
-    def run(self):
-        while not self.changeScreen:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.nextScreen = ScreenType.NONE
-                    self.changeScreen = True
-                elif event.type == pygame.KEYDOWN:
-                    self.handleKeyDownEvent(event.key)
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    self.handleMouseClickEvent(event.pos, event.button)
+    def handleEvent(self, event):
+        if event.type == pygame.KEYDOWN:
+            self.handleKeyDownEvent(event.key)
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            self.handleMouseClickEvent(event.pos, event.button)
 
-            self.renderer.clearScreen(palette.BLACK)
-            self.drawPlayerInventory()
-            self.drawCraftButton()
-            self.drawCraftPanel()
-            self.drawBackButton()
-            self.drawDropButton()
-            self.drawCursorSlot()
-            self.status.draw()
-            self.renderer.present()
+    def draw(self):
+        self.renderer.clearScreen(palette.BLACK)
+        self.drawPlayerInventory()
+        self.drawCraftButton()
+        self.drawCraftPanel()
+        self.drawBackButton()
+        self.drawDropButton()
+        self.drawCursorSlot()
+        self.status.draw()
 
+    def onExit(self):
         if not self.cursorSlot.isEmpty():
             for item in self.cursorSlot.getContents():
                 self.inventory.placeIntoFirstAvailableInventorySlot(item)
             self.cursorSlot.setContents([])
-
-        self.changeScreen = False
-        return self.nextScreen
 
     def setInventory(self, inventory):
         self.inventory = inventory

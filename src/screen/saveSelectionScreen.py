@@ -6,6 +6,7 @@ from config.config import Config
 from gameLogging.logger import getLogger
 from rendering.renderer import Renderer
 from screen.screenType import ScreenType
+from screen.screen import Screen
 from ui import palette
 
 _logger = getLogger(__name__)
@@ -13,7 +14,7 @@ _logger = getLogger(__name__)
 
 # @author Copilot
 # @since April 13th, 2026
-class SaveSelectionScreen:
+class SaveSelectionScreen(Screen):
     SORT_BY_DATE = "date"
     SORT_BY_NAME = "name"
 
@@ -478,7 +479,7 @@ class SaveSelectionScreen:
                     (80, 80, 80),
                 )
 
-    def run(self):
+    def onStart(self):
         self.refreshSaveCache()
 
         # Wait for mouse button release to prevent click pass-through
@@ -495,50 +496,43 @@ class SaveSelectionScreen:
 
             pygame.time.wait(10)
 
-        while not self.changeScreen:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.nextScreen = ScreenType.NONE
-                    self.changeScreen = True
-                    break
-                elif event.type == pygame.KEYDOWN:
-                    self.handleKeyDownEvent(event.key)
-                elif event.type == pygame.MOUSEWHEEL:
-                    if event.y > 0:
-                        self.scrollUp()
-                    elif event.y < 0:
-                        self.scrollDown()
-                elif event.type == pygame.TEXTINPUT:
-                    if self.namingNewSave:
-                        for ch in event.text:
-                            if ch.isalnum() or ch in "-_ ":
-                                self.newSaveNameInput += ch
-                                self.newSaveNameError = ""
+    def handleEvent(self, event):
+        if event.type == pygame.KEYDOWN:
+            self.handleKeyDownEvent(event.key)
+        elif event.type == pygame.MOUSEWHEEL:
+            if event.y > 0:
+                self.scrollUp()
+            elif event.y < 0:
+                self.scrollDown()
+        elif event.type == pygame.TEXTINPUT:
+            if self.namingNewSave:
+                for ch in event.text:
+                    if ch.isalnum() or ch in "-_ ":
+                        self.newSaveNameInput += ch
+                        self.newSaveNameError = ""
 
-            self.renderer.clearScreen(palette.BLACK)
-            self.drawTitle()
+    def draw(self):
+        self.renderer.clearScreen(palette.BLACK)
+        self.drawTitle()
 
-            saves = self.getSaveDirectories()
-            if len(saves) == 0:
-                self.drawNoSavesMessage()
-            else:
-                self.drawSaveList(saves)
+        saves = self.getSaveDirectories()
+        if len(saves) == 0:
+            self.drawNoSavesMessage()
+        else:
+            self.drawSaveList(saves)
 
-            self.drawBottomButtons()
+        self.drawBottomButtons()
 
-            if self.confirmingDelete is not None:
-                self.drawDeleteConfirmation()
-            elif self.namingNewSave:
-                self.drawNamingDialog()
+        if self.confirmingDelete is not None:
+            self.drawDeleteConfirmation()
+        elif self.namingNewSave:
+            self.drawNamingDialog()
 
-            self.renderer.present()
-
+    def onExit(self):
         if self.nextScreen == ScreenType.WORLD_SCREEN:
             self.initializeWorldScreen()
 
-        self.changeScreen = False
         self.scrollOffset = 0
         self.confirmingDelete = None
         self.namingNewSave = False
         self.newSaveNameInput = ""
-        return self.nextScreen

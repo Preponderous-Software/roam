@@ -380,3 +380,18 @@ def test_close_falls_back_to_chest_when_player_inventory_is_full():
         chest.getStoredInventory().getInventorySlots()[0].getContents()[0].getName()
         == "Oak Wood"
     )
+
+
+def test_on_exit_returns_cursor_items_and_fires_on_close():
+    # onExit (extracted from run() in Phase 3b-2) must return held items and
+    # fire the on-close callback so the chest's room is saved.
+    fired = []
+    screen = createChestScreen()
+    screen.onClose = lambda: fired.append(True)
+    screen.cursorSlot.add(Apple())
+    assert not screen.cursorSlot.isEmpty()
+
+    screen.onExit()
+
+    assert screen.cursorSlot.isEmpty()
+    assert fired == [True]
