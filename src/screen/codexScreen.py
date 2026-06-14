@@ -5,6 +5,7 @@ from config.config import Config
 from config.keyBindings import KeyBindings
 from rendering.renderer import Renderer
 from screen.screenType import ScreenType
+from screen.screen import Screen
 from gameLogging.logger import getLogger
 from ui import palette
 
@@ -14,7 +15,7 @@ _logger = getLogger(__name__)
 # @author Copilot
 # @since April 20th, 2026
 @component
-class CodexScreen:
+class CodexScreen(Screen):
     def __init__(
         self,
         renderer: Renderer,
@@ -169,22 +170,17 @@ class CodexScreen:
         elif event.y < 0:
             self.scrollOffset += 1
 
-    def run(self):
+    def onStart(self):
         self.scrollOffset = 0
-        while not self.changeScreen:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    return ScreenType.NONE
-                elif event.type == pygame.KEYDOWN:
-                    self.handleKeyDownEvent(event.key)
-                elif event.type == pygame.MOUSEWHEEL:
-                    self.handleScrollEvent(event)
 
-            self.renderer.clearScreen(palette.BLACK)
-            self.drawTitle()
-            self.drawEntries()
-            self.drawBackButton()
-            self.renderer.present()
+    def handleEvent(self, event):
+        if event.type == pygame.KEYDOWN:
+            self.handleKeyDownEvent(event.key)
+        elif event.type == pygame.MOUSEWHEEL:
+            self.handleScrollEvent(event)
 
-        self.changeScreen = False
-        return self.nextScreen
+    def draw(self):
+        self.renderer.clearScreen(palette.BLACK)
+        self.drawTitle()
+        self.drawEntries()
+        self.drawBackButton()

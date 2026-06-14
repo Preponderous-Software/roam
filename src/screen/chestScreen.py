@@ -5,6 +5,7 @@ from inventory.inventory import Inventory
 from inventory.inventorySlot import InventorySlot
 from rendering.renderer import Renderer
 from screen.screenType import ScreenType
+from screen.screen import Screen
 from ui.status import Status
 import pygame
 from ui import palette
@@ -13,7 +14,7 @@ from ui import palette
 # @author Claude
 # @since June 12th, 2026
 @component
-class ChestScreen:
+class ChestScreen(Screen):
     """Inventory-management screen for a placed Chest.
 
     Displays the chest's stored inventory (top panel) alongside the player's
@@ -386,36 +387,32 @@ class ChestScreen:
             palette.MEDIUM_GRAY,
         )
 
-    def run(self):
-        while not self.changeScreen:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.nextScreen = ScreenType.NONE
-                    self.changeScreen = True
-                elif event.type == pygame.KEYDOWN:
-                    self.handleKeyDownEvent(event.key)
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    shift = bool(pygame.key.get_mods() & pygame.KMOD_SHIFT)
-                    self.handleMouseClickEvent(event.pos, event.button, shift)
+    def handleEvent(self, event):
+        if event.type == pygame.KEYDOWN:
+            self.handleKeyDownEvent(event.key)
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            shift = bool(pygame.key.get_mods() & pygame.KMOD_SHIFT)
+            self.handleMouseClickEvent(event.pos, event.button, shift)
 
-            self.renderer.clearScreen(palette.BLACK)
-            hoveredChestItem = self._drawPanel(
-                self.getChestInventory(), self.getChestPanelRect(), self._chestTitle()
-            )
-            hoveredPlayerItem = self._drawPanel(
-                self.inventory, self.getPlayerPanelRect(), "Inventory"
-            )
-            self.drawInstructions()
-            self.drawBackButton()
-            self.drawTakeAllButton()
-            self.drawDropButton()
-            hoveredItemName = hoveredChestItem or hoveredPlayerItem
-            if hoveredItemName is not None and self.cursorSlot.isEmpty():
-                self._drawTooltip(hoveredItemName)
-            self.drawCursorSlot()
-            self.status.draw()
-            self.renderer.present()
+    def draw(self):
+        self.renderer.clearScreen(palette.BLACK)
+        hoveredChestItem = self._drawPanel(
+            self.getChestInventory(), self.getChestPanelRect(), self._chestTitle()
+        )
+        hoveredPlayerItem = self._drawPanel(
+            self.inventory, self.getPlayerPanelRect(), "Inventory"
+        )
+        self.drawInstructions()
+        self.drawBackButton()
+        self.drawTakeAllButton()
+        self.drawDropButton()
+        hoveredItemName = hoveredChestItem or hoveredPlayerItem
+        if hoveredItemName is not None and self.cursorSlot.isEmpty():
+            self._drawTooltip(hoveredItemName)
+        self.drawCursorSlot()
+        self.status.draw()
 
+    def onExit(self):
         # Return any held cursor items on close so nothing is lost: prefer the
         # player's inventory, but if it's full, fall back to the chest the items
         # came from rather than silently discarding them.
@@ -427,6 +424,3 @@ class ChestScreen:
 
         if self.onClose is not None:
             self.onClose()
-
-        self.changeScreen = False
-        return self.nextScreen

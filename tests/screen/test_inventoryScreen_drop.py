@@ -268,3 +268,15 @@ def test_right_click_empty_slot_announces_empty():
 
     assert screen.inventory.getSelectedInventorySlotIndex() == 0
     screen.status.set.assert_called_with("Empty slot")
+
+
+def test_on_exit_returns_held_cursor_items_to_inventory():
+    # The cursor-return-on-close logic now lives in onExit (extracted from the
+    # old run() loop in Phase 3b-2); a held item must not be lost on close.
+    screen = createInventoryScreen()
+    screen.cursorSlot.add(createGrass())
+    assert not screen.cursorSlot.isEmpty()
+
+    screen.onExit()
+
+    assert screen.cursorSlot.isEmpty()
