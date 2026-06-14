@@ -44,6 +44,9 @@ class NullRenderer(Renderer):
     def drawText(self, text, xpos, ypos, size, color):
         pass
 
+    def drawTextLeftAligned(self, text, leftX, centerY, size, color):
+        pass
+
     def drawButton(
         self, xpos, ypos, width, height, colorBox, colorText, sizeText, text, function
     ):
