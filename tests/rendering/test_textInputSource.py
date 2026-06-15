@@ -99,6 +99,36 @@ def test_default_reader_decodes_an_arrow_over_a_real_pty():
         os.close(master)
 
 
+def test_arrow_key_emits_key_up_after_key_down():
+    # Terminal key-repeat sends repeated KEY_DOWN; the synthetic KEY_UP stops
+    # the player after one tile instead of letting them walk indefinitely.
+    source = _sourceFeeding("\x1b[A")  # up arrow
+    events = source.pollEvents()
+    types = [e.type for e in events]
+    assert EventType.KEY_DOWN in types
+    assert EventType.KEY_UP in types
+    downIdx = next(i for i, e in enumerate(events) if e.type is EventType.KEY_DOWN)
+    upIdx = next(i for i, e in enumerate(events) if e.type is EventType.KEY_UP)
+    assert upIdx > downIdx
+    assert events[upIdx].key is KeyCode.UP
+
+
+def test_wasd_movement_key_emits_key_up_after_key_down():
+    for key_char, expected_key in [("w", KeyCode.W), ("a", KeyCode.A), ("s", KeyCode.S), ("d", KeyCode.D)]:
+        source = _sourceFeeding(key_char)
+        events = source.pollEvents()
+        down_events = [e for e in events if e.type is EventType.KEY_DOWN]
+        up_events = [e for e in events if e.type is EventType.KEY_UP]
+        assert len(down_events) == 1 and down_events[0].key is expected_key, key_char
+        assert len(up_events) == 1 and up_events[0].key is expected_key, key_char
+
+
+def test_non_movement_key_does_not_emit_key_up():
+    source = _sourceFeeding("i")  # inventory key — not a movement key
+    events = source.pollEvents()
+    assert not any(e.type is EventType.KEY_UP for e in events)
+
+
 def test_newline_and_carriage_return_map_to_return():
     # cbreak delivers Enter as "\n"; raw mode as "\r" — both are Return.
     for ch in ("\n", "\r"):

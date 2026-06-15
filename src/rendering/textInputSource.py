@@ -19,6 +19,15 @@ _ARROW_SEQUENCES = {
     "\x1bOD": KeyCode.LEFT,
 }
 
+# Movement keys that need a synthetic KEY_UP immediately after KEY_DOWN so
+# the player moves exactly one tile per keypress. Without this the terminal's
+# OS-level key-repeat keeps firing KEY_DOWN events and the player walks
+# indefinitely (there is no physical KEY_UP from a terminal).
+_MOVEMENT_KEYS = {
+    KeyCode.UP, KeyCode.DOWN, KeyCode.LEFT, KeyCode.RIGHT,
+    KeyCode.W, KeyCode.A, KeyCode.S, KeyCode.D,
+}
+
 # Control bytes whose terminal value differs from the KeyCode (SDL) value. In
 # cbreak mode the Enter key arrives as "\n" (CR translated to LF), not the
 # "\r" KeyCode.RETURN expects; the terminal sends DEL ("\x7f") for Backspace,
@@ -56,6 +65,7 @@ class TextInputSource(InputSource):
                 arrow = _ARROW_SEQUENCES.get(chars[index : index + 3])
                 if arrow is not None:
                     events.append(InputEvent(EventType.KEY_DOWN, key=arrow))
+                    events.append(InputEvent(EventType.KEY_UP, key=arrow))
                     index += 3
                     continue
                 # A bare Escape (no following sequence bytes).
@@ -66,6 +76,8 @@ class TextInputSource(InputSource):
             if keyCode is None:
                 keyCode = fromInt(ord(char))
             events.append(InputEvent(EventType.KEY_DOWN, key=keyCode))
+            if keyCode in _MOVEMENT_KEYS:
+                events.append(InputEvent(EventType.KEY_UP, key=keyCode))
             if char.isprintable():
                 events.append(InputEvent(EventType.TEXT_INPUT, text=char))
             index += 1

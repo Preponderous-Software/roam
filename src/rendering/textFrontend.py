@@ -31,8 +31,9 @@ from rendering.textRenderer import TextRenderer
 #         whatever entity is at grid cell (0, 0).
 #       * The scroll wheel cannot cycle the hotbar; use 1–0 keys instead.
 #   - No held-key state. isPressed() always returns False, so Run (hold Shift)
-#     and Crouch (hold Ctrl) have no effect. Movement still works because it is
-#     driven by KEY_DOWN events, not isPressed().
+#     and Crouch (hold Ctrl) have no effect. Each directional keypress moves
+#     the player exactly one tile (a synthetic KEY_UP follows each movement
+#     KEY_DOWN to prevent OS key-repeat from causing continuous walking).
 #   - Terminal resize mid-session is not detected. The grid is sized once at
 #     startup from os.get_terminal_size(); restart the game after resizing.
 #
