@@ -1,3 +1,4 @@
+import os
 import sys
 
 from config.config import Config
@@ -24,9 +25,23 @@ class TextFrontend:
         self._build()
 
     def _build(self):
-        self._renderer = TextRenderer()
+        self._renderer = TextRenderer(columns=self._termCols(), rows=self._termRows())
         self._inputSource = TextInputSource()
         self._clock = TextClock()
+
+    def _termCols(self):
+        try:
+            cols = os.get_terminal_size().columns
+            return cols if cols > 0 else 80
+        except OSError:
+            return 80
+
+    def _termRows(self):
+        try:
+            lines = os.get_terminal_size().lines
+            return lines if lines > 0 else 24
+        except OSError:
+            return 24
 
     def _enterCbreakMode(self):
         # Non-canonical, no-echo input so keystrokes arrive immediately. Skipped
