@@ -29,10 +29,14 @@ def test_draw_text_left_aligned_starts_at_the_left_pixel():
     assert renderer.grid.getChar(3, 2) == "h"  # leftX 30 -> col 3, centerY 25 -> row 2
 
 
-def test_draw_rectangle_outlines_a_box():
+def test_draw_rectangle_fills_with_spaces():
     renderer = TextRenderer(columns=20, rows=10, cellWidth=10, cellHeight=10)
+    # Pre-fill the area with a non-space char so we can confirm it was cleared.
+    for c in range(4):
+        for r in range(3):
+            renderer.grid.setChar(c, r, "X")
     renderer.drawRectangle(0, 0, 40, 30, (255, 255, 255))
-    assert renderer.grid.getChar(0, 0) == "+"  # corner of the 4x3-cell box
+    assert renderer.grid.getChar(0, 0) == " "  # filled with spaces, not a box corner
 
 
 def test_load_image_collapses_to_a_glyph_and_draw_image_places_it():

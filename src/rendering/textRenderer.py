@@ -5,6 +5,51 @@ from rendering.renderer import Renderer
 from rendering.textGrid import TextGrid
 from ui.geometry import Rect
 
+# Roguelike-style glyph table: image filename (no extension, lowercased) → char.
+# Uppercase = dangerous / solid; lowercase = passive / harmless; symbols = terrain.
+_GLYPHS = {
+    # terrain
+    "grass":                    ".",
+    "stone":                    "#",
+    "stonefloor":               "-",
+    "woodfloor":                "_",
+    "fence":                    "|",
+    # flora
+    "oakwood":                  "T",
+    "junglewood":               "T",
+    "leaves":                   "*",
+    "wheat":                    '"',
+    "wheatseed":                ",",
+    "youngcrop":                ":",
+    "maturecrop":               '"',
+    # creatures  (uppercase = dangerous)
+    "bear":                     "B",
+    "bearonreproductioncooldown": "B",
+    "wolf":                     "W",
+    "snake":                    "~",
+    "deer":                     "d",
+    "rabbit":                   "r",
+    "chicken":                  "c",
+    "chickenonreproductioncooldown": "c",
+    # items / food
+    "bearmeat":                 "%",
+    "chickenmeat":              "%",
+    "apple":                    "a",
+    "banana":                   "b",
+    # furniture / structures
+    "chest":                    "[",
+    "gravestone":               "+",
+    "campfire":                 "^",
+    "torch":                    "!",
+    "bed":                      "=",
+    "stonebed":                 "=",
+    # ores
+    "coalore":                  "o",
+    "ironore":                  "O",
+    # misc
+    "excrement":                "x",
+}
+
 
 # @author Daniel McCoy Stephenson
 # @since June 14th, 2026
@@ -77,12 +122,15 @@ class TextRenderer(Renderer):
     # --- drawing primitives ---
 
     def drawRectangle(self, xpos, ypos, width, height, color):
-        # An outlined box reads better in a terminal than a flooded fill.
-        self.grid.drawBox(
+        # Fill with spaces so background calls (location tiles, energy bar
+        # backdrop, hotbar panel) don't leave box-outline noise on the grid.
+        # drawButton() handles its own box, so UI elements are unaffected.
+        self.grid.fillRect(
             self._col(xpos),
             self._row(ypos),
             self._cellsWide(width),
             self._cellsHigh(height),
+            " ",
         )
 
     def drawText(self, text, xpos, ypos, size, color):
@@ -119,10 +167,15 @@ class TextRenderer(Renderer):
         self.grid.setChar(self._col(x), self._row(y), glyph[0])
 
     def loadImage(self, path):
-        # Collapse an asset to a single representative glyph.
+        # Map each asset to a distinct, meaningful ASCII glyph so the text
+        # mode reads like a classic roguelike rather than scattered initials.
         name = os.path.splitext(os.path.basename(str(path)))[0].lower()
         if name.startswith("player"):
             return "@"
+        glyph = _GLYPHS.get(name)
+        if glyph:
+            return glyph
+        # Fallback: first letter, uppercase, for any unrecognised asset.
         return name[0].upper() if name else "#"
 
     def scaleImage(self, image, size):
