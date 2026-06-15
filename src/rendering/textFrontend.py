@@ -17,6 +17,45 @@ from rendering.textRenderer import TextRenderer
 # keystrokes reach the game without Enter, and restoring it on quit. This is the
 # concrete demonstration that a second frontend is a few classes plus a factory
 # branch — no game-logic change.
+#
+# Known limitations / UX divergences from the pygame frontend
+# -----------------------------------------------------------
+# INPUT
+#   - No mouse. getMousePosition() always returns (0, 0) and getMouseButtons()
+#     always returns (False, False, False). As a result:
+#       * Gather (left-click) and Place (right-click) actions do not work.
+#         There is no keyboard-only alternative yet.
+#       * Hotbar slots cannot be clicked; use 1–0 keys instead.
+#       * HUD elements (hotbar, minimap, status) cannot be dragged.
+#       * The "hover over a tile to show its name" status tooltip always reads
+#         whatever entity is at grid cell (0, 0).
+#       * The scroll wheel cannot cycle the hotbar; use 1–0 keys instead.
+#   - No held-key state. isPressed() always returns False, so Run (hold Shift)
+#     and Crouch (hold Ctrl) have no effect. Movement still works because it is
+#     driven by KEY_DOWN events, not isPressed().
+#   - Terminal resize mid-session is not detected. The grid is sized once at
+#     startup from os.get_terminal_size(); restart the game after resizing.
+#
+# RENDERING
+#   - No day/night overlay. drawDayNightOverlay() is a no-op, so the world
+#     always appears fully lit regardless of the in-game time of day.
+#   - No minimap. tryLoadImage() returns None so the minimap never renders,
+#     and saveImage() is a no-op so room PNGs are never written — the map
+#     image file is never generated either.
+#   - No screenshots. captureScreenshot() is a no-op.
+#   - No translucent overlays. The death and pause screens show their text
+#     banners but not the darkening dim layer behind them.
+#   - No colour. All glyphs are the same terminal foreground colour; entities
+#     that differ only by colour (e.g. day-phase indicators) look identical.
+#   - One glyph per tile. Only the topmost entity on a location is shown; a
+#     grass tile covered by stone covered by the player shows only '@'.
+#
+# HUD LAYOUT
+#   - The hotbar, status box, and energy bar are positioned using pixel offsets
+#     designed for the graphical build (HOTBAR_BOTTOM_OFFSET = 150 px). On a
+#     small terminal they may overlap the game-world area rather than sitting
+#     below it. The energy number is always visible on the last row; the hotbar
+#     items appear as glyphs wherever the pixel math maps them.
 class TextFrontend:
     def __init__(self, config: Config):
         self._config = config
