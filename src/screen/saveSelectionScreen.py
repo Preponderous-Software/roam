@@ -191,10 +191,10 @@ class SaveSelectionScreen(Screen):
                 self.newSaveNameError = ""
             return
         if self.confirmingDelete is not None:
-            # While confirming a delete, Esc cancels and any other key is ignored
-            # (the confirm/cancel buttons remain mouse-driven).
             if key == KeyCode.ESCAPE:
                 self.confirmingDelete = None
+            elif key in (KeyCode.RETURN, KeyCode.KP_ENTER):
+                self.deleteSave(self.confirmingDelete)
             return
         if key == KeyCode.ESCAPE:
             self.switchToMainMenuScreen()
@@ -374,6 +374,13 @@ class SaveSelectionScreen(Screen):
             24,
             "Cancel",
             lambda: setattr(self, "confirmingDelete", None),
+        )
+        self.renderer.drawText(
+            "Enter: confirm  -  Esc: cancel",
+            x / 2,
+            btnY + buttonHeight + 8,
+            14,
+            palette.DIM_GRAY,
         )
 
     def drawNamingDialog(self):

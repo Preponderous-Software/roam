@@ -28,13 +28,33 @@ class OptionsScreen(Screen):
         self.nextScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = False
         self.confirmingMainMenu = False
+        self._cursor = 0
+
+    _MENU_ITEMS = [
+        ("Quit to Main Menu", "requestMainMenuConfirmation"),
+        ("Stats", "switchToStatsScreen"),
+        ("Inventory", "switchToInventoryScreen"),
+        ("Controls", "switchToControlsScreen"),
+        ("Codex", "switchToCodexScreen"),
+        ("Back", "switchToWorldScreen"),
+    ]
 
     def handleKeyDownEvent(self, key):
-        if key == KeyCode.ESCAPE:
-            if self.confirmingMainMenu:
+        if self.confirmingMainMenu:
+            if key in (KeyCode.RETURN, KeyCode.KP_ENTER):
+                self.switchToMainMenuScreen()
+            elif key == KeyCode.ESCAPE:
                 self.confirmingMainMenu = False
-            else:
-                self.switchToWorldScreen()
+            return
+        if key == KeyCode.ESCAPE:
+            self.switchToWorldScreen()
+        elif key in (KeyCode.UP, KeyCode.W):
+            self._cursor = (self._cursor - 1) % len(self._MENU_ITEMS)
+        elif key in (KeyCode.DOWN, KeyCode.S):
+            self._cursor = (self._cursor + 1) % len(self._MENU_ITEMS)
+        elif key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
+            _, methodName = self._MENU_ITEMS[self._cursor]
+            getattr(self, methodName)()
 
     def _switchToScreen(self, screenType):
         self.nextScreen = screenType
@@ -82,46 +102,29 @@ class OptionsScreen(Screen):
         ypos = 70
         margin = 10
 
-        menuItems = [
-            ("Quit to Main Menu", self.requestMainMenuConfirmation),
-            ("Stats", self.switchToStatsScreen),
-            ("Inventory", self.switchToInventoryScreen),
-            ("Controls", self.switchToControlsScreen),
-            ("Codex", self.switchToCodexScreen),
-        ]
-
-        for label, callback in menuItems:
+        for i, (label, methodName) in enumerate(self._MENU_ITEMS):
+            selected = i == self._cursor
+            bg = palette.LIGHT_GRAY if selected else palette.WHITE
+            displayLabel = ("> " + label) if selected else label
             self.renderer.drawButton(
                 xpos,
                 ypos,
                 width,
                 height,
-                palette.WHITE,
+                bg,
                 palette.BLACK,
                 30,
-                label,
-                callback,
+                displayLabel,
+                getattr(self, methodName),
             )
             ypos = ypos + height + margin
 
-        self.drawBackButton()
-
-    def drawBackButton(self):
-        x, y = self.renderer.getDisplaySize()
-        width = x / 3
-        height = y / 10
-        xpos = x / 2 - width / 2
-        ypos = y / 2 - height / 2 + width
-        self.renderer.drawButton(
-            xpos,
-            ypos,
-            width,
-            height,
-            palette.WHITE,
-            palette.BLACK,
-            30,
-            "Back",
-            self.switchToWorldScreen,
+        self.renderer.drawText(
+            "Up/Down: navigate  -  Enter: select  -  Esc: back",
+            x / 2,
+            ypos + margin,
+            14,
+            palette.DIM_GRAY,
         )
 
     def drawMainMenuConfirmation(self):
@@ -182,6 +185,13 @@ class OptionsScreen(Screen):
             "Cancel",
             self.cancelMainMenuConfirmation,
         )
+        self.renderer.drawText(
+            "Enter: confirm  -  Esc: cancel",
+            x / 2,
+            btnY + buttonHeight + 10,
+            14,
+            palette.DIM_GRAY,
+        )
 
     def handleEvent(self, event):
         if event.type == EventType.KEY_DOWN:
@@ -196,6 +206,9 @@ class OptionsScreen(Screen):
             self.drawMainMenuConfirmation()
         else:
             self.drawMenuButtons()
+
+    def onStart(self):
+        self._cursor = 0
 
     def onExit(self):
         self.confirmingMainMenu = False

@@ -120,7 +120,7 @@ class CodexScreen(Screen):
             )
             self.renderer.drawText(scrollInfo, x / 2, y - 70, 16, palette.MEDIUM_GRAY)
             self.renderer.drawText(
-                "Scroll to see more", x / 2, y - 92, 14, palette.DIM_GRAY
+                "Scroll or Up/Down to see more", x / 2, y - 92, 14, palette.DIM_GRAY
             )
 
     def drawBackButton(self):
@@ -144,6 +144,10 @@ class CodexScreen(Screen):
     def handleKeyDownEvent(self, key):
         if key == KeyCode.ESCAPE or key == self.keyBindings.getKey("codex"):
             self.switchToReturnScreen()
+        elif key == KeyCode.UP:
+            self.scrollOffset = max(0, self.scrollOffset - 1)
+        elif key == KeyCode.DOWN:
+            self.scrollOffset += 1
 
     def handleScrollEvent(self, event):
         if event.scrollY > 0:

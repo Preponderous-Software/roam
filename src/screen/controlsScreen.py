@@ -125,7 +125,7 @@ class ControlsScreen(Screen):
             )
             self.renderer.drawText(scrollInfo, x / 2, y - 70, 16, palette.MEDIUM_GRAY)
             self.renderer.drawText(
-                "Scroll to see more", x / 2, y - 92, 14, palette.DIM_GRAY
+                "Scroll or Up/Down to see more", x / 2, y - 92, 14, palette.DIM_GRAY
             )
 
     def drawBottomButtons(self):
@@ -213,6 +213,15 @@ class ControlsScreen(Screen):
             return
         if key == KeyCode.ESCAPE:
             self.cancelAndReturn()
+        elif key == KeyCode.UP:
+            self.scrollOffset = max(0, self.scrollOffset - 1)
+        elif key == KeyCode.DOWN:
+            self.scrollOffset += 1
+        elif key in (KeyCode.RETURN, KeyCode.KP_ENTER):
+            if not self.keyBindings.getConflictsForBindings(
+                self.pendingBindings or self.keyBindings.bindings
+            ):
+                self.saveAndReturn()
 
     def handleScrollEvent(self, event):
         if event.scrollY > 0:
