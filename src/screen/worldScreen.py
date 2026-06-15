@@ -558,15 +558,22 @@ class WorldScreen:
 
     def executeGatherAction(self):
         targetLocation, targetRoom = self.getLocationAndRoomAtMousePosition()
-
         if targetLocation == -1:
             self.status.set("Nothing to pick up here")
             return
-
         if self.isLocationTooFar(targetLocation, targetRoom):
             self.status.set("Too far away")
             return
+        self._executeGatherAt(targetLocation, targetRoom)
 
+    def executeGatherAtFront(self):
+        targetLocation = self.getLocationInFrontOfPlayer()
+        if targetLocation == -1:
+            self.status.set("Nothing to pick up here")
+            return
+        self._executeGatherAt(targetLocation, self.currentRoom)
+
+    def _executeGatherAt(self, targetLocation, targetRoom):
         if self._tryHarvestCrop(targetLocation, targetRoom):
             return
 
@@ -710,11 +717,19 @@ class WorldScreen:
         if targetLocation == -2:
             self.status.set("Stop moving to place items")
             return
-
         if self.isLocationTooFar(targetLocation, targetRoom):
             self.status.set("Too far away")
             return
+        self._executePlaceAt(targetLocation, targetRoom)
 
+    def executePlaceAtFront(self):
+        targetLocation = self.getLocationInFrontOfPlayer()
+        if targetLocation == -1:
+            self.status.set("Cannot place here")
+            return
+        self._executePlaceAt(targetLocation, self.currentRoom)
+
+    def _executePlaceAt(self, targetLocation, targetRoom):
         # Check for chest/gravestone interaction before checking solid/blocked
         for entityId in list(targetLocation.getEntities().keys()):
             entity = targetLocation.getEntity(entityId)
@@ -951,6 +966,12 @@ class WorldScreen:
             )
         elif key == kb.getKey("toggle_help"):
             self.showHelp = not self.showHelp
+        elif key == kb.getKey("gather"):
+            if self.checkPlayerGatherCooldown(self.player.getTickLastGathered()):
+                self.executeGatherAtFront()
+        elif key == kb.getKey("place"):
+            if self.checkPlayerPlaceCooldown(self.player.getTickLastPlaced()):
+                self.executePlaceAtFront()
         elif key == kb.getKey("codex"):
             self.nextScreen = ScreenType.CODEX_SCREEN
             self.changeScreen = True
@@ -1358,8 +1379,8 @@ class WorldScreen:
 
         helpLines = [
             "W/A/S/D or Arrows  -  Move",
-            "Left Click  -  Gather / Pick up",
-            "Right Click  -  Place item / open chest",
+            f"Left Click / {keyName('gather')}  -  Gather / Pick up (facing tile)",
+            f"Right Click / {keyName('place')}  -  Place item / open chest (facing tile)",
             "Middle Click  -  Drag HUD elements to reposition",
             "1-0  -  Select hotbar slot",
             "Scroll Wheel  -  Cycle hotbar",

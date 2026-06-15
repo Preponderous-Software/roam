@@ -23,6 +23,8 @@ class KeyCode(IntEnum):
     A = 97
     C = 99
     D = 100
+    F = 102
+    G = 103
     I = 105
     L = 108
     M = 109
@@ -73,6 +75,8 @@ _DISPLAY_NAMES = {
     KeyCode.A: "a",
     KeyCode.C: "c",
     KeyCode.D: "d",
+    KeyCode.F: "f",
+    KeyCode.G: "g",
     KeyCode.I: "i",
     KeyCode.L: "l",
     KeyCode.M: "m",

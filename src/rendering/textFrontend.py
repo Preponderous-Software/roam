@@ -23,8 +23,8 @@ from rendering.textRenderer import TextRenderer
 # INPUT
 #   - No mouse. getMousePosition() always returns (0, 0) and getMouseButtons()
 #     always returns (False, False, False). As a result:
-#       * Gather (left-click) and Place (right-click) actions do not work.
-#         There is no keyboard-only alternative yet.
+#       * Gather (left-click): use G to gather from the tile in front of you.
+#       * Place (right-click): use F to place/interact with the tile in front of you.
 #       * Hotbar slots cannot be clicked; use 1–0 keys instead.
 #       * HUD elements (hotbar, minimap, status) cannot be dragged.
 #       * The "hover over a tile to show its name" status tooltip always reads
