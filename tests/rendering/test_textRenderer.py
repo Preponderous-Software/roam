@@ -1,5 +1,5 @@
 from rendering.renderer import Renderer
-from rendering.textRenderer import TextRenderer
+from rendering.textRenderer import TextRenderer, _buildDiff
 from textDemo import renderMainMenu
 
 
@@ -98,3 +98,50 @@ def test_a_real_screen_renders_to_text_with_no_pygame():
     assert "Play" in frame
     assert "Quit" in frame
     assert "Settings" in frame
+
+
+# --- _buildDiff: differential rendering tests ---
+
+def test_build_diff_first_frame_homes_cursor_and_paints_all_lines():
+    diff = _buildDiff(["hello", "world"], [])
+    assert "\033[H" in diff          # cursor home
+    assert "hello" in diff
+    assert "world" in diff
+    assert "\033[K" in diff          # erase-to-EOL present
+    assert "\033[J" in diff          # erase-below at end
+    assert "\033[2J" not in diff     # NO full-screen clear
+
+
+def test_build_diff_subsequent_frame_only_updates_changed_lines():
+    old = ["line A", "line B", "line C"]
+    new = ["line A", "line X", "line C"]   # only row 1 changed
+    diff = _buildDiff(new, old)
+    assert "line X" in diff
+    assert "line A" not in diff    # unchanged — not retransmitted
+    assert "line C" not in diff    # unchanged — not retransmitted
+    assert "\033[2;1H" in diff     # jumped to row 2 (1-based)
+    assert "\033[2J" not in diff   # NO full-screen clear
+
+
+def test_build_diff_erases_lines_that_disappeared():
+    old = ["row0", "row1", "row2"]
+    new = ["row0"]                 # two rows removed
+    diff = _buildDiff(new, old)
+    assert "\033[2;1H\033[2K" in diff   # row 2 blanked
+    assert "\033[3;1H\033[2K" in diff   # row 3 blanked
+
+
+def test_build_diff_identical_frames_produce_empty_string():
+    lines = ["same", "content"]
+    diff = _buildDiff(lines, lines[:])
+    assert diff == ""
+
+
+def test_present_output_contains_no_full_screen_clear():
+    frames = []
+    renderer = TextRenderer(output=frames.append)
+    renderer.clearScreen((0, 0, 0))
+    renderer.drawText("hi", 80, 16, 12, (255, 255, 255))
+    renderer.present()
+    assert len(frames) == 1
+    assert "\033[2J" not in frames[0]   # flicker-free: no full clear

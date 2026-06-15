@@ -96,6 +96,12 @@ class TextFrontend:
 
             self._terminalState = termios.tcgetattr(sys.stdin)
             tty.setcbreak(sys.stdin.fileno())
+            # Switch to the alternate screen buffer so the game never pollutes
+            # the shell's scroll-back history, and hide the cursor so it does
+            # not visually jump between cells during repaints (both are
+            # standard VT100/xterm extensions supported by Userland on Android).
+            sys.stdout.write("\033[?1049h\033[?25l")
+            sys.stdout.flush()
         except (ImportError, OSError, ValueError):
             self._terminalState = None
 
@@ -118,6 +124,14 @@ class TextFrontend:
         if self._terminalState is not None:
             import termios
 
+            # Restore the cursor and return to the normal screen *before*
+            # restoring terminal attributes so the shell prompt lands cleanly
+            # on the main screen, not inside the alternate screen buffer.
+            try:
+                sys.stdout.write("\033[?25h\033[?1049l")
+                sys.stdout.flush()
+            except OSError:
+                pass
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, self._terminalState)
             self._terminalState = None
 

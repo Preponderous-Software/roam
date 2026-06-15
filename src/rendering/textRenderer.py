@@ -142,9 +142,12 @@ class TextRenderer(Renderer):
         # Only repaint when the frame actually changed, so a static screen
         # (e.g. a menu polled every loop) doesn't flood the terminal.
         frame = self.grid.toString()
-        if frame != self._lastFrame:
-            self._output(frame)
-            self._lastFrame = frame
+        if frame == self._lastFrame:
+            return
+        newLines = frame.split("\n")
+        oldLines = self._lastFrame.split("\n") if self._lastFrame is not None else []
+        self._output(_buildDiff(newLines, oldLines))
+        self._lastFrame = frame
 
     def setCaption(self, text):
         self._caption = text
@@ -254,7 +257,46 @@ class TextRenderer(Renderer):
         pass
 
 
-def _printToTerminal(frame):
-    # Clear the screen and home the cursor, then paint the frame.
-    sys.stdout.write("\033[2J\033[H" + frame + "\n")
-    sys.stdout.flush()
+def _buildDiff(newLines, oldLines):
+    """Return an ANSI escape sequence that updates only the lines that changed.
+
+    On the first call (oldLines=[]), homes the cursor and rewrites every row
+    followed by erase-to-EOL (\033[K), then erases below (\033[J).  This
+    clears any pre-game content without a blank-screen flash.
+
+    On subsequent calls, only the lines whose content changed are repositioned
+    with \033[row;1H and rewritten, each followed by \033[K to wipe stale
+    trailing characters.  Lines that are identical to the previous frame are
+    left untouched — the terminal keeps them with zero bandwidth cost.
+
+    Neither path uses \033[2J (full clear), so the terminal never shows a
+    blank frame between repaints — that was the root cause of the choppiness
+    reported on Userland on Android.
+    """
+    parts = []
+    if not oldLines:
+        # First render: home cursor, overwrite every row, then clear below.
+        parts.append("\033[H")
+        for line in newLines:
+            parts.append(line + "\033[K\r\n")
+        parts.append("\033[J")
+    else:
+        # Differential update: rewrite only rows that changed.
+        for i, line in enumerate(newLines):
+            old = oldLines[i] if i < len(oldLines) else None
+            if line != old:
+                # \033[row;1H  — move to start of that row (1-based)
+                # line         — new content (may include ANSI color codes)
+                # \033[K       — erase from cursor to end of line
+                parts.append(f"\033[{i + 1};1H{line}\033[K")
+        # Blank rows that existed in the old frame but not in the new one.
+        for i in range(len(newLines), len(oldLines)):
+            parts.append(f"\033[{i + 1};1H\033[2K")
+    return "".join(parts)
+
+
+def _printToTerminal(diff):
+    # diff is a pre-built ANSI sequence from _buildDiff; just emit and flush.
+    if diff:
+        sys.stdout.write(diff)
+        sys.stdout.flush()
