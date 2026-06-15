@@ -31,10 +31,31 @@ class ConfigScreen(Screen):
         self.scrollOffset = 0
         self._lastToggleAt = 0.0
         self._toggleCooldown = 0.25
+        self._cursor = 0
+        self._toggleButtons = [
+            ("Debug Mode", "debug"),
+            ("Fullscreen", "fullscreen"),
+            ("Auto Eat Food", "autoEatFoodInInventory"),
+            ("Remove Dead Creatures", "removeDeadEntities"),
+            ("Show Minimap", "showMiniMap"),
+            ("Camera Follow Player", "cameraFollowPlayer"),
+            ("Limit Speed", "limitTps"),
+            ("Pushable Stone", "pushableStone"),
+            ("Day/Night Cycle", "dayNightCycleEnabled"),
+        ]
 
     def handleKeyDownEvent(self, key):
+        n = len(self._toggleButtons)
         if key == KeyCode.ESCAPE:
             self.switchToMainMenuScreen()
+        elif key == KeyCode.UP:
+            self._cursor = (self._cursor - 1) % n
+            self.scrollOffset = min(self.scrollOffset, self._cursor)
+        elif key == KeyCode.DOWN:
+            self._cursor = (self._cursor + 1) % n
+        elif key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
+            _, attribute = self._toggleButtons[self._cursor]
+            self._toggleConfigAttribute(attribute)
 
     def switchToMainMenuScreen(self):
         self.nextScreen = ScreenType.MAIN_MENU_SCREEN
@@ -55,7 +76,8 @@ class ConfigScreen(Screen):
         x, y = self.renderer.getDisplaySize()
         self.renderer.drawText("Settings", x / 2, 25, 36, palette.WHITE)
         self.renderer.drawText(
-            "Click a setting to toggle it", x / 2, 50, 14, palette.MEDIUM_GRAY
+            "Up/Down: navigate  -  Enter/Space: toggle  -  Click a setting to toggle",
+            x / 2, 50, 14, palette.MEDIUM_GRAY
         )
 
     def drawMenuButtons(self):
@@ -66,42 +88,30 @@ class ConfigScreen(Screen):
         buttonHeight = 28
         startY = 60
 
-        toggleButtons = [
-            ("Debug Mode", "debug"),
-            ("Fullscreen", "fullscreen"),
-            ("Auto Eat Food", "autoEatFoodInInventory"),
-            ("Remove Dead Creatures", "removeDeadEntities"),
-            ("Show Minimap", "showMiniMap"),
-            ("Camera Follow Player", "cameraFollowPlayer"),
-            ("Limit Speed", "limitTps"),
-            ("Pushable Stone", "pushableStone"),
-            ("Day/Night Cycle", "dayNightCycleEnabled"),
-        ]
-
-        visibleRows = max(
-            1, int((y - startY - 80) / rowHeight)
-        )  # 80px reserved for bottom Back button
+        toggleButtons = self._toggleButtons
+        visibleRows = max(1, int((y - startY - 80) / rowHeight))
         maxOffset = max(0, len(toggleButtons) - visibleRows)
+
+        # Keep the cursor visible: scroll down if cursor is below the window.
+        if self._cursor >= self.scrollOffset + visibleRows:
+            self.scrollOffset = self._cursor - visibleRows + 1
         self.scrollOffset = max(0, min(self.scrollOffset, maxOffset))
 
-        visibleToggles = toggleButtons[
-            self.scrollOffset : self.scrollOffset + visibleRows
-        ]
+        visibleToggles = toggleButtons[self.scrollOffset : self.scrollOffset + visibleRows]
 
         for i, (label, attribute) in enumerate(visibleToggles):
+            absIndex = self.scrollOffset + i
+            selected = absIndex == self._cursor
             rowY = startY + i * rowHeight
             isOn = bool(getattr(self.config, attribute))
-            color = (0, 255, 0) if isOn else (255, 0, 0)
+            valueColor = (0, 200, 0) if isOn else (200, 50, 50)
             stateText = "ON" if isOn else "OFF"
+            bg = palette.LIGHT_GRAY if selected else palette.WHITE
+            displayLabel = ("> " if selected else "  ") + label + ": " + stateText
             self.renderer.drawButton(
-                xpos,
-                rowY,
-                width,
-                buttonHeight,
-                palette.WHITE,
-                color,
-                20,
-                label + ": " + stateText,
+                xpos, rowY, width, buttonHeight,
+                bg, valueColor, 20,
+                displayLabel,
                 lambda attr=attribute: self._toggleConfigAttribute(attr),
             )
 
@@ -140,6 +150,7 @@ class ConfigScreen(Screen):
 
     def onStart(self):
         self.scrollOffset = 0
+        self._cursor = 0
 
     def handleEvent(self, event):
         if event.type == EventType.KEY_DOWN:

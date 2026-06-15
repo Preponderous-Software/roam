@@ -68,6 +68,8 @@ class InventoryScreen(Screen):
             destSlot.setContents(self.cursorSlot.getContents())
             self.cursorSlot.setContents(temp)
 
+    _ITEMS_PER_ROW = 5
+
     def handleKeyDownEvent(self, key):
         kb = self.keyBindings
         if key == KeyCode.ESCAPE and self.craftPanelOpen:
@@ -75,8 +77,28 @@ class InventoryScreen(Screen):
             return
         if key == kb.getKey("inventory") or key == KeyCode.ESCAPE:
             self.switchToWorldScreen()
-        elif key == kb.getKey("screenshot"):
+            return
+        if key == kb.getKey("screenshot"):
             self.renderer.captureScreenshot()
+            return
+        _NAV_KEYS = {KeyCode.UP, KeyCode.DOWN, KeyCode.LEFT, KeyCode.RIGHT,
+                     KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE, KeyCode.D}
+        if key in _NAV_KEYS:
+            idx = self.inventory.getSelectedInventorySlotIndex()
+            n = len(self.inventory.getInventorySlots())
+            cols = self._ITEMS_PER_ROW
+            if key == KeyCode.RIGHT:
+                self.inventory.setSelectedInventorySlotIndex((idx + 1) % n)
+            elif key == KeyCode.LEFT:
+                self.inventory.setSelectedInventorySlotIndex((idx - 1) % n)
+            elif key == KeyCode.DOWN:
+                self.inventory.setSelectedInventorySlotIndex(min(idx + cols, n - 1))
+            elif key == KeyCode.UP:
+                self.inventory.setSelectedInventorySlotIndex(max(idx - cols, 0))
+            elif key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
+                self.swapCursorSlotWithInventorySlotByIndex(idx)
+            elif key == KeyCode.D:
+                self.dropCursorSlot()
         else:
             self._handleHotbarKey(key)
 
@@ -168,12 +190,32 @@ class InventoryScreen(Screen):
             palette.WHITE,
         )
         self.renderer.drawText(
-            "Left-click: swap  -  Right-click: select hotbar  -  Drop button: discard",
+            "Arrows: navigate  -  Enter/Space: pick up / put down  -  D: discard held",
             backgroundX,
-            backgroundY + backgroundHeight + 45,
-            16,
+            backgroundY + backgroundHeight + 42,
+            14,
             palette.MEDIUM_GRAY,
         )
+        self.renderer.drawText(
+            "Left-click: swap  -  Right-click: select hotbar  -  Drop button: discard",
+            backgroundX,
+            backgroundY + backgroundHeight + 58,
+            14,
+            palette.DIM_GRAY,
+        )
+        if not self.cursorSlot.isEmpty():
+            heldItem = self.cursorSlot.getContents()[0]
+            heldCount = self.cursorSlot.getNumItems()
+            heldText = "Holding: " + heldItem.getName()
+            if heldCount > 1:
+                heldText += " x" + str(heldCount)
+            self.renderer.drawText(
+                heldText,
+                backgroundX + backgroundWidth / 2,
+                backgroundY - 20,
+                18,
+                (255, 255, 160),
+            )
 
         if hoveredItemName is not None:
             screenW, screenH = self.renderer.getDisplaySize()

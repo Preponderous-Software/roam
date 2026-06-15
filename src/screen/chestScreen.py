@@ -187,6 +187,8 @@ class ChestScreen(Screen):
             self.switchToWorldScreen()
         elif key == kb.getKey("screenshot"):
             self.renderer.captureScreenshot()
+        elif key == KeyCode.T:
+            self.takeAll()
 
     def drawBackButton(self):
         width, height = self.renderer.getDisplaySize()
@@ -377,7 +379,7 @@ class ChestScreen(Screen):
         width, _ = self.renderer.getDisplaySize()
         closeKeyName = self.keyBindings.getKeyName("inventory").upper()
         self.renderer.drawText(
-            "Left-click: move  -  Shift-click: transfer between chest and inventory",
+            "Left-click: move  -  Shift-click: transfer  -  T: take all",
             width / 2,
             14,
             16,
