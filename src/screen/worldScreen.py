@@ -975,6 +975,12 @@ class WorldScreen:
         elif key == kb.getKey("codex"):
             self.nextScreen = ScreenType.CODEX_SCREEN
             self.changeScreen = True
+        elif key == KeyCode.LEFTBRACKET:
+            current = self.player.getInventory().getSelectedInventorySlotIndex()
+            self.changeSelectedInventorySlot((current - 1) % 10)
+        elif key == KeyCode.RIGHTBRACKET:
+            current = self.player.getInventory().getSelectedInventorySlotIndex()
+            self.changeSelectedInventorySlot((current + 1) % 10)
 
     def handleKeyUpEvent(self, key):
         kb = self.keyBindings
@@ -1383,7 +1389,7 @@ class WorldScreen:
             f"Right Click / {keyName('place')}  -  Place item / open chest (facing tile)",
             "Middle Click  -  Drag HUD elements to reposition",
             "1-0  -  Select hotbar slot",
-            "Scroll Wheel  -  Cycle hotbar",
+            "Scroll Wheel / [ ]  -  Cycle hotbar",
             f"{keyName('inventory')}  -  Open / Close inventory",
             f"{keyName('run')}  -  Run",
             f"{keyName('crouch')}  -  Crouch",

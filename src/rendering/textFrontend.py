@@ -29,7 +29,7 @@ from rendering.textRenderer import TextRenderer
 #       * HUD elements (hotbar, minimap, status) cannot be dragged.
 #       * The "hover over a tile to show its name" status tooltip always reads
 #         whatever entity is at grid cell (0, 0).
-#       * The scroll wheel cannot cycle the hotbar; use 1–0 keys instead.
+#       * The scroll wheel cannot cycle the hotbar; use 1–0 or [ ] instead.
 #   - No held-key state. isPressed() always returns False, so Run (hold Shift)
 #     and Crouch (hold Ctrl) have no effect. Each directional keypress moves
 #     the player exactly one tile (a synthetic KEY_UP follows each movement

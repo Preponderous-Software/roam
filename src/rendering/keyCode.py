@@ -61,6 +61,8 @@ class KeyCode(IntEnum):
     F1 = 1073741882
     F3 = 1073741884
     PRINTSCREEN = 1073741894
+    LEFTBRACKET = 91
+    RIGHTBRACKET = 93
     EQUALS = 61
     MINUS = 45
     ESCAPE = 27
@@ -106,6 +108,8 @@ _DISPLAY_NAMES = {
     KeyCode.F1: "f1",
     KeyCode.F3: "f3",
     KeyCode.PRINTSCREEN: "print screen",
+    KeyCode.LEFTBRACKET: "[",
+    KeyCode.RIGHTBRACKET: "]",
     KeyCode.EQUALS: "=",
     KeyCode.MINUS: "-",
     KeyCode.ESCAPE: "escape",

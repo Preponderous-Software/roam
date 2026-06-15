@@ -143,10 +143,11 @@ class ConfigScreen(Screen):
         )
 
     def handleScrollEvent(self, event):
+        n = len(self._toggleButtons)
         if event.scrollY > 0:
-            self.scrollOffset = max(0, self.scrollOffset - 1)
+            self._cursor = max(0, self._cursor - 1)
         elif event.scrollY < 0:
-            self.scrollOffset += 1
+            self._cursor = min(n - 1, self._cursor + 1)
 
     def onStart(self):
         self.scrollOffset = 0

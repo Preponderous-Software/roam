@@ -58,16 +58,17 @@ def test_toggle_resumes_after_the_cooldown_elapses(resolve):
     assert screen.config.debug is False
 
 
-def test_scroll_increments_and_clamps_at_zero(resolve):
+def test_scroll_moves_cursor_and_clamps(resolve):
     screen = resolve(ConfigScreen)
 
     class _Wheel:
         def __init__(self, scrollY):
             self.scrollY = scrollY
 
-    screen.handleScrollEvent(_Wheel(-1))
-    assert screen.scrollOffset == 1
-    screen.handleScrollEvent(_Wheel(1))
-    assert screen.scrollOffset == 0
-    screen.handleScrollEvent(_Wheel(1))
-    assert screen.scrollOffset == 0
+    assert screen._cursor == 0
+    screen.handleScrollEvent(_Wheel(-1))  # scroll down -> cursor advances
+    assert screen._cursor == 1
+    screen.handleScrollEvent(_Wheel(1))   # scroll up -> cursor retreats
+    assert screen._cursor == 0
+    screen.handleScrollEvent(_Wheel(1))   # scroll up at 0 -> clamped
+    assert screen._cursor == 0
