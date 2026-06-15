@@ -234,7 +234,7 @@ class SaveSelectionScreen(Screen):
         self.renderer.drawText("No save files found.", xpos, ypos, 28, palette.WHITE)
         ypos += 40
         self.renderer.drawText(
-            'Click "New Game" to start playing!',
+            'Press C or click "New Game" to start playing!',
             xpos,
             ypos,
             24,
