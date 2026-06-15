@@ -4,6 +4,7 @@ import sys
 from rendering.renderer import Renderer
 from rendering.textGrid import TextGrid
 from ui.geometry import Rect
+from ui.hotbarLayout import HOTBAR_BOTTOM_OFFSET, HOTBAR_PADDING
 
 # Roguelike-style glyph table: image filename (no extension, lowercased) → char.
 # Uppercase = dangerous / solid; lowercase = passive / harmless; symbols = terrain.
@@ -48,6 +49,40 @@ _GLYPHS = {
     "ironore":                  "O",
     # misc
     "excrement":                "x",
+}
+
+# ANSI foreground color codes per glyph. Standard 8-color palette (codes 30-37,
+# 90-97) so they work on every terminal without capability queries.
+# Mnemonic: green = nature, yellow = passive/warm, red = dangerous, gray = stone.
+_GLYPH_COLORS = {
+    "@": 93,   # player        — bright yellow
+    ".": 32,   # grass         — green
+    "#": 37,   # stone         — white/light-gray
+    "-": 90,   # stone floor   — dark gray
+    "_": 33,   # wood floor    — yellow-brown
+    "|": 33,   # fence         — yellow-brown
+    "T": 32,   # trees         — green
+    "*": 32,   # leaves        — green
+    '"': 33,   # wheat/crop    — yellow
+    ",": 33,   # seed          — yellow
+    ":": 32,   # young crop    — green
+    "B": 31,   # bear          — red
+    "W": 91,   # wolf          — bright red
+    "~": 32,   # snake         — green
+    "d": 33,   # deer          — yellow
+    "r": 37,   # rabbit        — white
+    "c": 37,   # chicken       — white
+    "%": 31,   # meat          — red
+    "a": 91,   # apple         — bright red
+    "b": 93,   # banana        — bright yellow
+    "[": 33,   # chest         — yellow
+    "+": 37,   # gravestone    — white
+    "^": 91,   # campfire      — bright red
+    "!": 93,   # torch         — bright yellow
+    "=": 36,   # bed           — cyan
+    "o": 90,   # coal ore      — dark gray
+    "O": 37,   # iron ore      — white
+    "x": 33,   # excrement     — yellow
 }
 
 
@@ -116,8 +151,17 @@ class TextRenderer(Renderer):
 
     def getGameAreaRect(self):
         width, height = self.getDisplaySize()
-        side = min(width, height)
-        return Rect((width - side) // 2, (height - side) // 2, side, side)
+        # Reserve bottom rows for the HUD (hotbar + status box + energy bar).
+        # Mirror the pixel formulae in Status.getDefaultRect() and EnergyBar so
+        # the game world is always drawn above — not behind — the HUD elements.
+        statusBoxHeight = height // 10          # matches Status: height = y / 10
+        hudHeight = (HOTBAR_BOTTOM_OFFSET       # hotbar + energy-bar zone
+                     + HOTBAR_PADDING           # gap above hotbar
+                     + statusBoxHeight          # status box
+                     + 10)                      # margin between status and hotbar
+        availHeight = max(self.cellHeight, height - hudHeight)
+        side = min(width, availHeight)
+        return Rect((width - side) // 2, 0, side, side)
 
     # --- drawing primitives ---
 
@@ -164,7 +208,11 @@ class TextRenderer(Renderer):
         x = position[0] if not hasattr(position, "x") else position.x
         y = position[1] if not hasattr(position, "y") else position.y
         glyph = image if isinstance(image, str) and image else "#"
-        self.grid.setChar(self._col(x), self._row(y), glyph[0])
+        col, row = self._col(x), self._row(y)
+        self.grid.setChar(col, row, glyph[0])
+        color = _GLYPH_COLORS.get(glyph[0])
+        if color is not None:
+            self.grid.setColor(col, row, color)
 
     def loadImage(self, path):
         # Map each asset to a distinct, meaningful ASCII glyph so the text

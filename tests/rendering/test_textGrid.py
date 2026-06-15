@@ -39,3 +39,37 @@ def test_draw_box_outlines_a_rectangle():
 def test_to_string_has_one_newline_separator_per_row_boundary():
     grid = TextGrid(3, 4)
     assert grid.toString().count("\n") == 3  # 4 rows -> 3 separators
+
+
+def test_set_color_wraps_char_in_ansi_codes():
+    grid = TextGrid(5, 2)
+    grid.setChar(1, 0, "@")
+    grid.setColor(1, 0, 93)  # bright yellow
+    line = grid.toString().splitlines()[0]
+    assert "\033[93m@\033[0m" in line
+
+
+def test_uncolored_chars_are_output_plain():
+    grid = TextGrid(5, 2)
+    grid.setChar(2, 0, ".")
+    line = grid.toString().splitlines()[0]
+    assert "." in line
+    assert "\033[" not in line
+
+
+def test_color_does_not_affect_trailing_space_strip():
+    grid = TextGrid(6, 1)
+    grid.setChar(0, 0, "B")
+    grid.setColor(0, 0, 31)
+    # columns 1-5 remain spaces — should not appear in output
+    line = grid.toString()
+    assert line.endswith("\033[0m")  # ends at the colored char, no trailing spaces
+
+
+def test_clear_resets_colors():
+    grid = TextGrid(4, 2)
+    grid.setChar(0, 0, "#")
+    grid.setColor(0, 0, 37)
+    grid.clear()
+    line = grid.toString().splitlines()[0]
+    assert "\033[" not in line

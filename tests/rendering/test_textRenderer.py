@@ -12,7 +12,13 @@ def test_display_size_is_columns_times_cell_size():
     renderer = TextRenderer(columns=80, rows=24, cellWidth=8, cellHeight=16)
     assert renderer.getDisplaySize() == (640, 384)
     r = renderer.getGameAreaRect()
-    assert (r.x, r.y, r.width, r.height) == (128, 0, 384, 384)
+    # Game area is pinned to the top and shrunk to leave room for the HUD:
+    # availHeight = 384 - (150 + 5 + 384//10 + 10) = 384 - 203 = 181
+    # side = min(640, 181) = 181; x = (640 - 181) // 2 = 229
+    assert r.y == 0
+    assert r.width == r.height          # always square
+    assert r.x + r.width <= 640        # stays within display
+    assert r.y + r.height <= 384
 
 
 def test_draw_text_is_centered_on_the_pixel_position():
@@ -45,6 +51,29 @@ def test_load_image_collapses_to_a_glyph_and_draw_image_places_it():
     assert glyph == "@"
     renderer.drawImage(glyph, (20, 10))
     assert renderer.grid.getChar(2, 1) == "@"
+
+
+def test_draw_image_applies_ansi_color_for_known_glyphs():
+    renderer = TextRenderer(cellWidth=10, cellHeight=10)
+    renderer.drawImage("@", (0, 0))   # player — bright yellow (93)
+    frame = renderer.grid.toString()
+    assert "\033[93m@\033[0m" in frame
+
+
+def test_draw_image_no_color_for_unknown_glyphs():
+    renderer = TextRenderer(cellWidth=10, cellHeight=10)
+    renderer.drawImage("?", (0, 0))   # not in color map
+    frame = renderer.grid.toString()
+    assert "\033[" not in frame
+
+
+def test_game_area_rect_does_not_overlap_hud():
+    renderer = TextRenderer(columns=80, rows=24, cellWidth=8, cellHeight=16)
+    r = renderer.getGameAreaRect()
+    _, displayH = renderer.getDisplaySize()
+    from ui.hotbarLayout import HOTBAR_BOTTOM_OFFSET
+    # game area must end above the hotbar top
+    assert r.y + r.height <= displayH - HOTBAR_BOTTOM_OFFSET
 
 
 def test_present_only_outputs_when_the_frame_changes():
