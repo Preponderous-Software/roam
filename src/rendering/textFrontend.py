@@ -34,20 +34,15 @@ from rendering.textRenderer import TextRenderer
 #     and Crouch (hold Ctrl) have no effect. Each directional keypress moves
 #     the player exactly one tile (a synthetic KEY_UP follows each movement
 #     KEY_DOWN to prevent OS key-repeat from causing continuous walking).
-#   - Terminal resize mid-session is not detected. The grid is sized once at
-#     startup from os.get_terminal_size(); restart the game after resizing.
+#   - Terminal resize is handled via SIGWINCH (Unix only). On non-Unix
+#     platforms the grid is sized once at startup; restart after resizing.
 #
 # RENDERING
-#   - No day/night overlay. drawDayNightOverlay() is a no-op, so the world
-#     always appears fully lit regardless of the in-game time of day.
-#   - No minimap. tryLoadImage() returns None so the minimap never renders,
-#     and saveImage() is a no-op so room PNGs are never written — the map
-#     image file is never generated either.
-#   - No screenshots. captureScreenshot() is a no-op.
-#   - No translucent overlays. The death and pause screens show their text
-#     banners but not the darkening dim layer behind them.
-#   - No colour. All glyphs are the same terminal foreground colour; entities
-#     that differ only by colour (e.g. day-phase indicators) look identical.
+#   - Minimap renders as a [map] text placeholder. Room PNG files are never
+#     written (saveImage is a no-op), so a graphical minimap image is never
+#     generated in text mode.
+#   - Screenshots are saved as plain-text files (not PNGs) in the screenshots
+#     folder, capturing the current ANSI grid content.
 #   - One glyph per tile. Only the topmost entity on a location is shown; a
 #     grass tile covered by stone covered by the player shows only '@'.
 #
@@ -63,6 +58,7 @@ class TextFrontend:
         self._terminalState = None
         self._enterCbreakMode()
         self._build()
+        self._setupResizeHandler()
 
     def _build(self):
         self._renderer = TextRenderer(columns=self._termCols(), rows=self._termRows())
@@ -82,6 +78,16 @@ class TextFrontend:
             return lines if lines > 0 else 24
         except OSError:
             return 24
+
+    def _setupResizeHandler(self):
+        try:
+            import signal
+            signal.signal(signal.SIGWINCH, self._onResize)
+        except (AttributeError, OSError):
+            pass  # SIGWINCH not available on non-Unix platforms
+
+    def _onResize(self, signum, frame):
+        self._renderer.resize(self._termCols(), self._termRows())
 
     def _enterCbreakMode(self):
         # Non-canonical, no-echo input so keystrokes arrive immediately. Skipped

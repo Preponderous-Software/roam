@@ -76,7 +76,7 @@ class ConfigScreen(Screen):
         x, y = self.renderer.getDisplaySize()
         self.renderer.drawText("Settings", x / 2, 25, 36, palette.WHITE)
         self.renderer.drawText(
-            "Up/Down: navigate  -  Enter/Space: toggle  -  Click a setting to toggle",
+            "Up/Down: navigate  -  Enter/Space: toggle",
             x / 2, 50, 14, palette.MEDIUM_GRAY
         )
 

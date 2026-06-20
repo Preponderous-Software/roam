@@ -939,8 +939,8 @@ class WorldScreen:
         elif key == kb.getKey("move_right") or key == kb.getKey("alt_move_right"):
             self._handleMovementKey(3)
         elif key == kb.getKey("screenshot"):
-            self.renderer.captureScreenshot()
-            self.status.set("Screenshot saved")
+            result = self.renderer.captureScreenshot()
+            self.status.set("Screenshot saved" if result else "Screenshots not supported in this mode")
         elif key == kb.getKey("run"):
             self.player.setMovementSpeed(
                 self.player.getMovementSpeed() * self.config.runSpeedFactor
@@ -1362,7 +1362,7 @@ class WorldScreen:
             "PAUSED", width / 2, height / 2 - 20, 56, palette.LIGHT_GRAY
         )
         self.renderer.drawText(
-            "Click the window to resume",
+            "Click the window or press any key to resume",
             width / 2,
             height / 2 + 28,
             22,

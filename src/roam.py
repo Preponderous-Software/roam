@@ -119,8 +119,9 @@ class Roam:
         self.worldScreen.initialize()
 
     def quitApplication(self):
-        w, h = self.renderer.getDisplaySize()
-        self.config.saveWindowSize(w, h)
+        if self.renderer.supportsImageLoading():
+            w, h = self.renderer.getDisplaySize()
+            self.config.saveWindowSize(w, h)
         self.frontend.quit()
         quit()
 
@@ -130,10 +131,11 @@ class Roam:
             if result == ScreenType.MAIN_MENU_SCREEN:
                 # Preserve current window dimensions so the restart
                 # does not shrink a maximized/resized window.
-                w, h = self.renderer.getDisplaySize()
-                self.config.displayWidth = w
-                self.config.displayHeight = h
-                self.config.saveWindowSize(w, h)
+                if self.renderer.supportsImageLoading():
+                    w, h = self.renderer.getDisplaySize()
+                    self.config.displayWidth = w
+                    self.config.displayHeight = h
+                    self.config.saveWindowSize(w, h)
                 _logger.info("returning to main menu")
                 return "restart"
             if result == ScreenType.WORLD_SCREEN:

@@ -11,14 +11,25 @@ class TextGrid:
         self.columns = columns
         self.rows = rows
         self._blank = blank
+        self._clip = None  # (col0, row0, col1, row1) exclusive, or None
         self.clear()
+
+    def setClipRegion(self, col0, row0, col1, row1):
+        """Restrict all subsequent writes to cells in [col0,col1) × [row0,row1).
+        Pass None for col0 to clear the clip region."""
+        self._clip = None if col0 is None else (col0, row0, col1, row1)
 
     def clear(self):
         self._cells  = [[self._blank] * self.columns for _ in range(self.rows)]
         self._colors = [[None]        * self.columns for _ in range(self.rows)]
 
     def _inBounds(self, column, row):
-        return 0 <= column < self.columns and 0 <= row < self.rows
+        if not (0 <= column < self.columns and 0 <= row < self.rows):
+            return False
+        if self._clip is not None:
+            col0, row0, col1, row1 = self._clip
+            return col0 <= column < col1 and row0 <= row < row1
+        return True
 
     def setChar(self, column, row, char):
         if self._inBounds(column, row):

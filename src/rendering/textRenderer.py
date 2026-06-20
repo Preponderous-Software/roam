@@ -149,6 +149,13 @@ class TextRenderer(Renderer):
         self._output(_buildDiff(newLines, oldLines))
         self._lastFrame = frame
 
+    def resize(self, columns, rows):
+        """Rebuild the grid for a new terminal size and force a full repaint."""
+        self.columns = columns
+        self.rows = rows
+        self.grid = TextGrid(columns, rows)
+        self._lastFrame = None
+
     def setCaption(self, text):
         self._caption = text
 
@@ -290,7 +297,14 @@ class TextRenderer(Renderer):
     # --- clipping / render target / screenshots (no terminal analogue) ---
 
     def setClipRegion(self, rect):
-        pass
+        if rect is None:
+            self.grid.setClipRegion(None, None, None, None)
+        else:
+            x, y, w, h = rect.x, rect.y, rect.width, rect.height
+            self.grid.setClipRegion(
+                self._col(x), self._row(y),
+                self._col(x + w) + 1, self._row(y + h) + 1,
+            )
 
     def getRenderTarget(self):
         return self._renderTarget
@@ -299,7 +313,15 @@ class TextRenderer(Renderer):
         self._renderTarget = target
 
     def captureScreenshot(self):
-        pass
+        import datetime
+        from config.config import Config
+        folder = os.path.join(Config.getUserDataDirectory(), "screenshots")
+        os.makedirs(folder, exist_ok=True)
+        stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        path = os.path.join(folder, f"roam_{stamp}.txt")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(self.grid.toString())
+        return path
 
     def drawSelectionHighlight(self, x, y, width, height, color):
         # Highlight the selected slot by recoloring its cells bright yellow.

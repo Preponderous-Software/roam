@@ -203,3 +203,4 @@ class PygameRenderer(Renderer):
 
     def captureScreenshot(self):
         takeScreenshot(self._display())
+        return True
