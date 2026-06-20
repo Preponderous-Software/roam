@@ -102,14 +102,18 @@ def test_a_real_screen_renders_to_text_with_no_pygame():
 
 # --- _buildDiff: differential rendering tests ---
 
-def test_build_diff_first_frame_homes_cursor_and_paints_all_lines():
+def test_build_diff_first_frame_positions_rows_explicitly():
     diff = _buildDiff(["hello", "world"], [])
-    assert "\033[H" in diff          # cursor home
+    # Each row must be written at an explicit position so \r\n on the last row
+    # never triggers a terminal scroll (which would shift all content up by one
+    # line, causing duplicate HUD elements on stable rows).
+    assert "\033[1;1H" in diff       # row 1 positioned explicitly
+    assert "\033[2;1H" in diff       # row 2 positioned explicitly
     assert "hello" in diff
     assert "world" in diff
     assert "\033[K" in diff          # erase-to-EOL present
-    assert "\033[J" in diff          # erase-below at end
     assert "\033[2J" not in diff     # NO full-screen clear
+    assert "\r\n" not in diff        # NO \r\n — that would scroll on last row
 
 
 def test_build_diff_subsequent_frame_only_updates_changed_lines():

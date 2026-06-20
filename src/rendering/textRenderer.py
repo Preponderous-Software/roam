@@ -340,9 +340,13 @@ class TextRenderer(Renderer):
 def _buildDiff(newLines, oldLines):
     """Return an ANSI escape sequence that updates only the lines that changed.
 
-    On the first call (oldLines=[]), homes the cursor and rewrites every row
-    followed by erase-to-EOL (\033[K), then erases below (\033[J).  This
-    clears any pre-game content without a blank-screen flash.
+    On the first call (oldLines=[]), each row is written with an explicit
+    \033[row;1H cursor-position command rather than \r\n advancement.  This
+    avoids the terminal-scroll that \r\n triggers when the cursor is on the
+    last row: that scroll shifts all content up by one line, creating a
+    permanent one-row discrepancy between _lastFrame and what the terminal
+    actually displays, which manifests as duplicate HUD elements (two hotbars,
+    two TPS indicators) on any row whose content is stable across frames.
 
     On subsequent calls, only the lines whose content changed are repositioned
     with \033[row;1H and rewritten, each followed by \033[K to wipe stale
@@ -355,11 +359,14 @@ def _buildDiff(newLines, oldLines):
     """
     parts = []
     if not oldLines:
-        # First render: home cursor, overwrite every row, then clear below.
-        parts.append("\033[H")
-        for line in newLines:
-            parts.append(line + "\033[K\r\n")
-        parts.append("\033[J")
+        # First render: position each row explicitly to avoid triggering a
+        # terminal scroll on the last row (which \r\n would cause).
+        # Each line is followed by \033[K (erase to right edge), so no stale
+        # trailing content remains.  No final \033[J is needed: when using the
+        # alternate screen buffer the buffer starts fresh, and after a resize
+        # the new grid always covers all terminal rows.
+        for i, line in enumerate(newLines):
+            parts.append(f"\033[{i + 1};1H{line}\033[K")
     else:
         # Differential update: rewrite only rows that changed.
         for i, line in enumerate(newLines):
