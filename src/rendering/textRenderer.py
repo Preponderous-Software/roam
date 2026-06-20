@@ -181,11 +181,21 @@ class TextRenderer(Renderer):
         )
 
     def drawText(self, text, xpos, ypos, size, color):
-        column = self._col(xpos) - len(text) // 2
-        self.grid.writeText(column, self._row(ypos), text)
+        col = self._col(xpos) - len(text) // 2
+        row = self._row(ypos)
+        self.grid.writeText(col, row, text)
+        # Clear per-cell colors so text is always readable over overlays
+        # (drawTranslucentOverlay dims cells to dark-grey; clearing restores
+        # them to the terminal default foreground).
+        for offset in range(len(text)):
+            self.grid.setColor(col + offset, row, None)
 
     def drawTextLeftAligned(self, text, leftX, centerY, size, color):
-        self.grid.writeText(self._col(leftX), self._row(centerY), text)
+        col = self._col(leftX)
+        row = self._row(centerY)
+        self.grid.writeText(col, row, text)
+        for offset in range(len(text)):
+            self.grid.setColor(col + offset, row, None)
 
     def drawButton(
         self, xpos, ypos, width, height, colorBox, colorText, sizeText, text, function
@@ -197,13 +207,45 @@ class TextRenderer(Renderer):
         self.grid.writeText(labelColumn, row + cellsHigh // 2, text)
 
     def drawTranslucentOverlay(self, color):
-        # No per-cell alpha; any banner text drawn over it still shows.
-        pass
+        # Simulate the darkness backdrop by dimming every cell to dark grey.
+        # Subsequent drawText calls clear per-cell colors so overlay text
+        # (YOU DIED, PAUSED) stays readable in the terminal default foreground.
+        for r in range(self.grid.rows):
+            for c in range(self.grid.columns):
+                self.grid.setColor(c, r, 90)  # ANSI dark grey
 
     def drawDayNightOverlay(self, gameAreaRect, opacity, lightSources):
-        # No per-pixel alpha/blend in a terminal; the day/night dimming and
-        # light masks are skipped (the world still renders, just unshaded).
-        pass
+        # Approximate the darkness overlay by dimming cells in the game area.
+        # Light sources (torches, campfires) punch bright spots.
+        if opacity <= 30:
+            return
+        gx, gy, gw, gh = gameAreaRect
+        startCol = self._col(gx)
+        startRow = self._row(gy)
+        endCol = min(self.columns, self._col(gx + gw) + 1)
+        endRow = min(self.rows, self._row(gy + gh) + 1)
+        # Normalise: 0.0 (opacity 30) → 1.0 (opacity 200)
+        darkness = (opacity - 30) / 170.0
+        halfW = self.cellWidth / 2
+        halfH = self.cellHeight / 2
+        for row in range(startRow, endRow):
+            py = row * self.cellHeight + halfH
+            for col in range(startCol, endCol):
+                px = col * self.cellWidth + halfW
+                litFraction = 0.0
+                for lx, ly, lRadius in lightSources:
+                    if lRadius <= 0:
+                        continue
+                    dist = ((px - lx) ** 2 + (py - ly) ** 2) ** 0.5
+                    if dist < lRadius:
+                        litFraction = max(litFraction, 1.0 - dist / lRadius)
+                effectiveDark = darkness * (1.0 - litFraction)
+                if effectiveDark < 0.2:
+                    pass  # well-lit: no change
+                elif effectiveDark < 0.65:
+                    self.grid.setColor(col, row, 90)  # dark grey
+                else:
+                    self.grid.setColor(col, row, 30)  # near-black
 
     def drawImage(self, image, position):
         # `image` is a one-glyph handle from loadImage; `position` is (x, y) or a
@@ -241,6 +283,9 @@ class TextRenderer(Renderer):
 
     def tryLoadImage(self, path):
         return None
+
+    def supportsImageLoading(self):
+        return False
 
     # --- clipping / render target / screenshots (no terminal analogue) ---
 

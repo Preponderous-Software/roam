@@ -102,6 +102,13 @@ class Renderer(ABC):
         missing or unreadable. For dynamic images (e.g. the regenerated minimap)
         where loadImage's caching + placeholder behavior is not wanted."""
 
+    def supportsImageLoading(self):
+        """Return True if this backend can load and display real image files.
+        Text/headless backends that always return None from tryLoadImage should
+        override to return False so callers can offer a text fallback without
+        going through the image-load path and logging spurious warnings."""
+        return True
+
     @abstractmethod
     def getGameAreaRect(self):
         """Return the centered square play-area rect for the current display."""

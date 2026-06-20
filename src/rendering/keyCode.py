@@ -33,6 +33,7 @@ class KeyCode(IntEnum):
     T = 116
     U = 117
     W = 119
+    X = 120
     Z = 122
 
     # digits
@@ -116,6 +117,7 @@ _DISPLAY_NAMES = {
     KeyCode.EQUALS: "=",
     KeyCode.MINUS: "-",
     KeyCode.R: "r",
+    KeyCode.X: "x",
     KeyCode.Z: "z",
     KeyCode.ESCAPE: "escape",
     KeyCode.RETURN: "return",

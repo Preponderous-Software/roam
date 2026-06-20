@@ -568,6 +568,20 @@ class WorldScreen:
             return
         self._executeGatherAt(targetLocation, targetRoom)
 
+    def _lookAtFacingTile(self):
+        location = self.getLocationInFrontOfPlayer()
+        if location == -1:
+            self.status.set("Nothing ahead")
+            return
+        entities = [
+            location.getEntity(eid).getName()
+            for eid in location.getEntities()
+        ]
+        if entities:
+            self.status.set("Ahead: " + ", ".join(entities))
+        else:
+            self.status.set("Nothing notable ahead")
+
     def executeGatherAtFront(self):
         targetLocation = self.getLocationInFrontOfPlayer()
         if targetLocation == -1:
@@ -985,6 +999,8 @@ class WorldScreen:
             )
         elif key == kb.getKey("toggle_help"):
             self.showHelp = not self.showHelp
+        elif key == kb.getKey("look"):
+            self._lookAtFacingTile()
         elif key == kb.getKey("gather"):
             if self.checkPlayerGatherCooldown(self.player.getTickLastGathered()):
                 self.executeGatherAtFront()
@@ -1180,7 +1196,17 @@ class WorldScreen:
         finally:
             self._pngSavePending.discard(roomKey)
 
+    def _drawTextMinimap(self):
+        minimapOx, minimapOy = self.hudDragManager.getOffset("minimap")
+        drawX = self.minimapX + minimapOx
+        drawY = self.minimapY + minimapOy
+        self.renderer.drawRectangle(drawX, drawY, 72, 20, palette.NEAR_BLACK)
+        self.renderer.drawText("[map]", drawX + 36, drawY + 10, 12, palette.MEDIUM_GRAY)
+
     def drawMiniMap(self):
+        if not self.renderer.supportsImageLoading():
+            self._drawTextMinimap()
+            return
         mapImagePath = self.config.pathToSaveDirectory + "/mapImage.png"
         if not os.path.isfile(mapImagePath):
             if self._cachedMiniMapImage is not None:
@@ -1412,6 +1438,7 @@ class WorldScreen:
             f"{keyName('inventory')}  -  Open / Close inventory",
             f"{keyName('run')}  -  Run (hold)  /  {keyName('run_toggle')}  -  Run toggle",
             f"{keyName('crouch')}  -  Crouch (hold)  /  {keyName('crouch_toggle')}  -  Crouch toggle",
+            f"{keyName('look')}  -  Examine facing tile",
             f"{keyName('toggle_minimap')}  -  Toggle minimap",
             f"{keyName('minimap_zoom_in')}/{keyName('minimap_zoom_out')}  -  Resize minimap",
             f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",
