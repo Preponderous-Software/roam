@@ -114,6 +114,10 @@ class ConfigScreen(Screen):
                 displayLabel,
                 lambda attr=attribute: self._toggleConfigAttribute(attr),
             )
+            if selected:
+                self.renderer.drawSelectionHighlight(
+                    xpos, rowY, width, buttonHeight, (255, 255, 0)
+                )
 
         if maxOffset > 0:
             scrollInfo = (

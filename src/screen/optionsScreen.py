@@ -117,6 +117,10 @@ class OptionsScreen(Screen):
                 displayLabel,
                 getattr(self, methodName),
             )
+            if selected:
+                self.renderer.drawSelectionHighlight(
+                    xpos, ypos, width, height, (255, 255, 0)
+                )
             ypos = ypos + height + margin
 
         self.renderer.drawText(
