@@ -207,6 +207,8 @@ class ChestScreen(Screen):
     def _moveCursor(self, key):
         inv = self._focusedInventory()
         n = len(inv.getInventorySlots())
+        if n == 0:
+            return
         rows = max(1, (n + self.ITEMS_PER_ROW - 1) // self.ITEMS_PER_ROW)
         if key == KeyCode.RIGHT:
             slotsOnRow = n - self._cursorRow * self.ITEMS_PER_ROW

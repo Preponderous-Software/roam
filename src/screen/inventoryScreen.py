@@ -61,6 +61,10 @@ class InventoryScreen(Screen):
             self.cursorSlot.setContents(temp)
 
     _ITEMS_PER_ROW = 5
+    _NAV_KEYS = frozenset({
+        KeyCode.UP, KeyCode.DOWN, KeyCode.LEFT, KeyCode.RIGHT,
+        KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE, KeyCode.D,
+    })
 
     def handleKeyDownEvent(self, key):
         kb = self.keyBindings
@@ -80,7 +84,8 @@ class InventoryScreen(Screen):
                 self._craftCursor = max(0, self._craftCursor - 1)
                 return
             if key == KeyCode.DOWN:
-                self._craftCursor = min(len(recipes) - 1, self._craftCursor + 1)
+                if recipes:
+                    self._craftCursor = min(len(recipes) - 1, self._craftCursor + 1)
                 return
             if key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
                 if 0 <= self._craftCursor < len(recipes):
@@ -89,9 +94,7 @@ class InventoryScreen(Screen):
         if key == KeyCode.C:
             self.toggleCraftPanel()
             return
-        _NAV_KEYS = {KeyCode.UP, KeyCode.DOWN, KeyCode.LEFT, KeyCode.RIGHT,
-                     KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE, KeyCode.D}
-        if key in _NAV_KEYS:
+        if key in self._NAV_KEYS:
             idx = self.inventory.getSelectedInventorySlotIndex()
             n = len(self.inventory.getInventorySlots())
             cols = self._ITEMS_PER_ROW

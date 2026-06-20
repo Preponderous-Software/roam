@@ -33,6 +33,8 @@ def createWorldScreen():
     ws.config = config
     ws.graphik = graphik
     ws.status = status
+    ws._isRunning = False
+    ws._isCrouching = False
     return ws
 
 

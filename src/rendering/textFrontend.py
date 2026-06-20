@@ -83,8 +83,8 @@ class TextFrontend:
         try:
             import signal
             signal.signal(signal.SIGWINCH, self._onResize)
-        except (AttributeError, OSError):
-            pass  # SIGWINCH not available on non-Unix platforms
+        except (AttributeError, OSError, ValueError):
+            pass  # SIGWINCH not available on non-Unix platforms or non-main threads
 
     def _onResize(self, signum, frame):
         self._renderer.resize(self._termCols(), self._termRows())

@@ -187,22 +187,24 @@ class TextRenderer(Renderer):
             " ",
         )
 
+    def _clearColors(self, col, row, length):
+        # Clear per-cell colors so text is always readable over overlays
+        # (drawTranslucentOverlay dims cells to dark-grey; clearing restores
+        # them to the terminal default foreground).
+        for offset in range(length):
+            self.grid.setColor(col + offset, row, None)
+
     def drawText(self, text, xpos, ypos, size, color):
         col = self._col(xpos) - len(text) // 2
         row = self._row(ypos)
         self.grid.writeText(col, row, text)
-        # Clear per-cell colors so text is always readable over overlays
-        # (drawTranslucentOverlay dims cells to dark-grey; clearing restores
-        # them to the terminal default foreground).
-        for offset in range(len(text)):
-            self.grid.setColor(col + offset, row, None)
+        self._clearColors(col, row, len(text))
 
     def drawTextLeftAligned(self, text, leftX, centerY, size, color):
         col = self._col(leftX)
         row = self._row(centerY)
         self.grid.writeText(col, row, text)
-        for offset in range(len(text)):
-            self.grid.setColor(col + offset, row, None)
+        self._clearColors(col, row, len(text))
 
     def drawButton(
         self, xpos, ypos, width, height, colorBox, colorText, sizeText, text, function
@@ -243,9 +245,9 @@ class TextRenderer(Renderer):
                 for lx, ly, lRadius in lightSources:
                     if lRadius <= 0:
                         continue
-                    dist = ((px - lx) ** 2 + (py - ly) ** 2) ** 0.5
-                    if dist < lRadius:
-                        litFraction = max(litFraction, 1.0 - dist / lRadius)
+                    distSq = (px - lx) ** 2 + (py - ly) ** 2
+                    if distSq < lRadius * lRadius:
+                        litFraction = max(litFraction, 1.0 - distSq ** 0.5 / lRadius)
                 effectiveDark = darkness * (1.0 - litFraction)
                 if effectiveDark < 0.2:
                     pass  # well-lit: no change

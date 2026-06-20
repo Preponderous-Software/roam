@@ -1069,6 +1069,14 @@ class WorldScreen:
 
         self.currentRoom = self.map.getRoom(0, 0)
         self.player.energy = self.player.targetEnergy
+        if self._isRunning:
+            self.player.setMovementSpeed(
+                self.player.getMovementSpeed() / self.config.runSpeedFactor
+            )
+            self._isRunning = False
+        if self._isCrouching:
+            self.player.setCrouching(False)
+            self._isCrouching = False
         self.status.set("Respawned")
         self.player.setTickCreated(self.tickCounter.getTick())
 

@@ -87,10 +87,10 @@ def _configureStructlog():
     for filtering.
     """
     if _LOG_FILE:
-        stream = open(_LOG_FILE, "a", encoding="utf-8")  # noqa: WPS515
+        handlers = [logging.FileHandler(_LOG_FILE, mode="a", encoding="utf-8")]
+        logging.basicConfig(format="%(message)s", handlers=handlers, level=_LOG_LEVEL)
     else:
-        stream = sys.stderr
-    logging.basicConfig(format="%(message)s", stream=stream, level=_LOG_LEVEL)
+        logging.basicConfig(format="%(message)s", stream=sys.stderr, level=_LOG_LEVEL)
 
     shared_processors = [
         structlog.stdlib.filter_by_level,
