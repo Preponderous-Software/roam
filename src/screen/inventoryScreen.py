@@ -41,16 +41,7 @@ class InventoryScreen(Screen):
         self.lastCraftToggleTime = 0
 
     def _drawSelectionBorder(self, x, y, width, height):
-        borderWidth = 3
-        color = (255, 255, 0)
-        self.renderer.drawRectangle(x, y, width, borderWidth, color)
-        self.renderer.drawRectangle(
-            x, y + height - borderWidth, width, borderWidth, color
-        )
-        self.renderer.drawRectangle(x, y, borderWidth, height, color)
-        self.renderer.drawRectangle(
-            x + width - borderWidth, y, borderWidth, height, color
-        )
+        self.renderer.drawSelectionHighlight(x, y, width, height, (255, 255, 0))
 
     def swapCursorSlotWithInventorySlotByIndex(self, index):
         destSlot = self.inventory.getInventorySlots()[index]

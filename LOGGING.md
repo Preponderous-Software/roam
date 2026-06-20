@@ -11,6 +11,12 @@ Logging behaviour is controlled by two environment variables:
 |---|---|---|
 | `LOG_LEVEL` | `INFO` | Minimum log level to emit |
 | `LOG_FORMAT` | `pretty` | Output format (`pretty` or `json`) |
+| `LOG_FILE` | *(see below)* | Path to a log file; set to empty string to force stderr |
+
+`LOG_FILE` defaults to `roam.log` when the game is started with `--text` (TUI
+mode) so that log lines never corrupt the terminal display.  For the graphical
+frontend the default is empty (logs go to stderr).  Set `LOG_FILE=myfile.log`
+to override, or `LOG_FILE=` to suppress file logging even in text mode.
 
 ### Setting environment variables by platform
 

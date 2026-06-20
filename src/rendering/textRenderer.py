@@ -256,6 +256,17 @@ class TextRenderer(Renderer):
     def captureScreenshot(self):
         pass
 
+    def drawSelectionHighlight(self, x, y, width, height, color):
+        # Highlight the selected slot by recoloring its cells bright yellow.
+        # Using fillRect (spaces) would erase the glyphs already drawn there.
+        col = self._col(x)
+        row = self._row(y)
+        cellsWide = max(1, self._cellsWide(width))
+        cellsHigh = max(1, self._cellsHigh(height))
+        for r in range(row, row + cellsHigh):
+            for c in range(col, col + cellsWide):
+                self.grid.setColor(c, r, 93)  # bright yellow
+
 
 def _buildDiff(newLines, oldLines):
     """Return an ANSI escape sequence that updates only the lines that changed.

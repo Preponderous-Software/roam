@@ -129,3 +129,18 @@ class Renderer(ABC):
     @abstractmethod
     def captureScreenshot(self):
         """Save a screenshot of the current frame to the screenshots folder."""
+
+    # --- selection / highlight ---
+
+    def drawSelectionHighlight(self, x, y, width, height, color):
+        """Draw a selection indicator around the rect (x, y, width, height).
+
+        The default implementation draws four thin filled border rectangles in
+        the given color.  Text/terminal backends override this to use a
+        character-based indicator instead, since fillRect with spaces would
+        erase any glyphs already drawn inside the rect."""
+        border = 3
+        self.drawRectangle(x, y, width, border, color)
+        self.drawRectangle(x, y + height - border, width, border, color)
+        self.drawRectangle(x, y, border, height, color)
+        self.drawRectangle(x + width - border, y, border, height, color)
