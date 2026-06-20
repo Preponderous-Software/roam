@@ -36,6 +36,7 @@ class SaveSelectionScreen(Screen):
         self.changeScreen = False
         self.savesBaseDirectory = Config.getSavesBaseDirectory()
         self.scrollOffset = 0
+        self._selectedIndex = 0
         self.sortMode = self.SORT_BY_DATE
         self.cachedSaves = None
         self.confirmingDelete = None
@@ -161,6 +162,7 @@ class SaveSelectionScreen(Screen):
         saves = self.getSaveDirectories()
         maxOffset = max(0, len(saves) - 1)
         self.scrollOffset = min(self.scrollOffset, maxOffset)
+        self._selectedIndex = min(self._selectedIndex, maxOffset)
 
     def toggleSort(self):
         if self.sortMode == self.SORT_BY_DATE:
@@ -179,6 +181,18 @@ class SaveSelectionScreen(Screen):
         saves = self.getSaveDirectories()
         maxScrollOffset = max(0, len(saves) - 1)
         self.scrollOffset = min(self.scrollOffset + 1, maxScrollOffset)
+
+    def _moveCursorUp(self, saves, maxVisible):
+        if self._selectedIndex > 0:
+            self._selectedIndex -= 1
+            if self._selectedIndex < self.scrollOffset:
+                self.scrollOffset = self._selectedIndex
+
+    def _moveCursorDown(self, saves, maxVisible):
+        if self._selectedIndex < len(saves) - 1:
+            self._selectedIndex += 1
+            if self._selectedIndex >= self.scrollOffset + maxVisible:
+                self.scrollOffset = self._selectedIndex - maxVisible + 1
 
     def handleKeyDownEvent(self, key):
         if self.namingNewSave:
@@ -199,17 +213,29 @@ class SaveSelectionScreen(Screen):
         if key == KeyCode.ESCAPE:
             self.switchToMainMenuScreen()
         elif key == KeyCode.UP:
-            self.scrollUp()
+            saves = self.getSaveDirectories()
+            maxVisible = self._maxVisible()
+            self._moveCursorUp(saves, maxVisible)
         elif key == KeyCode.DOWN:
-            self.scrollDown()
+            saves = self.getSaveDirectories()
+            maxVisible = self._maxVisible()
+            self._moveCursorDown(saves, maxVisible)
         elif key == KeyCode.RETURN:
             self.selectHighlightedSave()
         elif key == KeyCode.C:
             self.startNamingNewSave()
 
+    def _maxVisible(self):
+        """Number of save rows that fit on screen (approximated from display height)."""
+        _, y = self.renderer.getDisplaySize()
+        height = y / 14
+        margin = 8
+        ypos = y / 8
+        bottomLimit = y - y / 4
+        return max(1, int((bottomLimit - ypos) / (height + margin)))
+
     def getHighlightedSaveIndex(self):
-        """The save the keyboard cursor is on — the first visible row."""
-        return self.scrollOffset
+        return self._selectedIndex
 
     def selectHighlightedSave(self):
         """Enter the world with the keyboard-highlighted save, or start naming a
@@ -266,8 +292,9 @@ class SaveSelectionScreen(Screen):
             )
 
         for rowIndex, save in enumerate(visibleSaves):
-            # The first visible row is the keyboard-highlighted selection.
-            marker = "> " if interactive and rowIndex == 0 else ""
+            absoluteIndex = self.scrollOffset + rowIndex
+            isSelected = interactive and absoluteIndex == self._selectedIndex
+            marker = "> " if isSelected else ""
             label = marker + save["name"] + "  |  " + save["lastPlayed"]
             savePath = save["path"]
             if interactive:
@@ -282,6 +309,10 @@ class SaveSelectionScreen(Screen):
                     label,
                     lambda p=savePath: self.selectSave(p),
                 )
+                if isSelected:
+                    self.renderer.drawSelectionHighlight(
+                        xpos, ypos, saveWidth, height, (255, 255, 0)
+                    )
                 self.renderer.drawButton(
                     xpos + saveWidth + margin,
                     ypos,
@@ -545,10 +576,12 @@ class SaveSelectionScreen(Screen):
         if event.type == EventType.KEY_DOWN:
             self.handleKeyDownEvent(event.key)
         elif event.type == EventType.MOUSE_WHEEL:
+            saves = self.getSaveDirectories()
+            maxVisible = self._maxVisible()
             if event.scrollY > 0:
-                self.scrollUp()
+                self._moveCursorUp(saves, maxVisible)
             elif event.scrollY < 0:
-                self.scrollDown()
+                self._moveCursorDown(saves, maxVisible)
         elif event.type == EventType.TEXT_INPUT:
             if self.namingNewSave and not self._suppressTextInput:
                 for ch in event.text:
@@ -592,6 +625,7 @@ class SaveSelectionScreen(Screen):
             self.initializeWorldScreen()
 
         self.scrollOffset = 0
+        self._selectedIndex = 0
         self.confirmingDelete = None
         self.namingNewSave = False
         self.newSaveNameInput = ""

@@ -173,24 +173,24 @@ def test_handleKeyDownEvent_escape_cancels_delete(temp_saves_dir):
 def test_handleKeyDownEvent_scroll(temp_saves_dir):
     screen = createSaveSelectionScreen(temp_saves_dir)
 
-    assert screen.scrollOffset == 0
+    assert screen._selectedIndex == 0
     screen.handleKeyDownEvent(pygame.K_DOWN)
-    assert screen.scrollOffset == 0
+    assert screen._selectedIndex == 0  # no saves, cursor stays at 0
 
     for i in range(5):
         os.makedirs(os.path.join(temp_saves_dir, "save_" + str(i + 1)))
     screen.refreshSaveCache()
 
     screen.handleKeyDownEvent(pygame.K_DOWN)
-    assert screen.scrollOffset == 1
+    assert screen._selectedIndex == 1
     screen.handleKeyDownEvent(pygame.K_DOWN)
-    assert screen.scrollOffset == 2
+    assert screen._selectedIndex == 2
     screen.handleKeyDownEvent(pygame.K_UP)
-    assert screen.scrollOffset == 1
+    assert screen._selectedIndex == 1
     screen.handleKeyDownEvent(pygame.K_UP)
-    assert screen.scrollOffset == 0
+    assert screen._selectedIndex == 0
     screen.handleKeyDownEvent(pygame.K_UP)
-    assert screen.scrollOffset == 0
+    assert screen._selectedIndex == 0  # clamped at 0
 
 
 def test_handleKeyDownEvent_scroll_clamped(temp_saves_dir):
@@ -203,7 +203,7 @@ def test_handleKeyDownEvent_scroll_clamped(temp_saves_dir):
     for _ in range(10):
         screen.handleKeyDownEvent(pygame.K_DOWN)
 
-    assert screen.scrollOffset == 1
+    assert screen._selectedIndex == 1  # clamped at last save index
 
 
 def test_screenType_has_save_selection():
@@ -374,9 +374,9 @@ def test_handleKeyDownEvent_keys_ignored_during_naming(temp_saves_dir):
     screen.namingNewSave = True
 
     screen.handleKeyDownEvent(pygame.K_DOWN)
-    assert screen.scrollOffset == 0
+    assert screen._selectedIndex == 0
     screen.handleKeyDownEvent(pygame.K_UP)
-    assert screen.scrollOffset == 0
+    assert screen._selectedIndex == 0
 
 
 def test_createNewGameWithName_rejects_path_traversal(temp_saves_dir):
