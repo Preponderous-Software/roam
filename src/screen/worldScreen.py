@@ -1504,16 +1504,7 @@ class WorldScreen:
         )
 
     def _drawHotbarSelectionIndicator(self, xPos, yPos, slotWidth, slotHeight):
-        borderWidth = 3
-        color = (255, 255, 0)
-        self.renderer.drawRectangle(xPos, yPos, slotWidth, borderWidth, color)
-        self.renderer.drawRectangle(
-            xPos, yPos + slotHeight - borderWidth, slotWidth, borderWidth, color
-        )
-        self.renderer.drawRectangle(xPos, yPos, borderWidth, slotHeight, color)
-        self.renderer.drawRectangle(
-            xPos + slotWidth - borderWidth, yPos, borderWidth, slotHeight, color
-        )
+        self.renderer.drawSelectionHighlight(xPos, yPos, slotWidth, slotHeight, (255, 255, 0))
 
     def _drawHotbar(self):
         hotbarOx, hotbarOy = self.hudDragManager.getOffset("hotbar")
