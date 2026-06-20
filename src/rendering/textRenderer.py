@@ -237,12 +237,25 @@ class TextRenderer(Renderer):
         darkness = (opacity - 30) / 170.0
         halfW = self.cellWidth / 2
         halfH = self.cellHeight / 2
+
+        # The player (@) always carries a small ambient glow so they remain
+        # visible and nearby tiles get fog-of-war style partial illumination.
+        # Radius = 3 cell diagonals, enough to show adjacent tiles.
+        playerRadius = 3 * (self.cellWidth ** 2 + self.cellHeight ** 2) ** 0.5
+        allSources = list(lightSources)
+        for r in range(startRow, endRow):
+            for c in range(startCol, endCol):
+                if self.grid.getChar(c, r) == "@":
+                    px = c * self.cellWidth + halfW
+                    py = r * self.cellHeight + halfH
+                    allSources.insert(0, (px, py, playerRadius))
+
         for row in range(startRow, endRow):
             py = row * self.cellHeight + halfH
             for col in range(startCol, endCol):
                 px = col * self.cellWidth + halfW
                 litFraction = 0.0
-                for lx, ly, lRadius in lightSources:
+                for lx, ly, lRadius in allSources:
                     if lRadius <= 0:
                         continue
                     distSq = (px - lx) ** 2 + (py - ly) ** 2
