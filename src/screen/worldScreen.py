@@ -128,6 +128,8 @@ class WorldScreen:
         # in, so the ChestScreen can persist its contents on close.
         self.activeChest = None
         self.activeChestRoom = None
+        self._isRunning = False
+        self._isCrouching = False
 
     def initialize(self):
         self.map = self.container.resolve(Map)
@@ -931,6 +933,23 @@ class WorldScreen:
             )
         elif key == kb.getKey("crouch"):
             self.player.setCrouching(True)
+        elif key == kb.getKey("run_toggle"):
+            if self._isRunning:
+                self.player.setMovementSpeed(
+                    self.player.getMovementSpeed() / self.config.runSpeedFactor
+                )
+                self._isRunning = False
+                self.status.set("Run: OFF")
+            else:
+                self.player.setMovementSpeed(
+                    self.player.getMovementSpeed() * self.config.runSpeedFactor
+                )
+                self._isRunning = True
+                self.status.set("Run: ON")
+        elif key == kb.getKey("crouch_toggle"):
+            self._isCrouching = not self._isCrouching
+            self.player.setCrouching(self._isCrouching)
+            self.status.set("Crouch: " + ("ON" if self._isCrouching else "OFF"))
         elif key == kb.getKey("inventory"):
             self.switchToInventoryScreen()
             if self.player.isGathering():
@@ -1391,8 +1410,8 @@ class WorldScreen:
             "1-0  -  Select hotbar slot",
             "Scroll Wheel / [ ]  -  Cycle hotbar",
             f"{keyName('inventory')}  -  Open / Close inventory",
-            f"{keyName('run')}  -  Run",
-            f"{keyName('crouch')}  -  Crouch",
+            f"{keyName('run')}  -  Run (hold)  /  {keyName('run_toggle')}  -  Run toggle",
+            f"{keyName('crouch')}  -  Crouch (hold)  /  {keyName('crouch_toggle')}  -  Crouch toggle",
             f"{keyName('toggle_minimap')}  -  Toggle minimap",
             f"{keyName('minimap_zoom_in')}/{keyName('minimap_zoom_out')}  -  Resize minimap",
             f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",

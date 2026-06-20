@@ -48,6 +48,11 @@ class ChestScreen(Screen):
         self.nextScreen = ScreenType.WORLD_SCREEN
         self.changeScreen = False
         self.cursorSlot = InventorySlot()
+        # Keyboard cursor for text-mode navigation.
+        # _focusPanel: 0=chest, 1=player inventory
+        self._focusPanel = 0
+        self._cursorRow = 0
+        self._cursorCol = 0
 
     def setInventory(self, inventory):
         self.inventory = inventory
@@ -99,7 +104,7 @@ class ChestScreen(Screen):
             itemHeight = cellHeight - 2 * margin
             yield index, slot, itemX, itemY, itemWidth, itemHeight
 
-    def _drawPanel(self, inventory, panelRect, title):
+    def _drawPanel(self, inventory, panelRect, title, highlightIndex=None):
         panelX, panelY, panelWidth, panelHeight = panelRect
         self.renderer.drawText(
             title, panelX + panelWidth / 2, panelY - 15, 20, palette.WHITE
@@ -116,24 +121,28 @@ class ChestScreen(Screen):
                 self.renderer.drawRectangle(
                     itemX, itemY, itemWidth, itemHeight, palette.WHITE
                 )
-                continue
-            item = slot.getContents()[0]
-            scaledImage = self.renderer.scaleImage(
-                self.renderer.loadImage(item.getImagePath()), (itemWidth, itemHeight)
-            )
-            self.renderer.drawImage(scaledImage, (itemX, itemY))
-            if (
-                itemX <= mouseX < itemX + itemWidth
-                and itemY <= mouseY < itemY + itemHeight
-            ):
-                hoveredItemName = item.getName()
-            self.renderer.drawText(
-                str(slot.getNumItems()),
-                itemX + itemWidth - 20,
-                itemY + itemHeight - 20,
-                20,
-                palette.WHITE,
-            )
+            else:
+                item = slot.getContents()[0]
+                scaledImage = self.renderer.scaleImage(
+                    self.renderer.loadImage(item.getImagePath()), (itemWidth, itemHeight)
+                )
+                self.renderer.drawImage(scaledImage, (itemX, itemY))
+                if (
+                    itemX <= mouseX < itemX + itemWidth
+                    and itemY <= mouseY < itemY + itemHeight
+                ):
+                    hoveredItemName = item.getName()
+                self.renderer.drawText(
+                    str(slot.getNumItems()),
+                    itemX + itemWidth - 20,
+                    itemY + itemHeight - 20,
+                    20,
+                    palette.WHITE,
+                )
+            if index == highlightIndex:
+                self.renderer.drawSelectionHighlight(
+                    itemX, itemY, itemWidth, itemHeight, (255, 255, 0)
+                )
         return hoveredItemName
 
     def _drawTooltip(self, itemName):
@@ -181,6 +190,58 @@ class ChestScreen(Screen):
         if not self.cursorSlot.isEmpty():
             self.cursorSlot.pop()
 
+    def _focusedInventory(self):
+        return self.getChestInventory() if self._focusPanel == 0 else self.inventory
+
+    def _clampCursor(self, inv):
+        slots = inv.getInventorySlots()
+        n = len(slots)
+        rows = max(1, (n + self.ITEMS_PER_ROW - 1) // self.ITEMS_PER_ROW)
+        self._cursorRow = max(0, min(self._cursorRow, rows - 1))
+        slotsOnRow = n - self._cursorRow * self.ITEMS_PER_ROW
+        self._cursorCol = max(0, min(self._cursorCol, min(self.ITEMS_PER_ROW, slotsOnRow) - 1))
+
+    def _cursorIndex(self):
+        return self._cursorRow * self.ITEMS_PER_ROW + self._cursorCol
+
+    def _moveCursor(self, key):
+        inv = self._focusedInventory()
+        n = len(inv.getInventorySlots())
+        rows = max(1, (n + self.ITEMS_PER_ROW - 1) // self.ITEMS_PER_ROW)
+        if key == KeyCode.RIGHT:
+            slotsOnRow = n - self._cursorRow * self.ITEMS_PER_ROW
+            maxCol = min(self.ITEMS_PER_ROW, slotsOnRow) - 1
+            self._cursorCol = (self._cursorCol + 1) % (maxCol + 1)
+        elif key == KeyCode.LEFT:
+            slotsOnRow = n - self._cursorRow * self.ITEMS_PER_ROW
+            maxCol = min(self.ITEMS_PER_ROW, slotsOnRow) - 1
+            self._cursorCol = (self._cursorCol - 1) % (maxCol + 1)
+        elif key == KeyCode.DOWN:
+            if self._cursorRow + 1 < rows and (self._cursorRow + 1) * self.ITEMS_PER_ROW < n:
+                self._cursorRow += 1
+                self._clampCursor(inv)
+            elif self._focusPanel == 0:
+                self._focusPanel = 1
+                self._cursorRow = 0
+                self._clampCursor(self.inventory)
+        elif key == KeyCode.UP:
+            if self._cursorRow > 0:
+                self._cursorRow -= 1
+            elif self._focusPanel == 1:
+                self._focusPanel = 0
+                chestInv = self.getChestInventory()
+                chestSlots = len(chestInv.getInventorySlots())
+                chestRows = max(1, (chestSlots + self.ITEMS_PER_ROW - 1) // self.ITEMS_PER_ROW)
+                self._cursorRow = chestRows - 1
+                self._clampCursor(chestInv)
+
+    def _activateCursor(self):
+        inv = self._focusedInventory()
+        slots = inv.getInventorySlots()
+        idx = self._cursorIndex()
+        if 0 <= idx < len(slots):
+            self.swapCursorSlotWithSlot(slots[idx])
+
     def handleKeyDownEvent(self, key):
         kb = self.keyBindings
         if key == kb.getKey("inventory") or key == KeyCode.ESCAPE:
@@ -189,6 +250,13 @@ class ChestScreen(Screen):
             self.renderer.captureScreenshot()
         elif key == KeyCode.T:
             self.takeAll()
+        elif key in (KeyCode.UP, KeyCode.DOWN, KeyCode.LEFT, KeyCode.RIGHT):
+            self._moveCursor(key)
+        elif key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
+            self._activateCursor()
+        elif key == KeyCode.TAB:
+            self._focusPanel = 1 - self._focusPanel
+            self._clampCursor(self._focusedInventory())
 
     def drawBackButton(self):
         width, height = self.renderer.getDisplaySize()
@@ -386,9 +454,16 @@ class ChestScreen(Screen):
             palette.MEDIUM_GRAY,
         )
         self.renderer.drawText(
-            "press [" + closeKeyName + "] or [Esc] to close",
+            "Arrows: navigate  -  Enter/Space: swap  -  Tab: switch panel",
             width / 2,
             32,
+            14,
+            palette.MEDIUM_GRAY,
+        )
+        self.renderer.drawText(
+            "press [" + closeKeyName + "] or [Esc] to close",
+            width / 2,
+            48,
             14,
             palette.MEDIUM_GRAY,
         )
@@ -404,11 +479,15 @@ class ChestScreen(Screen):
 
     def draw(self):
         self.renderer.clearScreen(palette.BLACK)
+        chestHighlight = self._cursorIndex() if self._focusPanel == 0 else None
+        playerHighlight = self._cursorIndex() if self._focusPanel == 1 else None
         hoveredChestItem = self._drawPanel(
-            self.getChestInventory(), self.getChestPanelRect(), self._chestTitle()
+            self.getChestInventory(), self.getChestPanelRect(), self._chestTitle(),
+            highlightIndex=chestHighlight,
         )
         hoveredPlayerItem = self._drawPanel(
-            self.inventory, self.getPlayerPanelRect(), "Inventory"
+            self.inventory, self.getPlayerPanelRect(), "Inventory",
+            highlightIndex=playerHighlight,
         )
         self.drawInstructions()
         self.drawBackButton()

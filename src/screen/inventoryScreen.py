@@ -39,6 +39,7 @@ class InventoryScreen(Screen):
         self.craftPanelOpen = False
         self.recipeRegistry = RecipeRegistry()
         self.lastCraftToggleTime = 0
+        self._craftCursor = 0
 
     def _drawSelectionBorder(self, x, y, width, height):
         self.renderer.drawSelectionHighlight(x, y, width, height, (255, 255, 0))
@@ -71,6 +72,22 @@ class InventoryScreen(Screen):
             return
         if key == kb.getKey("screenshot"):
             self.renderer.captureScreenshot()
+            return
+        # When the craft panel is open, arrow keys and Enter navigate recipes.
+        if self.craftPanelOpen:
+            recipes = self.recipeRegistry.getRecipes()
+            if key == KeyCode.UP:
+                self._craftCursor = max(0, self._craftCursor - 1)
+                return
+            if key == KeyCode.DOWN:
+                self._craftCursor = min(len(recipes) - 1, self._craftCursor + 1)
+                return
+            if key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
+                if 0 <= self._craftCursor < len(recipes):
+                    self.craftRecipe(recipes[self._craftCursor])
+                return
+        if key == KeyCode.C:
+            self.toggleCraftPanel()
             return
         _NAV_KEYS = {KeyCode.UP, KeyCode.DOWN, KeyCode.LEFT, KeyCode.RIGHT,
                      KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE, KeyCode.D}
@@ -181,7 +198,7 @@ class InventoryScreen(Screen):
             palette.WHITE,
         )
         self.renderer.drawText(
-            "Arrows: navigate  -  Enter/Space: pick up / put down  -  D: discard held",
+            "Arrows: navigate  -  Enter/Space: pick up / put down  -  D: discard held  -  C: craft",
             backgroundX,
             backgroundY + backgroundHeight + 42,
             14,
@@ -234,6 +251,8 @@ class InventoryScreen(Screen):
             return
         self.lastCraftToggleTime = now
         self.craftPanelOpen = not self.craftPanelOpen
+        if self.craftPanelOpen:
+            self._craftCursor = 0
 
     def drawCraftButton(self):
         backgroundX = self.renderer.getDisplayWidth() / 4
@@ -304,10 +323,10 @@ class InventoryScreen(Screen):
         recipes = self.recipeRegistry.getRecipes()
         craftableCount = sum(1 for r in recipes if r.canCraft(self.inventory))
         self.renderer.drawText(
-            f"{craftableCount} / {len(recipes)} craftable",
+            f"{craftableCount} / {len(recipes)} craftable  —  Up/Down: navigate  Enter: craft  C/Esc: close",
             panelX + panelWidth / 2,
             panelY + 40,
-            14,
+            12,
             palette.MEDIUM_GRAY,
         )
         startY, rowStride, recipeButtonHeight, recipeMargin = self._craftRowLayout(
@@ -363,6 +382,14 @@ class InventoryScreen(Screen):
                     recipeY + recipeButtonHeight / 2,
                     16,
                     (210, 210, 210),
+                )
+            if i == self._craftCursor:
+                self.renderer.drawSelectionHighlight(
+                    panelX + recipeMargin,
+                    recipeY,
+                    panelWidth - 2 * recipeMargin,
+                    recipeButtonHeight,
+                    (255, 255, 0),
                 )
 
     def craftRecipe(self, recipe):

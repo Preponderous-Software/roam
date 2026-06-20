@@ -28,10 +28,12 @@ class KeyCode(IntEnum):
     I = 105
     L = 108
     M = 109
+    R = 114
     S = 115
     T = 116
     U = 117
     W = 119
+    Z = 122
 
     # digits
     NUM_0 = 48
@@ -70,6 +72,7 @@ class KeyCode(IntEnum):
     KP_ENTER = 1073741912
     BACKSPACE = 8
     SPACE = 32
+    TAB = 9
 
 
 # Human-readable names for the controls UI. Mirrors pygame.key.name() output for
@@ -112,11 +115,14 @@ _DISPLAY_NAMES = {
     KeyCode.RIGHTBRACKET: "]",
     KeyCode.EQUALS: "=",
     KeyCode.MINUS: "-",
+    KeyCode.R: "r",
+    KeyCode.Z: "z",
     KeyCode.ESCAPE: "escape",
     KeyCode.RETURN: "return",
     KeyCode.KP_ENTER: "enter",
     KeyCode.BACKSPACE: "backspace",
     KeyCode.SPACE: "space",
+    KeyCode.TAB: "tab",
 }
 
 
