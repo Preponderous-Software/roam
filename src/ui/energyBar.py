@@ -70,7 +70,7 @@ class EnergyBar:
 
     def _drawText(self, xpos, ypos, energyRatio):
         BAR_WIDTH = 16
-        filled = round(energyRatio * BAR_WIDTH)
+        filled = max(0, min(BAR_WIDTH, round(energyRatio * BAR_WIDTH)))
         bar = "=" * filled + " " * (BAR_WIDTH - filled)
         energy = ceil(self.player.getEnergy())
         target = self.player.getTargetEnergy()

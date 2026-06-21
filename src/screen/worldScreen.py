@@ -1658,7 +1658,11 @@ class WorldScreen:
     def draw(self):
         gameArea = self.renderer.getGameAreaRect()
 
-        if self.config.showMiniMap and not self.isCurrentRoomSavedAsPNG():
+        if (
+            self.config.showMiniMap
+            and self.renderer.supportsImageLoading()
+            and not self.isCurrentRoomSavedAsPNG()
+        ):
             self.saveCurrentRoomAsPNG()
 
         self.renderer.clearScreen(palette.BLACK)
@@ -2060,7 +2064,7 @@ class WorldScreen:
         self.tickCounter.save()
         self.saveCodexToFile()
 
-        if self.config.showMiniMap:
+        if self.config.showMiniMap and self.renderer.supportsImageLoading():
             if not self.isCurrentRoomSavedAsPNG():
                 self.saveCurrentRoomAsPNG()
             # flush pending PNG writes so the map image update reads complete files
@@ -2225,7 +2229,7 @@ class WorldScreen:
             if self.deathRespawnTicksRemaining == 0:
                 self.respawnPlayer()
 
-        if self.config.showMiniMap:
+        if self.config.showMiniMap and self.renderer.supportsImageLoading():
             self.mapImageUpdater.updateIfCooldownOver()
 
     def run(self):

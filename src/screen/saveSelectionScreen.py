@@ -198,7 +198,7 @@ class SaveSelectionScreen(Screen):
         if self.namingNewSave:
             if key == KeyCode.ESCAPE:
                 self.cancelNamingNewSave()
-            elif key == KeyCode.RETURN:
+            elif key in (KeyCode.RETURN, KeyCode.KP_ENTER):
                 self.confirmNewSaveName()
             elif key == KeyCode.BACKSPACE:
                 self.newSaveNameInput = self.newSaveNameInput[:-1]

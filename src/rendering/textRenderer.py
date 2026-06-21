@@ -153,8 +153,11 @@ class TextRenderer(Renderer):
         """Rebuild the grid for a new terminal size and force a full repaint."""
         self.columns = columns
         self.rows = rows
+        old_grid = self.grid
         self.grid = TextGrid(columns, rows)
         self._lastFrame = None
+        if self._renderTarget is old_grid:
+            self._renderTarget = self.grid
 
     def setCaption(self, text):
         self._caption = text
