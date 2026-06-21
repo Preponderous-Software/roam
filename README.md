@@ -10,16 +10,20 @@ Key | Action
 W / A / S / D (or Arrow Keys) | Move up / left / down / right
 Shift | Run
 Ctrl | Crouch
+G | Gather / Harvest mature crop
+F | Place item / Interact
+X | Look (examine the tile you are facing)
 Left Mouse | Gather / Pick up / Harvest mature crop
 Right Mouse | Place item / Plant seed on grass
 1-0 | Select hotbar slot
+`[` / `]` | Cycle hotbar left / right
 Scroll Wheel | Cycle through hotbar
 I | Open / Close inventory
 M | Toggle minimap
-+/- | Resize minimap
+= / - | Minimap zoom in / out
 C | Toggle camera follow mode
-F1 | Toggle controls help overlay
-F3 | Toggle debug info
+F1 (or H) | Toggle controls help overlay
+F3 (or `\`) | Toggle debug info
 L | Open Codex
 Print Screen | Take screenshot
 Esc | Quit (main menu) / Open menu (world) / Go back (other screens)
@@ -28,6 +32,8 @@ Middle Mouse (outside inventory panel) | Drop single item from cursor (inventory
 Right Mouse (inventory slot) | Select inventory slot (inventory screen)
 
 > **Tip:** Keybindings are configurable in-game. Open the options menu and select **Controls** to view or remap bindings. Remapped keys are respected across all screens (world, inventory, stats, etc.).
+>
+> **Tip:** On keyboards without F-keys (e.g. Android / Userland), use **H** for the help overlay and **`\`** for debug info.
 
 ## Download & Install (recommended)
 The easiest way to play Roam — no Python and no command line. Grab the latest build from the [Releases page](https://github.com/Preponderous-Software/roam/releases):
@@ -54,6 +60,9 @@ Want the latest code, or to contribute? Run Roam from a clone. (To just play, us
 ### Run
 6. Run the game with the following command:
 > python src/roam.py
+
+To run in **text / TUI mode** (no pygame window — plays entirely in your terminal, no display server required):
+> python src/roam.py --text
 
 ## Run Script (Linux Only)
 There is also a run.sh script you can execute if you're on linux which will automatically attempt to install the dependencies for you.
