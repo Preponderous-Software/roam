@@ -98,9 +98,13 @@ def _navScreen(startIndex=0, numSlots=25):
     screen.keyBindings.getKey = lambda name: name
     screen.cursorSlot = MagicMock()
     screen.cursorSlot.isEmpty.return_value = True
+    screen.status = MagicMock()
     screen._selected = startIndex
+    slots = [MagicMock() for _ in range(numSlots)]
+    for s in slots:
+        s.isEmpty.return_value = True
     screen.inventory = MagicMock()
-    screen.inventory.getInventorySlots.return_value = [MagicMock()] * numSlots
+    screen.inventory.getInventorySlots.return_value = slots
     screen.inventory.getSelectedInventorySlotIndex.side_effect = lambda: screen._selected
     screen.inventory.setSelectedInventorySlotIndex.side_effect = lambda i: setattr(screen, "_selected", i)
     return screen, KeyCode

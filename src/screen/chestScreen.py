@@ -237,6 +237,20 @@ class ChestScreen(Screen):
                 self._cursorRow = chestRows - 1
                 self._clampCursor(chestInv)
 
+    def _announceSelectedSlot(self):
+        inv = self._focusedInventory()
+        slots = inv.getInventorySlots()
+        idx = self._cursorIndex()
+        if not (0 <= idx < len(slots)):
+            return
+        slot = slots[idx]
+        if slot.isEmpty():
+            self.status.set("Empty slot")
+        else:
+            item = slot.getContents()[0]
+            count = slot.getNumItems()
+            self.status.set(item.getName() + (f" x{count}" if count > 1 else ""))
+
     def _activateCursor(self):
         inv = self._focusedInventory()
         slots = inv.getInventorySlots()
@@ -255,6 +269,7 @@ class ChestScreen(Screen):
         elif key in (KeyCode.UP, KeyCode.DOWN, KeyCode.LEFT, KeyCode.RIGHT,
                      KeyCode.W, KeyCode.A, KeyCode.S):
             self._moveCursor(key)
+            self._announceSelectedSlot()
         elif key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
             self._activateCursor()
         elif key == KeyCode.D:

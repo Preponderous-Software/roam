@@ -226,6 +226,11 @@ class SaveSelectionScreen(Screen):
             self.startNamingNewSave()
         elif key == KeyCode.T:
             self.toggleSort()
+        elif key == KeyCode.BACKSPACE:
+            saves = self.getSaveDirectories()
+            if saves:
+                idx = min(self.getHighlightedSaveIndex(), len(saves) - 1)
+                self._requestDelete(saves[idx]["path"])
 
     def _maxVisible(self):
         """Number of save rows that fit on screen (approximated from display height)."""
@@ -615,7 +620,7 @@ class SaveSelectionScreen(Screen):
     def drawControlsHint(self):
         x, y = self.renderer.getDisplaySize()
         self.renderer.drawText(
-            "Up/Down: choose  -  Enter: play  -  C: new save  -  T: sort  -  Esc: back",
+            "Up/Down: choose  -  Enter: play  -  C: new  -  Bksp: delete  -  T: sort  -  Esc: back",
             x / 2,
             y - 14,
             16,

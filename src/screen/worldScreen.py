@@ -1211,7 +1211,7 @@ class WorldScreen:
         roomX = self.currentRoom.getX()
         roomY = self.currentRoom.getY() * -1
         dirArrows = {0: "^", 1: "<", 2: "v", 3: ">"}
-        facing = dirArrows.get(self.player.getDirection(), "·")
+        facing = dirArrows.get(self.player.getDirection(), ".")
         label = f"[{roomX},{roomY}] {facing}"
         self.renderer.drawRectangle(drawX, drawY, 80, 20, palette.NEAR_BLACK)
         self.renderer.drawText(label, drawX + 40, drawY + 10, 12, palette.MEDIUM_GRAY)

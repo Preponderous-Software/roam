@@ -67,6 +67,17 @@ class InventoryScreen(Screen):
         KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE, KeyCode.D,
     })
 
+    def _announceSelectedSlot(self):
+        slot = self.inventory.getInventorySlots()[
+            self.inventory.getSelectedInventorySlotIndex()
+        ]
+        if slot.isEmpty():
+            self.status.set("Empty slot")
+        else:
+            item = slot.getContents()[0]
+            count = slot.getNumItems()
+            self.status.set(item.getName() + (f" x{count}" if count > 1 else ""))
+
     def handleKeyDownEvent(self, key):
         kb = self.keyBindings
         if key == KeyCode.ESCAPE and self.craftPanelOpen:
@@ -99,18 +110,25 @@ class InventoryScreen(Screen):
             idx = self.inventory.getSelectedInventorySlotIndex()
             n = len(self.inventory.getInventorySlots())
             cols = self._ITEMS_PER_ROW
+            moved = False
             if key == KeyCode.RIGHT:
                 self.inventory.setSelectedInventorySlotIndex((idx + 1) % n)
+                moved = True
             elif key in (KeyCode.LEFT, KeyCode.A):
                 self.inventory.setSelectedInventorySlotIndex((idx - 1) % n)
+                moved = True
             elif key in (KeyCode.DOWN, KeyCode.S):
                 self.inventory.setSelectedInventorySlotIndex(min(idx + cols, n - 1))
+                moved = True
             elif key in (KeyCode.UP, KeyCode.W):
                 self.inventory.setSelectedInventorySlotIndex(max(idx - cols, 0))
+                moved = True
             elif key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
                 self.swapCursorSlotWithInventorySlotByIndex(idx)
             elif key == KeyCode.D:
                 self.dropCursorSlot()
+            if moved:
+                self._announceSelectedSlot()
         else:
             self._handleHotbarKey(key)
 
