@@ -240,8 +240,8 @@ class TextRenderer(Renderer):
 
         # The player (@) always carries a small ambient glow so they remain
         # visible and nearby tiles get fog-of-war style partial illumination.
-        # Radius = 3 cell diagonals, enough to show adjacent tiles.
-        playerRadius = 3 * (self.cellWidth ** 2 + self.cellHeight ** 2) ** 0.5
+        # Radius = 5 cell diagonals: well-lit ~2 cells out, grey ~3 cells out.
+        playerRadius = 5 * (self.cellWidth ** 2 + self.cellHeight ** 2) ** 0.5
         allSources = list(lightSources)
         for r in range(startRow, endRow):
             for c in range(startCol, endCol):

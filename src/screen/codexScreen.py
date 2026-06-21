@@ -144,9 +144,9 @@ class CodexScreen(Screen):
     def handleKeyDownEvent(self, key):
         if key == KeyCode.ESCAPE or key == self.keyBindings.getKey("codex"):
             self.switchToReturnScreen()
-        elif key == KeyCode.UP:
+        elif key in (KeyCode.UP, KeyCode.W):
             self.scrollOffset = max(0, self.scrollOffset - 1)
-        elif key == KeyCode.DOWN:
+        elif key in (KeyCode.DOWN, KeyCode.S):
             self.scrollOffset += 1
 
     def handleScrollEvent(self, event):
