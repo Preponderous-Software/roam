@@ -1210,9 +1210,11 @@ class WorldScreen:
         drawY = self.minimapY + minimapOy
         roomX = self.currentRoom.getX()
         roomY = self.currentRoom.getY() * -1
-        label = f"[{roomX},{roomY}]"
-        self.renderer.drawRectangle(drawX, drawY, 72, 20, palette.NEAR_BLACK)
-        self.renderer.drawText(label, drawX + 36, drawY + 10, 12, palette.MEDIUM_GRAY)
+        dirArrows = {0: "^", 1: "<", 2: "v", 3: ">"}
+        facing = dirArrows.get(self.player.getDirection(), "·")
+        label = f"[{roomX},{roomY}] {facing}"
+        self.renderer.drawRectangle(drawX, drawY, 80, 20, palette.NEAR_BLACK)
+        self.renderer.drawText(label, drawX + 40, drawY + 10, 12, palette.MEDIUM_GRAY)
 
     def drawMiniMap(self):
         if not self.renderer.supportsImageLoading():
@@ -1546,6 +1548,7 @@ class WorldScreen:
             barXPos, barYPos, barWidth, barHeight, palette.BLACK
         )
 
+        isTextMode = not self.renderer.supportsImageLoading()
         selectedIndex = self.player.getInventory().getSelectedInventorySlotIndex()
         firstTenInventorySlots = self.player.getInventory().getFirstTenInventorySlots()
         slotX = slotStartX
@@ -1554,6 +1557,8 @@ class WorldScreen:
                 self.renderer.drawRectangle(
                     slotX, slotY, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE, palette.WHITE
                 )
+                if isTextMode:
+                    self.renderer.drawImage("-", (slotX, slotY))
             else:
                 item = inventorySlot.getContents()[0]
                 scaledImage = self.renderer.scaleImage(
@@ -1574,13 +1579,29 @@ class WorldScreen:
                     slotX, slotY, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE
                 )
 
-            if not self.renderer.supportsImageLoading():
+            if isTextMode:
                 label = str(i + 1) if i < 9 else "0"
                 self.renderer.drawTextLeftAligned(
                     label, slotX, slotY - HOTBAR_SLOT_SIZE // 2, 12, palette.MEDIUM_GRAY
                 )
 
             slotX += HOTBAR_SLOT_SIZE + HOTBAR_SLOT_GAP
+
+        if isTextMode:
+            selectedSlot = self.player.getInventory().getSelectedInventorySlot()
+            if not selectedSlot.isEmpty():
+                item = selectedSlot.getContents()[0]
+                count = selectedSlot.getNumItems()
+                itemLabel = f"{item.getName()} x{count}" if count > 1 else item.getName()
+            else:
+                itemLabel = "-"
+            self.renderer.drawText(
+                itemLabel,
+                self.renderer.getDisplayWidth() / 2,
+                slotY + HOTBAR_SLOT_SIZE + 16,
+                14,
+                palette.LIGHT_GRAY,
+            )
 
     def _drawDebugInfo(self):
         displayWidth = self.renderer.getDisplayWidth()
@@ -1660,6 +1681,8 @@ class WorldScreen:
 
         if self.config.showMiniMap and self.minimapScaleFactor > 0:
             self.drawMiniMap()
+        elif not self.renderer.supportsImageLoading():
+            self._drawTextMinimap()
 
         if not self.showHelp:
             helpKeyName = self.keyBindings.getKeyName("toggle_help").upper()

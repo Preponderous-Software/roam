@@ -106,7 +106,8 @@ class TextFrontend:
             # the shell's scroll-back history, and hide the cursor so it does
             # not visually jump between cells during repaints (both are
             # standard VT100/xterm extensions supported by Userland on Android).
-            sys.stdout.write("\033[?1049h\033[?25l")
+            # Alternate screen + hide cursor + set terminal title.
+            sys.stdout.write("\033[?1049h\033[?25l\033]2;Roam\007")
             sys.stdout.flush()
         except (ImportError, OSError, ValueError):
             self._terminalState = None
@@ -125,6 +126,12 @@ class TextFrontend:
 
     def setCaption(self, caption):
         self._renderer.setCaption(caption)
+        if self._terminalState is not None:
+            try:
+                sys.stdout.write(f"\033]2;{caption}\007")
+                sys.stdout.flush()
+            except OSError:
+                pass
 
     def quit(self):
         if self._terminalState is not None:
