@@ -220,7 +220,7 @@ class SaveSelectionScreen(Screen):
             saves = self.getSaveDirectories()
             maxVisible = self._maxVisible()
             self._moveCursorDown(saves, maxVisible)
-        elif key == KeyCode.RETURN:
+        elif key in (KeyCode.RETURN, KeyCode.KP_ENTER):
             self.selectHighlightedSave()
         elif key == KeyCode.C:
             self.startNamingNewSave()

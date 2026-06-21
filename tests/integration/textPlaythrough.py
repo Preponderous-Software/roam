@@ -12,7 +12,12 @@ REPO_ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 )
 
-_ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+_ANSI = re.compile(
+    r"\x1b(?:"
+    r"\[[0-9;?]*[A-Za-z]"  # CSI  ESC [ ... final-byte
+    r"|\][^\x07\x1b]*(?:\x07|\x1b\\)"  # OSC  ESC ] ... BEL-or-ST
+    r")"
+)
 
 
 # @author Claude

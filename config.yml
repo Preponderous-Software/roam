@@ -33,5 +33,3 @@ dayNightCycleLengthTicks: 54000
 # Check GitHub for a newer release on launch and show a notice on the main menu.
 # Set to false to disable the only network request Roam makes.
 checkForUpdates: true
-savedWindowWidth: 528
-savedWindowHeight: 544

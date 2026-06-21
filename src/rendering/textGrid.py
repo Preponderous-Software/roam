@@ -23,8 +23,11 @@ class TextGrid:
         self._cells = [[self._blank] * self.columns for _ in range(self.rows)]
         self._colors = [[None] * self.columns for _ in range(self.rows)]
 
-    def _inBounds(self, column, row):
-        if not (0 <= column < self.columns and 0 <= row < self.rows):
+    def _inGridBounds(self, column, row):
+        return 0 <= column < self.columns and 0 <= row < self.rows
+
+    def _inWriteBounds(self, column, row):
+        if not self._inGridBounds(column, row):
             return False
         if self._clip is not None:
             col0, row0, col1, row1 = self._clip
@@ -32,17 +35,17 @@ class TextGrid:
         return True
 
     def setChar(self, column, row, char):
-        if self._inBounds(column, row):
+        if self._inWriteBounds(column, row):
             self._cells[row][column] = char
 
     def setColor(self, column, row, ansiCode):
         """Attach an ANSI foreground color code to a cell (e.g. 32 for green).
         Pass None to clear. Only applied when toString() builds the frame."""
-        if self._inBounds(column, row):
+        if self._inWriteBounds(column, row):
             self._colors[row][column] = ansiCode
 
     def getChar(self, column, row):
-        if self._inBounds(column, row):
+        if self._inGridBounds(column, row):
             return self._cells[row][column]
         return None
 

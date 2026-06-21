@@ -135,7 +135,11 @@ class Renderer(ABC):
 
     @abstractmethod
     def captureScreenshot(self):
-        """Save a screenshot of the current frame to the screenshots folder."""
+        """Save a screenshot of the current frame to the screenshots folder.
+
+        Returns a truthy value on success (e.g. the file path or True).
+        Returns a falsey value when unsupported or when the save fails.
+        Implementations must never raise; callers branch on the return value."""
 
     # --- selection / highlight ---
 

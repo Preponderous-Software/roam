@@ -9,9 +9,9 @@
 # pygame.Rect API the codebase actually uses on these rects (mutable
 # x/y/width/height, collidepoint, move, copy) so a text or web frontend can lay
 # out HUD elements without importing pygame. The pygame renderer converts to a
-# real pygame.Rect only where it draws. Edge/center accessors are intentionally
-# omitted until a consumer needs one (and would be added as explicit getters,
-# per the codebase's explicit-getter convention).
+# real pygame.Rect only where it draws. Edge accessors (right, bottom) are
+# @property so they match the pygame.Rect attribute convention and stay correct
+# if x/y/width/height are mutated after construction.
 
 
 class Rect:
