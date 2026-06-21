@@ -63,6 +63,7 @@ class InventoryScreen(Screen):
     _ITEMS_PER_ROW = 5
     _NAV_KEYS = frozenset({
         KeyCode.UP, KeyCode.DOWN, KeyCode.LEFT, KeyCode.RIGHT,
+        KeyCode.W, KeyCode.A, KeyCode.S,
         KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE, KeyCode.D,
     })
 
@@ -77,13 +78,13 @@ class InventoryScreen(Screen):
         if key == kb.getKey("screenshot"):
             self.renderer.captureScreenshot()
             return
-        # When the craft panel is open, arrow keys and Enter navigate recipes.
+        # When the craft panel is open, arrow keys / W S and Enter navigate recipes.
         if self.craftPanelOpen:
             recipes = self.recipeRegistry.getRecipes()
-            if key == KeyCode.UP:
+            if key in (KeyCode.UP, KeyCode.W):
                 self._craftCursor = max(0, self._craftCursor - 1)
                 return
-            if key == KeyCode.DOWN:
+            if key in (KeyCode.DOWN, KeyCode.S):
                 if recipes:
                     self._craftCursor = min(len(recipes) - 1, self._craftCursor + 1)
                 return
@@ -100,11 +101,11 @@ class InventoryScreen(Screen):
             cols = self._ITEMS_PER_ROW
             if key == KeyCode.RIGHT:
                 self.inventory.setSelectedInventorySlotIndex((idx + 1) % n)
-            elif key == KeyCode.LEFT:
+            elif key in (KeyCode.LEFT, KeyCode.A):
                 self.inventory.setSelectedInventorySlotIndex((idx - 1) % n)
-            elif key == KeyCode.DOWN:
+            elif key in (KeyCode.DOWN, KeyCode.S):
                 self.inventory.setSelectedInventorySlotIndex(min(idx + cols, n - 1))
-            elif key == KeyCode.UP:
+            elif key in (KeyCode.UP, KeyCode.W):
                 self.inventory.setSelectedInventorySlotIndex(max(idx - cols, 0))
             elif key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
                 self.swapCursorSlotWithInventorySlotByIndex(idx)
@@ -201,7 +202,7 @@ class InventoryScreen(Screen):
             palette.WHITE,
         )
         self.renderer.drawText(
-            "Arrows: navigate  -  Enter/Space: pick up / put down  -  D: discard held  -  C: craft",
+            "Arrows / W A S: navigate  -  Enter/Space: pick up / put down  -  D: discard held  -  C: craft",
             backgroundX,
             backgroundY + backgroundHeight + 42,
             14,
