@@ -120,7 +120,7 @@ class CodexScreen(Screen):
             )
             self.renderer.drawText(scrollInfo, x / 2, y - 70, 16, palette.MEDIUM_GRAY)
             self.renderer.drawText(
-                "Scroll or Up/Down to see more", x / 2, y - 92, 14, palette.DIM_GRAY
+                "Up/Down to see more", x / 2, y - 92, 14, palette.DIM_GRAY
             )
 
     def drawBackButton(self):

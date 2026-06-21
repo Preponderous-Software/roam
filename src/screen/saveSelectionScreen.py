@@ -224,6 +224,8 @@ class SaveSelectionScreen(Screen):
             self.selectHighlightedSave()
         elif key == KeyCode.C:
             self.startNamingNewSave()
+        elif key == KeyCode.T:
+            self.toggleSort()
 
     def _maxVisible(self):
         """Number of save rows that fit on screen (approximated from display height)."""
@@ -260,7 +262,7 @@ class SaveSelectionScreen(Screen):
         self.renderer.drawText("No save files found.", xpos, ypos, 28, palette.WHITE)
         ypos += 40
         self.renderer.drawText(
-            'Press C or click "New Game" to start playing!',
+            "Press C to create a new save.",
             xpos,
             ypos,
             24,
@@ -613,7 +615,7 @@ class SaveSelectionScreen(Screen):
     def drawControlsHint(self):
         x, y = self.renderer.getDisplaySize()
         self.renderer.drawText(
-            "Up/Down: choose  -  Enter: play  -  C: new save  -  Esc: back",
+            "Up/Down: choose  -  Enter: play  -  C: new save  -  T: sort  -  Esc: back",
             x / 2,
             y - 14,
             16,

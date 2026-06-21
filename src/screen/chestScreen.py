@@ -214,11 +214,11 @@ class ChestScreen(Screen):
             slotsOnRow = n - self._cursorRow * self.ITEMS_PER_ROW
             maxCol = min(self.ITEMS_PER_ROW, slotsOnRow) - 1
             self._cursorCol = (self._cursorCol + 1) % (maxCol + 1)
-        elif key == KeyCode.LEFT:
+        elif key in (KeyCode.LEFT, KeyCode.A):
             slotsOnRow = n - self._cursorRow * self.ITEMS_PER_ROW
             maxCol = min(self.ITEMS_PER_ROW, slotsOnRow) - 1
             self._cursorCol = (self._cursorCol - 1) % (maxCol + 1)
-        elif key == KeyCode.DOWN:
+        elif key in (KeyCode.DOWN, KeyCode.S):
             if self._cursorRow + 1 < rows and (self._cursorRow + 1) * self.ITEMS_PER_ROW < n:
                 self._cursorRow += 1
                 self._clampCursor(inv)
@@ -226,7 +226,7 @@ class ChestScreen(Screen):
                 self._focusPanel = 1
                 self._cursorRow = 0
                 self._clampCursor(self.inventory)
-        elif key == KeyCode.UP:
+        elif key in (KeyCode.UP, KeyCode.W):
             if self._cursorRow > 0:
                 self._cursorRow -= 1
             elif self._focusPanel == 1:
@@ -252,10 +252,13 @@ class ChestScreen(Screen):
             self.renderer.captureScreenshot()
         elif key == KeyCode.T:
             self.takeAll()
-        elif key in (KeyCode.UP, KeyCode.DOWN, KeyCode.LEFT, KeyCode.RIGHT):
+        elif key in (KeyCode.UP, KeyCode.DOWN, KeyCode.LEFT, KeyCode.RIGHT,
+                     KeyCode.W, KeyCode.A, KeyCode.S):
             self._moveCursor(key)
         elif key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
             self._activateCursor()
+        elif key == KeyCode.D:
+            self.dropCursorSlot()
         elif key == KeyCode.TAB:
             self._focusPanel = 1 - self._focusPanel
             self._clampCursor(self._focusedInventory())
@@ -449,23 +452,16 @@ class ChestScreen(Screen):
         width, _ = self.renderer.getDisplaySize()
         closeKeyName = self.keyBindings.getKeyName("inventory").upper()
         self.renderer.drawText(
-            "Left-click: move  -  Shift-click: transfer  -  T: take all",
+            "Arrows / W A S: navigate  -  Enter/Space: swap  -  D: discard held  -  Tab: switch panel  -  T: take all",
             width / 2,
             14,
             16,
             palette.MEDIUM_GRAY,
         )
         self.renderer.drawText(
-            "Arrows: navigate  -  Enter/Space: swap  -  Tab: switch panel",
-            width / 2,
-            32,
-            14,
-            palette.MEDIUM_GRAY,
-        )
-        self.renderer.drawText(
             "press [" + closeKeyName + "] or [Esc] to close",
             width / 2,
-            48,
+            32,
             14,
             palette.MEDIUM_GRAY,
         )
