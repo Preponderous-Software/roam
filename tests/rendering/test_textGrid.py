@@ -102,3 +102,51 @@ def test_clip_region_col0_allows_leftmost_column():
     grid.setClipRegion(0, 0, 4, 4)   # clip starts at col 0
     grid.setChar(0, 0, "Z")
     assert grid.getChar(0, 0) == "Z"
+
+
+# --- additional edge cases ---
+
+def test_draw_box_with_zero_width_or_height_does_not_raise():
+    grid = TextGrid(6, 4)
+    grid.drawBox(0, 0, 0, 3)  # zero width
+    grid.drawBox(0, 0, 3, 0)  # zero height
+    # Grid must be unmodified (all spaces)
+    assert grid.getChar(0, 0) == " "
+
+
+def test_set_color_none_clears_an_existing_color():
+    grid = TextGrid(4, 2)
+    grid.setChar(1, 0, "X")
+    grid.setColor(1, 0, 31)   # red
+    grid.setColor(1, 0, None)  # clear
+    line = grid.toString().splitlines()[0]
+    assert "\033[" not in line
+
+
+def test_color_not_applied_to_space_cells():
+    grid = TextGrid(4, 2)
+    # Set a color on a cell that stays a space — toString must skip ANSI wrapping.
+    grid.setColor(0, 0, 93)
+    line = grid.toString().splitlines()[0]
+    assert "\033[93m" not in line
+
+
+def test_fill_rect_with_zero_dimensions_does_nothing():
+    grid = TextGrid(5, 5)
+    grid.fillRect(0, 0, 0, 3, "#")  # zero width
+    grid.fillRect(0, 0, 3, 0, "#")  # zero height
+    assert grid.getChar(0, 0) == " "
+
+
+def test_write_text_clips_at_right_edge():
+    grid = TextGrid(4, 2)
+    grid.writeText(3, 0, "abc")   # only "a" fits at col 3; b,c are off the right edge
+    assert grid.getChar(3, 0) == "a"
+    assert grid.getChar(4, 0) is None  # out of bounds
+
+
+def test_get_char_out_of_bounds_returns_none():
+    grid = TextGrid(4, 2)
+    assert grid.getChar(-1, 0) is None
+    assert grid.getChar(0, -1) is None
+    assert grid.getChar(99, 0) is None

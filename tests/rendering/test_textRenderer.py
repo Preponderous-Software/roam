@@ -270,3 +270,89 @@ def test_resize_rebuilds_grid_and_forces_full_repaint():
     renderer.drawImage("#", (0, 0))
     renderer.present()
     assert len(frames) == 2
+
+
+# --- second batch: glyph table, surface helpers, game area, screenshot ---
+
+def test_draw_button_renders_box_and_label():
+    renderer = TextRenderer(columns=80, rows=24, cellWidth=8, cellHeight=16)
+    renderer.drawButton(0, 0, 80, 32, None, None, 12, "OK", lambda: None)
+    frame = renderer.grid.toString()
+    assert "OK" in frame
+    assert "+" in frame   # box corner
+
+
+def test_load_image_player_variants_all_map_to_at():
+    renderer = TextRenderer()
+    for name in ("player_down.png", "player_left.png", "player_up.png", "player_right.png"):
+        assert renderer.loadImage(name) == "@", name
+
+
+def test_load_image_chest_maps_to_left_bracket():
+    # Regression: the chest glyph [ was invisible on the left edge before the clip fix.
+    renderer = TextRenderer()
+    assert renderer.loadImage("chest.png") == "["
+
+
+def test_load_image_known_terrain_glyphs():
+    renderer = TextRenderer()
+    assert renderer.loadImage("grass.png") == "."
+    assert renderer.loadImage("stone.png") == "#"
+    assert renderer.loadImage("oakwood.png") == "T"
+
+
+def test_load_image_unknown_asset_falls_back_to_first_letter_uppercase():
+    renderer = TextRenderer()
+    assert renderer.loadImage("zombie.png") == "Z"
+    assert renderer.loadImage("npc_friend.png") == "N"
+
+
+def test_scale_image_returns_image_unchanged():
+    renderer = TextRenderer()
+    assert renderer.scaleImage("@", (50, 50)) is "@"
+    assert renderer.scaleImage("T", (8, 16)) == "T"
+
+
+def test_create_surface_returns_a_text_grid():
+    from rendering.textGrid import TextGrid
+    renderer = TextRenderer()
+    assert isinstance(renderer.createSurface((100, 100)), TextGrid)
+
+
+def test_try_load_image_always_returns_none():
+    renderer = TextRenderer()
+    assert renderer.tryLoadImage("anything.png") is None
+
+
+def test_supports_image_loading_returns_false():
+    renderer = TextRenderer()
+    assert renderer.supportsImageLoading() is False
+
+
+def test_get_render_target_and_set_render_target_round_trip():
+    renderer = TextRenderer()
+    sentinel = object()
+    renderer.setRenderTarget(sentinel)
+    assert renderer.getRenderTarget() is sentinel
+
+
+def test_game_area_rect_tall_terminal_fills_full_width():
+    # Very tall terminal: side is constrained by width, not height.
+    # columns=40,rows=80 → width=320, height=1280
+    # side = min(320, availHeight) = 320 → gameArea.x == 0, width == displayWidth
+    renderer = TextRenderer(columns=40, rows=80, cellWidth=8, cellHeight=16)
+    r = renderer.getGameAreaRect()
+    assert r.x == 0
+    assert r.width == renderer.getDisplayWidth()
+
+
+def test_capture_screenshot_writes_text_file(tmp_path, monkeypatch):
+    import config.config as _cfg_mod
+    monkeypatch.setattr(_cfg_mod.Config, "getUserDataDirectory", staticmethod(lambda: str(tmp_path)))
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=8, cellHeight=16)
+    renderer.drawTextLeftAligned("SNAP", 0, 8, 12, (255, 255, 255))
+    renderer.captureScreenshot()
+    screenshots = list((tmp_path / "screenshots").glob("*.txt"))
+    assert len(screenshots) == 1
+    content = screenshots[0].read_text(encoding="utf-8")
+    assert "SNAP" in content

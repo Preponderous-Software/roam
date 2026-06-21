@@ -198,3 +198,72 @@ def test_h_key_does_not_emit_synthetic_key_up():
     source = _sourceFeeding("h")
     events = source.pollEvents()
     assert not any(e.type is EventType.KEY_UP for e in events)
+
+
+# --- more key coverage ---
+
+def test_space_key_maps_to_keycode_space():
+    source = _sourceFeeding(" ")
+    keys = [e.key for e in source.pollEvents() if e.type is EventType.KEY_DOWN]
+    assert keys == [KeyCode.SPACE]
+
+
+def test_tab_key_maps_to_keycode_tab():
+    source = _sourceFeeding("\t")
+    keys = [e.key for e in source.pollEvents() if e.type is EventType.KEY_DOWN]
+    assert keys == [KeyCode.TAB]
+
+
+def test_digit_keys_map_to_num_keycodes():
+    for char, expected in [("1", KeyCode.NUM_1), ("9", KeyCode.NUM_9), ("0", KeyCode.NUM_0)]:
+        keys = [
+            e.key
+            for e in _sourceFeeding(char).pollEvents()
+            if e.type is EventType.KEY_DOWN
+        ]
+        assert keys == [expected], char
+
+
+def test_left_bracket_maps_to_leftbracket():
+    source = _sourceFeeding("[")
+    keys = [e.key for e in source.pollEvents() if e.type is EventType.KEY_DOWN]
+    assert keys == [KeyCode.LEFTBRACKET]
+
+
+def test_right_bracket_maps_to_rightbracket():
+    source = _sourceFeeding("]")
+    keys = [e.key for e in source.pollEvents() if e.type is EventType.KEY_DOWN]
+    assert keys == [KeyCode.RIGHTBRACKET]
+
+
+def test_right_arrow_sequence_maps_to_right():
+    source = _sourceFeeding("\x1b[C")
+    keys = [e.key for e in source.pollEvents() if e.type is EventType.KEY_DOWN]
+    assert keys == [KeyCode.RIGHT]
+
+
+def test_left_arrow_sequence_maps_to_left():
+    source = _sourceFeeding("\x1b[D")
+    keys = [e.key for e in source.pollEvents() if e.type is EventType.KEY_DOWN]
+    assert keys == [KeyCode.LEFT]
+
+
+def test_unknown_control_char_has_none_key():
+    # ctrl-A (value 1) has no matching KeyCode entry — fromInt returns None.
+    source = _sourceFeeding("\x01")
+    events = source.pollEvents()
+    down = [e for e in events if e.type is EventType.KEY_DOWN]
+    assert len(down) == 1
+    assert down[0].key is None
+
+
+def test_space_is_printable_so_emits_text_input():
+    source = _sourceFeeding(" ")
+    types = [e.type for e in source.pollEvents()]
+    assert EventType.TEXT_INPUT in types
+
+
+def test_tab_is_not_printable_so_no_text_input():
+    source = _sourceFeeding("\t")
+    types = [e.type for e in source.pollEvents()]
+    assert EventType.TEXT_INPUT not in types
