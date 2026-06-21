@@ -196,6 +196,28 @@ def runSelfTest():
         return 1
 
 
+def _shouldUseTextMode(argv):
+    """Return True when the text/TUI frontend should be used.
+
+    --text forces text mode. Without it, try to initialise the pygame display
+    subsystem; if SDL selects a headless driver (dummy / offscreen) or fails
+    entirely, fall back to text mode so the game runs without a display server.
+    """
+    if "--text" in argv:
+        return True
+    try:
+        pygame.display.init()
+        driver = pygame.display.get_driver()
+        pygame.display.quit()
+        if driver in ("dummy", "offscreen"):
+            _logger.info("no display detected; using text mode", driver=driver)
+            return True
+        return False
+    except pygame.error as exc:
+        _logger.info("display unavailable; using text mode", error=str(exc))
+        return True
+
+
 def main(argv):
     # Frozen executables start in an arbitrary working directory; make relative
     # asset/schema paths resolve against the bundle. No-op when run from source.
@@ -205,7 +227,7 @@ def main(argv):
         return runSelfTest()
 
     config = Config()
-    roam = Roam(config, textMode="--text" in argv)
+    roam = Roam(config, textMode=_shouldUseTextMode(argv))
     try:
         while True:
             result = roam.run()

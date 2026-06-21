@@ -61,7 +61,7 @@ Want the latest code, or to contribute? Run Roam from a clone. (To just play, us
 6. Run the game with the following command:
 > python src/roam.py
 
-To run in **text / TUI mode** (no pygame window — plays entirely in your terminal, no display server required):
+Roam auto-detects whether a display is available. If no display server is found (e.g. SSH without X forwarding, Android Userland without XServer), it switches to **text / TUI mode** automatically — no extra flags needed. You can also force text mode explicitly:
 > python src/roam.py --text
 
 ## Run Script (Linux Only)
