@@ -13,10 +13,10 @@ LOG_FORMAT : str
     for human-readable coloured output (default: ``pretty``).
 LOG_FILE : str
     Path to a log file.  When set, all log output goes to that file
-    instead of stderr.  In text/TUI mode (``--text`` flag) this
-    defaults to ``roam.log`` so that log lines never corrupt the
-    terminal display.  Set ``LOG_FILE=`` (empty) to suppress file
-    logging even in text mode.
+    instead of stderr.  In text/TUI mode this defaults to ``roam.log``
+    so that log lines never corrupt the terminal display — roam.py sets
+    this variable before any import triggers logger initialisation.
+    Set ``LOG_FILE=`` (empty) to suppress file logging even in text mode.
 """
 
 import logging

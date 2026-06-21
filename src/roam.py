@@ -1,6 +1,35 @@
-import json
 import os
 import sys
+
+
+# ---------------------------------------------------------------------------
+# Early display probe — must run before any import that pulls in the logger.
+# config.py and bootstrap.py both import gameLogging.logger at module level,
+# which configures log output (stderr vs file) at import time. We set LOG_FILE
+# here so headless auto-detection redirects logs to a file before the logger
+# is ever initialised, preventing log lines from corrupting the TUI display.
+# ---------------------------------------------------------------------------
+def _earlyDetectTextMode():
+    if "--text" in sys.argv:
+        return True
+    try:
+        import pygame as _pg
+
+        _pg.display.init()
+        driver = _pg.display.get_driver()
+        _pg.display.quit()
+        return driver in ("dummy", "offscreen")
+    except Exception:
+        return True
+
+
+if _earlyDetectTextMode() and os.environ.get("LOG_FILE") is None:
+    os.environ["LOG_FILE"] = "roam.log"
+
+# ---------------------------------------------------------------------------
+# Remaining imports (logger is now configured with the correct destination)
+# ---------------------------------------------------------------------------
+import json
 
 import pygame
 from appPaths import prepareWorkingDirectory
