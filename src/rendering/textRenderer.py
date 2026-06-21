@@ -275,7 +275,10 @@ class TextRenderer(Renderer):
         x = position[0] if not hasattr(position, "x") else position.x
         y = position[1] if not hasattr(position, "y") else position.y
         glyph = image if isinstance(image, str) and image else "#"
-        col, row = self._col(x), self._row(y)
+        # Tile positions include a -1px overlap (see room.drawWithOffset).  When
+        # the game area starts at pixel 0, the leftmost tile lands at col -1 which
+        # is out of bounds.  Clamp to 0 so edge tiles are never silently dropped.
+        col, row = max(0, self._col(x)), max(0, self._row(y))
         self.grid.setChar(col, row, glyph[0])
         color = _GLYPH_COLORS.get(glyph[0])
         if color is not None:
@@ -317,7 +320,7 @@ class TextRenderer(Renderer):
         else:
             x, y, w, h = rect.x, rect.y, rect.width, rect.height
             self.grid.setClipRegion(
-                self._col(x), self._row(y),
+                max(0, self._col(x) - 1), self._row(y),
                 self._col(x + w) + 1, self._row(y + h) + 1,
             )
 

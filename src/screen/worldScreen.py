@@ -1554,7 +1554,9 @@ class WorldScreen:
         isTextMode = not self.renderer.supportsImageLoading()
         selectedIndex = self.player.getInventory().getSelectedInventorySlotIndex()
         firstTenInventorySlots = self.player.getInventory().getFirstTenInventorySlots()
-        slotX = slotStartX
+        # On narrow terminals slotStartX can be negative, pushing slot 1 off the
+        # left edge.  In text mode clamp to 0 so the first slot is always visible.
+        slotX = max(0.0, slotStartX) if isTextMode else slotStartX
         for i, inventorySlot in enumerate(firstTenInventorySlots):
             if inventorySlot.isEmpty():
                 self.renderer.drawRectangle(
