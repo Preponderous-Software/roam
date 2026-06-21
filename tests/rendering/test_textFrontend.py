@@ -62,3 +62,17 @@ def test_frontend_set_caption_does_not_raise_without_terminal():
     # In the test environment _terminalState is None — setCaption must be a no-op.
     frontend = createTextFrontend(MagicMock())
     frontend.setCaption("Test")
+
+
+# --- third batch ---
+
+def test_frontend_renderer_is_a_text_renderer():
+    from rendering.textRenderer import TextRenderer
+    frontend = createTextFrontend(MagicMock())
+    assert isinstance(frontend.getRenderer(), TextRenderer)
+
+
+def test_frontend_input_source_is_text_input_source():
+    from rendering.textInputSource import TextInputSource
+    frontend = createTextFrontend(MagicMock())
+    assert isinstance(frontend.getInputSource(), TextInputSource)

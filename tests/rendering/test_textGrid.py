@@ -150,3 +150,49 @@ def test_get_char_out_of_bounds_returns_none():
     assert grid.getChar(-1, 0) is None
     assert grid.getChar(0, -1) is None
     assert grid.getChar(99, 0) is None
+
+
+# --- third batch ---
+
+def test_draw_box_2x2_has_all_four_corners_and_no_edges():
+    # 2×2 is the smallest box with distinct corners; edge loops produce empty
+    # ranges so only "+" appears — no "-" or "|".
+    grid = TextGrid(4, 4)
+    grid.drawBox(0, 0, 2, 2)
+    assert grid.getChar(0, 0) == "+"
+    assert grid.getChar(1, 0) == "+"
+    assert grid.getChar(0, 1) == "+"
+    assert grid.getChar(1, 1) == "+"
+    assert grid.getChar(2, 0) == " "  # outside box
+
+
+def test_draw_box_1x1_places_single_corner_character():
+    # All four corner calls target the same cell → just "+".
+    grid = TextGrid(6, 4)
+    grid.drawBox(2, 1, 1, 1)
+    assert grid.getChar(2, 1) == "+"
+    assert grid.getChar(0, 0) == " "  # grid otherwise blank
+
+
+def test_clear_resets_chars_to_space():
+    grid = TextGrid(4, 2)
+    grid.setChar(0, 0, "X")
+    grid.clear()
+    assert grid.getChar(0, 0) == " "
+
+
+def test_write_text_empty_string_is_noop():
+    grid = TextGrid(4, 2)
+    grid.writeText(0, 0, "")
+    assert grid.getChar(0, 0) == " "
+
+
+def test_to_string_single_row_has_no_newlines():
+    grid = TextGrid(5, 1)
+    assert grid.toString().count("\n") == 0
+
+
+def test_fill_rect_all_out_of_bounds_does_nothing():
+    grid = TextGrid(4, 2)
+    grid.fillRect(10, 10, 3, 3, "#")  # entirely outside bounds
+    assert grid.getChar(0, 0) == " "

@@ -356,3 +356,64 @@ def test_capture_screenshot_writes_text_file(tmp_path, monkeypatch):
     assert len(screenshots) == 1
     content = screenshots[0].read_text(encoding="utf-8")
     assert "SNAP" in content
+
+
+# --- third batch ---
+
+def test_draw_text_left_aligned_long_bracket_label_never_clips_left_edge():
+    # Minimap regression: "[-1,0] ^ night" at leftX=5 → col=0 must place "[" at col 0.
+    renderer = TextRenderer(columns=20, rows=10, cellWidth=8, cellHeight=16)
+    renderer.drawTextLeftAligned("[-1,0] ^ night", 5, 80, 12, (200, 200, 200))
+    # _col(5) = 5//8 = 0, _row(80) = 80//16 = 5
+    assert renderer.grid.getChar(0, 5) == "["
+
+
+def test_draw_text_clears_overlay_color_at_text_position():
+    # _clearColors is called after writeText so overlay dimming does not mask UI text.
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=10, cellHeight=10)
+    renderer.drawTranslucentOverlay((0, 0, 0))           # dim all to dark-grey (90)
+    renderer.drawText("hi", 100, 20, 12, (255, 255, 255))
+    # drawText: col = _col(100) - len("hi")//2 = 10 - 1 = 9, row = _row(20) = 2
+    assert renderer.grid._colors[2][9] is None   # "h" — color cleared
+    assert renderer.grid._colors[2][10] is None  # "i" — color cleared
+    assert renderer.grid._colors[0][0] == 90     # unrelated cell still dimmed
+
+
+def test_draw_text_left_aligned_clears_overlay_color():
+    # drawTextLeftAligned also calls _clearColors.
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=10, cellHeight=10)
+    renderer.drawTranslucentOverlay((0, 0, 0))
+    renderer.drawTextLeftAligned("AB", 0, 10, 12, (255, 255, 255))
+    # col = _col(0) = 0, row = _row(10) = 1
+    assert renderer.grid._colors[1][0] is None  # "A" — cleared
+    assert renderer.grid._colors[1][1] is None  # "B" — cleared
+    assert renderer.grid._colors[0][5] == 90    # unrelated cell still dimmed
+
+
+def test_clear_screen_resets_all_cells_to_space():
+    # clearScreen() delegates to grid.clear() — both chars and colors reset.
+    renderer = TextRenderer(columns=10, rows=5, cellWidth=8, cellHeight=16)
+    renderer.drawImage("@", (0, 0))
+    renderer.grid.setColor(0, 0, 93)
+    renderer.clearScreen((0, 0, 0))
+    assert renderer.grid.getChar(0, 0) == " "
+    assert renderer.grid._colors[0][0] is None
+
+
+def test_draw_day_night_overlay_explicit_light_source_exempts_lit_cell():
+    # A large explicit light source at cell (0,0)'s center keeps that cell uncolored.
+    renderer = TextRenderer(columns=10, rows=5, cellWidth=8, cellHeight=16)
+    # Cell (0,0) center: px = 0*8 + 4 = 4, py = 0*16 + 8 = 8
+    renderer.drawDayNightOverlay((0, 0, 80, 80), 200, [(4, 8, 1000)])
+    assert renderer.grid._colors[0][0] is None  # lit cell untouched
+
+
+def test_draw_day_night_overlay_player_glyph_creates_implicit_light_source():
+    # "@" auto-creates a light source so the player cell is not darkened.
+    # drawImage sets the cell to bright-yellow (93); overlay must not overwrite
+    # it with the dim values (90 = dark-grey, 30 = near-black).
+    renderer = TextRenderer(columns=10, rows=5, cellWidth=8, cellHeight=16)
+    renderer.drawImage("@", (24, 32))  # col = 24//8 = 3, row = 32//16 = 2
+    renderer.drawDayNightOverlay((0, 0, 80, 80), 200, [])
+    color = renderer.grid._colors[2][3]
+    assert color not in (30, 90)  # player cell not dimmed by the overlay

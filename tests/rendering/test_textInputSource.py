@@ -267,3 +267,25 @@ def test_tab_is_not_printable_so_no_text_input():
     source = _sourceFeeding("\t")
     types = [e.type for e in source.pollEvents()]
     assert EventType.TEXT_INPUT not in types
+
+
+# --- third batch ---
+
+def test_minus_key_maps_to_minus():
+    source = _sourceFeeding("-")
+    keys = [e.key for e in source.pollEvents() if e.type is EventType.KEY_DOWN]
+    assert keys == [KeyCode.MINUS]
+
+
+def test_equals_key_maps_to_equals():
+    source = _sourceFeeding("=")
+    keys = [e.key for e in source.pollEvents() if e.type is EventType.KEY_DOWN]
+    assert keys == [KeyCode.EQUALS]
+
+
+def test_multiple_chars_in_burst_decoded_in_order():
+    # Three chars arriving together must all decode in order (KeyCode.B doesn't
+    # exist — use A, C, D which are defined in the enum).
+    source = _sourceFeeding("acd")
+    keys = [e.key for e in source.pollEvents() if e.type is EventType.KEY_DOWN]
+    assert keys == [KeyCode.A, KeyCode.C, KeyCode.D]
