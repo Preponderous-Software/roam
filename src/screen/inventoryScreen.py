@@ -61,11 +61,21 @@ class InventoryScreen(Screen):
             self.cursorSlot.setContents(temp)
 
     _ITEMS_PER_ROW = 5
-    _NAV_KEYS = frozenset({
-        KeyCode.UP, KeyCode.DOWN, KeyCode.LEFT, KeyCode.RIGHT,
-        KeyCode.W, KeyCode.A, KeyCode.S,
-        KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE, KeyCode.D,
-    })
+    _NAV_KEYS = frozenset(
+        {
+            KeyCode.UP,
+            KeyCode.DOWN,
+            KeyCode.LEFT,
+            KeyCode.RIGHT,
+            KeyCode.W,
+            KeyCode.A,
+            KeyCode.S,
+            KeyCode.RETURN,
+            KeyCode.KP_ENTER,
+            KeyCode.SPACE,
+            KeyCode.D,
+        }
+    )
 
     def _announceSelectedSlot(self):
         slot = self.inventory.getInventorySlots()[

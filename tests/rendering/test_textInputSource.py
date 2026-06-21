@@ -114,7 +114,12 @@ def test_arrow_key_emits_key_up_after_key_down():
 
 
 def test_wasd_movement_key_emits_key_up_after_key_down():
-    for key_char, expected_key in [("w", KeyCode.W), ("a", KeyCode.A), ("s", KeyCode.S), ("d", KeyCode.D)]:
+    for key_char, expected_key in [
+        ("w", KeyCode.W),
+        ("a", KeyCode.A),
+        ("s", KeyCode.S),
+        ("d", KeyCode.D),
+    ]:
         source = _sourceFeeding(key_char)
         events = source.pollEvents()
         down_events = [e for e in events if e.type is EventType.KEY_DOWN]
@@ -181,6 +186,7 @@ def test_default_reader_decodes_enter_over_a_real_pty():
 
 # --- new keys added for F-key-less terminals ---
 
+
 def test_h_key_maps_to_keycode_h():
     source = _sourceFeeding("h")
     keys = [e.key for e in source.pollEvents() if e.type is EventType.KEY_DOWN]
@@ -188,7 +194,7 @@ def test_h_key_maps_to_keycode_h():
 
 
 def test_backslash_maps_to_keycode_backslash():
-    source = _sourceFeeding("\\")   # single backslash, ord 92
+    source = _sourceFeeding("\\")  # single backslash, ord 92
     keys = [e.key for e in source.pollEvents() if e.type is EventType.KEY_DOWN]
     assert keys == [KeyCode.BACKSLASH]
 
@@ -201,6 +207,7 @@ def test_h_key_does_not_emit_synthetic_key_up():
 
 
 # --- more key coverage ---
+
 
 def test_space_key_maps_to_keycode_space():
     source = _sourceFeeding(" ")
@@ -215,7 +222,11 @@ def test_tab_key_maps_to_keycode_tab():
 
 
 def test_digit_keys_map_to_num_keycodes():
-    for char, expected in [("1", KeyCode.NUM_1), ("9", KeyCode.NUM_9), ("0", KeyCode.NUM_0)]:
+    for char, expected in [
+        ("1", KeyCode.NUM_1),
+        ("9", KeyCode.NUM_9),
+        ("0", KeyCode.NUM_0),
+    ]:
         keys = [
             e.key
             for e in _sourceFeeding(char).pollEvents()
@@ -270,6 +281,7 @@ def test_tab_is_not_printable_so_no_text_input():
 
 
 # --- third batch ---
+
 
 def test_minus_key_maps_to_minus():
     source = _sourceFeeding("-")

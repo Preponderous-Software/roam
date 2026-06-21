@@ -45,6 +45,7 @@ def test_keycode_is_hashable_with_int_collisions():
 
 # --- keys added for F-key-less terminals (Userland / Android) ---
 
+
 def test_h_is_defined():
     assert KeyCode.H == 104
 

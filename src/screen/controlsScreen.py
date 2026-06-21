@@ -100,9 +100,17 @@ class ControlsScreen(Screen):
             isConflict = action in conflicts
             isCursor = absIndex == self._cursor
             isAlt = action.startswith("alt_")
-            labelColor = (255, 100, 100) if isConflict else (palette.MEDIUM_GRAY if isAlt else palette.WHITE)
+            labelColor = (
+                (255, 100, 100)
+                if isConflict
+                else (palette.MEDIUM_GRAY if isAlt else palette.WHITE)
+            )
             self.renderer.drawText(
-                label, labelX + (18 if isAlt else 0), rowY + buttonHeight / 2, 20, labelColor
+                label,
+                labelX + (18 if isAlt else 0),
+                rowY + buttonHeight / 2,
+                20,
+                labelColor,
             )
 
             if self.waitingForKey == action:
@@ -130,7 +138,10 @@ class ControlsScreen(Screen):
 
         self.renderer.drawText(
             "Up/Down: navigate  -  Enter/Space: remap  -  S: save  -  R: reset  -  Esc: cancel",
-            x / 2, y - 92, 13, palette.DIM_GRAY,
+            x / 2,
+            y - 92,
+            13,
+            palette.DIM_GRAY,
         )
         if maxOffset > 0:
             scrollInfo = (

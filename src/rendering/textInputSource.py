@@ -4,7 +4,6 @@ from rendering.inputEvent import EventType, InputEvent
 from rendering.inputSource import InputSource
 from rendering.keyCode import KeyCode, fromInt
 
-
 # ANSI escape sequences the arrow keys emit (CSI and the SS3 "application"
 # variant). Recognizing these stops the leading ESC (\x1b) from being misread
 # as a bare Escape keypress.
@@ -24,8 +23,14 @@ _ARROW_SEQUENCES = {
 # OS-level key-repeat keeps firing KEY_DOWN events and the player walks
 # indefinitely (there is no physical KEY_UP from a terminal).
 _MOVEMENT_KEYS = {
-    KeyCode.UP, KeyCode.DOWN, KeyCode.LEFT, KeyCode.RIGHT,
-    KeyCode.W, KeyCode.A, KeyCode.S, KeyCode.D,
+    KeyCode.UP,
+    KeyCode.DOWN,
+    KeyCode.LEFT,
+    KeyCode.RIGHT,
+    KeyCode.W,
+    KeyCode.A,
+    KeyCode.S,
+    KeyCode.D,
 }
 
 # Control bytes whose terminal value differs from the KeyCode (SDL) value. In

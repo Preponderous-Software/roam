@@ -2,7 +2,6 @@ from rendering.keyCode import KeyCode
 from screen.configScreen import ConfigScreen
 from screen.screenType import ScreenType
 
-
 # Characterization tests for ConfigScreen (previously no dedicated test file):
 # Esc/quit transitions, the cooldown-guarded config toggle, and scroll clamping.
 
@@ -68,7 +67,7 @@ def test_scroll_moves_cursor_and_clamps(resolve):
     assert screen._cursor == 0
     screen.handleScrollEvent(_Wheel(-1))  # scroll down -> cursor advances
     assert screen._cursor == 1
-    screen.handleScrollEvent(_Wheel(1))   # scroll up -> cursor retreats
+    screen.handleScrollEvent(_Wheel(1))  # scroll up -> cursor retreats
     assert screen._cursor == 0
-    screen.handleScrollEvent(_Wheel(1))   # scroll up at 0 -> clamped
+    screen.handleScrollEvent(_Wheel(1))  # scroll up at 0 -> clamped
     assert screen._cursor == 0

@@ -59,9 +59,9 @@ class MainMenuScreen(Screen):
         )
 
     _MENU_ITEMS = [
-        ("Play",     "switchToSaveSelectionScreen"),
+        ("Play", "switchToSaveSelectionScreen"),
         ("Settings", "switchToConfigScreen"),
-        ("Quit",     "quitApplication"),
+        ("Quit", "quitApplication"),
     ]
 
     def drawMenuButtons(self):
@@ -74,12 +74,20 @@ class MainMenuScreen(Screen):
         for i, (label, method) in enumerate(self._MENU_ITEMS):
             btnY = startY + i * (height + margin)
             self.renderer.drawButton(
-                xpos, btnY, width, height,
-                palette.WHITE, palette.BLACK, 30,
-                label, getattr(self, method),
+                xpos,
+                btnY,
+                width,
+                height,
+                palette.WHITE,
+                palette.BLACK,
+                30,
+                label,
+                getattr(self, method),
             )
             if i == self._selectedIndex:
-                self.renderer.drawSelectionHighlight(xpos, btnY, width, height, (255, 255, 0))
+                self.renderer.drawSelectionHighlight(
+                    xpos, btnY, width, height, (255, 255, 0)
+                )
         hintY = startY + len(self._MENU_ITEMS) * (height + margin) + 6
         selectedLabel = self._MENU_ITEMS[self._selectedIndex][0]
         self.renderer.drawText(

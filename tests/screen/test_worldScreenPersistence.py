@@ -8,7 +8,6 @@ from unittest.mock import MagicMock
 from jsonPersistence import readJsonFile
 from screen.worldScreenPersistence import WorldScreenPersistence
 
-
 # --- player attributes -------------------------------------------------------
 
 

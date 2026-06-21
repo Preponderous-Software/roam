@@ -2,7 +2,6 @@ from rendering.keyCode import KeyCode
 from screen.controlsScreen import ControlsScreen
 from screen.screenType import ScreenType
 
-
 # Characterization tests for the ControlsScreen rebind state machine. They lock
 # in the screen's current behavior (no behavior change intended) — the screen
 # had no dedicated test file before this.

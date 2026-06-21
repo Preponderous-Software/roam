@@ -9,7 +9,6 @@ from rendering.keyCode import KeyCode
 from screen.screenType import ScreenType
 from screen.worldScreen import WorldScreen
 
-
 # Characterization tests for the WorldScreen input seam (epic #433, Phase 4c):
 # its game loop now reads InputEvents from an InputSource instead of pygame.
 # The real-time loop itself still needs a maintainer smoke-run; these lock in

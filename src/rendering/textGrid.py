@@ -20,8 +20,8 @@ class TextGrid:
         self._clip = None if col0 is None else (col0, row0, col1, row1)
 
     def clear(self):
-        self._cells  = [[self._blank] * self.columns for _ in range(self.rows)]
-        self._colors = [[None]        * self.columns for _ in range(self.rows)]
+        self._cells = [[self._blank] * self.columns for _ in range(self.rows)]
+        self._colors = [[None] * self.columns for _ in range(self.rows)]
 
     def _inBounds(self, column, row):
         if not (0 <= column < self.columns and 0 <= row < self.rows):
@@ -87,8 +87,8 @@ class TextGrid:
                     break
             parts = []
             for c in range(last + 1):
-                char  = row[c]
-                code  = colorRow[c]
+                char = row[c]
+                code = colorRow[c]
                 if code is not None and char != " ":
                     parts.append(f"\033[{code}m{char}\033[0m")
                 else:

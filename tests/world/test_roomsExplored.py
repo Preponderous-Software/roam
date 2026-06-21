@@ -6,6 +6,7 @@ Covers the requirement that:
 - Rooms pre-loaded in the background (via RoomPreloader) still count
   when the player actually enters them, but not if never entered
 """
+
 from unittest.mock import MagicMock
 
 from stats.stats import Stats

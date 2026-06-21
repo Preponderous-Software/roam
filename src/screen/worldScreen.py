@@ -573,10 +573,7 @@ class WorldScreen:
         if location == -1:
             self.status.set("Nothing ahead")
             return
-        entities = [
-            location.getEntity(eid).getName()
-            for eid in location.getEntities()
-        ]
+        entities = [location.getEntity(eid).getName() for eid in location.getEntities()]
         if entities:
             self.status.set("Ahead: " + ", ".join(entities))
         else:
@@ -940,7 +937,11 @@ class WorldScreen:
             self._handleMovementKey(3)
         elif key == kb.getKey("screenshot"):
             result = self.renderer.captureScreenshot()
-            self.status.set("Screenshot saved" if result else "Screenshots not supported in this mode")
+            self.status.set(
+                "Screenshot saved"
+                if result
+                else "Screenshots not supported in this mode"
+            )
         elif key == kb.getKey("run"):
             self.player.setMovementSpeed(
                 self.player.getMovementSpeed() * self.config.runSpeedFactor
@@ -1216,8 +1217,12 @@ class WorldScreen:
         if self.config.dayNightCycleEnabled:
             phase = self.dayNightCycle.getPhase(self.tickCounter.getTick())
             label += f" {phase}"
-        self.renderer.drawRectangle(drawX, drawY, max(96, len(label) * 8), 20, palette.NEAR_BLACK)
-        self.renderer.drawTextLeftAligned(label, drawX, drawY + 10, 12, palette.MEDIUM_GRAY)
+        self.renderer.drawRectangle(
+            drawX, drawY, max(96, len(label) * 8), 20, palette.NEAR_BLACK
+        )
+        self.renderer.drawTextLeftAligned(
+            label, drawX, drawY + 10, 12, palette.MEDIUM_GRAY
+        )
 
     def drawMiniMap(self):
         if not self.renderer.supportsImageLoading():
@@ -1382,7 +1387,9 @@ class WorldScreen:
             if not self.renderer.supportsImageLoading()
             else "Click the window or press any key to resume"
         )
-        self.renderer.drawText(resumeHint, width / 2, height / 2 + 28, 22, palette.MEDIUM_GRAY)
+        self.renderer.drawText(
+            resumeHint, width / 2, height / 2 + 28, 22, palette.MEDIUM_GRAY
+        )
 
     def _drawDayNightPhaseIndicator(self):
         phase = self.dayNightCycle.getPhase(self.tickCounter.getTick())
@@ -1533,7 +1540,9 @@ class WorldScreen:
         )
 
     def _drawHotbarSelectionIndicator(self, xPos, yPos, slotWidth, slotHeight):
-        self.renderer.drawSelectionHighlight(xPos, yPos, slotWidth, slotHeight, (255, 255, 0))
+        self.renderer.drawSelectionHighlight(
+            xPos, yPos, slotWidth, slotHeight, (255, 255, 0)
+        )
 
     def _drawHotbar(self):
         hotbarOx, hotbarOy = self.hudDragManager.getOffset("hotbar")
@@ -1598,7 +1607,9 @@ class WorldScreen:
             if not selectedSlot.isEmpty():
                 item = selectedSlot.getContents()[0]
                 count = selectedSlot.getNumItems()
-                itemLabel = f"{item.getName()} x{count}" if count > 1 else item.getName()
+                itemLabel = (
+                    f"{item.getName()} x{count}" if count > 1 else item.getName()
+                )
             else:
                 itemLabel = "-"
             self.renderer.drawText(
@@ -1691,7 +1702,11 @@ class WorldScreen:
             self._drawTextMinimap()
 
         if not self.showHelp:
-            helpAction = "alt_toggle_help" if not self.renderer.supportsImageLoading() else "toggle_help"
+            helpAction = (
+                "alt_toggle_help"
+                if not self.renderer.supportsImageLoading()
+                else "toggle_help"
+            )
             helpKeyName = self.keyBindings.getKeyName(helpAction).upper()
             hintLabel = f"{helpKeyName}: Help"
             hintX = self.renderer.getDisplayWidth() - 50

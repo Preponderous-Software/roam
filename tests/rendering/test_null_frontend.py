@@ -106,8 +106,7 @@ def test_the_seam_drives_a_screen_with_pygame_imports_blocked():
     # `import pygame`, then drive the Screen base loop one frame through the Null
     # frontend. If any module on that path imported pygame, this subprocess would
     # die with ImportError instead of printing the sentinel.
-    script = textwrap.dedent(
-        """
+    script = textwrap.dedent("""
         import sys
         # Poison pygame: any `import pygame` now raises ImportError.
         sys.modules["pygame"] = None
@@ -137,8 +136,7 @@ def test_the_seam_drives_a_screen_with_pygame_imports_blocked():
         assert screen.frames == 1
         assert "pygame" not in sys.modules or sys.modules["pygame"] is None
         print("NULL_FRONTEND_OK")
-        """
-    )
+        """)
     completed = subprocess.run(
         [sys.executable, "-c", script],
         cwd=REPO_ROOT,

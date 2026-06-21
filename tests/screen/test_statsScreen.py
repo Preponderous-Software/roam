@@ -2,7 +2,6 @@ from rendering.keyCode import KeyCode
 from screen.screenType import ScreenType
 from screen.statsScreen import StatsScreen
 
-
 # Characterization tests for StatsScreen (previously no dedicated test file):
 # the Esc/screenshot key handling and a headless smoke of the stats/goals draw
 # path through the (mocked) renderer.

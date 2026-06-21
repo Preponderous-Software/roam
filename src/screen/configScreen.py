@@ -77,7 +77,10 @@ class ConfigScreen(Screen):
         self.renderer.drawText("Settings", x / 2, 25, 36, palette.WHITE)
         self.renderer.drawText(
             "Up/Down: navigate  -  Enter/Space: toggle",
-            x / 2, 50, 14, palette.MEDIUM_GRAY
+            x / 2,
+            50,
+            14,
+            palette.MEDIUM_GRAY,
         )
 
     def drawMenuButtons(self):
@@ -97,7 +100,9 @@ class ConfigScreen(Screen):
             self.scrollOffset = self._cursor - visibleRows + 1
         self.scrollOffset = max(0, min(self.scrollOffset, maxOffset))
 
-        visibleToggles = toggleButtons[self.scrollOffset : self.scrollOffset + visibleRows]
+        visibleToggles = toggleButtons[
+            self.scrollOffset : self.scrollOffset + visibleRows
+        ]
 
         for i, (label, attribute) in enumerate(visibleToggles):
             absIndex = self.scrollOffset + i
@@ -109,8 +114,13 @@ class ConfigScreen(Screen):
             bg = palette.LIGHT_GRAY if selected else palette.WHITE
             displayLabel = ("> " if selected else "  ") + label + ": " + stateText
             self.renderer.drawButton(
-                xpos, rowY, width, buttonHeight,
-                bg, valueColor, 20,
+                xpos,
+                rowY,
+                width,
+                buttonHeight,
+                bg,
+                valueColor,
+                20,
                 displayLabel,
                 lambda attr=attribute: self._toggleConfigAttribute(attr),
             )

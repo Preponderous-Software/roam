@@ -124,7 +124,8 @@ class ChestScreen(Screen):
             else:
                 item = slot.getContents()[0]
                 scaledImage = self.renderer.scaleImage(
-                    self.renderer.loadImage(item.getImagePath()), (itemWidth, itemHeight)
+                    self.renderer.loadImage(item.getImagePath()),
+                    (itemWidth, itemHeight),
                 )
                 self.renderer.drawImage(scaledImage, (itemX, itemY))
                 if (
@@ -199,7 +200,9 @@ class ChestScreen(Screen):
         rows = max(1, (n + self.ITEMS_PER_ROW - 1) // self.ITEMS_PER_ROW)
         self._cursorRow = max(0, min(self._cursorRow, rows - 1))
         slotsOnRow = n - self._cursorRow * self.ITEMS_PER_ROW
-        self._cursorCol = max(0, min(self._cursorCol, min(self.ITEMS_PER_ROW, slotsOnRow) - 1))
+        self._cursorCol = max(
+            0, min(self._cursorCol, min(self.ITEMS_PER_ROW, slotsOnRow) - 1)
+        )
 
     def _cursorIndex(self):
         return self._cursorRow * self.ITEMS_PER_ROW + self._cursorCol
@@ -219,7 +222,10 @@ class ChestScreen(Screen):
             maxCol = min(self.ITEMS_PER_ROW, slotsOnRow) - 1
             self._cursorCol = (self._cursorCol - 1) % (maxCol + 1)
         elif key in (KeyCode.DOWN, KeyCode.S):
-            if self._cursorRow + 1 < rows and (self._cursorRow + 1) * self.ITEMS_PER_ROW < n:
+            if (
+                self._cursorRow + 1 < rows
+                and (self._cursorRow + 1) * self.ITEMS_PER_ROW < n
+            ):
                 self._cursorRow += 1
                 self._clampCursor(inv)
             elif self._focusPanel == 0:
@@ -233,7 +239,9 @@ class ChestScreen(Screen):
                 self._focusPanel = 0
                 chestInv = self.getChestInventory()
                 chestSlots = len(chestInv.getInventorySlots())
-                chestRows = max(1, (chestSlots + self.ITEMS_PER_ROW - 1) // self.ITEMS_PER_ROW)
+                chestRows = max(
+                    1, (chestSlots + self.ITEMS_PER_ROW - 1) // self.ITEMS_PER_ROW
+                )
                 self._cursorRow = chestRows - 1
                 self._clampCursor(chestInv)
 
@@ -266,8 +274,15 @@ class ChestScreen(Screen):
             self.renderer.captureScreenshot()
         elif key == KeyCode.T:
             self.takeAll()
-        elif key in (KeyCode.UP, KeyCode.DOWN, KeyCode.LEFT, KeyCode.RIGHT,
-                     KeyCode.W, KeyCode.A, KeyCode.S):
+        elif key in (
+            KeyCode.UP,
+            KeyCode.DOWN,
+            KeyCode.LEFT,
+            KeyCode.RIGHT,
+            KeyCode.W,
+            KeyCode.A,
+            KeyCode.S,
+        ):
             self._moveCursor(key)
             self._announceSelectedSlot()
         elif key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
@@ -495,11 +510,15 @@ class ChestScreen(Screen):
         chestHighlight = self._cursorIndex() if self._focusPanel == 0 else None
         playerHighlight = self._cursorIndex() if self._focusPanel == 1 else None
         hoveredChestItem = self._drawPanel(
-            self.getChestInventory(), self.getChestPanelRect(), self._chestTitle(),
+            self.getChestInventory(),
+            self.getChestPanelRect(),
+            self._chestTitle(),
             highlightIndex=chestHighlight,
         )
         hoveredPlayerItem = self._drawPanel(
-            self.inventory, self.getPlayerPanelRect(), "Inventory",
+            self.inventory,
+            self.getPlayerPanelRect(),
+            "Inventory",
             highlightIndex=playerHighlight,
         )
         self.drawInstructions()

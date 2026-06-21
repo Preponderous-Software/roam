@@ -36,8 +36,10 @@ def test_text_clock_tick_returns_nonnegative_milliseconds():
 
 # --- second batch ---
 
+
 def test_set_caption_emits_osc_title_sequence_when_terminal_active(monkeypatch):
     import io
+
     frontend = createTextFrontend(MagicMock())
     frontend._terminalState = object()  # non-None → OSC branch executes
     buf = io.StringIO()
@@ -66,13 +68,16 @@ def test_frontend_set_caption_does_not_raise_without_terminal():
 
 # --- third batch ---
 
+
 def test_frontend_renderer_is_a_text_renderer():
     from rendering.textRenderer import TextRenderer
+
     frontend = createTextFrontend(MagicMock())
     assert isinstance(frontend.getRenderer(), TextRenderer)
 
 
 def test_frontend_input_source_is_text_input_source():
     from rendering.textInputSource import TextInputSource
+
     frontend = createTextFrontend(MagicMock())
     assert isinstance(frontend.getInputSource(), TextInputSource)

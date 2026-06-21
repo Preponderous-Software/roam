@@ -77,34 +77,36 @@ def test_clear_resets_colors():
 
 # --- clip region ---
 
+
 def test_clip_region_restricts_writes():
     grid = TextGrid(6, 4)
     # clip to cols 1-3 (exclusive 3), rows 0-1 (exclusive 1)
     grid.setClipRegion(1, 0, 3, 1)
-    grid.setChar(0, 0, "X")   # col 0 is outside clip — should be rejected
-    grid.setChar(2, 0, "Y")   # col 2 is inside clip — should land
+    grid.setChar(0, 0, "X")  # col 0 is outside clip — should be rejected
+    grid.setChar(2, 0, "Y")  # col 2 is inside clip — should land
     assert grid.getChar(0, 0) != "X"
     assert grid.getChar(2, 0) == "Y"
 
 
 def test_clip_region_none_clears_restriction():
     grid = TextGrid(6, 4)
-    grid.setClipRegion(3, 0, 6, 4)   # col 0 excluded
+    grid.setClipRegion(3, 0, 6, 4)  # col 0 excluded
     grid.setChar(0, 0, "A")
-    assert grid.getChar(0, 0) != "A"   # blocked by clip
+    assert grid.getChar(0, 0) != "A"  # blocked by clip
     grid.setClipRegion(None, None, None, None)  # clear
     grid.setChar(0, 0, "B")
-    assert grid.getChar(0, 0) == "B"   # now accepted
+    assert grid.getChar(0, 0) == "B"  # now accepted
 
 
 def test_clip_region_col0_allows_leftmost_column():
     grid = TextGrid(6, 4)
-    grid.setClipRegion(0, 0, 4, 4)   # clip starts at col 0
+    grid.setClipRegion(0, 0, 4, 4)  # clip starts at col 0
     grid.setChar(0, 0, "Z")
     assert grid.getChar(0, 0) == "Z"
 
 
 # --- additional edge cases ---
+
 
 def test_draw_box_with_zero_width_or_height_does_not_raise():
     grid = TextGrid(6, 4)
@@ -117,7 +119,7 @@ def test_draw_box_with_zero_width_or_height_does_not_raise():
 def test_set_color_none_clears_an_existing_color():
     grid = TextGrid(4, 2)
     grid.setChar(1, 0, "X")
-    grid.setColor(1, 0, 31)   # red
+    grid.setColor(1, 0, 31)  # red
     grid.setColor(1, 0, None)  # clear
     line = grid.toString().splitlines()[0]
     assert "\033[" not in line
@@ -140,7 +142,7 @@ def test_fill_rect_with_zero_dimensions_does_nothing():
 
 def test_write_text_clips_at_right_edge():
     grid = TextGrid(4, 2)
-    grid.writeText(3, 0, "abc")   # only "a" fits at col 3; b,c are off the right edge
+    grid.writeText(3, 0, "abc")  # only "a" fits at col 3; b,c are off the right edge
     assert grid.getChar(3, 0) == "a"
     assert grid.getChar(4, 0) is None  # out of bounds
 
@@ -153,6 +155,7 @@ def test_get_char_out_of_bounds_returns_none():
 
 
 # --- third batch ---
+
 
 def test_draw_box_2x2_has_all_four_corners_and_no_edges():
     # 2×2 is the smallest box with distinct corners; edge loops produce empty

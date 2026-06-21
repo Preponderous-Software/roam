@@ -21,6 +21,7 @@ from world.room import Room
 @pytest.fixture(scope="module", autouse=True)
 def init_pygame():
     import pygame
+
     pygame.init()
     yield
     pygame.quit()
@@ -59,6 +60,7 @@ def _makeWorldScreen(room=None):
 
 
 # --- executeGatherAtFront ---
+
 
 def test_gather_at_front_no_location_sets_status():
     ws = _makeWorldScreen()
@@ -122,6 +124,7 @@ def test_gather_at_front_full_inventory_sets_status():
 
 # --- executePlaceAtFront ---
 
+
 def test_place_at_front_no_location_sets_status():
     ws = _makeWorldScreen()
     ws.getLocationInFrontOfPlayer = lambda: -1
@@ -178,6 +181,7 @@ def test_place_at_front_opens_chest_in_front():
 
 
 # --- G/F key wiring in _handleUtilityKey ---
+
 
 def test_g_key_calls_executeGatherAtFront_when_off_cooldown():
     ws = _makeWorldScreen()

@@ -10,79 +10,79 @@ from ui.hotbarLayout import HOTBAR_BOTTOM_OFFSET, HOTBAR_PADDING
 # Uppercase = dangerous / solid; lowercase = passive / harmless; symbols = terrain.
 _GLYPHS = {
     # terrain
-    "grass":                    ".",
-    "stone":                    "#",
-    "stonefloor":               "-",
-    "woodfloor":                "_",
-    "fence":                    "|",
+    "grass": ".",
+    "stone": "#",
+    "stonefloor": "-",
+    "woodfloor": "_",
+    "fence": "|",
     # flora
-    "oakwood":                  "T",
-    "junglewood":               "T",
-    "leaves":                   "*",
-    "wheat":                    '"',
-    "wheatseed":                ",",
-    "youngcrop":                ":",
-    "maturecrop":               '"',
+    "oakwood": "T",
+    "junglewood": "T",
+    "leaves": "*",
+    "wheat": '"',
+    "wheatseed": ",",
+    "youngcrop": ":",
+    "maturecrop": '"',
     # creatures  (uppercase = dangerous)
-    "bear":                     "B",
+    "bear": "B",
     "bearonreproductioncooldown": "B",
-    "wolf":                     "W",
-    "snake":                    "~",
-    "deer":                     "d",
-    "rabbit":                   "r",
-    "chicken":                  "c",
+    "wolf": "W",
+    "snake": "~",
+    "deer": "d",
+    "rabbit": "r",
+    "chicken": "c",
     "chickenonreproductioncooldown": "c",
     # items / food
-    "bearmeat":                 "%",
-    "chickenmeat":              "%",
-    "apple":                    "a",
-    "banana":                   "b",
+    "bearmeat": "%",
+    "chickenmeat": "%",
+    "apple": "a",
+    "banana": "b",
     # furniture / structures
-    "chest":                    "[",
-    "gravestone":               "+",
-    "campfire":                 "^",
-    "torch":                    "!",
-    "bed":                      "=",
-    "stonebed":                 "=",
+    "chest": "[",
+    "gravestone": "+",
+    "campfire": "^",
+    "torch": "!",
+    "bed": "=",
+    "stonebed": "=",
     # ores
-    "coalore":                  "o",
-    "ironore":                  "O",
+    "coalore": "o",
+    "ironore": "O",
     # misc
-    "excrement":                "x",
+    "excrement": "x",
 }
 
 # ANSI foreground color codes per glyph. Standard 8-color palette (codes 30-37,
 # 90-97) so they work on every terminal without capability queries.
 # Mnemonic: green = nature, yellow = passive/warm, red = dangerous, gray = stone.
 _GLYPH_COLORS = {
-    "@": 93,   # player        — bright yellow
-    ".": 32,   # grass         — green
-    "#": 37,   # stone         — white/light-gray
-    "-": 90,   # stone floor   — dark gray
-    "_": 33,   # wood floor    — yellow-brown
-    "|": 33,   # fence         — yellow-brown
-    "T": 32,   # trees         — green
-    "*": 32,   # leaves        — green
-    '"': 33,   # wheat/crop    — yellow
-    ",": 33,   # seed          — yellow
-    ":": 32,   # young crop    — green
-    "B": 31,   # bear          — red
-    "W": 91,   # wolf          — bright red
-    "~": 32,   # snake         — green
-    "d": 33,   # deer          — yellow
-    "r": 37,   # rabbit        — white
-    "c": 37,   # chicken       — white
-    "%": 31,   # meat          — red
-    "a": 91,   # apple         — bright red
-    "b": 93,   # banana        — bright yellow
-    "[": 33,   # chest         — yellow
-    "+": 37,   # gravestone    — white
-    "^": 91,   # campfire      — bright red
-    "!": 93,   # torch         — bright yellow
-    "=": 36,   # bed           — cyan
-    "o": 90,   # coal ore      — dark gray
-    "O": 37,   # iron ore      — white
-    "x": 33,   # excrement     — yellow
+    "@": 93,  # player        — bright yellow
+    ".": 32,  # grass         — green
+    "#": 37,  # stone         — white/light-gray
+    "-": 90,  # stone floor   — dark gray
+    "_": 33,  # wood floor    — yellow-brown
+    "|": 33,  # fence         — yellow-brown
+    "T": 32,  # trees         — green
+    "*": 32,  # leaves        — green
+    '"': 33,  # wheat/crop    — yellow
+    ",": 33,  # seed          — yellow
+    ":": 32,  # young crop    — green
+    "B": 31,  # bear          — red
+    "W": 91,  # wolf          — bright red
+    "~": 32,  # snake         — green
+    "d": 33,  # deer          — yellow
+    "r": 37,  # rabbit        — white
+    "c": 37,  # chicken       — white
+    "%": 31,  # meat          — red
+    "a": 91,  # apple         — bright red
+    "b": 93,  # banana        — bright yellow
+    "[": 33,  # chest         — yellow
+    "+": 37,  # gravestone    — white
+    "^": 91,  # campfire      — bright red
+    "!": 93,  # torch         — bright yellow
+    "=": 36,  # bed           — cyan
+    "o": 90,  # coal ore      — dark gray
+    "O": 37,  # iron ore      — white
+    "x": 33,  # excrement     — yellow
 }
 
 
@@ -164,11 +164,13 @@ class TextRenderer(Renderer):
         # Reserve bottom rows for the HUD (hotbar + status box + energy bar).
         # Mirror the pixel formulae in Status.getDefaultRect() and EnergyBar so
         # the game world is always drawn above — not behind — the HUD elements.
-        statusBoxHeight = height // 10          # matches Status: height = y / 10
-        hudHeight = (HOTBAR_BOTTOM_OFFSET       # hotbar + energy-bar zone
-                     + HOTBAR_PADDING           # gap above hotbar
-                     + statusBoxHeight          # status box
-                     + 10)                      # margin between status and hotbar
+        statusBoxHeight = height // 10  # matches Status: height = y / 10
+        hudHeight = (
+            HOTBAR_BOTTOM_OFFSET  # hotbar + energy-bar zone
+            + HOTBAR_PADDING  # gap above hotbar
+            + statusBoxHeight  # status box
+            + 10
+        )  # margin between status and hotbar
         availHeight = max(self.cellHeight, height - hudHeight)
         side = min(width, availHeight)
         return Rect((width - side) // 2, 0, side, side)
@@ -241,7 +243,7 @@ class TextRenderer(Renderer):
         # The player (@) always carries a small ambient glow so they remain
         # visible and nearby tiles get fog-of-war style partial illumination.
         # Radius = 5 cell diagonals: well-lit ~2 cells out, grey ~3 cells out.
-        playerRadius = 5 * (self.cellWidth ** 2 + self.cellHeight ** 2) ** 0.5
+        playerRadius = 5 * (self.cellWidth**2 + self.cellHeight**2) ** 0.5
         allSources = list(lightSources)
         for r in range(startRow, endRow):
             for c in range(startCol, endCol):
@@ -260,7 +262,7 @@ class TextRenderer(Renderer):
                         continue
                     distSq = (px - lx) ** 2 + (py - ly) ** 2
                     if distSq < lRadius * lRadius:
-                        litFraction = max(litFraction, 1.0 - distSq ** 0.5 / lRadius)
+                        litFraction = max(litFraction, 1.0 - distSq**0.5 / lRadius)
                 effectiveDark = darkness * (1.0 - litFraction)
                 if effectiveDark < 0.2:
                     pass  # well-lit: no change
@@ -320,8 +322,10 @@ class TextRenderer(Renderer):
         else:
             x, y, w, h = rect.x, rect.y, rect.width, rect.height
             self.grid.setClipRegion(
-                max(0, self._col(x) - 1), self._row(y),
-                self._col(x + w) + 1, self._row(y + h) + 1,
+                max(0, self._col(x) - 1),
+                self._row(y),
+                self._col(x + w) + 1,
+                self._row(y + h) + 1,
             )
 
     def getRenderTarget(self):
@@ -333,6 +337,7 @@ class TextRenderer(Renderer):
     def captureScreenshot(self):
         import datetime
         from config.config import Config
+
         folder = os.path.join(Config.getUserDataDirectory(), "screenshots")
         os.makedirs(folder, exist_ok=True)
         stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")

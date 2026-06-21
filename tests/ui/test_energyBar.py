@@ -1,6 +1,5 @@
 from ui.energyBar import EnergyBar
 
-
 # Coverage for the EnergyBar HUD widget (sibling of ui/status, which has a test
 # but EnergyBar did not): its default layout rect and a headless draw smoke.
 
@@ -30,6 +29,7 @@ def test_draw_renders_the_bar_through_the_renderer(resolve):
 
 # --- text mode (_drawText) ---
 
+
 def _textModeBar(energy, target):
     """Return an EnergyBar wired to a real TextRenderer with the given energy."""
     from unittest.mock import MagicMock
@@ -53,7 +53,7 @@ def test_text_mode_full_energy_renders_full_bar():
     frame = renderer.grid.toString()
     assert "E:[" in frame
     assert "300/300" in frame
-    assert "=" * 16 in frame   # all 16 slots filled
+    assert "=" * 16 in frame  # all 16 slots filled
 
 
 def test_text_mode_empty_energy_renders_empty_bar():
@@ -62,7 +62,7 @@ def test_text_mode_empty_energy_renders_empty_bar():
     frame = renderer.grid.toString()
     assert "E:[" in frame
     assert "0/300" in frame
-    assert "=" not in frame.split("[")[1].split("]")[0]   # no fills in bar section
+    assert "=" not in frame.split("[")[1].split("]")[0]  # no fills in bar section
 
 
 def test_text_mode_half_energy_renders_half_bar():

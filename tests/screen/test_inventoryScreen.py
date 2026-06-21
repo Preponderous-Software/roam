@@ -90,8 +90,10 @@ def test_craft_rows_do_not_balloon_for_few_recipes():
 
 # --- WASD / arrow navigation in the inventory grid ---
 
+
 def _navScreen(startIndex=0, numSlots=25):
     from rendering.keyCode import KeyCode
+
     screen = InventoryScreen.__new__(InventoryScreen)
     screen.craftPanelOpen = False
     screen.keyBindings = MagicMock()
@@ -105,21 +107,25 @@ def _navScreen(startIndex=0, numSlots=25):
         s.isEmpty.return_value = True
     screen.inventory = MagicMock()
     screen.inventory.getInventorySlots.return_value = slots
-    screen.inventory.getSelectedInventorySlotIndex.side_effect = lambda: screen._selected
-    screen.inventory.setSelectedInventorySlotIndex.side_effect = lambda i: setattr(screen, "_selected", i)
+    screen.inventory.getSelectedInventorySlotIndex.side_effect = (
+        lambda: screen._selected
+    )
+    screen.inventory.setSelectedInventorySlotIndex.side_effect = lambda i: setattr(
+        screen, "_selected", i
+    )
     return screen, KeyCode
 
 
 def test_wasd_navigates_inventory_grid():
     screen, K = _navScreen(startIndex=6)  # row 1, col 1 of a 5-wide grid
     screen.handleKeyDownEvent(K.W)
-    assert screen._selected == 1   # moved up one row (6 - 5 = 1)
+    assert screen._selected == 1  # moved up one row (6 - 5 = 1)
     screen.handleKeyDownEvent(K.S)
-    assert screen._selected == 6   # back down
+    assert screen._selected == 6  # back down
     screen.handleKeyDownEvent(K.A)
-    assert screen._selected == 5   # moved left
+    assert screen._selected == 5  # moved left
     screen.handleKeyDownEvent(K.A)
-    assert screen._selected == 4   # moved left again (wraps within row)
+    assert screen._selected == 4  # moved left again (wraps within row)
 
 
 def test_arrow_keys_still_navigate_inventory_grid():
