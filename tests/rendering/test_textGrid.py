@@ -73,3 +73,32 @@ def test_clear_resets_colors():
     grid.clear()
     line = grid.toString().splitlines()[0]
     assert "\033[" not in line
+
+
+# --- clip region ---
+
+def test_clip_region_restricts_writes():
+    grid = TextGrid(6, 4)
+    # clip to cols 1-3 (exclusive 3), rows 0-1 (exclusive 1)
+    grid.setClipRegion(1, 0, 3, 1)
+    grid.setChar(0, 0, "X")   # col 0 is outside clip — should be rejected
+    grid.setChar(2, 0, "Y")   # col 2 is inside clip — should land
+    assert grid.getChar(0, 0) != "X"
+    assert grid.getChar(2, 0) == "Y"
+
+
+def test_clip_region_none_clears_restriction():
+    grid = TextGrid(6, 4)
+    grid.setClipRegion(3, 0, 6, 4)   # col 0 excluded
+    grid.setChar(0, 0, "A")
+    assert grid.getChar(0, 0) != "A"   # blocked by clip
+    grid.setClipRegion(None, None, None, None)  # clear
+    grid.setChar(0, 0, "B")
+    assert grid.getChar(0, 0) == "B"   # now accepted
+
+
+def test_clip_region_col0_allows_leftmost_column():
+    grid = TextGrid(6, 4)
+    grid.setClipRegion(0, 0, 4, 4)   # clip starts at col 0
+    grid.setChar(0, 0, "Z")
+    assert grid.getChar(0, 0) == "Z"

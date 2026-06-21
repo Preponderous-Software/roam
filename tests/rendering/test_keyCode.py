@@ -41,3 +41,29 @@ def test_keycode_is_hashable_with_int_collisions():
     mapping = {KeyCode.W: "binding"}
     assert mapping[119] == "binding"
     assert hash(KeyCode.W) == hash(119)
+
+
+# --- keys added for F-key-less terminals (Userland / Android) ---
+
+def test_h_is_defined():
+    assert KeyCode.H == 104
+
+
+def test_backslash_is_defined():
+    assert KeyCode.BACKSLASH == 92
+
+
+def test_h_display_name():
+    assert displayName(KeyCode.H) == "h"
+
+
+def test_backslash_display_name():
+    assert displayName(KeyCode.BACKSLASH) == "\\"
+
+
+def test_from_int_h():
+    assert fromInt(104) is KeyCode.H
+
+
+def test_from_int_backslash():
+    assert fromInt(92) is KeyCode.BACKSLASH

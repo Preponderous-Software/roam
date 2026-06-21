@@ -149,3 +149,124 @@ def test_present_output_contains_no_full_screen_clear():
     renderer.present()
     assert len(frames) == 1
     assert "\033[2J" not in frames[0]   # flicker-free: no full clear
+
+
+# --- drawImage edge clamping (max(0, col)) ---
+
+def test_draw_image_at_negative_x_clamps_to_col_0():
+    # Tile positioned at -1px (the 1px left-overlap from room.drawWithOffset)
+    # must land at col 0, not be silently dropped.
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=8, cellHeight=16)
+    renderer.drawImage("@", (-1, 0))
+    assert renderer.grid.getChar(0, 0) == "@"
+
+
+def test_draw_image_at_exact_zero_places_at_col_0():
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=8, cellHeight=16)
+    renderer.drawImage("@", (0, 0))
+    assert renderer.grid.getChar(0, 0) == "@"
+
+
+def test_draw_image_at_negative_y_clamps_to_row_0():
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=8, cellHeight=16)
+    renderer.drawImage("@", (0, -1))
+    assert renderer.grid.getChar(0, 0) == "@"
+
+
+def test_draw_image_far_negative_x_clamped_but_clip_hides_it():
+    # Glyph clamps to col 0, but if the clip region starts at col 5 the cell
+    # is still rejected by the clip — prevents off-screen tiles leaking in.
+    from ui.geometry import Rect
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=8, cellHeight=16)
+    renderer.setClipRegion(Rect(40, 0, 80, 80))  # clip starts at col 5
+    renderer.drawImage("@", (-1, 0))
+    char = renderer.grid.getChar(0, 0)
+    assert char != "@"
+
+
+# --- setClipRegion left-extension (max(0, _col(x) - 1)) ---
+
+def test_set_clip_region_extends_left_by_one_cell():
+    # Rect at x=8 maps to _col(8)=1; the fix subtracts 1 → clip starts at
+    # col 0. A char written at x=0 (col 0) must therefore pass the clip.
+    from ui.geometry import Rect
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=8, cellHeight=16)
+    renderer.setClipRegion(Rect(8, 0, 80, 80))
+    renderer.drawImage("#", (0, 0))   # pixel 0 → col 0, inside extended clip
+    assert renderer.grid.getChar(0, 0) == "#"
+
+
+def test_set_clip_region_none_removes_restriction():
+    from ui.geometry import Rect
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=8, cellHeight=16)
+    renderer.setClipRegion(Rect(40, 0, 80, 80))   # col 0 excluded
+    renderer.drawImage("X", (0, 0))
+    assert renderer.grid.getChar(0, 0) != "X"
+    renderer.setClipRegion(None)
+    renderer.drawImage("Y", (0, 0))
+    assert renderer.grid.getChar(0, 0) == "Y"
+
+
+def test_left_edge_tile_visible_when_game_area_starts_at_pixel_0():
+    # Regression: when gameArea.x=0, tile at -1px → col -1 was silently
+    # dropped. Now clamps to col 0 and the clip (extended by 1) lets it through.
+    from ui.geometry import Rect
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=8, cellHeight=16)
+    renderer.setClipRegion(Rect(0, 0, 80, 80))
+    renderer.drawImage("[", (-1, 0))   # chest at leftmost tile column
+    assert renderer.grid.getChar(0, 0) == "["
+
+
+# --- drawSelectionHighlight ---
+
+def test_draw_selection_highlight_colors_cells_yellow_without_erasing_glyphs():
+    renderer = TextRenderer(columns=10, rows=5, cellWidth=8, cellHeight=16)
+    renderer.drawImage("@", (0, 0))
+    renderer.drawSelectionHighlight(0, 0, 8, 16, None)
+    assert renderer.grid.getChar(0, 0) == "@"     # glyph preserved
+    assert renderer.grid._colors[0][0] == 93       # bright yellow
+
+
+# --- drawTranslucentOverlay ---
+
+def test_draw_translucent_overlay_dims_all_cells():
+    renderer = TextRenderer(columns=10, rows=5, cellWidth=8, cellHeight=16)
+    renderer.drawImage("@", (0, 0))
+    renderer.drawTranslucentOverlay((0, 0, 0))
+    assert renderer.grid._colors[0][0] == 90   # dark grey
+
+
+# --- drawDayNightOverlay ---
+
+def test_draw_day_night_overlay_dims_cells_in_game_area():
+    renderer = TextRenderer(columns=20, rows=10, cellWidth=8, cellHeight=16)
+    # Place a non-player tile so no implicit light source interferes.
+    renderer.drawImage(".", (0, 0))
+    renderer.drawDayNightOverlay((0, 0, 80, 64), 200, [])
+    # At full darkness (opacity=200) all cells in the area must have a color set.
+    color = renderer.grid._colors[0][0]
+    assert color is not None
+
+
+def test_draw_day_night_overlay_skips_at_low_opacity():
+    renderer = TextRenderer(columns=20, rows=10, cellWidth=8, cellHeight=16)
+    renderer.drawDayNightOverlay((0, 0, 80, 64), 20, [])   # below threshold of 30
+    assert renderer.grid._colors[0][0] is None   # nothing dimmed
+
+
+# --- resize ---
+
+def test_resize_rebuilds_grid_and_forces_full_repaint():
+    frames = []
+    renderer = TextRenderer(columns=10, rows=5, cellWidth=8, cellHeight=16, output=frames.append)
+    renderer.drawImage("@", (0, 0))
+    renderer.present()
+    assert len(frames) == 1
+
+    renderer.resize(12, 6)
+    # Old char must be gone — grid was rebuilt
+    assert renderer.grid.getChar(0, 0) != "@"
+    # present must re-output a full frame (lastFrame reset to None)
+    renderer.drawImage("#", (0, 0))
+    renderer.present()
+    assert len(frames) == 2

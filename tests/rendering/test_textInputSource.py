@@ -177,3 +177,24 @@ def test_default_reader_decodes_enter_over_a_real_pty():
         sys.stdin.close()
         sys.stdin = savedStdin
         os.close(master)
+
+
+# --- new keys added for F-key-less terminals ---
+
+def test_h_key_maps_to_keycode_h():
+    source = _sourceFeeding("h")
+    keys = [e.key for e in source.pollEvents() if e.type is EventType.KEY_DOWN]
+    assert keys == [KeyCode.H]
+
+
+def test_backslash_maps_to_keycode_backslash():
+    source = _sourceFeeding("\\")   # single backslash, ord 92
+    keys = [e.key for e in source.pollEvents() if e.type is EventType.KEY_DOWN]
+    assert keys == [KeyCode.BACKSLASH]
+
+
+def test_h_key_does_not_emit_synthetic_key_up():
+    # H is not a movement key — no synthetic KEY_UP should follow.
+    source = _sourceFeeding("h")
+    events = source.pollEvents()
+    assert not any(e.type is EventType.KEY_UP for e in events)
