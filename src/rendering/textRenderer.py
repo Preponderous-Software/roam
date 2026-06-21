@@ -1,10 +1,13 @@
 import os
 import sys
 
+from gameLogging.logger import getLogger
 from rendering.renderer import Renderer
 from rendering.textGrid import TextGrid
 from ui.geometry import Rect
 from ui.hotbarLayout import HOTBAR_BOTTOM_OFFSET, HOTBAR_PADDING
+
+_logger = getLogger(__name__)
 
 # Roguelike-style glyph table: image filename (no extension, lowercased) → char.
 # Uppercase = dangerous / solid; lowercase = passive / harmless; symbols = terrain.
@@ -338,16 +341,20 @@ class TextRenderer(Renderer):
         self._renderTarget = target
 
     def captureScreenshot(self):
-        import datetime
-        from config.config import Config
+        try:
+            import datetime
+            from config.config import Config
 
-        folder = os.path.join(Config.getUserDataDirectory(), "screenshots")
-        os.makedirs(folder, exist_ok=True)
-        stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        path = os.path.join(folder, f"roam_{stamp}.txt")
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(self.grid.toString())
-        return path
+            folder = os.path.join(Config.getUserDataDirectory(), "screenshots")
+            os.makedirs(folder, exist_ok=True)
+            stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            path = os.path.join(folder, f"roam_{stamp}.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(self.grid.toString())
+            return path
+        except Exception as exc:
+            _logger.warning("screenshot failed", error=str(exc))
+            return None
 
     def drawSelectionHighlight(self, x, y, width, height, color):
         # Highlight the selected slot by recoloring its cells bright yellow.
