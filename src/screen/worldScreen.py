@@ -1208,8 +1208,11 @@ class WorldScreen:
         minimapOx, minimapOy = self.hudDragManager.getOffset("minimap")
         drawX = self.minimapX + minimapOx
         drawY = self.minimapY + minimapOy
+        roomX = self.currentRoom.getX()
+        roomY = self.currentRoom.getY() * -1
+        label = f"[{roomX},{roomY}]"
         self.renderer.drawRectangle(drawX, drawY, 72, 20, palette.NEAR_BLACK)
-        self.renderer.drawText("[map]", drawX + 36, drawY + 10, 12, palette.MEDIUM_GRAY)
+        self.renderer.drawText(label, drawX + 36, drawY + 10, 12, palette.MEDIUM_GRAY)
 
     def drawMiniMap(self):
         if not self.renderer.supportsImageLoading():
@@ -1369,13 +1372,12 @@ class WorldScreen:
         self.renderer.drawText(
             "PAUSED", width / 2, height / 2 - 20, 56, palette.LIGHT_GRAY
         )
-        self.renderer.drawText(
-            "Click the window or press any key to resume",
-            width / 2,
-            height / 2 + 28,
-            22,
-            palette.MEDIUM_GRAY,
+        resumeHint = (
+            "Press any key to resume"
+            if not self.renderer.supportsImageLoading()
+            else "Click the window or press any key to resume"
         )
+        self.renderer.drawText(resumeHint, width / 2, height / 2 + 28, 22, palette.MEDIUM_GRAY)
 
     def _drawDayNightPhaseIndicator(self):
         phase = self.dayNightCycle.getPhase(self.tickCounter.getTick())
@@ -1436,26 +1438,47 @@ class WorldScreen:
         def keyName(action):
             return kb.getKeyName(action).upper()
 
-        helpLines = [
-            "W/A/S/D or Arrows  -  Move",
-            f"Left Click / {keyName('gather')}  -  Gather / Pick up (facing tile)",
-            f"Right Click / {keyName('place')}  -  Place item / open chest (facing tile)",
-            "Middle Click  -  Drag HUD elements to reposition",
-            "1-0  -  Select hotbar slot",
-            "Scroll Wheel / [ ]  -  Cycle hotbar",
-            f"{keyName('inventory')}  -  Open / Close inventory",
-            f"{keyName('run')}  -  Run (hold)  /  {keyName('run_toggle')}  -  Run toggle",
-            f"{keyName('crouch')}  -  Crouch (hold)  /  {keyName('crouch_toggle')}  -  Crouch toggle",
-            f"{keyName('look')}  -  Examine facing tile",
-            f"{keyName('toggle_minimap')}  -  Toggle minimap",
-            f"{keyName('minimap_zoom_in')}/{keyName('minimap_zoom_out')}  -  Resize minimap",
-            f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",
-            f"{keyName('toggle_debug')}  -  Toggle debug info",
-            f"{keyName('screenshot')}  -  Take screenshot",
-            f"{keyName('codex')}  -  Open Codex",
-            "Esc  -  Open menu",
-            f"{keyName('toggle_help')}  -  Toggle this help",
-        ]
+        isTextMode = not self.renderer.supportsImageLoading()
+        if isTextMode:
+            helpLines = [
+                "W/A/S/D or Arrows  -  Move",
+                f"{keyName('gather')}  -  Gather / Pick up (facing tile)",
+                f"{keyName('place')}  -  Place / open chest (facing tile)",
+                "1-0  -  Select hotbar slot",
+                "[ ]  -  Cycle hotbar",
+                f"{keyName('inventory')}  -  Open / Close inventory",
+                f"{keyName('run_toggle')}  -  Run toggle",
+                f"{keyName('crouch_toggle')}  -  Crouch toggle",
+                f"{keyName('look')}  -  Examine facing tile",
+                f"{keyName('toggle_minimap')}  -  Toggle minimap",
+                f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",
+                f"{keyName('toggle_debug')}  -  Toggle debug info",
+                f"{keyName('screenshot')}  -  Take screenshot (saved as .txt)",
+                f"{keyName('codex')}  -  Open Codex",
+                "Esc  -  Open menu",
+                f"{keyName('toggle_help')}  -  Toggle this help",
+            ]
+        else:
+            helpLines = [
+                "W/A/S/D or Arrows  -  Move",
+                f"Left Click / {keyName('gather')}  -  Gather / Pick up (facing tile)",
+                f"Right Click / {keyName('place')}  -  Place item / open chest (facing tile)",
+                "Middle Click  -  Drag HUD elements to reposition",
+                "1-0  -  Select hotbar slot",
+                "Scroll Wheel / [ ]  -  Cycle hotbar",
+                f"{keyName('inventory')}  -  Open / Close inventory",
+                f"{keyName('run')}  -  Run (hold)  /  {keyName('run_toggle')}  -  Run toggle",
+                f"{keyName('crouch')}  -  Crouch (hold)  /  {keyName('crouch_toggle')}  -  Crouch toggle",
+                f"{keyName('look')}  -  Examine facing tile",
+                f"{keyName('toggle_minimap')}  -  Toggle minimap",
+                f"{keyName('minimap_zoom_in')}/{keyName('minimap_zoom_out')}  -  Resize minimap",
+                f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",
+                f"{keyName('toggle_debug')}  -  Toggle debug info",
+                f"{keyName('screenshot')}  -  Take screenshot",
+                f"{keyName('codex')}  -  Open Codex",
+                "Esc  -  Open menu",
+                f"{keyName('toggle_help')}  -  Toggle this help",
+            ]
 
         lineY = titleY + 40
         lineSpacing = 24
@@ -1549,6 +1572,12 @@ class WorldScreen:
             if i == selectedIndex:
                 self._drawHotbarSelectionIndicator(
                     slotX, slotY, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE
+                )
+
+            if not self.renderer.supportsImageLoading():
+                label = str(i + 1) if i < 9 else "0"
+                self.renderer.drawTextLeftAligned(
+                    label, slotX, slotY - HOTBAR_SLOT_SIZE // 2, 12, palette.MEDIUM_GRAY
                 )
 
             slotX += HOTBAR_SLOT_SIZE + HOTBAR_SLOT_GAP
