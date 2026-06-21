@@ -128,6 +128,8 @@ class WorldScreen:
         # in, so the ChestScreen can persist its contents on close.
         self.activeChest = None
         self.activeChestRoom = None
+        self._isRunning = False
+        self._isCrouching = False
 
     def initialize(self):
         self.map = self.container.resolve(Map)
@@ -558,15 +560,33 @@ class WorldScreen:
 
     def executeGatherAction(self):
         targetLocation, targetRoom = self.getLocationAndRoomAtMousePosition()
-
         if targetLocation == -1:
             self.status.set("Nothing to pick up here")
             return
-
         if self.isLocationTooFar(targetLocation, targetRoom):
             self.status.set("Too far away")
             return
+        self._executeGatherAt(targetLocation, targetRoom)
 
+    def _lookAtFacingTile(self):
+        location = self.getLocationInFrontOfPlayer()
+        if location == -1:
+            self.status.set("Nothing ahead")
+            return
+        entities = [location.getEntity(eid).getName() for eid in location.getEntities()]
+        if entities:
+            self.status.set("Ahead: " + ", ".join(entities))
+        else:
+            self.status.set("Nothing notable ahead")
+
+    def executeGatherAtFront(self):
+        targetLocation = self.getLocationInFrontOfPlayer()
+        if targetLocation == -1:
+            self.status.set("Nothing to pick up here")
+            return
+        self._executeGatherAt(targetLocation, self.currentRoom)
+
+    def _executeGatherAt(self, targetLocation, targetRoom):
         if self._tryHarvestCrop(targetLocation, targetRoom):
             return
 
@@ -710,11 +730,19 @@ class WorldScreen:
         if targetLocation == -2:
             self.status.set("Stop moving to place items")
             return
-
         if self.isLocationTooFar(targetLocation, targetRoom):
             self.status.set("Too far away")
             return
+        self._executePlaceAt(targetLocation, targetRoom)
 
+    def executePlaceAtFront(self):
+        targetLocation = self.getLocationInFrontOfPlayer()
+        if targetLocation == -1:
+            self.status.set("Cannot place here")
+            return
+        self._executePlaceAt(targetLocation, self.currentRoom)
+
+    def _executePlaceAt(self, targetLocation, targetRoom):
         # Check for chest/gravestone interaction before checking solid/blocked
         for entityId in list(targetLocation.getEntities().keys()):
             entity = targetLocation.getEntity(entityId)
@@ -908,14 +936,35 @@ class WorldScreen:
         elif key == kb.getKey("move_right") or key == kb.getKey("alt_move_right"):
             self._handleMovementKey(3)
         elif key == kb.getKey("screenshot"):
-            self.renderer.captureScreenshot()
-            self.status.set("Screenshot saved")
+            result = self.renderer.captureScreenshot()
+            self.status.set(
+                "Screenshot saved"
+                if result
+                else "Screenshots not supported in this mode"
+            )
         elif key == kb.getKey("run"):
             self.player.setMovementSpeed(
                 self.player.getMovementSpeed() * self.config.runSpeedFactor
             )
         elif key == kb.getKey("crouch"):
             self.player.setCrouching(True)
+        elif key == kb.getKey("run_toggle"):
+            if self._isRunning:
+                self.player.setMovementSpeed(
+                    self.player.getMovementSpeed() / self.config.runSpeedFactor
+                )
+                self._isRunning = False
+                self.status.set("Run: OFF")
+            else:
+                self.player.setMovementSpeed(
+                    self.player.getMovementSpeed() * self.config.runSpeedFactor
+                )
+                self._isRunning = True
+                self.status.set("Run: ON")
+        elif key == kb.getKey("crouch_toggle"):
+            self._isCrouching = not self._isCrouching
+            self.player.setCrouching(self._isCrouching)
+            self.status.set("Crouch: " + ("ON" if self._isCrouching else "OFF"))
         elif key == kb.getKey("inventory"):
             self.switchToInventoryScreen()
             if self.player.isGathering():
@@ -926,7 +975,7 @@ class WorldScreen:
             self._handleUtilityKey(key, kb)
 
     def _handleUtilityKey(self, key, kb):
-        if key == kb.getKey("toggle_debug"):
+        if key == kb.getKey("toggle_debug") or key == kb.getKey("alt_toggle_debug"):
             self.config.debug = not self.config.debug
             self.status.set("Debug info " + ("ON" if self.config.debug else "OFF"))
         elif key == kb.getKey("toggle_minimap"):
@@ -949,11 +998,25 @@ class WorldScreen:
             self.status.set(
                 "Camera follow " + ("ON" if self.config.cameraFollowPlayer else "OFF")
             )
-        elif key == kb.getKey("toggle_help"):
+        elif key == kb.getKey("toggle_help") or key == kb.getKey("alt_toggle_help"):
             self.showHelp = not self.showHelp
+        elif key == kb.getKey("look"):
+            self._lookAtFacingTile()
+        elif key == kb.getKey("gather"):
+            if self.checkPlayerGatherCooldown(self.player.getTickLastGathered()):
+                self.executeGatherAtFront()
+        elif key == kb.getKey("place"):
+            if self.checkPlayerPlaceCooldown(self.player.getTickLastPlaced()):
+                self.executePlaceAtFront()
         elif key == kb.getKey("codex"):
             self.nextScreen = ScreenType.CODEX_SCREEN
             self.changeScreen = True
+        elif key == KeyCode.LEFTBRACKET:
+            current = self.player.getInventory().getSelectedInventorySlotIndex()
+            self.changeSelectedInventorySlot((current - 1) % 10)
+        elif key == KeyCode.RIGHTBRACKET:
+            current = self.player.getInventory().getSelectedInventorySlotIndex()
+            self.changeSelectedInventorySlot((current + 1) % 10)
 
     def handleKeyUpEvent(self, key):
         kb = self.keyBindings
@@ -1007,6 +1070,14 @@ class WorldScreen:
 
         self.currentRoom = self.map.getRoom(0, 0)
         self.player.energy = self.player.targetEnergy
+        if self._isRunning:
+            self.player.setMovementSpeed(
+                self.player.getMovementSpeed() / self.config.runSpeedFactor
+            )
+            self._isRunning = False
+        if self._isCrouching:
+            self.player.setCrouching(False)
+            self._isCrouching = False
         self.status.set("Respawned")
         self.player.setTickCreated(self.tickCounter.getTick())
 
@@ -1134,7 +1205,29 @@ class WorldScreen:
         finally:
             self._pngSavePending.discard(roomKey)
 
+    def _drawTextMinimap(self):
+        minimapOx, minimapOy = self.hudDragManager.getOffset("minimap")
+        drawX = self.minimapX + minimapOx
+        drawY = self.minimapY + minimapOy
+        roomX = self.currentRoom.getX()
+        roomY = self.currentRoom.getY() * -1
+        dirArrows = {0: "^", 1: "<", 2: "v", 3: ">"}
+        facing = dirArrows.get(self.player.getDirection(), ".")
+        label = f"[{roomX},{roomY}] {facing}"
+        if self.config.dayNightCycleEnabled:
+            phase = self.dayNightCycle.getPhase(self.tickCounter.getTick())
+            label += f" {phase}"
+        self.renderer.drawRectangle(
+            drawX, drawY, max(96, len(label) * 8), 20, palette.NEAR_BLACK
+        )
+        self.renderer.drawTextLeftAligned(
+            label, drawX, drawY + 10, 12, palette.MEDIUM_GRAY
+        )
+
     def drawMiniMap(self):
+        if not self.renderer.supportsImageLoading():
+            self._drawTextMinimap()
+            return
         mapImagePath = self.config.pathToSaveDirectory + "/mapImage.png"
         if not os.path.isfile(mapImagePath):
             if self._cachedMiniMapImage is not None:
@@ -1289,12 +1382,13 @@ class WorldScreen:
         self.renderer.drawText(
             "PAUSED", width / 2, height / 2 - 20, 56, palette.LIGHT_GRAY
         )
+        resumeHint = (
+            "Press any key to resume"
+            if not self.renderer.supportsImageLoading()
+            else "Click the window or press any key to resume"
+        )
         self.renderer.drawText(
-            "Click the window to resume",
-            width / 2,
-            height / 2 + 28,
-            22,
-            palette.MEDIUM_GRAY,
+            resumeHint, width / 2, height / 2 + 28, 22, palette.MEDIUM_GRAY
         )
 
     def _drawDayNightPhaseIndicator(self):
@@ -1344,7 +1438,9 @@ class WorldScreen:
         kb = self.keyBindings
 
         titleY = overlayY + 25
-        closeKeyName = kb.getKeyName("toggle_help").upper()
+        isTextMode = not self.renderer.supportsImageLoading()
+        closeHelpAction = "alt_toggle_help" if isTextMode else "toggle_help"
+        closeKeyName = kb.getKeyName(closeHelpAction).upper()
         self.renderer.drawText(
             f"Controls  ({closeKeyName} to close)",
             x / 2,
@@ -1356,25 +1452,46 @@ class WorldScreen:
         def keyName(action):
             return kb.getKeyName(action).upper()
 
-        helpLines = [
-            "W/A/S/D or Arrows  -  Move",
-            "Left Click  -  Gather / Pick up",
-            "Right Click  -  Place item / open chest",
-            "Middle Click  -  Drag HUD elements to reposition",
-            "1-0  -  Select hotbar slot",
-            "Scroll Wheel  -  Cycle hotbar",
-            f"{keyName('inventory')}  -  Open / Close inventory",
-            f"{keyName('run')}  -  Run",
-            f"{keyName('crouch')}  -  Crouch",
-            f"{keyName('toggle_minimap')}  -  Toggle minimap",
-            f"{keyName('minimap_zoom_in')}/{keyName('minimap_zoom_out')}  -  Resize minimap",
-            f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",
-            f"{keyName('toggle_debug')}  -  Toggle debug info",
-            f"{keyName('screenshot')}  -  Take screenshot",
-            f"{keyName('codex')}  -  Open Codex",
-            "Esc  -  Open menu",
-            f"{keyName('toggle_help')}  -  Toggle this help",
-        ]
+        if isTextMode:
+            helpLines = [
+                "W/A/S/D or Arrows  -  Move",
+                f"{keyName('gather')}  -  Gather / Pick up (facing tile)",
+                f"{keyName('place')}  -  Place / open chest (facing tile)",
+                "1-0  -  Select hotbar slot",
+                "[ ]  -  Cycle hotbar",
+                f"{keyName('inventory')}  -  Open / Close inventory",
+                f"{keyName('run_toggle')}  -  Run toggle",
+                f"{keyName('crouch_toggle')}  -  Crouch toggle",
+                f"{keyName('look')}  -  Examine facing tile",
+                f"{keyName('toggle_minimap')}  -  Toggle minimap",
+                f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",
+                f"{keyName('alt_toggle_debug')}  -  Toggle debug info",
+                f"{keyName('screenshot')}  -  Take screenshot (saved as .txt)",
+                f"{keyName('codex')}  -  Open Codex",
+                "Esc  -  Open menu",
+                f"{keyName('alt_toggle_help')}  -  Toggle this help",
+            ]
+        else:
+            helpLines = [
+                "W/A/S/D or Arrows  -  Move",
+                f"Left Click / {keyName('gather')}  -  Gather / Pick up (facing tile)",
+                f"Right Click / {keyName('place')}  -  Place item / open chest (facing tile)",
+                "Middle Click  -  Drag HUD elements to reposition",
+                "1-0  -  Select hotbar slot",
+                "Scroll Wheel / [ ]  -  Cycle hotbar",
+                f"{keyName('inventory')}  -  Open / Close inventory",
+                f"{keyName('run')}  -  Run (hold)  /  {keyName('run_toggle')}  -  Run toggle",
+                f"{keyName('crouch')}  -  Crouch (hold)  /  {keyName('crouch_toggle')}  -  Crouch toggle",
+                f"{keyName('look')}  -  Examine facing tile",
+                f"{keyName('toggle_minimap')}  -  Toggle minimap",
+                f"{keyName('minimap_zoom_in')}/{keyName('minimap_zoom_out')}  -  Resize minimap",
+                f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",
+                f"{keyName('toggle_debug')}  -  Toggle debug info",
+                f"{keyName('screenshot')}  -  Take screenshot",
+                f"{keyName('codex')}  -  Open Codex",
+                "Esc  -  Open menu",
+                f"{keyName('toggle_help')}  -  Toggle this help",
+            ]
 
         lineY = titleY + 40
         lineSpacing = 24
@@ -1423,15 +1540,8 @@ class WorldScreen:
         )
 
     def _drawHotbarSelectionIndicator(self, xPos, yPos, slotWidth, slotHeight):
-        borderWidth = 3
-        color = (255, 255, 0)
-        self.renderer.drawRectangle(xPos, yPos, slotWidth, borderWidth, color)
-        self.renderer.drawRectangle(
-            xPos, yPos + slotHeight - borderWidth, slotWidth, borderWidth, color
-        )
-        self.renderer.drawRectangle(xPos, yPos, borderWidth, slotHeight, color)
-        self.renderer.drawRectangle(
-            xPos + slotWidth - borderWidth, yPos, borderWidth, slotHeight, color
+        self.renderer.drawSelectionHighlight(
+            xPos, yPos, slotWidth, slotHeight, (255, 255, 0)
         )
 
     def _drawHotbar(self):
@@ -1451,14 +1561,19 @@ class WorldScreen:
             barXPos, barYPos, barWidth, barHeight, palette.BLACK
         )
 
+        isTextMode = not self.renderer.supportsImageLoading()
         selectedIndex = self.player.getInventory().getSelectedInventorySlotIndex()
         firstTenInventorySlots = self.player.getInventory().getFirstTenInventorySlots()
-        slotX = slotStartX
+        # On narrow terminals slotStartX can be negative, pushing slot 1 off the
+        # left edge.  In text mode clamp to 0 so the first slot is always visible.
+        slotX = max(0.0, slotStartX) if isTextMode else slotStartX
         for i, inventorySlot in enumerate(firstTenInventorySlots):
             if inventorySlot.isEmpty():
                 self.renderer.drawRectangle(
                     slotX, slotY, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE, palette.WHITE
                 )
+                if isTextMode:
+                    self.renderer.drawImage("-", (slotX, slotY))
             else:
                 item = inventorySlot.getContents()[0]
                 scaledImage = self.renderer.scaleImage(
@@ -1479,7 +1594,31 @@ class WorldScreen:
                     slotX, slotY, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE
                 )
 
+            if isTextMode:
+                label = str(i + 1) if i < 9 else "0"
+                self.renderer.drawTextLeftAligned(
+                    label, slotX, slotY - HOTBAR_SLOT_SIZE // 2, 12, palette.MEDIUM_GRAY
+                )
+
             slotX += HOTBAR_SLOT_SIZE + HOTBAR_SLOT_GAP
+
+        if isTextMode:
+            selectedSlot = self.player.getInventory().getSelectedInventorySlot()
+            if not selectedSlot.isEmpty():
+                item = selectedSlot.getContents()[0]
+                count = selectedSlot.getNumItems()
+                itemLabel = (
+                    f"{item.getName()} x{count}" if count > 1 else item.getName()
+                )
+            else:
+                itemLabel = "-"
+            self.renderer.drawText(
+                itemLabel,
+                self.renderer.getDisplayWidth() / 2,
+                slotY + HOTBAR_SLOT_SIZE + 16,
+                14,
+                palette.LIGHT_GRAY,
+            )
 
     def _drawDebugInfo(self):
         displayWidth = self.renderer.getDisplayWidth()
@@ -1519,7 +1658,11 @@ class WorldScreen:
     def draw(self):
         gameArea = self.renderer.getGameAreaRect()
 
-        if self.config.showMiniMap and not self.isCurrentRoomSavedAsPNG():
+        if (
+            self.config.showMiniMap
+            and self.renderer.supportsImageLoading()
+            and not self.isCurrentRoomSavedAsPNG()
+        ):
             self.saveCurrentRoomAsPNG()
 
         self.renderer.clearScreen(palette.BLACK)
@@ -1551,7 +1694,7 @@ class WorldScreen:
 
         self._drawHotbar()
 
-        if self.config.dayNightCycleEnabled:
+        if self.config.dayNightCycleEnabled and self.renderer.supportsImageLoading():
             self._drawDayNightPhaseIndicator()
 
         if self.config.debug:
@@ -1559,9 +1702,16 @@ class WorldScreen:
 
         if self.config.showMiniMap and self.minimapScaleFactor > 0:
             self.drawMiniMap()
+        elif not self.renderer.supportsImageLoading():
+            self._drawTextMinimap()
 
         if not self.showHelp:
-            helpKeyName = self.keyBindings.getKeyName("toggle_help").upper()
+            helpAction = (
+                "alt_toggle_help"
+                if not self.renderer.supportsImageLoading()
+                else "toggle_help"
+            )
+            helpKeyName = self.keyBindings.getKeyName(helpAction).upper()
             hintLabel = f"{helpKeyName}: Help"
             hintX = self.renderer.getDisplayWidth() - 50
             hintY = self.renderer.getDisplayHeight() - 20
@@ -1914,7 +2064,7 @@ class WorldScreen:
         self.tickCounter.save()
         self.saveCodexToFile()
 
-        if self.config.showMiniMap:
+        if self.config.showMiniMap and self.renderer.supportsImageLoading():
             if not self.isCurrentRoomSavedAsPNG():
                 self.saveCurrentRoomAsPNG()
             # flush pending PNG writes so the map image update reads complete files
@@ -2079,7 +2229,7 @@ class WorldScreen:
             if self.deathRespawnTicksRemaining == 0:
                 self.respawnPlayer()
 
-        if self.config.showMiniMap:
+        if self.config.showMiniMap and self.renderer.supportsImageLoading():
             self.mapImageUpdater.updateIfCooldownOver()
 
     def run(self):

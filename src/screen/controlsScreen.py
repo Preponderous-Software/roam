@@ -29,6 +29,7 @@ class ControlsScreen(Screen):
         self.changeScreen = False
         self.waitingForKey = None
         self.scrollOffset = 0
+        self._cursor = 0
         self.pendingBindings = None
 
     def switchToOptionsScreen(self):
@@ -80,20 +81,36 @@ class ControlsScreen(Screen):
 
         visibleRows = int((y - startY - 80) / rowHeight)
         maxOffset = max(0, len(actions) - visibleRows)
+        # Keep cursor in view.
+        if self._cursor < self.scrollOffset:
+            self.scrollOffset = self._cursor
+        elif self._cursor >= self.scrollOffset + visibleRows:
+            self.scrollOffset = self._cursor - visibleRows + 1
         self.scrollOffset = max(0, min(self.scrollOffset, maxOffset))
 
         visibleActions = actions[self.scrollOffset : self.scrollOffset + visibleRows]
 
         for i, action in enumerate(visibleActions):
+            absIndex = self.scrollOffset + i
             rowY = startY + i * rowHeight
             label = self.keyBindings.getLabel(action)
             key = bindings.get(action, self.keyBindings.DEFAULT_BINDINGS.get(action))
             keyName = displayName(key if isinstance(key, KeyCode) else fromInt(key))
 
             isConflict = action in conflicts
-            labelColor = (255, 100, 100) if isConflict else palette.WHITE
+            isCursor = absIndex == self._cursor
+            isAlt = action.startswith("alt_")
+            labelColor = (
+                (255, 100, 100)
+                if isConflict
+                else (palette.MEDIUM_GRAY if isAlt else palette.WHITE)
+            )
             self.renderer.drawText(
-                label, labelX, rowY + buttonHeight / 2, 20, labelColor
+                label,
+                labelX + (18 if isAlt else 0),
+                rowY + buttonHeight / 2,
+                20,
+                labelColor,
             )
 
             if self.waitingForKey == action:
@@ -101,7 +118,7 @@ class ControlsScreen(Screen):
                 displayText = "Press a key  (Esc cancels)"
             else:
                 bgColor = (255, 50, 50) if isConflict else palette.DARKER_GRAY
-                displayText = keyName
+                displayText = ("> " if isCursor else "") + keyName
 
             self.renderer.drawButton(
                 keyX,
@@ -114,7 +131,18 @@ class ControlsScreen(Screen):
                 displayText,
                 lambda a=action: self.startRemap(a),
             )
+            if isCursor and self.waitingForKey != action:
+                self.renderer.drawSelectionHighlight(
+                    keyX, rowY, buttonWidth, buttonHeight, (255, 255, 0)
+                )
 
+        self.renderer.drawText(
+            "Up/Down: navigate  -  Enter/Space: remap  -  S: save  -  R: reset  -  Esc: cancel",
+            x / 2,
+            y - 92,
+            13,
+            palette.DIM_GRAY,
+        )
         if maxOffset > 0:
             scrollInfo = (
                 str(self.scrollOffset + 1)
@@ -124,9 +152,6 @@ class ControlsScreen(Screen):
                 + str(len(actions))
             )
             self.renderer.drawText(scrollInfo, x / 2, y - 70, 16, palette.MEDIUM_GRAY)
-            self.renderer.drawText(
-                "Scroll to see more", x / 2, y - 92, 14, palette.DIM_GRAY
-            )
 
     def drawBottomButtons(self):
         x, y = self.renderer.getDisplaySize()
@@ -213,17 +238,35 @@ class ControlsScreen(Screen):
             return
         if key == KeyCode.ESCAPE:
             self.cancelAndReturn()
+        elif key == KeyCode.UP:
+            self._cursor = max(0, self._cursor - 1)
+        elif key == KeyCode.DOWN:
+            actions = self.keyBindings.getActions()
+            self._cursor = min(len(actions) - 1, self._cursor + 1)
+        elif key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
+            actions = self.keyBindings.getActions()
+            if 0 <= self._cursor < len(actions):
+                self.startRemap(actions[self._cursor])
+        elif key == KeyCode.S:
+            if not self.keyBindings.getConflictsForBindings(
+                self.pendingBindings or self.keyBindings.bindings
+            ):
+                self.saveAndReturn()
+        elif key == KeyCode.R:
+            self.resetToDefaults()
 
     def handleScrollEvent(self, event):
+        actions = self.keyBindings.getActions()
         if event.scrollY > 0:
-            self.scrollOffset = max(0, self.scrollOffset - 1)
+            self._cursor = max(0, self._cursor - 1)
         elif event.scrollY < 0:
-            self.scrollOffset += 1
+            self._cursor = min(len(actions) - 1, self._cursor + 1)
 
     def onStart(self):
         self.pendingBindings = None
         self.waitingForKey = None
         self.scrollOffset = 0
+        self._cursor = 0
 
     def handleEvent(self, event):
         if event.type == EventType.KEY_DOWN:

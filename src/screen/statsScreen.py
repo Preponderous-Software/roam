@@ -37,7 +37,7 @@ class StatsScreen(Screen):
         self.changeScreen = False
 
     def handleKeyDownEvent(self, key):
-        if key == KeyCode.ESCAPE:
+        if key in (KeyCode.ESCAPE, KeyCode.RETURN, KeyCode.KP_ENTER):
             self.switchToOptionsScreen()
         elif key == self.keyBindings.getKey("screenshot"):
             self.renderer.captureScreenshot()
@@ -127,6 +127,13 @@ class StatsScreen(Screen):
             30,
             "Back",
             self.switchToOptionsScreen,
+        )
+        self.renderer.drawText(
+            "Enter or Esc to go back",
+            x / 2,
+            ypos + height + 10,
+            14,
+            palette.DIM_GRAY,
         )
 
     def handleEvent(self, event):

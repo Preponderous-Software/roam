@@ -45,3 +45,15 @@ def test_hud_drag_manager_works_with_geometry_rect():
     manager.handleMouseMotion(140, 130, 800, 600)
     assert manager.getOffset("box") == (20, 10)
     assert manager.handleMouseDown(0, 0) is False
+
+
+def test_rect_exposes_right_and_bottom_edges():
+    r = Rect(10, 20, 30, 40)
+    assert r.right == 40  # x + width
+    assert r.bottom == 60  # y + height
+
+
+def test_moved_and_copied_rects_recompute_their_edges():
+    r = Rect(0, 0, 10, 10).move(5, 7)
+    assert (r.right, r.bottom) == (15, 17)
+    assert Rect(2, 3, 4, 5).copy().right == 6

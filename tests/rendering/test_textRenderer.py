@@ -1,5 +1,5 @@
 from rendering.renderer import Renderer
-from rendering.textRenderer import TextRenderer
+from rendering.textRenderer import TextRenderer, _buildDiff
 from textDemo import renderMainMenu
 
 
@@ -11,7 +11,14 @@ def test_text_renderer_is_a_concrete_renderer():
 def test_display_size_is_columns_times_cell_size():
     renderer = TextRenderer(columns=80, rows=24, cellWidth=8, cellHeight=16)
     assert renderer.getDisplaySize() == (640, 384)
-    assert renderer.getGameAreaRect() == (128, 0, 384, 384)
+    r = renderer.getGameAreaRect()
+    # Game area is pinned to the top and shrunk to leave room for the HUD:
+    # availHeight = 384 - (150 + 5 + 384//10 + 10) = 384 - 203 = 181
+    # side = min(640, 181) = 181; x = (640 - 181) // 2 = 229
+    assert r.y == 0
+    assert r.width == r.height  # always square
+    assert r.x + r.width <= 640  # stays within display
+    assert r.y + r.height <= 384
 
 
 def test_draw_text_is_centered_on_the_pixel_position():
@@ -28,10 +35,14 @@ def test_draw_text_left_aligned_starts_at_the_left_pixel():
     assert renderer.grid.getChar(3, 2) == "h"  # leftX 30 -> col 3, centerY 25 -> row 2
 
 
-def test_draw_rectangle_outlines_a_box():
+def test_draw_rectangle_fills_with_spaces():
     renderer = TextRenderer(columns=20, rows=10, cellWidth=10, cellHeight=10)
+    # Pre-fill the area with a non-space char so we can confirm it was cleared.
+    for c in range(4):
+        for r in range(3):
+            renderer.grid.setChar(c, r, "X")
     renderer.drawRectangle(0, 0, 40, 30, (255, 255, 255))
-    assert renderer.grid.getChar(0, 0) == "+"  # corner of the 4x3-cell box
+    assert renderer.grid.getChar(0, 0) == " "  # filled with spaces, not a box corner
 
 
 def test_load_image_collapses_to_a_glyph_and_draw_image_places_it():
@@ -42,6 +53,44 @@ def test_load_image_collapses_to_a_glyph_and_draw_image_places_it():
     assert renderer.grid.getChar(2, 1) == "@"
 
 
+def test_draw_image_applies_ansi_color_for_known_glyphs():
+    renderer = TextRenderer(cellWidth=10, cellHeight=10)
+    renderer.drawImage("@", (0, 0))  # player — bright yellow (93)
+    frame = renderer.grid.toString()
+    assert "\033[93m@\033[0m" in frame
+
+
+def test_draw_image_no_color_for_unknown_glyphs():
+    renderer = TextRenderer(cellWidth=10, cellHeight=10)
+    renderer.drawImage("?", (0, 0))  # not in color map
+    frame = renderer.grid.toString()
+    assert "\033[" not in frame
+
+
+def test_game_area_rect_does_not_overlap_hud():
+    renderer = TextRenderer(columns=80, rows=24, cellWidth=8, cellHeight=16)
+    r = renderer.getGameAreaRect()
+    _, displayH = renderer.getDisplaySize()
+    from ui.hotbarLayout import HOTBAR_BOTTOM_OFFSET
+
+    # game area must end above the hotbar top
+    assert r.y + r.height <= displayH - HOTBAR_BOTTOM_OFFSET
+
+
+def test_present_only_outputs_when_the_frame_changes():
+    frames = []
+    renderer = TextRenderer(output=frames.append)
+    renderer.clearScreen((0, 0, 0))
+    renderer.drawText("hi", 80, 16, 12, (255, 255, 255))
+    renderer.present()
+    renderer.present()  # nothing changed -> no repaint
+    assert len(frames) == 1
+    renderer.clearScreen((0, 0, 0))
+    renderer.drawText("bye", 80, 16, 12, (255, 255, 255))
+    renderer.present()  # changed -> repaint
+    assert len(frames) == 2
+
+
 def test_a_real_screen_renders_to_text_with_no_pygame():
     # The payoff: MainMenuScreen drawn through the text frontend produces a
     # recognizable menu — same screen logic, different backend, no pygame.
@@ -50,3 +99,346 @@ def test_a_real_screen_renders_to_text_with_no_pygame():
     assert "Play" in frame
     assert "Quit" in frame
     assert "Settings" in frame
+
+
+# --- _buildDiff: differential rendering tests ---
+
+
+def test_build_diff_first_frame_positions_rows_explicitly():
+    diff = _buildDiff(["hello", "world"], [])
+    # Each row must be written at an explicit position so \r\n on the last row
+    # never triggers a terminal scroll (which would shift all content up by one
+    # line, causing duplicate HUD elements on stable rows).
+    assert "\033[1;1H" in diff  # row 1 positioned explicitly
+    assert "\033[2;1H" in diff  # row 2 positioned explicitly
+    assert "hello" in diff
+    assert "world" in diff
+    assert "\033[K" in diff  # erase-to-EOL present
+    assert "\033[2J" not in diff  # NO full-screen clear
+    assert "\r\n" not in diff  # NO \r\n — that would scroll on last row
+
+
+def test_build_diff_subsequent_frame_only_updates_changed_lines():
+    old = ["line A", "line B", "line C"]
+    new = ["line A", "line X", "line C"]  # only row 1 changed
+    diff = _buildDiff(new, old)
+    assert "line X" in diff
+    assert "line A" not in diff  # unchanged — not retransmitted
+    assert "line C" not in diff  # unchanged — not retransmitted
+    assert "\033[2;1H" in diff  # jumped to row 2 (1-based)
+    assert "\033[2J" not in diff  # NO full-screen clear
+
+
+def test_build_diff_erases_lines_that_disappeared():
+    old = ["row0", "row1", "row2"]
+    new = ["row0"]  # two rows removed
+    diff = _buildDiff(new, old)
+    assert "\033[2;1H\033[2K" in diff  # row 2 blanked
+    assert "\033[3;1H\033[2K" in diff  # row 3 blanked
+
+
+def test_build_diff_identical_frames_produce_empty_string():
+    lines = ["same", "content"]
+    diff = _buildDiff(lines, lines[:])
+    assert diff == ""
+
+
+def test_present_output_contains_no_full_screen_clear():
+    frames = []
+    renderer = TextRenderer(output=frames.append)
+    renderer.clearScreen((0, 0, 0))
+    renderer.drawText("hi", 80, 16, 12, (255, 255, 255))
+    renderer.present()
+    assert len(frames) == 1
+    assert "\033[2J" not in frames[0]  # flicker-free: no full clear
+
+
+# --- drawImage edge clamping (max(0, col)) ---
+
+
+def test_draw_image_at_negative_x_clamps_to_col_0():
+    # Tile positioned at -1px (the 1px left-overlap from room.drawWithOffset)
+    # must land at col 0, not be silently dropped.
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=8, cellHeight=16)
+    renderer.drawImage("@", (-1, 0))
+    assert renderer.grid.getChar(0, 0) == "@"
+
+
+def test_draw_image_at_exact_zero_places_at_col_0():
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=8, cellHeight=16)
+    renderer.drawImage("@", (0, 0))
+    assert renderer.grid.getChar(0, 0) == "@"
+
+
+def test_draw_image_at_negative_y_clamps_to_row_0():
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=8, cellHeight=16)
+    renderer.drawImage("@", (0, -1))
+    assert renderer.grid.getChar(0, 0) == "@"
+
+
+def test_draw_image_far_negative_x_clamped_but_clip_hides_it():
+    # Glyph clamps to col 0, but if the clip region starts at col 5 the cell
+    # is still rejected by the clip — prevents off-screen tiles leaking in.
+    from ui.geometry import Rect
+
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=8, cellHeight=16)
+    renderer.setClipRegion(Rect(40, 0, 80, 80))  # clip starts at col 5
+    renderer.drawImage("@", (-1, 0))
+    char = renderer.grid.getChar(0, 0)
+    assert char != "@"
+
+
+# --- setClipRegion left-extension (max(0, _col(x) - 1)) ---
+
+
+def test_set_clip_region_extends_left_by_one_cell():
+    # Rect at x=8 maps to _col(8)=1; the fix subtracts 1 → clip starts at
+    # col 0. A char written at x=0 (col 0) must therefore pass the clip.
+    from ui.geometry import Rect
+
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=8, cellHeight=16)
+    renderer.setClipRegion(Rect(8, 0, 80, 80))
+    renderer.drawImage("#", (0, 0))  # pixel 0 → col 0, inside extended clip
+    assert renderer.grid.getChar(0, 0) == "#"
+
+
+def test_set_clip_region_none_removes_restriction():
+    from ui.geometry import Rect
+
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=8, cellHeight=16)
+    renderer.setClipRegion(Rect(40, 0, 80, 80))  # col 0 excluded
+    renderer.drawImage("X", (0, 0))
+    assert renderer.grid.getChar(0, 0) != "X"
+    renderer.setClipRegion(None)
+    renderer.drawImage("Y", (0, 0))
+    assert renderer.grid.getChar(0, 0) == "Y"
+
+
+def test_left_edge_tile_visible_when_game_area_starts_at_pixel_0():
+    # Regression: when gameArea.x=0, tile at -1px → col -1 was silently
+    # dropped. Now clamps to col 0 and the clip (extended by 1) lets it through.
+    from ui.geometry import Rect
+
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=8, cellHeight=16)
+    renderer.setClipRegion(Rect(0, 0, 80, 80))
+    renderer.drawImage("[", (-1, 0))  # chest at leftmost tile column
+    assert renderer.grid.getChar(0, 0) == "["
+
+
+# --- drawSelectionHighlight ---
+
+
+def test_draw_selection_highlight_colors_cells_yellow_without_erasing_glyphs():
+    renderer = TextRenderer(columns=10, rows=5, cellWidth=8, cellHeight=16)
+    renderer.drawImage("@", (0, 0))
+    renderer.drawSelectionHighlight(0, 0, 8, 16, None)
+    assert renderer.grid.getChar(0, 0) == "@"  # glyph preserved
+    assert renderer.grid._colors[0][0] == 93  # bright yellow
+
+
+# --- drawTranslucentOverlay ---
+
+
+def test_draw_translucent_overlay_dims_all_cells():
+    renderer = TextRenderer(columns=10, rows=5, cellWidth=8, cellHeight=16)
+    renderer.drawImage("@", (0, 0))
+    renderer.drawTranslucentOverlay((0, 0, 0))
+    assert renderer.grid._colors[0][0] == 90  # dark grey
+
+
+# --- drawDayNightOverlay ---
+
+
+def test_draw_day_night_overlay_dims_cells_in_game_area():
+    renderer = TextRenderer(columns=20, rows=10, cellWidth=8, cellHeight=16)
+    # Place a non-player tile so no implicit light source interferes.
+    renderer.drawImage(".", (0, 0))
+    renderer.drawDayNightOverlay((0, 0, 80, 64), 200, [])
+    # At full darkness (opacity=200) all cells in the area must have a color set.
+    color = renderer.grid._colors[0][0]
+    assert color is not None
+
+
+def test_draw_day_night_overlay_skips_at_low_opacity():
+    renderer = TextRenderer(columns=20, rows=10, cellWidth=8, cellHeight=16)
+    renderer.drawDayNightOverlay((0, 0, 80, 64), 20, [])  # below threshold of 30
+    assert renderer.grid._colors[0][0] is None  # nothing dimmed
+
+
+# --- resize ---
+
+
+def test_resize_rebuilds_grid_and_forces_full_repaint():
+    frames = []
+    renderer = TextRenderer(
+        columns=10, rows=5, cellWidth=8, cellHeight=16, output=frames.append
+    )
+    renderer.drawImage("@", (0, 0))
+    renderer.present()
+    assert len(frames) == 1
+
+    renderer.resize(12, 6)
+    # Old char must be gone — grid was rebuilt
+    assert renderer.grid.getChar(0, 0) != "@"
+    # present must re-output a full frame (lastFrame reset to None)
+    renderer.drawImage("#", (0, 0))
+    renderer.present()
+    assert len(frames) == 2
+
+
+# --- second batch: glyph table, surface helpers, game area, screenshot ---
+
+
+def test_draw_button_renders_box_and_label():
+    renderer = TextRenderer(columns=80, rows=24, cellWidth=8, cellHeight=16)
+    renderer.drawButton(0, 0, 80, 32, None, None, 12, "OK", lambda: None)
+    frame = renderer.grid.toString()
+    assert "OK" in frame
+    assert "+" in frame  # box corner
+
+
+def test_load_image_player_variants_all_map_to_at():
+    renderer = TextRenderer()
+    for name in (
+        "player_down.png",
+        "player_left.png",
+        "player_up.png",
+        "player_right.png",
+    ):
+        assert renderer.loadImage(name) == "@", name
+
+
+def test_load_image_chest_maps_to_left_bracket():
+    # Regression: the chest glyph [ was invisible on the left edge before the clip fix.
+    renderer = TextRenderer()
+    assert renderer.loadImage("chest.png") == "["
+
+
+def test_load_image_known_terrain_glyphs():
+    renderer = TextRenderer()
+    assert renderer.loadImage("grass.png") == "."
+    assert renderer.loadImage("stone.png") == "#"
+    assert renderer.loadImage("oakwood.png") == "T"
+
+
+def test_load_image_unknown_asset_falls_back_to_first_letter_uppercase():
+    renderer = TextRenderer()
+    assert renderer.loadImage("zombie.png") == "Z"
+    assert renderer.loadImage("npc_friend.png") == "N"
+
+
+def test_scale_image_returns_image_unchanged():
+    renderer = TextRenderer()
+    assert renderer.scaleImage("@", (50, 50)) is "@"
+    assert renderer.scaleImage("T", (8, 16)) == "T"
+
+
+def test_create_surface_returns_a_text_grid():
+    from rendering.textGrid import TextGrid
+
+    renderer = TextRenderer()
+    assert isinstance(renderer.createSurface((100, 100)), TextGrid)
+
+
+def test_try_load_image_always_returns_none():
+    renderer = TextRenderer()
+    assert renderer.tryLoadImage("anything.png") is None
+
+
+def test_supports_image_loading_returns_false():
+    renderer = TextRenderer()
+    assert renderer.supportsImageLoading() is False
+
+
+def test_get_render_target_and_set_render_target_round_trip():
+    renderer = TextRenderer()
+    sentinel = object()
+    renderer.setRenderTarget(sentinel)
+    assert renderer.getRenderTarget() is sentinel
+
+
+def test_game_area_rect_tall_terminal_fills_full_width():
+    # Very tall terminal: side is constrained by width, not height.
+    # columns=40,rows=80 → width=320, height=1280
+    # side = min(320, availHeight) = 320 → gameArea.x == 0, width == displayWidth
+    renderer = TextRenderer(columns=40, rows=80, cellWidth=8, cellHeight=16)
+    r = renderer.getGameAreaRect()
+    assert r.x == 0
+    assert r.width == renderer.getDisplayWidth()
+
+
+def test_capture_screenshot_writes_text_file(tmp_path, monkeypatch):
+    import config.config as _cfg_mod
+
+    monkeypatch.setattr(
+        _cfg_mod.Config, "getUserDataDirectory", staticmethod(lambda: str(tmp_path))
+    )
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=8, cellHeight=16)
+    renderer.drawTextLeftAligned("SNAP", 0, 8, 12, (255, 255, 255))
+    renderer.captureScreenshot()
+    screenshots = list((tmp_path / "screenshots").glob("*.txt"))
+    assert len(screenshots) == 1
+    content = screenshots[0].read_text(encoding="utf-8")
+    assert "SNAP" in content
+
+
+# --- third batch ---
+
+
+def test_draw_text_left_aligned_long_bracket_label_never_clips_left_edge():
+    # Minimap regression: "[-1,0] ^ night" at leftX=5 → col=0 must place "[" at col 0.
+    renderer = TextRenderer(columns=20, rows=10, cellWidth=8, cellHeight=16)
+    renderer.drawTextLeftAligned("[-1,0] ^ night", 5, 80, 12, (200, 200, 200))
+    # _col(5) = 5//8 = 0, _row(80) = 80//16 = 5
+    assert renderer.grid.getChar(0, 5) == "["
+
+
+def test_draw_text_clears_overlay_color_at_text_position():
+    # _clearColors is called after writeText so overlay dimming does not mask UI text.
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=10, cellHeight=10)
+    renderer.drawTranslucentOverlay((0, 0, 0))  # dim all to dark-grey (90)
+    renderer.drawText("hi", 100, 20, 12, (255, 255, 255))
+    # drawText: col = _col(100) - len("hi")//2 = 10 - 1 = 9, row = _row(20) = 2
+    assert renderer.grid._colors[2][9] is None  # "h" — color cleared
+    assert renderer.grid._colors[2][10] is None  # "i" — color cleared
+    assert renderer.grid._colors[0][0] == 90  # unrelated cell still dimmed
+
+
+def test_draw_text_left_aligned_clears_overlay_color():
+    # drawTextLeftAligned also calls _clearColors.
+    renderer = TextRenderer(columns=20, rows=5, cellWidth=10, cellHeight=10)
+    renderer.drawTranslucentOverlay((0, 0, 0))
+    renderer.drawTextLeftAligned("AB", 0, 10, 12, (255, 255, 255))
+    # col = _col(0) = 0, row = _row(10) = 1
+    assert renderer.grid._colors[1][0] is None  # "A" — cleared
+    assert renderer.grid._colors[1][1] is None  # "B" — cleared
+    assert renderer.grid._colors[0][5] == 90  # unrelated cell still dimmed
+
+
+def test_clear_screen_resets_all_cells_to_space():
+    # clearScreen() delegates to grid.clear() — both chars and colors reset.
+    renderer = TextRenderer(columns=10, rows=5, cellWidth=8, cellHeight=16)
+    renderer.drawImage("@", (0, 0))
+    renderer.grid.setColor(0, 0, 93)
+    renderer.clearScreen((0, 0, 0))
+    assert renderer.grid.getChar(0, 0) == " "
+    assert renderer.grid._colors[0][0] is None
+
+
+def test_draw_day_night_overlay_explicit_light_source_exempts_lit_cell():
+    # A large explicit light source at cell (0,0)'s center keeps that cell uncolored.
+    renderer = TextRenderer(columns=10, rows=5, cellWidth=8, cellHeight=16)
+    # Cell (0,0) center: px = 0*8 + 4 = 4, py = 0*16 + 8 = 8
+    renderer.drawDayNightOverlay((0, 0, 80, 80), 200, [(4, 8, 1000)])
+    assert renderer.grid._colors[0][0] is None  # lit cell untouched
+
+
+def test_draw_day_night_overlay_player_glyph_creates_implicit_light_source():
+    # "@" auto-creates a light source so the player cell is not darkened.
+    # drawImage sets the cell to bright-yellow (93); overlay must not overwrite
+    # it with the dim values (90 = dark-grey, 30 = near-black).
+    renderer = TextRenderer(columns=10, rows=5, cellWidth=8, cellHeight=16)
+    renderer.drawImage("@", (24, 32))  # col = 24//8 = 3, row = 32//16 = 2
+    renderer.drawDayNightOverlay((0, 0, 80, 80), 200, [])
+    color = renderer.grid._colors[2][3]
+    assert color not in (30, 90)  # player cell not dimmed by the overlay

@@ -13,6 +13,9 @@ from src.screen.screenType import ScreenType
 from src.lib.graphik.src.graphik import Graphik
 from src.rendering.pygameRenderer import PygameRenderer
 
+# Production root so KeyCode identity matches what the screen compares against.
+from rendering.keyCode import KeyCode
+
 
 @pytest.fixture(scope="module", autouse=True)
 def init_pygame():
@@ -170,24 +173,24 @@ def test_handleKeyDownEvent_escape_cancels_delete(temp_saves_dir):
 def test_handleKeyDownEvent_scroll(temp_saves_dir):
     screen = createSaveSelectionScreen(temp_saves_dir)
 
-    assert screen.scrollOffset == 0
+    assert screen._selectedIndex == 0
     screen.handleKeyDownEvent(pygame.K_DOWN)
-    assert screen.scrollOffset == 0
+    assert screen._selectedIndex == 0  # no saves, cursor stays at 0
 
     for i in range(5):
         os.makedirs(os.path.join(temp_saves_dir, "save_" + str(i + 1)))
     screen.refreshSaveCache()
 
     screen.handleKeyDownEvent(pygame.K_DOWN)
-    assert screen.scrollOffset == 1
+    assert screen._selectedIndex == 1
     screen.handleKeyDownEvent(pygame.K_DOWN)
-    assert screen.scrollOffset == 2
+    assert screen._selectedIndex == 2
     screen.handleKeyDownEvent(pygame.K_UP)
-    assert screen.scrollOffset == 1
+    assert screen._selectedIndex == 1
     screen.handleKeyDownEvent(pygame.K_UP)
-    assert screen.scrollOffset == 0
+    assert screen._selectedIndex == 0
     screen.handleKeyDownEvent(pygame.K_UP)
-    assert screen.scrollOffset == 0
+    assert screen._selectedIndex == 0  # clamped at 0
 
 
 def test_handleKeyDownEvent_scroll_clamped(temp_saves_dir):
@@ -200,7 +203,7 @@ def test_handleKeyDownEvent_scroll_clamped(temp_saves_dir):
     for _ in range(10):
         screen.handleKeyDownEvent(pygame.K_DOWN)
 
-    assert screen.scrollOffset == 1
+    assert screen._selectedIndex == 1  # clamped at last save index
 
 
 def test_screenType_has_save_selection():
@@ -371,9 +374,9 @@ def test_handleKeyDownEvent_keys_ignored_during_naming(temp_saves_dir):
     screen.namingNewSave = True
 
     screen.handleKeyDownEvent(pygame.K_DOWN)
-    assert screen.scrollOffset == 0
+    assert screen._selectedIndex == 0
     screen.handleKeyDownEvent(pygame.K_UP)
-    assert screen.scrollOffset == 0
+    assert screen._selectedIndex == 0
 
 
 def test_createNewGameWithName_rejects_path_traversal(temp_saves_dir):
@@ -407,3 +410,60 @@ def test_deleteSave_rejects_outside_base(temp_saves_dir):
 
     assert os.path.exists(outsidePath)
     shutil.rmtree(outsidePath)
+
+
+def test_enter_selects_the_highlighted_save(temp_saves_dir):
+    os.makedirs(os.path.join(temp_saves_dir, "save_a"))
+    os.makedirs(os.path.join(temp_saves_dir, "save_b"))
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.refreshSaveCache()
+
+    screen.handleKeyDownEvent(KeyCode.RETURN)  # selects the top/highlighted save
+
+    assert screen.nextScreen == ScreenType.WORLD_SCREEN
+    assert screen.changeScreen is True
+
+
+def test_down_then_enter_selects_the_next_save(temp_saves_dir):
+    for name in ("save_a", "save_b"):
+        os.makedirs(os.path.join(temp_saves_dir, name))
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.refreshSaveCache()
+    expected = screen.getSaveDirectories()[1]["path"]
+
+    screen.handleKeyDownEvent(KeyCode.DOWN)
+    screen.handleKeyDownEvent(KeyCode.RETURN)
+
+    assert screen.config.pathToSaveDirectory == expected
+
+
+def test_c_starts_naming_a_new_save(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.handleKeyDownEvent(KeyCode.C)
+    assert screen.namingNewSave is True
+
+
+def test_enter_with_no_saves_starts_naming(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)  # empty dir
+    screen.handleKeyDownEvent(KeyCode.RETURN)
+    assert screen.namingNewSave is True
+
+
+def test_c_that_opens_naming_does_not_type_itself_into_the_name(temp_saves_dir):
+    # In text mode a single 'c' keystroke arrives as a KEY_DOWN(C) plus a paired
+    # TEXT_INPUT('c') in the same poll batch. The KEY_DOWN opens the name field;
+    # the paired TEXT_INPUT must be suppressed so the field starts empty rather
+    # than pre-filled with "c". A later keystroke (after the draw frame) types
+    # normally.
+    from rendering.inputEvent import EventType, InputEvent
+
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.handleEvent(InputEvent(EventType.KEY_DOWN, key=KeyCode.C))
+    screen.handleEvent(InputEvent(EventType.TEXT_INPUT, text="c"))
+
+    assert screen.namingNewSave is True
+    assert screen.newSaveNameInput == ""  # the opening 'c' did not leak in
+
+    screen.draw()  # suppression only lasts the frame naming opened in
+    screen.handleEvent(InputEvent(EventType.TEXT_INPUT, text="a"))
+    assert screen.newSaveNameInput == "a"

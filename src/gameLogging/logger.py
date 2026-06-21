@@ -11,6 +11,12 @@ LOG_LEVEL : str
 LOG_FORMAT : str
     Output format — ``json`` for machine-readable output or ``pretty``
     for human-readable coloured output (default: ``pretty``).
+LOG_FILE : str
+    Path to a log file.  When set, all log output goes to that file
+    instead of stderr.  In text/TUI mode this defaults to ``roam.log``
+    so that log lines never corrupt the terminal display — roam.py sets
+    this variable before any import triggers logger initialisation.
+    Set ``LOG_FILE=`` (empty) to suppress file logging even in text mode.
 """
 
 import logging
@@ -35,6 +41,17 @@ _VALID_LEVELS = {
 _LOG_LEVEL_NAME = os.environ.get("LOG_LEVEL", "INFO").strip().upper()
 _LOG_LEVEL = _VALID_LEVELS.get(_LOG_LEVEL_NAME, logging.INFO)
 _LOG_FORMAT = os.environ.get("LOG_FORMAT", "pretty").strip().lower()
+
+# In text/TUI mode the terminal is taken over by the game display; stderr
+# output would corrupt it.  Auto-redirect to a log file unless the caller
+# has already configured LOG_FILE explicitly (including setting it empty to
+# suppress file logging).
+_TEXT_MODE = "--text" in sys.argv
+_LOG_FILE_ENV = os.environ.get("LOG_FILE")  # None means unset
+if _LOG_FILE_ENV is None:
+    _LOG_FILE = "roam.log" if _TEXT_MODE else None
+else:
+    _LOG_FILE = _LOG_FILE_ENV if _LOG_FILE_ENV else None
 
 # ---------------------------------------------------------------------------
 # Redaction helper
@@ -69,8 +86,11 @@ def _configureStructlog():
     Uses stdlib logging as the backend so that ``_LOG_LEVEL`` is respected
     for filtering.
     """
-    # Configure stdlib root logger so the level gate works.
-    logging.basicConfig(format="%(message)s", stream=sys.stderr, level=_LOG_LEVEL)
+    if _LOG_FILE:
+        handlers = [logging.FileHandler(_LOG_FILE, mode="a", encoding="utf-8")]
+        logging.basicConfig(format="%(message)s", handlers=handlers, level=_LOG_LEVEL)
+    else:
+        logging.basicConfig(format="%(message)s", stream=sys.stderr, level=_LOG_LEVEL)
 
     shared_processors = [
         structlog.stdlib.filter_by_level,

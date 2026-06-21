@@ -1,6 +1,35 @@
-import json
 import os
 import sys
+
+
+# ---------------------------------------------------------------------------
+# Early display probe — must run before any import that pulls in the logger.
+# config.py and bootstrap.py both import gameLogging.logger at module level,
+# which configures log output (stderr vs file) at import time. We set LOG_FILE
+# here so headless auto-detection redirects logs to a file before the logger
+# is ever initialised, preventing log lines from corrupting the TUI display.
+# ---------------------------------------------------------------------------
+def _earlyDetectTextMode():
+    if "--text" in sys.argv:
+        return True
+    try:
+        import pygame as _pg
+
+        _pg.display.init()
+        driver = _pg.display.get_driver()
+        _pg.display.quit()
+        return driver in ("dummy", "offscreen")
+    except Exception:
+        return True
+
+
+if _earlyDetectTextMode() and os.environ.get("LOG_FILE") is None:
+    os.environ["LOG_FILE"] = "roam.log"
+
+# ---------------------------------------------------------------------------
+# Remaining imports (logger is now configured with the correct destination)
+# ---------------------------------------------------------------------------
+import json
 
 import pygame
 from appPaths import prepareWorkingDirectory
@@ -10,11 +39,11 @@ from config.keyBindings import KeyBindings
 from inventory.inventory import Inventory
 from gameLogging.logger import getLogger
 from player.player import Player
-from lib.graphik.src.graphik import Graphik
 from rendering.renderer import Renderer
 from rendering.inputSource import InputSource
 from rendering.clock import Clock
 from rendering.pygameFrontend import createFrontend
+from rendering.textFrontend import createTextFrontend
 from screen.configScreen import ConfigScreen
 from screen.controlsScreen import ControlsScreen
 from screen.codexScreen import CodexScreen
@@ -36,11 +65,15 @@ _logger = getLogger(__name__)
 # @author Daniel McCoy Stephenson
 # @since August 8th, 2022
 class Roam:
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, textMode=False):
         self.config = config
-        # The frontend owns the pygame window lifecycle; the game depends only
-        # on the Renderer it provides (epic #433).
-        self.frontend = createFrontend(config)
+        self.textMode = textMode
+        # The frontend owns the display + input lifecycle; the game depends only
+        # on the Renderer/InputSource/Clock it provides (epic #433). Selecting a
+        # different frontend swaps the whole backend with no game-logic change.
+        self.frontend = (
+            createTextFrontend(config) if textMode else createFrontend(config)
+        )
         self._initializeDependencies()
         _logger.info("game initialized", savePath=config.pathToSaveDirectory)
 
@@ -62,10 +95,9 @@ class Roam:
         # Create the DI container and register runtime dependencies.
         self.container = createContainer(self.config)
         self.tickCounter = self.container.resolve(TickCounter)
-        # The frontend built the Graphik + Renderer; register both so the room
-        # pipeline (Graphik) and screens/HUD (Renderer) can auto-wire (epic #433).
-        self.graphik = self.frontend.getGraphik()
-        self.container.registerInstance(Graphik, self.graphik)
+        # Screens/HUD auto-wire the backend-neutral Renderer (epic #433). The
+        # room pipeline migrated off the raw Graphik, so the frontend no longer
+        # needs to expose one — the text frontend has none.
         self.renderer = self.frontend.getRenderer()
         self.container.registerInstance(Renderer, self.renderer)
         # The input seam (epic #433, Phase 4): register the InputSource so
@@ -116,8 +148,9 @@ class Roam:
         self.worldScreen.initialize()
 
     def quitApplication(self):
-        w, h = self.renderer.getDisplaySize()
-        self.config.saveWindowSize(w, h)
+        if self.renderer.supportsImageLoading():
+            w, h = self.renderer.getDisplaySize()
+            self.config.saveWindowSize(w, h)
         self.frontend.quit()
         quit()
 
@@ -127,10 +160,11 @@ class Roam:
             if result == ScreenType.MAIN_MENU_SCREEN:
                 # Preserve current window dimensions so the restart
                 # does not shrink a maximized/resized window.
-                w, h = self.renderer.getDisplaySize()
-                self.config.displayWidth = w
-                self.config.displayHeight = h
-                self.config.saveWindowSize(w, h)
+                if self.renderer.supportsImageLoading():
+                    w, h = self.renderer.getDisplaySize()
+                    self.config.displayWidth = w
+                    self.config.displayHeight = h
+                    self.config.saveWindowSize(w, h)
                 _logger.info("returning to main menu")
                 return "restart"
             if result == ScreenType.WORLD_SCREEN:
@@ -191,17 +225,53 @@ def runSelfTest():
         return 1
 
 
-# Frozen executables start in an arbitrary working directory; make relative
-# asset/schema paths resolve against the bundle. No-op when run from source.
-prepareWorkingDirectory()
+def _shouldUseTextMode(argv):
+    """Return True when the text/TUI frontend should be used.
 
-if "--selftest" in sys.argv:
-    sys.exit(runSelfTest())
+    --text forces text mode. Without it, try to initialise the pygame display
+    subsystem; if SDL selects a headless driver (dummy / offscreen) or fails
+    entirely, fall back to text mode so the game runs without a display server.
+    """
+    if "--text" in argv:
+        return True
+    try:
+        pygame.display.init()
+        driver = pygame.display.get_driver()
+        pygame.display.quit()
+        if driver in ("dummy", "offscreen"):
+            _logger.info("no display detected; using text mode", driver=driver)
+            return True
+        return False
+    except pygame.error as exc:
+        _logger.info("display unavailable; using text mode", error=str(exc))
+        return True
 
-config = Config()
-roam = Roam(config)
-while True:
-    result = roam.run()
-    if result != "restart":
-        break
-    roam.restart()
+
+def main(argv):
+    # Frozen executables start in an arbitrary working directory; make relative
+    # asset/schema paths resolve against the bundle. No-op when run from source.
+    prepareWorkingDirectory()
+
+    if "--selftest" in argv:
+        return runSelfTest()
+
+    config = Config()
+    roam = Roam(config, textMode=_shouldUseTextMode(argv))
+    try:
+        while True:
+            result = roam.run()
+            if result != "restart":
+                break
+            roam.restart()
+    except KeyboardInterrupt:
+        # Ctrl+C: exit cleanly rather than dumping a traceback.
+        _logger.info("interrupted; shutting down")
+    finally:
+        # Always restore the frontend (e.g. put the terminal back to normal mode
+        # in text mode), even on an interrupt or unexpected error.
+        roam.frontend.quit()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

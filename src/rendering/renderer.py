@@ -102,6 +102,13 @@ class Renderer(ABC):
         missing or unreadable. For dynamic images (e.g. the regenerated minimap)
         where loadImage's caching + placeholder behavior is not wanted."""
 
+    def supportsImageLoading(self):
+        """Return True if this backend can load and display real image files.
+        Text/headless backends that always return None from tryLoadImage should
+        override to return False so callers can offer a text fallback without
+        going through the image-load path and logging spurious warnings."""
+        return True
+
     @abstractmethod
     def getGameAreaRect(self):
         """Return the centered square play-area rect for the current display."""
@@ -128,4 +135,23 @@ class Renderer(ABC):
 
     @abstractmethod
     def captureScreenshot(self):
-        """Save a screenshot of the current frame to the screenshots folder."""
+        """Save a screenshot of the current frame to the screenshots folder.
+
+        Returns a truthy value on success (e.g. the file path or True).
+        Returns a falsey value when unsupported or when the save fails.
+        Implementations must never raise; callers branch on the return value."""
+
+    # --- selection / highlight ---
+
+    def drawSelectionHighlight(self, x, y, width, height, color):
+        """Draw a selection indicator around the rect (x, y, width, height).
+
+        The default implementation draws four thin filled border rectangles in
+        the given color.  Text/terminal backends override this to use a
+        character-based indicator instead, since fillRect with spaces would
+        erase any glyphs already drawn inside the rect."""
+        border = 3
+        self.drawRectangle(x, y, width, border, color)
+        self.drawRectangle(x, y + height - border, width, border, color)
+        self.drawRectangle(x, y, border, height, color)
+        self.drawRectangle(x + width - border, y, border, height, color)

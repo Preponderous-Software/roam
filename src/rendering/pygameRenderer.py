@@ -202,4 +202,9 @@ class PygameRenderer(Renderer):
     # --- screenshots ---
 
     def captureScreenshot(self):
-        takeScreenshot(self._display())
+        try:
+            takeScreenshot(self._display())
+            return True
+        except Exception as exc:
+            _logger.warning("screenshot failed", error=str(exc))
+            return False

@@ -2,7 +2,6 @@ from rendering.keyCode import KeyCode
 from screen.optionsScreen import OptionsScreen
 from screen.screenType import ScreenType
 
-
 # Characterization tests for OptionsScreen (previously no dedicated test file).
 # They assert the screen's current behavior — no behavior change intended.
 

@@ -2,7 +2,6 @@ from rendering.keyCode import KeyCode
 from screen.mainMenuScreen import MainMenuScreen
 from screen.screenType import ScreenType
 
-
 # Coverage for MainMenuScreen's transitions, in particular the backend-neutral
 # quit (epic #433 follow-up #463): quitting requests shutdown by returning NONE
 # to the main loop rather than calling pygame.quit() directly.

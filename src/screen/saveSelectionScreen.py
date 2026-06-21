@@ -36,12 +36,17 @@ class SaveSelectionScreen(Screen):
         self.changeScreen = False
         self.savesBaseDirectory = Config.getSavesBaseDirectory()
         self.scrollOffset = 0
+        self._selectedIndex = 0
         self.sortMode = self.SORT_BY_DATE
         self.cachedSaves = None
         self.confirmingDelete = None
         self.namingNewSave = False
         self.newSaveNameInput = ""
         self.newSaveNameError = ""
+        # When naming opens via the 'C' key, that keypress also arrives as a
+        # text-input event in the same batch; suppress text input for the frame
+        # it opens so 'c' isn't typed into the new name. Cleared each draw().
+        self._suppressTextInput = False
 
     def refreshSaveCache(self):
         self.cachedSaves = self._scanSaveDirectories()
@@ -86,6 +91,7 @@ class SaveSelectionScreen(Screen):
 
     def startNamingNewSave(self):
         self.namingNewSave = True
+        self._suppressTextInput = True
         self.newSaveNameInput = ""
         self.newSaveNameError = ""
 
@@ -156,6 +162,7 @@ class SaveSelectionScreen(Screen):
         saves = self.getSaveDirectories()
         maxOffset = max(0, len(saves) - 1)
         self.scrollOffset = min(self.scrollOffset, maxOffset)
+        self._selectedIndex = min(self._selectedIndex, maxOffset)
 
     def toggleSort(self):
         if self.sortMode == self.SORT_BY_DATE:
@@ -175,25 +182,77 @@ class SaveSelectionScreen(Screen):
         maxScrollOffset = max(0, len(saves) - 1)
         self.scrollOffset = min(self.scrollOffset + 1, maxScrollOffset)
 
+    def _moveCursorUp(self, saves, maxVisible):
+        if self._selectedIndex > 0:
+            self._selectedIndex -= 1
+            if self._selectedIndex < self.scrollOffset:
+                self.scrollOffset = self._selectedIndex
+
+    def _moveCursorDown(self, saves, maxVisible):
+        if self._selectedIndex < len(saves) - 1:
+            self._selectedIndex += 1
+            if self._selectedIndex >= self.scrollOffset + maxVisible:
+                self.scrollOffset = self._selectedIndex - maxVisible + 1
+
     def handleKeyDownEvent(self, key):
         if self.namingNewSave:
             if key == KeyCode.ESCAPE:
                 self.cancelNamingNewSave()
-            elif key == KeyCode.RETURN:
+            elif key in (KeyCode.RETURN, KeyCode.KP_ENTER):
                 self.confirmNewSaveName()
             elif key == KeyCode.BACKSPACE:
                 self.newSaveNameInput = self.newSaveNameInput[:-1]
                 self.newSaveNameError = ""
             return
-        if key == KeyCode.ESCAPE:
-            if self.confirmingDelete is not None:
+        if self.confirmingDelete is not None:
+            if key == KeyCode.ESCAPE:
                 self.confirmingDelete = None
-            else:
-                self.switchToMainMenuScreen()
+            elif key in (KeyCode.RETURN, KeyCode.KP_ENTER):
+                self.deleteSave(self.confirmingDelete)
+            return
+        if key == KeyCode.ESCAPE:
+            self.switchToMainMenuScreen()
         elif key == KeyCode.UP:
-            self.scrollUp()
+            saves = self.getSaveDirectories()
+            maxVisible = self._maxVisible()
+            self._moveCursorUp(saves, maxVisible)
         elif key == KeyCode.DOWN:
-            self.scrollDown()
+            saves = self.getSaveDirectories()
+            maxVisible = self._maxVisible()
+            self._moveCursorDown(saves, maxVisible)
+        elif key in (KeyCode.RETURN, KeyCode.KP_ENTER):
+            self.selectHighlightedSave()
+        elif key == KeyCode.C:
+            self.startNamingNewSave()
+        elif key == KeyCode.T:
+            self.toggleSort()
+        elif key == KeyCode.BACKSPACE:
+            saves = self.getSaveDirectories()
+            if saves:
+                idx = min(self.getHighlightedSaveIndex(), len(saves) - 1)
+                self._requestDelete(saves[idx]["path"])
+
+    def _maxVisible(self):
+        """Number of save rows that fit on screen (approximated from display height)."""
+        _, y = self.renderer.getDisplaySize()
+        height = y / 14
+        margin = 8
+        ypos = y / 8
+        bottomLimit = y - y / 4
+        return max(1, int((bottomLimit - ypos) / (height + margin)))
+
+    def getHighlightedSaveIndex(self):
+        return self._selectedIndex
+
+    def selectHighlightedSave(self):
+        """Enter the world with the keyboard-highlighted save, or start naming a
+        new one if there are no saves yet (so Enter always does something)."""
+        saves = self.getSaveDirectories()
+        if saves:
+            index = min(self.getHighlightedSaveIndex(), len(saves) - 1)
+            self.selectSave(saves[index]["path"])
+        else:
+            self.startNamingNewSave()
 
     def drawTitle(self):
         x, y = self.renderer.getDisplaySize()
@@ -208,7 +267,7 @@ class SaveSelectionScreen(Screen):
         self.renderer.drawText("No save files found.", xpos, ypos, 28, palette.WHITE)
         ypos += 40
         self.renderer.drawText(
-            'Click "New Game" to start playing!',
+            "Press C to create a new save.",
             xpos,
             ypos,
             24,
@@ -239,8 +298,11 @@ class SaveSelectionScreen(Screen):
                 scrollInfo, x / 2, ypos - 18, 14, palette.MEDIUM_GRAY
             )
 
-        for save in visibleSaves:
-            label = save["name"] + "  |  " + save["lastPlayed"]
+        for rowIndex, save in enumerate(visibleSaves):
+            absoluteIndex = self.scrollOffset + rowIndex
+            isSelected = interactive and absoluteIndex == self._selectedIndex
+            marker = "> " if isSelected else ""
+            label = marker + save["name"] + "  |  " + save["lastPlayed"]
             savePath = save["path"]
             if interactive:
                 self.renderer.drawButton(
@@ -254,6 +316,10 @@ class SaveSelectionScreen(Screen):
                     label,
                     lambda p=savePath: self.selectSave(p),
                 )
+                if isSelected:
+                    self.renderer.drawSelectionHighlight(
+                        xpos, ypos, saveWidth, height, (255, 255, 0)
+                    )
                 self.renderer.drawButton(
                     xpos + saveWidth + margin,
                     ypos,
@@ -346,6 +412,13 @@ class SaveSelectionScreen(Screen):
             24,
             "Cancel",
             lambda: setattr(self, "confirmingDelete", None),
+        )
+        self.renderer.drawText(
+            "Enter: confirm  -  Esc: cancel",
+            x / 2,
+            btnY + buttonHeight + 8,
+            14,
+            palette.DIM_GRAY,
         )
 
     def drawNamingDialog(self):
@@ -510,18 +583,22 @@ class SaveSelectionScreen(Screen):
         if event.type == EventType.KEY_DOWN:
             self.handleKeyDownEvent(event.key)
         elif event.type == EventType.MOUSE_WHEEL:
+            saves = self.getSaveDirectories()
+            maxVisible = self._maxVisible()
             if event.scrollY > 0:
-                self.scrollUp()
+                self._moveCursorUp(saves, maxVisible)
             elif event.scrollY < 0:
-                self.scrollDown()
+                self._moveCursorDown(saves, maxVisible)
         elif event.type == EventType.TEXT_INPUT:
-            if self.namingNewSave:
+            if self.namingNewSave and not self._suppressTextInput:
                 for ch in event.text:
                     if ch.isalnum() or ch in "-_ ":
                         self.newSaveNameInput += ch
                         self.newSaveNameError = ""
 
     def draw(self):
+        # The text-input suppression only lasts the frame naming opened in.
+        self._suppressTextInput = False
         self.renderer.clearScreen(palette.BLACK)
         self.drawTitle()
 
@@ -537,12 +614,25 @@ class SaveSelectionScreen(Screen):
             self.drawDeleteConfirmation()
         elif self.namingNewSave:
             self.drawNamingDialog()
+        else:
+            self.drawControlsHint()
+
+    def drawControlsHint(self):
+        x, y = self.renderer.getDisplaySize()
+        self.renderer.drawText(
+            "Up/Down: choose  -  Enter: play  -  C: new  -  Bksp: delete  -  T: sort  -  Esc: back",
+            x / 2,
+            y - 14,
+            16,
+            palette.MEDIUM_GRAY,
+        )
 
     def onExit(self):
         if self.nextScreen == ScreenType.WORLD_SCREEN:
             self.initializeWorldScreen()
 
         self.scrollOffset = 0
+        self._selectedIndex = 0
         self.confirmingDelete = None
         self.namingNewSave = False
         self.newSaveNameInput = ""

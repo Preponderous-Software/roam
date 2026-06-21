@@ -39,18 +39,10 @@ class InventoryScreen(Screen):
         self.craftPanelOpen = False
         self.recipeRegistry = RecipeRegistry()
         self.lastCraftToggleTime = 0
+        self._craftCursor = 0
 
     def _drawSelectionBorder(self, x, y, width, height):
-        borderWidth = 3
-        color = (255, 255, 0)
-        self.renderer.drawRectangle(x, y, width, borderWidth, color)
-        self.renderer.drawRectangle(
-            x, y + height - borderWidth, width, borderWidth, color
-        )
-        self.renderer.drawRectangle(x, y, borderWidth, height, color)
-        self.renderer.drawRectangle(
-            x + width - borderWidth, y, borderWidth, height, color
-        )
+        self.renderer.drawSelectionHighlight(x, y, width, height, (255, 255, 0))
 
     def swapCursorSlotWithInventorySlotByIndex(self, index):
         destSlot = self.inventory.getInventorySlots()[index]
@@ -68,6 +60,34 @@ class InventoryScreen(Screen):
             destSlot.setContents(self.cursorSlot.getContents())
             self.cursorSlot.setContents(temp)
 
+    _ITEMS_PER_ROW = 5
+    _NAV_KEYS = frozenset(
+        {
+            KeyCode.UP,
+            KeyCode.DOWN,
+            KeyCode.LEFT,
+            KeyCode.RIGHT,
+            KeyCode.W,
+            KeyCode.A,
+            KeyCode.S,
+            KeyCode.RETURN,
+            KeyCode.KP_ENTER,
+            KeyCode.SPACE,
+            KeyCode.D,
+        }
+    )
+
+    def _announceSelectedSlot(self):
+        slot = self.inventory.getInventorySlots()[
+            self.inventory.getSelectedInventorySlotIndex()
+        ]
+        if slot.isEmpty():
+            self.status.set("Empty slot")
+        else:
+            item = slot.getContents()[0]
+            count = slot.getNumItems()
+            self.status.set(item.getName() + (f" x{count}" if count > 1 else ""))
+
     def handleKeyDownEvent(self, key):
         kb = self.keyBindings
         if key == KeyCode.ESCAPE and self.craftPanelOpen:
@@ -75,8 +95,50 @@ class InventoryScreen(Screen):
             return
         if key == kb.getKey("inventory") or key == KeyCode.ESCAPE:
             self.switchToWorldScreen()
-        elif key == kb.getKey("screenshot"):
+            return
+        if key == kb.getKey("screenshot"):
             self.renderer.captureScreenshot()
+            return
+        # When the craft panel is open, arrow keys / W S and Enter navigate recipes.
+        if self.craftPanelOpen:
+            recipes = self.recipeRegistry.getRecipes()
+            if key in (KeyCode.UP, KeyCode.W):
+                self._craftCursor = max(0, self._craftCursor - 1)
+                return
+            if key in (KeyCode.DOWN, KeyCode.S):
+                if recipes:
+                    self._craftCursor = min(len(recipes) - 1, self._craftCursor + 1)
+                return
+            if key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
+                if 0 <= self._craftCursor < len(recipes):
+                    self.craftRecipe(recipes[self._craftCursor])
+                return
+        if key == KeyCode.C:
+            self.toggleCraftPanel()
+            return
+        if key in self._NAV_KEYS:
+            idx = self.inventory.getSelectedInventorySlotIndex()
+            n = len(self.inventory.getInventorySlots())
+            cols = self._ITEMS_PER_ROW
+            moved = False
+            if key == KeyCode.RIGHT:
+                self.inventory.setSelectedInventorySlotIndex((idx + 1) % n)
+                moved = True
+            elif key in (KeyCode.LEFT, KeyCode.A):
+                self.inventory.setSelectedInventorySlotIndex((idx - 1) % n)
+                moved = True
+            elif key in (KeyCode.DOWN, KeyCode.S):
+                self.inventory.setSelectedInventorySlotIndex(min(idx + cols, n - 1))
+                moved = True
+            elif key in (KeyCode.UP, KeyCode.W):
+                self.inventory.setSelectedInventorySlotIndex(max(idx - cols, 0))
+                moved = True
+            elif key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
+                self.swapCursorSlotWithInventorySlotByIndex(idx)
+            elif key == KeyCode.D:
+                self.dropCursorSlot()
+            if moved:
+                self._announceSelectedSlot()
         else:
             self._handleHotbarKey(key)
 
@@ -168,12 +230,33 @@ class InventoryScreen(Screen):
             palette.WHITE,
         )
         self.renderer.drawText(
-            "Left-click: swap  -  Right-click: select hotbar  -  Drop button: discard",
+            "Arrows / W A S: navigate  -  Enter/Space: pick up / put down  -  D: discard held  -  C: craft",
             backgroundX,
-            backgroundY + backgroundHeight + 45,
-            16,
+            backgroundY + backgroundHeight + 42,
+            14,
             palette.MEDIUM_GRAY,
         )
+        if self.renderer.supportsImageLoading():
+            self.renderer.drawText(
+                "Left-click: swap  -  Right-click: select hotbar  -  Drop button: discard",
+                backgroundX,
+                backgroundY + backgroundHeight + 58,
+                14,
+                palette.DIM_GRAY,
+            )
+        if not self.cursorSlot.isEmpty():
+            heldItem = self.cursorSlot.getContents()[0]
+            heldCount = self.cursorSlot.getNumItems()
+            heldText = "Holding: " + heldItem.getName()
+            if heldCount > 1:
+                heldText += " x" + str(heldCount)
+            self.renderer.drawText(
+                heldText,
+                backgroundX + backgroundWidth / 2,
+                backgroundY - 20,
+                18,
+                (255, 255, 160),
+            )
 
         if hoveredItemName is not None:
             screenW, screenH = self.renderer.getDisplaySize()
@@ -201,6 +284,8 @@ class InventoryScreen(Screen):
             return
         self.lastCraftToggleTime = now
         self.craftPanelOpen = not self.craftPanelOpen
+        if self.craftPanelOpen:
+            self._craftCursor = 0
 
     def drawCraftButton(self):
         backgroundX = self.renderer.getDisplayWidth() / 4
@@ -271,10 +356,10 @@ class InventoryScreen(Screen):
         recipes = self.recipeRegistry.getRecipes()
         craftableCount = sum(1 for r in recipes if r.canCraft(self.inventory))
         self.renderer.drawText(
-            f"{craftableCount} / {len(recipes)} craftable",
+            f"{craftableCount} / {len(recipes)} craftable  —  Up/Down: navigate  Enter: craft  C/Esc: close",
             panelX + panelWidth / 2,
             panelY + 40,
-            14,
+            12,
             palette.MEDIUM_GRAY,
         )
         startY, rowStride, recipeButtonHeight, recipeMargin = self._craftRowLayout(
@@ -330,6 +415,14 @@ class InventoryScreen(Screen):
                     recipeY + recipeButtonHeight / 2,
                     16,
                     (210, 210, 210),
+                )
+            if i == self._craftCursor:
+                self.renderer.drawSelectionHighlight(
+                    panelX + recipeMargin,
+                    recipeY,
+                    panelWidth - 2 * recipeMargin,
+                    recipeButtonHeight,
+                    (255, 255, 0),
                 )
 
     def craftRecipe(self, recipe):

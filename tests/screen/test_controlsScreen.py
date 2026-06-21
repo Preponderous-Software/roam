@@ -2,7 +2,6 @@ from rendering.keyCode import KeyCode
 from screen.controlsScreen import ControlsScreen
 from screen.screenType import ScreenType
 
-
 # Characterization tests for the ControlsScreen rebind state machine. They lock
 # in the screen's current behavior (no behavior change intended) — the screen
 # had no dedicated test file before this.
@@ -118,7 +117,7 @@ def test_active_conflicts_detects_a_pending_collision(resolve):
     assert "move_left" in conflicts
 
 
-def test_scroll_offset_increments_and_clamps_at_zero(resolve):
+def test_cursor_moves_with_scroll(resolve):
     screen = resolve(ControlsScreen)
 
     class _Wheel:
@@ -126,9 +125,9 @@ def test_scroll_offset_increments_and_clamps_at_zero(resolve):
             self.scrollY = scrollY
 
     screen.handleScrollEvent(_Wheel(-1))
-    assert screen.scrollOffset == 1
+    assert screen._cursor == 1
     screen.handleScrollEvent(_Wheel(1))
-    assert screen.scrollOffset == 0
+    assert screen._cursor == 0
     # Cannot scroll above the top.
     screen.handleScrollEvent(_Wheel(1))
-    assert screen.scrollOffset == 0
+    assert screen._cursor == 0

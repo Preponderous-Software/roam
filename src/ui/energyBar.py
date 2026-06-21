@@ -28,6 +28,11 @@ class EnergyBar:
         xpos = 0 + offsetX
         ypos = y - y / 64 + offsetY
         energyRatio = self.player.getEnergy() / self.player.getTargetEnergy()
+
+        if not self.renderer.supportsImageLoading():
+            self._drawText(xpos, ypos, energyRatio)
+            return
+
         width = x * energyRatio
         fullWidth = x
         height = y / 64
@@ -62,3 +67,12 @@ class EnergyBar:
             ceil(height) - 1,
             palette.BLACK,
         )
+
+    def _drawText(self, xpos, ypos, energyRatio):
+        BAR_WIDTH = 16
+        filled = max(0, min(BAR_WIDTH, round(energyRatio * BAR_WIDTH)))
+        bar = "=" * filled + " " * (BAR_WIDTH - filled)
+        energy = ceil(self.player.getEnergy())
+        target = self.player.getTargetEnergy()
+        label = f"E:[{bar}] {energy}/{target}"
+        self.renderer.drawTextLeftAligned(label, xpos, ypos, 12, palette.WHITE)

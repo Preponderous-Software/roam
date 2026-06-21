@@ -6,10 +6,10 @@
 > in any browser (self-contained, no dependencies).
 
 
-> Status: **proposal / not yet implemented.** No source has been changed. This
-> document is the agreed target architecture and phased migration plan for
-> letting Roam run behind multiple frontends (pygame today; text and web
-> later) without rewriting game logic.
+> Status: **text frontend shipped** (PR #477). The Renderer / InputSource / Clock
+> seam described here is fully implemented; pygame and a terminal TUI backend
+> both run behind it. Launch with `python3 src/roam.py --text` to use the TUI.
+> Web frontend remains follow-on work.
 
 ## 1. Goal
 
@@ -23,9 +23,9 @@ The goal is a clean seam so the same screen/game logic can drive:
 by implementing two interfaces — one for output, one for input — plus a small
 set of backend-neutral value types. Game logic should never import `pygame`.
 
-This is a **refactor**, not a feature: the deliverable is the seam and the
-pygame implementation behind it. Building an actual text or web frontend is
-follow-on work that this plan unblocks.
+This was originally scoped as a **refactor** — the deliverable was the seam
+and the pygame implementation behind it. The text frontend has since been
+built on that seam (PR #477). A web frontend remains follow-on work.
 
 ## 2. Current state (measured, not estimated)
 

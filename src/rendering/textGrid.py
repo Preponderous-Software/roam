@@ -11,20 +11,41 @@ class TextGrid:
         self.columns = columns
         self.rows = rows
         self._blank = blank
+        self._clip = None  # (col0, row0, col1, row1) exclusive, or None
         self.clear()
+
+    def setClipRegion(self, col0, row0, col1, row1):
+        """Restrict all subsequent writes to cells in [col0,col1) × [row0,row1).
+        Pass None for col0 to clear the clip region."""
+        self._clip = None if col0 is None else (col0, row0, col1, row1)
 
     def clear(self):
         self._cells = [[self._blank] * self.columns for _ in range(self.rows)]
+        self._colors = [[None] * self.columns for _ in range(self.rows)]
 
-    def _inBounds(self, column, row):
+    def _inGridBounds(self, column, row):
         return 0 <= column < self.columns and 0 <= row < self.rows
 
+    def _inWriteBounds(self, column, row):
+        if not self._inGridBounds(column, row):
+            return False
+        if self._clip is not None:
+            col0, row0, col1, row1 = self._clip
+            return col0 <= column < col1 and row0 <= row < row1
+        return True
+
     def setChar(self, column, row, char):
-        if self._inBounds(column, row):
+        if self._inWriteBounds(column, row):
             self._cells[row][column] = char
 
+    def setColor(self, column, row, ansiCode):
+        """Attach an ANSI foreground color code to a cell (e.g. 32 for green).
+        Pass None to clear. Only applied when toString() builds the frame."""
+        if self._inWriteBounds(column, row):
+            self._colors[row][column] = ansiCode
+
     def getChar(self, column, row):
-        if self._inBounds(column, row):
+        if self._inGridBounds(column, row):
             return self._cells[row][column]
         return None
 
@@ -57,4 +78,23 @@ class TextGrid:
             self.setChar(right, r, "|")
 
     def toString(self):
-        return "\n".join("".join(row).rstrip() for row in self._cells)
+        lines = []
+        for rowIdx, row in enumerate(self._cells):
+            colorRow = self._colors[rowIdx]
+            # Determine last non-space column so we can rstrip correctly even
+            # when ANSI codes are present (they would foil a plain str.rstrip).
+            last = -1
+            for c in range(self.columns - 1, -1, -1):
+                if row[c] != " ":
+                    last = c
+                    break
+            parts = []
+            for c in range(last + 1):
+                char = row[c]
+                code = colorRow[c]
+                if code is not None and char != " ":
+                    parts.append(f"\033[{code}m{char}\033[0m")
+                else:
+                    parts.append(char)
+            lines.append("".join(parts))
+        return "\n".join(lines)

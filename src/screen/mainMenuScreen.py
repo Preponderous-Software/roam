@@ -31,6 +31,7 @@ class MainMenuScreen(Screen):
         self.nextScreen = ScreenType.SAVE_SELECTION_SCREEN
         self.changeScreen = False
         self._cachedVersionLabel = None
+        self._selectedIndex = 0  # 0=Play, 1=Settings, 2=Quit
 
     def switchToSaveSelectionScreen(self):
         self.nextScreen = ScreenType.SAVE_SELECTION_SCREEN
@@ -57,54 +58,42 @@ class MainMenuScreen(Screen):
             "Explore a procedurally-generated world", xpos, ypos, 24, palette.GRAY
         )
 
+    _MENU_ITEMS = [
+        ("Play", "switchToSaveSelectionScreen"),
+        ("Settings", "switchToConfigScreen"),
+        ("Quit", "quitApplication"),
+    ]
+
     def drawMenuButtons(self):
         x, y = self.renderer.getDisplaySize()
         width = x / 5
         height = y / 10
         xpos = x / 2 - width / 2
-        ypos = y / 2 - height / 2
+        startY = y / 2 - height / 2
         margin = 10
-        backgroundColor = palette.WHITE
-        self.renderer.drawButton(
-            xpos,
-            ypos,
-            width,
-            height,
-            backgroundColor,
-            palette.BLACK,
-            30,
-            "Play",
-            self.switchToSaveSelectionScreen,
-        )
-        ypos = ypos + height + margin
-        self.renderer.drawButton(
-            xpos,
-            ypos,
-            width,
-            height,
-            backgroundColor,
-            palette.BLACK,
-            30,
-            "Settings",
-            self.switchToConfigScreen,
-        )
-        ypos = ypos + height + margin
-        self.renderer.drawButton(
-            xpos,
-            ypos,
-            width,
-            height,
-            backgroundColor,
-            palette.BLACK,
-            30,
-            "Quit",
-            self.quitApplication,
-        )
-        ypos = ypos + height + margin + 6
+        for i, (label, method) in enumerate(self._MENU_ITEMS):
+            btnY = startY + i * (height + margin)
+            self.renderer.drawButton(
+                xpos,
+                btnY,
+                width,
+                height,
+                palette.WHITE,
+                palette.BLACK,
+                30,
+                label,
+                getattr(self, method),
+            )
+            if i == self._selectedIndex:
+                self.renderer.drawSelectionHighlight(
+                    xpos, btnY, width, height, (255, 255, 0)
+                )
+        hintY = startY + len(self._MENU_ITEMS) * (height + margin) + 6
+        selectedLabel = self._MENU_ITEMS[self._selectedIndex][0]
         self.renderer.drawText(
-            "Enter / Space: Play  -  Esc: Quit",
+            f"Up/Down: navigate  -  Enter: {selectedLabel}  -  Esc: Quit",
             x / 2,
-            ypos,
+            hintY,
             16,
             (160, 160, 160),
         )
@@ -146,8 +135,12 @@ class MainMenuScreen(Screen):
     def handleKeyDownEvent(self, key):
         if key == KeyCode.ESCAPE:
             self.quitApplication()
+        elif key == KeyCode.UP:
+            self._selectedIndex = (self._selectedIndex - 1) % len(self._MENU_ITEMS)
+        elif key == KeyCode.DOWN:
+            self._selectedIndex = (self._selectedIndex + 1) % len(self._MENU_ITEMS)
         elif key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
-            self.switchToSaveSelectionScreen()
+            getattr(self, self._MENU_ITEMS[self._selectedIndex][1])()
         elif key == KeyCode.U:
             self.openUpdatePage()
 

@@ -10,6 +10,7 @@ frontend (frontend-abstraction epic #433, text-UI #239).
 dependencies are stubbed; the menu needs only a version string and an
 update-checker, so it runs without a save file or network.
 """
+
 import os
 import sys
 
