@@ -2,6 +2,7 @@ import os
 import sys
 
 from config.config import Config
+from rendering.inputEvent import EventType, InputEvent
 from rendering.textClock import TextClock
 from rendering.textInputSource import TextInputSource
 from rendering.textRenderer import TextRenderer
@@ -27,15 +28,15 @@ from rendering.textRenderer import TextRenderer
 #       * Place (right-click): use F to place/interact with the tile in front of you.
 #       * Hotbar slots cannot be clicked; use 1–0 keys instead.
 #       * HUD elements (hotbar, minimap, status) cannot be dragged.
-#       * The "hover over a tile to show its name" status tooltip always reads
-#         whatever entity is at grid cell (0, 0).
+#       * The "hover over a tile" status tooltip is suppressed (no mouse).
 #       * The scroll wheel cannot cycle the hotbar; use 1–0 or [ ] instead.
 #   - No held-key state. isPressed() always returns False, so Run (hold Shift)
 #     and Crouch (hold Ctrl) have no effect. Each directional keypress moves
 #     the player exactly one tile (a synthetic KEY_UP follows each movement
 #     KEY_DOWN to prevent OS key-repeat from causing continuous walking).
-#   - Terminal resize is handled via SIGWINCH (Unix only). On non-Unix
-#     platforms the grid is sized once at startup; restart after resizing.
+#   - Terminal resize is handled via SIGWINCH (Unix only): the grid is resized
+#     and a WINDOW_RESIZE event is queued so worldScreen recalculates cell dims.
+#     On non-Unix platforms the grid is sized once at startup; restart after resizing.
 #
 # RENDERING
 #   - Minimap renders as a [map] text placeholder. Room PNG files are never
@@ -89,6 +90,7 @@ class TextFrontend:
 
     def _onResize(self, signum, frame):
         self._renderer.resize(self._termCols(), self._termRows())
+        self._inputSource.queueEvent(InputEvent(EventType.WINDOW_RESIZE))
 
     def _enterCbreakMode(self):
         # Non-canonical, no-echo input so keystrokes arrive immediately. Skipped

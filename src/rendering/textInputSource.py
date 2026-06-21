@@ -58,8 +58,14 @@ _CONTROL_CHARS = {
 class TextInputSource(InputSource):
     def __init__(self, charReader=None):
         self._charReader = charReader if charReader is not None else _readStdinChars
+        self._pendingEvents = []
+
+    def queueEvent(self, event):
+        self._pendingEvents.append(event)
 
     def pollEvents(self):
+        pending = self._pendingEvents[:]
+        self._pendingEvents.clear()
         chars = self._charReader()
         events = []
         index = 0
@@ -86,7 +92,7 @@ class TextInputSource(InputSource):
             if char.isprintable():
                 events.append(InputEvent(EventType.TEXT_INPUT, text=char))
             index += 1
-        return events
+        return pending + events
 
     def isPressed(self, keyCode):
         # A line/character terminal has no reliable held-key state.
