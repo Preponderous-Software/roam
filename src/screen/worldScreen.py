@@ -1216,8 +1216,8 @@ class WorldScreen:
         if self.config.dayNightCycleEnabled:
             phase = self.dayNightCycle.getPhase(self.tickCounter.getTick())
             label += f" {phase}"
-        self.renderer.drawRectangle(drawX, drawY, 96, 20, palette.NEAR_BLACK)
-        self.renderer.drawText(label, drawX + 48, drawY + 10, 12, palette.MEDIUM_GRAY)
+        self.renderer.drawRectangle(drawX, drawY, max(96, len(label) * 8), 20, palette.NEAR_BLACK)
+        self.renderer.drawTextLeftAligned(label, drawX, drawY + 10, 12, palette.MEDIUM_GRAY)
 
     def drawMiniMap(self):
         if not self.renderer.supportsImageLoading():
