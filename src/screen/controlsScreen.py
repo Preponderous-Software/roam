@@ -99,9 +99,10 @@ class ControlsScreen(Screen):
 
             isConflict = action in conflicts
             isCursor = absIndex == self._cursor
-            labelColor = (255, 100, 100) if isConflict else palette.WHITE
+            isAlt = action.startswith("alt_")
+            labelColor = (255, 100, 100) if isConflict else (palette.MEDIUM_GRAY if isAlt else palette.WHITE)
             self.renderer.drawText(
-                label, labelX, rowY + buttonHeight / 2, 20, labelColor
+                label, labelX + (18 if isAlt else 0), rowY + buttonHeight / 2, 20, labelColor
             )
 
             if self.waitingForKey == action:
