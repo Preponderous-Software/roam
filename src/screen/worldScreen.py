@@ -974,7 +974,7 @@ class WorldScreen:
             self._handleUtilityKey(key, kb)
 
     def _handleUtilityKey(self, key, kb):
-        if key == kb.getKey("toggle_debug"):
+        if key == kb.getKey("toggle_debug") or key == kb.getKey("alt_toggle_debug"):
             self.config.debug = not self.config.debug
             self.status.set("Debug info " + ("ON" if self.config.debug else "OFF"))
         elif key == kb.getKey("toggle_minimap"):
@@ -997,7 +997,7 @@ class WorldScreen:
             self.status.set(
                 "Camera follow " + ("ON" if self.config.cameraFollowPlayer else "OFF")
             )
-        elif key == kb.getKey("toggle_help"):
+        elif key == kb.getKey("toggle_help") or key == kb.getKey("alt_toggle_help"):
             self.showHelp = not self.showHelp
         elif key == kb.getKey("look"):
             self._lookAtFacingTile()
@@ -1431,7 +1431,9 @@ class WorldScreen:
         kb = self.keyBindings
 
         titleY = overlayY + 25
-        closeKeyName = kb.getKeyName("toggle_help").upper()
+        isTextMode = not self.renderer.supportsImageLoading()
+        closeHelpAction = "alt_toggle_help" if isTextMode else "toggle_help"
+        closeKeyName = kb.getKeyName(closeHelpAction).upper()
         self.renderer.drawText(
             f"Controls  ({closeKeyName} to close)",
             x / 2,
@@ -1443,7 +1445,6 @@ class WorldScreen:
         def keyName(action):
             return kb.getKeyName(action).upper()
 
-        isTextMode = not self.renderer.supportsImageLoading()
         if isTextMode:
             helpLines = [
                 "W/A/S/D or Arrows  -  Move",
@@ -1457,11 +1458,11 @@ class WorldScreen:
                 f"{keyName('look')}  -  Examine facing tile",
                 f"{keyName('toggle_minimap')}  -  Toggle minimap",
                 f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",
-                f"{keyName('toggle_debug')}  -  Toggle debug info",
+                f"{keyName('alt_toggle_debug')}  -  Toggle debug info",
                 f"{keyName('screenshot')}  -  Take screenshot (saved as .txt)",
                 f"{keyName('codex')}  -  Open Codex",
                 "Esc  -  Open menu",
-                f"{keyName('toggle_help')}  -  Toggle this help",
+                f"{keyName('alt_toggle_help')}  -  Toggle this help",
             ]
         else:
             helpLines = [
@@ -1690,7 +1691,8 @@ class WorldScreen:
             self._drawTextMinimap()
 
         if not self.showHelp:
-            helpKeyName = self.keyBindings.getKeyName("toggle_help").upper()
+            helpAction = "alt_toggle_help" if not self.renderer.supportsImageLoading() else "toggle_help"
+            helpKeyName = self.keyBindings.getKeyName(helpAction).upper()
             hintLabel = f"{helpKeyName}: Help"
             hintX = self.renderer.getDisplayWidth() - 50
             hintY = self.renderer.getDisplayHeight() - 20

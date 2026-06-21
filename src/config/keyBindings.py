@@ -44,7 +44,9 @@ class KeyBindings:
         "screenshot": KeyCode.PRINTSCREEN,
         "toggle_camera_follow": KeyCode.C,
         "toggle_debug": KeyCode.F3,
+        "alt_toggle_debug": KeyCode.BACKSLASH,
         "toggle_help": KeyCode.F1,
+        "alt_toggle_help": KeyCode.H,
         "codex": KeyCode.L,
     }
 
@@ -81,7 +83,9 @@ class KeyBindings:
         "screenshot": "Screenshot",
         "toggle_camera_follow": "Camera Follow",
         "toggle_debug": "Toggle Debug",
+        "alt_toggle_debug": "Toggle Debug (Alt)",
         "toggle_help": "Toggle Help",
+        "alt_toggle_help": "Toggle Help (Alt)",
         "codex": "Codex",
     }
 

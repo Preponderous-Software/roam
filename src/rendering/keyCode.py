@@ -25,6 +25,7 @@ class KeyCode(IntEnum):
     D = 100
     F = 102
     G = 103
+    H = 104
     I = 105
     L = 108
     M = 109
@@ -65,6 +66,7 @@ class KeyCode(IntEnum):
     F3 = 1073741884
     PRINTSCREEN = 1073741894
     LEFTBRACKET = 91
+    BACKSLASH = 92
     RIGHTBRACKET = 93
     EQUALS = 61
     MINUS = 45
@@ -84,6 +86,7 @@ _DISPLAY_NAMES = {
     KeyCode.D: "d",
     KeyCode.F: "f",
     KeyCode.G: "g",
+    KeyCode.H: "h",
     KeyCode.I: "i",
     KeyCode.L: "l",
     KeyCode.M: "m",
@@ -113,6 +116,7 @@ _DISPLAY_NAMES = {
     KeyCode.F3: "f3",
     KeyCode.PRINTSCREEN: "print screen",
     KeyCode.LEFTBRACKET: "[",
+    KeyCode.BACKSLASH: "\\",
     KeyCode.RIGHTBRACKET: "]",
     KeyCode.EQUALS: "=",
     KeyCode.MINUS: "-",
