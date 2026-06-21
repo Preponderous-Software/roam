@@ -226,13 +226,14 @@ class InventoryScreen(Screen):
             14,
             palette.MEDIUM_GRAY,
         )
-        self.renderer.drawText(
-            "Left-click: swap  -  Right-click: select hotbar  -  Drop button: discard",
-            backgroundX,
-            backgroundY + backgroundHeight + 58,
-            14,
-            palette.DIM_GRAY,
-        )
+        if self.renderer.supportsImageLoading():
+            self.renderer.drawText(
+                "Left-click: swap  -  Right-click: select hotbar  -  Drop button: discard",
+                backgroundX,
+                backgroundY + backgroundHeight + 58,
+                14,
+                palette.DIM_GRAY,
+            )
         if not self.cursorSlot.isEmpty():
             heldItem = self.cursorSlot.getContents()[0]
             heldCount = self.cursorSlot.getNumItems()

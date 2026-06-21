@@ -1213,8 +1213,11 @@ class WorldScreen:
         dirArrows = {0: "^", 1: "<", 2: "v", 3: ">"}
         facing = dirArrows.get(self.player.getDirection(), ".")
         label = f"[{roomX},{roomY}] {facing}"
-        self.renderer.drawRectangle(drawX, drawY, 80, 20, palette.NEAR_BLACK)
-        self.renderer.drawText(label, drawX + 40, drawY + 10, 12, palette.MEDIUM_GRAY)
+        if self.config.dayNightCycleEnabled:
+            phase = self.dayNightCycle.getPhase(self.tickCounter.getTick())
+            label += f" {phase}"
+        self.renderer.drawRectangle(drawX, drawY, 96, 20, palette.NEAR_BLACK)
+        self.renderer.drawText(label, drawX + 48, drawY + 10, 12, palette.MEDIUM_GRAY)
 
     def drawMiniMap(self):
         if not self.renderer.supportsImageLoading():
@@ -1673,7 +1676,7 @@ class WorldScreen:
 
         self._drawHotbar()
 
-        if self.config.dayNightCycleEnabled:
+        if self.config.dayNightCycleEnabled and self.renderer.supportsImageLoading():
             self._drawDayNightPhaseIndicator()
 
         if self.config.debug:
