@@ -3,6 +3,7 @@ from entity.banana import Banana
 from entity.bed import Bed
 from entity.chest import Chest
 from entity.oakWood import OakWood
+from entity.torch import Torch
 from entity.woodFloor import WoodFloor
 from gameLogging.logger import getLogger
 from world.room import Room
@@ -70,6 +71,12 @@ class StartingHomeGenerator:
         chestLocation = grid.getLocationByCoordinates(right - 1, top + 1)
         if chestLocation != -1:
             room.addEntityToLocation(Chest(), chestLocation)
+
+        # A torch for light, on a free bottom corner (the bed and chest occupy
+        # the two top corners).
+        torchLocation = grid.getLocationByCoordinates(left + 1, bottom - 1)
+        if torchLocation != -1:
+            room.addEntityToLocation(Torch(), torchLocation)
 
         _logger.info("starting home generated", roomX=room.getX(), roomY=room.getY())
         return grid.getLocationByCoordinates(center, center)
