@@ -301,3 +301,35 @@ def test_multiple_chars_in_burst_decoded_in_order():
     source = _sourceFeeding("acd")
     keys = [e.key for e in source.pollEvents() if e.type is EventType.KEY_DOWN]
     assert keys == [KeyCode.A, KeyCode.C, KeyCode.D]
+
+
+def test_queued_event_returned_before_char_events():
+    from rendering.inputEvent import InputEvent
+
+    source = _sourceFeeding("a")
+    resize = InputEvent(EventType.WINDOW_RESIZE)
+    source.queueEvent(resize)
+    events = source.pollEvents()
+    assert events[0] is resize
+    assert any(e.type is EventType.KEY_DOWN and e.key is KeyCode.A for e in events)
+
+
+def test_queued_event_returned_exactly_once():
+    from rendering.inputEvent import InputEvent
+
+    source = _sourceFeeding("")
+    source.queueEvent(InputEvent(EventType.WINDOW_RESIZE))
+    first = source.pollEvents()
+    second = source.pollEvents()
+    assert len([e for e in first if e.type is EventType.WINDOW_RESIZE]) == 1
+    assert len([e for e in second if e.type is EventType.WINDOW_RESIZE]) == 0
+
+
+def test_multiple_queued_events_all_returned():
+    from rendering.inputEvent import InputEvent
+
+    source = _sourceFeeding("")
+    source.queueEvent(InputEvent(EventType.WINDOW_RESIZE))
+    source.queueEvent(InputEvent(EventType.WINDOW_RESIZE))
+    events = source.pollEvents()
+    assert len([e for e in events if e.type is EventType.WINDOW_RESIZE]) == 2

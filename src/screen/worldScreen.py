@@ -2208,7 +2208,8 @@ class WorldScreen:
         self.currentRoom.tickExcrement(self.tickCounter.getTick(), self.config)
         self.currentRoom.tickCrops(self.tickCounter.getTick(), self.config)
 
-        self.handleMouseOver()
+        if self.renderer.supportsImageLoading():
+            self.handleMouseOver()
 
         if self.deathRespawnTicksRemaining == 0:
             self.handlePlayerActions()
