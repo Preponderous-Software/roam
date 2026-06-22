@@ -8,8 +8,8 @@ The planning document can be found [here](./PLANNING.md)
 Key | Action
 ------------ | -------------
 W / A / S / D (or Arrow Keys) | Move up / left / down / right
-Shift | Run
-Ctrl | Crouch
+Shift (hold) or R (toggle) | Run
+Ctrl (hold) or Z (toggle) | Crouch
 G | Gather / Harvest mature crop
 F | Place item / Interact
 X | Look (examine the tile you are facing)
@@ -34,6 +34,8 @@ Right Mouse (inventory slot) | Select inventory slot (inventory screen)
 > **Tip:** Keybindings are configurable in-game. Open the options menu and select **Controls** to view or remap bindings. Remapped keys are respected across all screens (world, inventory, stats, etc.).
 >
 > **Tip:** On keyboards without F-keys (e.g. Android / Userland), use **H** for the help overlay and **`\`** for debug info.
+>
+> **Tip:** In text / terminal mode (`--text`), a terminal can't detect held keys, so use the toggles **R** (run) and **Z** (crouch) instead of holding Shift / Ctrl. The active state is shown in the status bar.
 
 ## Download & Install (recommended)
 The easiest way to play Roam — no Python and no command line. Grab the latest build from the [Releases page](https://github.com/Preponderous-Software/roam/releases):
