@@ -64,8 +64,9 @@ class TextInputSource(InputSource):
         self._pendingEvents.append(event)
 
     def pollEvents(self):
-        pending = self._pendingEvents[:]
-        self._pendingEvents.clear()
+        # Atomic swap under CPython's GIL: a SIGWINCH arriving between the two
+        # lines of a copy-then-clear could silently drop the queued event.
+        pending, self._pendingEvents = self._pendingEvents, []
         chars = self._charReader()
         events = []
         index = 0
