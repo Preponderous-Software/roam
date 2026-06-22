@@ -56,7 +56,7 @@ class MapImageUpdater:
         try:
             with self.roompngsLock:
                 image = self.mapImageGenerator.generate()
-                image.save(self.mapImageGenerator.mapImagePath)
+                image.save(self.mapImageGenerator.getMapImagePath())
                 self.mapImageGenerator.clearRoomImages()
             _logger.info("map image update completed")
         except Exception:

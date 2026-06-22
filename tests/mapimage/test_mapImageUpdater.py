@@ -136,6 +136,33 @@ def test_update_if_cooldown_over_skips_when_within_cooldown(
     updater.mapImageGenerator.generate.assert_not_called()
 
 
+def test_map_image_written_to_active_save_directory_after_change(
+    resolve, override_dependency, test_config, tmp_path
+):
+    # Regression (#495): the updater/generator is constructed at startup with the
+    # default save dir, then saveSelectionScreen.selectSave() reassigns
+    # config.pathToSaveDirectory. The map image must be written to the active
+    # save dir (read by drawMiniMap), not the one captured at construction. The
+    # bug was that the pygame minimap never appeared because the file landed in
+    # the stale directory.
+    from PIL import Image
+
+    # generator captured tmp_path (the "startup default") at construction
+    updater, _ = _createUpdater(resolve, override_dependency, test_config, tmp_path)
+    startupDir = tmp_path
+
+    saveDir = tmp_path / "save1"
+    (saveDir / "roompngs").mkdir(parents=True)
+    Image.new("RGB", (10, 10), "red").save(str(saveDir / "roompngs" / "0_0.png"))
+    test_config.pathToSaveDirectory = str(saveDir)  # selectSave()
+
+    updater._doUpdateMapImage()  # run synchronously
+    updater.shutdown(wait=True)
+
+    assert (saveDir / "mapImage.png").is_file()
+    assert not (startupDir / "mapImage.png").is_file()
+
+
 def test_shutdown(resolve, override_dependency, test_config, tmp_path):
     updater, _ = _createUpdater(resolve, override_dependency, test_config, tmp_path)
 
