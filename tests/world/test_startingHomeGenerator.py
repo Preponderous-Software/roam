@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 from entity.bed import Bed
 from entity.chest import Chest
 from entity.oakWood import OakWood
+from entity.torch import Torch
 from entity.woodFloor import WoodFloor
 from src.player.player import Player
 from src.world.room import Room
@@ -67,6 +68,16 @@ def test_bed_and_chest_are_placed():
 
     assert hasEntityType(room, 6, 6, Bed)
     assert hasEntityType(room, 10, 6, Chest)
+
+
+def test_torch_is_placed_on_a_free_interior_corner():
+    room = createRoom(17)
+    StartingHomeGenerator().generate(room)
+
+    # Bottom-left interior corner; distinct from the bed/chest top corners.
+    assert hasEntityType(room, 6, 10, Torch)
+    assert not hasEntityType(room, 6, 10, Bed)
+    assert not hasEntityType(room, 6, 10, Chest)
 
 
 def test_small_room_skips_building():
