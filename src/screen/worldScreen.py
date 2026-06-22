@@ -41,6 +41,7 @@ from world.roomPreloader import RoomPreloader
 from world.tickCounter import TickCounter
 from world.dayNightCycle import DayNightCycle
 from world.map import Map
+from world.startingHomeGenerator import StartingHomeGenerator
 from player.player import Player
 from ui.status import Status
 from ui.hotbarLayout import (
@@ -130,6 +131,7 @@ class WorldScreen:
         self.activeChestRoom = None
         self._isRunning = False
         self._isCrouching = False
+        self.startingHomeGenerator = StartingHomeGenerator()
 
     def initialize(self):
         self.map = self.container.resolve(Map)
@@ -142,9 +144,18 @@ class WorldScreen:
             self.currentRoom = self.map.getRoom(0, 0)
             if self.currentRoom == -1:
                 self.currentRoom = self.map.generateNewRoom(0, 0)
-            self.currentRoom.addEntity(self.player)
             if self.map.consumeIsNewRoom(0, 0):
+                # Brand-new world: build a starting home at the origin and give
+                # the player a little food so they don't starve immediately.
                 self.stats.incrementRoomsExplored()
+                spawnLocation = self.startingHomeGenerator.generate(self.currentRoom)
+                self.startingHomeGenerator.grantStartingItems(self.player)
+                if spawnLocation != -1:
+                    self.currentRoom.addEntityToLocation(self.player, spawnLocation)
+                else:
+                    self.currentRoom.addEntity(self.player)
+            else:
+                self.currentRoom.addEntity(self.player)
 
         if os.path.exists(self.config.pathToSaveDirectory + "/playerAttributes.json"):
             self.loadPlayerAttributesFromFile()
