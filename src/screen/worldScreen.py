@@ -1216,6 +1216,34 @@ class WorldScreen:
         finally:
             self._pngSavePending.discard(roomKey)
 
+    # Half-width of the explored-rooms grid drawn in the text-mode minimap; the
+    # grid is (2 * radius + 1) rooms on a side, centered on the current room.
+    _TEXT_MINIMAP_RADIUS = 2
+
+    def _buildTextMinimapRows(self):
+        """Build the ASCII rows of the text-mode minimap: a square window of
+        rooms centered on the current room. The current room shows the facing
+        arrow, other rooms known this session show ``#``, and unknown rooms
+        show ``.``. North is up (smaller y at the top)."""
+        currentX = self.currentRoom.getX()
+        currentY = self.currentRoom.getY()
+        knownRooms = {(room.getX(), room.getY()) for room in self.map.getRooms()}
+        dirArrows = {0: "^", 1: "<", 2: "v", 3: ">"}
+        facing = dirArrows.get(self.player.getDirection(), "@")
+        radius = self._TEXT_MINIMAP_RADIUS
+        rows = []
+        for y in range(currentY - radius, currentY + radius + 1):
+            cells = []
+            for x in range(currentX - radius, currentX + radius + 1):
+                if x == currentX and y == currentY:
+                    cells.append(facing)
+                elif (x, y) in knownRooms:
+                    cells.append("#")
+                else:
+                    cells.append(".")
+            rows.append("".join(cells))
+        return rows
+
     def _drawTextMinimap(self):
         minimapOx, minimapOy = self.hudDragManager.getOffset("minimap")
         drawX = self.minimapX + minimapOx
@@ -1228,12 +1256,18 @@ class WorldScreen:
         if self.config.dayNightCycleEnabled:
             phase = self.dayNightCycle.getPhase(self.tickCounter.getTick())
             label += f" {phase}"
-        self.renderer.drawRectangle(
-            drawX, drawY, max(96, len(label) * 8), 20, palette.NEAR_BLACK
-        )
+        rows = self._buildTextMinimapRows()
+        lineHeight = 14
+        width = max(96, len(label) * 8, len(rows[0]) * 8)
+        height = 20 + len(rows) * lineHeight
+        self.renderer.drawRectangle(drawX, drawY, width, height, palette.NEAR_BLACK)
         self.renderer.drawTextLeftAligned(
             label, drawX, drawY + 10, 12, palette.MEDIUM_GRAY
         )
+        for index, row in enumerate(rows):
+            self.renderer.drawTextLeftAligned(
+                row, drawX, drawY + 24 + index * lineHeight, 12, palette.MEDIUM_GRAY
+            )
 
     def drawMiniMap(self):
         if not self.renderer.supportsImageLoading():
@@ -2108,7 +2142,7 @@ class WorldScreen:
             with self._saveLock:
                 self._saveInProgress = False
 
-        if self.config.showMiniMap:
+        if self.config.showMiniMap and self.renderer.supportsImageLoading():
             self.mapImageUpdater.updateMapImage()
 
     def shutdown(self):
