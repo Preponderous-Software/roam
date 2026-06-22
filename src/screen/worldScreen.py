@@ -11,7 +11,7 @@ from entity.chickenMeat import ChickenMeat
 from entity.living.bear import Bear
 from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
-from codex.codex import Codex
+from codex.codex import Codex, ENTITY_DISPLAY_NAMES
 from codex.codexJsonReaderWriter import CodexJsonReaderWriter
 from inventory.inventoryJsonReaderWriter import InventoryJsonReaderWriter
 from inventory.inventorySlot import InventorySlot
@@ -173,7 +173,7 @@ class WorldScreen:
         self.status.set("Entered the world")
         self.energyBar = self.container.resolve(EnergyBar)
 
-        self.discoverLivingEntitiesInRoom()
+        self.discoverEntitiesInRoom()
 
         self.hudDragManager.register("hotbar", self._getHotbarDefaultRect)
         self.hudDragManager.register("status", lambda: self.status.getDefaultRect())
@@ -421,7 +421,7 @@ class WorldScreen:
             self.currentRoom.getX(), self.currentRoom.getY(), self.map
         )
 
-        self.discoverLivingEntitiesInRoom()
+        self.discoverEntitiesInRoom()
 
     def movePlayer(self, direction: int):
         if self.player.isCrouching():
@@ -1960,11 +1960,19 @@ class WorldScreen:
         if entities is not None:
             self.codex.setDiscovered(entities)
 
-    def discoverLivingEntitiesInRoom(self):
-        for entityId, entity in self.currentRoom.getLivingEntities().items():
-            entityClassName = entity.__class__.__name__
-            if self.codex.discover(entityClassName):
-                self.status.set("New codex entry: " + entityClassName)
+    def discoverEntitiesInRoom(self):
+        seen = set()
+        for entity in self.currentRoom.getLivingEntities().values():
+            seen.add(entity.__class__.__name__)
+        for locationId in self.currentRoom.getGrid().getLocations():
+            location = self.currentRoom.getGrid().getLocation(locationId)
+            for entityId in list(location.getEntities().keys()):
+                entity = location.getEntity(entityId)
+                seen.add(entity.__class__.__name__)
+        for className in seen:
+            if self.codex.discover(className):
+                displayName = ENTITY_DISPLAY_NAMES.get(className, className)
+                self.status.set("New codex entry: " + displayName)
                 self.saveCodexToFile()
 
     def getNewLocationCoordinatesForLivingEntityBasedOnLocation(self, currentLocation):

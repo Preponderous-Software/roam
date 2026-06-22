@@ -1,7 +1,7 @@
 import pygame
 import pytest
 
-from codex.codex import ALL_LIVING_ENTITY_TYPES
+from codex.codex import ALL_ENTITY_TYPES, ALL_LIVING_ENTITY_TYPES
 from rendering.inputEvent import EventType, InputEvent
 from screen.codexScreen import CodexScreen
 
@@ -68,6 +68,13 @@ def test_scroll_does_not_go_below_zero(pygame_init, resolve, test_graphik):
 def test_all_living_entity_types_defined():
     assert "Bear" in ALL_LIVING_ENTITY_TYPES
     assert "Chicken" in ALL_LIVING_ENTITY_TYPES
+
+
+def test_all_entity_types_includes_non_living():
+    assert "Apple" in ALL_ENTITY_TYPES
+    assert "Grass" in ALL_ENTITY_TYPES
+    assert "Campfire" in ALL_ENTITY_TYPES
+    assert len(ALL_ENTITY_TYPES) > len(ALL_LIVING_ENTITY_TYPES)
 
 
 def test_codex_screen_shows_discovered(pygame_init, resolve, test_graphik):
