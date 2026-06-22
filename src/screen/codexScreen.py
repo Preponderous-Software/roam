@@ -1,5 +1,11 @@
 from appContainer import component
-from codex.codex import Codex, ALL_LIVING_ENTITY_TYPES, ENTITY_IMAGE_PATHS
+from codex.codex import (
+    Codex,
+    ALL_ENTITY_TYPES,
+    ALL_LIVING_ENTITY_TYPES,
+    ENTITY_DISPLAY_NAMES,
+    ENTITY_IMAGE_PATHS,
+)
 from config.config import Config
 from config.keyBindings import KeyBindings
 from rendering.renderer import Renderer
@@ -45,7 +51,7 @@ class CodexScreen(Screen):
         x, y = self.renderer.getDisplaySize()
         self.renderer.drawText("Codex", x / 2, 25, 36, palette.WHITE)
         discoveredCount = len(self.codex.getDiscoveredEntities())
-        totalCount = len(ALL_LIVING_ENTITY_TYPES)
+        totalCount = len(ALL_ENTITY_TYPES)
         self.renderer.drawText(
             f"{discoveredCount} of {totalCount} discovered",
             x / 2,
@@ -69,7 +75,7 @@ class CodexScreen(Screen):
 
     def drawEntries(self):
         x, y = self.renderer.getDisplaySize()
-        entries = ALL_LIVING_ENTITY_TYPES
+        entries = ALL_ENTITY_TYPES
 
         rowHeight = 45
         startY = 85
@@ -87,6 +93,7 @@ class CodexScreen(Screen):
             rowY = startY + i * rowHeight
             discovered = self.codex.hasDiscovered(entityName)
 
+            displayName = ENTITY_DISPLAY_NAMES.get(entityName, entityName)
             if discovered:
                 # Draw entity image
                 img = self._getEntityImage(entityName)
@@ -94,7 +101,7 @@ class CodexScreen(Screen):
                     self.renderer.drawImage(img, (int(imageX), int(rowY + 2)))
                 # Draw entity name left-aligned after the image
                 self.renderer.drawTextLeftAligned(
-                    entityName,
+                    displayName,
                     nameX,
                     rowY + rowHeight / 2,
                     22,
