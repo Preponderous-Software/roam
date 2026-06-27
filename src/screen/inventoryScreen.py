@@ -1,3 +1,4 @@
+import re
 import time
 from appContainer import component
 from config.config import Config
@@ -336,6 +337,10 @@ class InventoryScreen(Screen):
         recipeButtonHeight = max(20, rowStride - recipeMargin)
         return startY, rowStride, recipeButtonHeight, recipeMargin
 
+    @staticmethod
+    def _ingredientLabel(cls):
+        return re.sub(r"(?<=[a-z])(?=[A-Z])", " ", cls.__name__)
+
     def drawCraftPanel(self):
         if not self.craftPanelOpen:
             return
@@ -370,7 +375,7 @@ class InventoryScreen(Screen):
             recipeY = startY + i * rowStride
             ingredientText = ", ".join(
                 [
-                    str(count) + "x " + cls.__name__
+                    str(count) + "x " + self._ingredientLabel(cls)
                     for cls, count in recipe.getIngredients().items()
                 ]
             )
@@ -393,7 +398,7 @@ class InventoryScreen(Screen):
                 )
             else:
                 missingParts = [
-                    f"{required - self.inventory.getNumItemsByType(cls)} {cls.__name__}"
+                    f"{required - self.inventory.getNumItemsByType(cls)} {self._ingredientLabel(cls)}"
                     for cls, required in recipe.getIngredients().items()
                     if self.inventory.getNumItemsByType(cls) < required
                 ]

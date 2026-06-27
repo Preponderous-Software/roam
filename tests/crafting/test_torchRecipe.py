@@ -1,4 +1,6 @@
 from src.crafting.recipeRegistry import RecipeRegistry
+from entity.coalOre import CoalOre
+from entity.wood import Wood
 
 
 def test_recipeRegistry_has_torch_recipe():
@@ -8,6 +10,5 @@ def test_recipeRegistry_has_torch_recipe():
     assert len(torchRecipes) == 1
     recipe = torchRecipes[0]
     ingredients = recipe.getIngredients()
-    ingredientNames = {cls.__name__: count for cls, count in ingredients.items()}
-    assert ingredientNames == {"OakWood": 1, "CoalOre": 1}
+    assert ingredients == {Wood: 1, CoalOre: 1}
     assert recipe.getResultCount() == 2

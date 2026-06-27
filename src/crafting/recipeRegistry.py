@@ -5,13 +5,12 @@ from entity.chest import Chest
 from entity.coalOre import CoalOre
 from entity.fence import Fence
 from entity.grass import Grass
-from entity.jungleWood import JungleWood
-from entity.oakWood import OakWood
 from entity.stone import Stone
 from entity.stoneBed import StoneBed
 from entity.stoneFloor import StoneFloor
 from entity.torch import Torch
 from entity.wheatSeed import WheatSeed
+from entity.wood import Wood
 from entity.woodFloor import WoodFloor
 
 
@@ -23,7 +22,7 @@ class RecipeRegistry:
         self.recipes.append(
             Recipe(
                 "Wood Floor",
-                {OakWood: 4},
+                {Wood: 4},
                 WoodFloor,
                 "assets/images/woodFloor.png",
             )
@@ -31,7 +30,7 @@ class RecipeRegistry:
         self.recipes.append(
             Recipe(
                 "Bed",
-                {OakWood: 3, Stone: 2},
+                {Wood: 3, Stone: 2},
                 Bed,
                 "assets/images/bed.png",
             )
@@ -47,7 +46,7 @@ class RecipeRegistry:
         self.recipes.append(
             Recipe(
                 "Stone Bed",
-                {Stone: 3, OakWood: 2},
+                {Stone: 3, Wood: 2},
                 StoneBed,
                 "assets/images/stoneBed.png",
             )
@@ -55,7 +54,7 @@ class RecipeRegistry:
         self.recipes.append(
             Recipe(
                 "Fence",
-                {JungleWood: 3},
+                {Wood: 3},
                 Fence,
                 "assets/images/fence.png",
             )
@@ -63,7 +62,7 @@ class RecipeRegistry:
         self.recipes.append(
             Recipe(
                 "Campfire",
-                {OakWood: 2, CoalOre: 1},
+                {Wood: 2, CoalOre: 1},
                 Campfire,
                 "assets/images/campfire.png",
             )
@@ -71,7 +70,7 @@ class RecipeRegistry:
         self.recipes.append(
             Recipe(
                 "Chest",
-                {OakWood: 6},
+                {Wood: 6},
                 Chest,
                 "assets/images/chest.png",
             )
@@ -88,7 +87,7 @@ class RecipeRegistry:
         self.recipes.append(
             Recipe(
                 "Torch",
-                {OakWood: 1, CoalOre: 1},
+                {Wood: 1, CoalOre: 1},
                 Torch,
                 "assets/images/torch.png",
                 2,
