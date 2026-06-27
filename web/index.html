@@ -201,6 +201,10 @@
 
     if (isTouchDevice()) {
       controlsEl.style.display = "flex";
+      // Disable xterm's input proxy so tapping the canvas doesn't trigger the
+      // virtual keyboard.  All input on mobile goes through on-screen buttons
+      // (which call send() directly) or tap-to-interact (mouse events).
+      term.options.disableStdin = true;
     } else {
       term.focus();
     }
@@ -270,11 +274,35 @@
     }
 
     // ── on-screen button wiring ───────────────────────────────────────────
+    // Directional keys repeat at 120 ms while held so the player can walk
+    // continuously by holding the button instead of tapping for every step.
+    // Action keys (G, F, I, C, Esc, Help) fire once per touch.
+    const REPEAT_KEYS = new Set(["up", "down", "left", "right"]);
+
+    let _repeatTimer = null;
+    function _startKey(seq, repeats) {
+      send(seq);
+      if (repeats) {
+        clearInterval(_repeatTimer);
+        _repeatTimer = setInterval(() => send(seq), 120);
+      }
+    }
+    function _stopKey() {
+      clearInterval(_repeatTimer);
+      _repeatTimer = null;
+    }
+
     document.querySelectorAll(".ctrl-btn").forEach((btn) => {
-      const seq = KEY_SEQUENCES[btn.dataset.key];
+      const key  = btn.dataset.key;
+      const seq  = KEY_SEQUENCES[key];
       if (!seq) return;
-      btn.addEventListener("touchstart", (e) => { e.preventDefault(); send(seq); }, { passive: false });
-      btn.addEventListener("mousedown",  (e) => { e.preventDefault(); send(seq); });
+      const repeats = REPEAT_KEYS.has(key);
+      btn.addEventListener("touchstart",  (e) => { e.preventDefault(); _startKey(seq, repeats); }, { passive: false });
+      btn.addEventListener("touchend",    (e) => { e.preventDefault(); _stopKey(); },              { passive: false });
+      btn.addEventListener("touchcancel", (e) => { e.preventDefault(); _stopKey(); },              { passive: false });
+      btn.addEventListener("mousedown",   (e) => { e.preventDefault(); _startKey(seq, repeats); });
+      btn.addEventListener("mouseup",     () => _stopKey());
+      btn.addEventListener("mouseleave",  () => _stopKey());
     });
 
     // ── tap-to-interact ───────────────────────────────────────────────────
