@@ -2,11 +2,17 @@ import asyncio
 import functools
 import http.server
 import os
+import re
 import threading
 
+from rendering.inputEvent import EventType, InputEvent
 from rendering.textClock import TextClock
 from rendering.webInputSource import WebInputSource
 from rendering.webRenderer import WebRenderer, _DEFAULT_COLUMNS, _DEFAULT_ROWS
+
+# CSI 8 ; <rows> ; <cols> t  — the standard xterm window-resize report that
+# xterm-addon-fit sends to tell the server its computed terminal dimensions.
+_RESIZE_RE = re.compile(r"\x1b\[8;(\d+);(\d+)t")
 
 _DEFAULT_WS_PORT = 8765
 _DEFAULT_HTTP_PORT = 8080
@@ -38,6 +44,20 @@ class WebSession:
         asyncio.run_coroutine_threadsafe(self._sendQueue.put(data), self._loop)
 
     def feedInput(self, data):
+        # Intercept the xterm resize report (CSI 8 ; rows ; cols t) before it
+        # reaches the ANSI key parser — it's a terminal control sequence, not a
+        # keystroke.  The renderer's resize() forces a full redraw at the new size.
+        m = _RESIZE_RE.fullmatch(data.strip())
+        if m:
+            rows, cols = int(m.group(1)), int(m.group(2))
+            if cols > 0 and rows > 0:
+                self._renderer.resize(cols, rows)
+                # Mirror what TextFrontend does on SIGWINCH: queue a WINDOW_RESIZE
+                # event so screens recalculate their pixel layout for the new size.
+                self._inputSource.queueEvent(
+                    InputEvent(EventType.WINDOW_RESIZE, size=(cols, rows))
+                )
+            return
         self._inputSource.feed(data)
 
     # --- Frontend interface (mirrors PygameFrontend / TextFrontend) ---

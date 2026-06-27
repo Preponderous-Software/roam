@@ -2,57 +2,89 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <!-- user-scalable=yes lets players pinch-zoom if they want; the layout itself
+       already fits the viewport so there is no forced double-tap zoom surprise. -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <title>Roam</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
+    /* Fill the viewport exactly; 100dvh accounts for mobile browser chrome. */
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
       background: #111;
       color: #ccc;
       font-family: "Courier New", Courier, monospace;
+    }
+
+    body {
       display: flex;
       flex-direction: column;
+      align-items: stretch;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    /* ── header ── */
+    #header {
+      display: flex;
       align-items: center;
-      padding: 8px 4px 12px;
-      min-height: 100dvh;
-      gap: 6px;
-      overflow-x: hidden;
+      justify-content: space-between;
+      flex-shrink: 0;
+      gap: 8px;
+      padding: 0 2px;
+    }
+    h1    { font-size: 1.1rem; letter-spacing: 0.1em; color: #e8c97a; white-space: nowrap; }
+    #status { font-size: 0.75rem; color: #888; text-align: right; flex: 1; }
+    #reconnect {
+      display: none;
+      padding: 3px 10px;
+      background: #2a2a2a;
+      color: #e8c97a;
+      border: 1px solid #555;
+      border-radius: 3px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+    #reconnect:active { background: #3a3a3a; }
+
+    /* ── terminal ─────────────────────────────────────────────────────────
+       flex: 1 + min-height: 0 lets the terminal shrink to share space with
+       the controls row.  FitAddon measures the final pixel dimensions and
+       adjusts cols/rows so the canvas never overflows this container.
+    ── */
+    #terminal-outer {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      overflow: hidden;
+      border: 1px solid #222;
+      border-radius: 3px;
     }
 
-    h1 { font-size: 1.3rem; letter-spacing: 0.12em; color: #e8c97a; }
-
-    #status {
-      font-size: 0.8rem;
-      color: #888;
-      min-height: 1.1em;
-      text-align: center;
+    /* xterm.js needs the host element to fill the container. */
+    #terminal {
+      width: 100%;
+      height: 100%;
     }
 
-    /* ── terminal ── */
-    #terminal-wrap {
-      border: 1px solid #2a2a2a;
-      border-radius: 4px;
-      overflow: auto;           /* allow pinch-zoom to reveal clipped content */
-      touch-action: pinch-zoom; /* browser handles pinch; we handle tap via buttons */
-      max-width: 100%;
-    }
-
-    /* ── on-screen controls (shown only on touch devices via JS) ── */
+    /* ── on-screen controls (shown on touch devices) ── */
     #controls {
       display: none;
       flex-direction: column;
       align-items: center;
       gap: 4px;
-      width: 100%;
-      max-width: 400px;
-      margin-top: 4px;
+      flex-shrink: 0;
     }
 
     .btn-row {
       display: flex;
-      gap: 6px;
+      gap: 5px;
       justify-content: center;
     }
 
@@ -64,9 +96,8 @@
       font-family: inherit;
       font-size: 1.1rem;
       cursor: pointer;
-      /* comfortable tap target */
-      min-width: 52px;
-      min-height: 52px;
+      min-width: 48px;
+      min-height: 48px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -75,44 +106,24 @@
       touch-action: manipulation;
     }
     .ctrl-btn:active { background: #333; border-color: #e8c97a; color: #e8c97a; }
-
-    .ctrl-btn.wide  { min-width: 110px; font-size: 0.85rem; }
-    .ctrl-btn.small { min-width: 44px; min-height: 44px; font-size: 0.8rem; }
-
-    /* spacer cell in the D-pad grid */
-    .ctrl-spacer { min-width: 52px; min-height: 52px; }
-
-    /* ── action button strip ── */
-    #action-row { flex-wrap: wrap; justify-content: center; gap: 6px; }
-
-    /* ── status / reconnect ── */
-    #reconnect {
-      display: none;
-      padding: 6px 18px;
-      background: #2a2a2a;
-      color: #e8c97a;
-      border: 1px solid #555;
-      border-radius: 3px;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 0.85rem;
-    }
-    #reconnect:hover, #reconnect:active { background: #3a3a3a; }
-
-    footer { font-size: 0.7rem; color: #444; text-align: center; }
+    .ctrl-btn.wide  { min-width: 96px; font-size: 0.8rem; }
+    .ctrl-btn.small { min-width: 42px; min-height: 42px; font-size: 0.8rem; }
+    .ctrl-spacer    { min-width: 48px; min-height: 48px; }
   </style>
 </head>
 <body>
-  <h1>Roam</h1>
-  <div id="status">Connecting&hellip;</div>
+  <div id="header">
+    <h1>Roam</h1>
+    <div id="status">Connecting&hellip;</div>
+    <button id="reconnect" onclick="connect()">Reconnect</button>
+  </div>
 
-  <div id="terminal-wrap">
+  <div id="terminal-outer">
     <div id="terminal"></div>
   </div>
 
-  <!-- On-screen controls — shown automatically on touch devices -->
+  <!-- On-screen controls — revealed on touch devices via JS -->
   <div id="controls">
-    <!-- D-pad -->
     <div class="btn-row">
       <div class="ctrl-spacer"></div>
       <button class="ctrl-btn" data-key="up"    title="Up">▲</button>
@@ -120,7 +131,7 @@
     </div>
     <div class="btn-row">
       <button class="ctrl-btn" data-key="left"  title="Left">◀</button>
-      <button class="ctrl-btn" data-key="enter" title="Interact / Confirm">✔</button>
+      <button class="ctrl-btn" data-key="enter" title="Confirm / Interact">✔</button>
       <button class="ctrl-btn" data-key="right" title="Right">▶</button>
     </div>
     <div class="btn-row">
@@ -128,9 +139,7 @@
       <button class="ctrl-btn" data-key="down"  title="Down">▼</button>
       <div class="ctrl-spacer"></div>
     </div>
-
-    <!-- Action buttons -->
-    <div class="btn-row" id="action-row">
+    <div class="btn-row">
       <button class="ctrl-btn small" data-key="g"      title="Gather (G)">G</button>
       <button class="ctrl-btn small" data-key="f"      title="Place / Use (F)">F</button>
       <button class="ctrl-btn small" data-key="i"      title="Inventory (I)">I</button>
@@ -140,20 +149,11 @@
     </div>
   </div>
 
-  <button id="reconnect" onclick="connect()">Reconnect</button>
-  <footer>Keyboard or on-screen controls &bull; pinch to zoom &bull; F1 for help</footer>
-
   <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
   <script>
     const WS_PORT = 8765;
-    const COLS    = 120;
-    const ROWS    = 36;
 
-    const statusEl    = document.getElementById("status");
-    const reconnectBtn = document.getElementById("reconnect");
-    const controlsEl  = document.getElementById("controls");
-
-    // Map button data-key values to the bytes xterm.js / the server expects.
     const KEY_SEQUENCES = {
       up:     "\x1b[A",
       down:   "\x1b[B",
@@ -162,50 +162,70 @@
       enter:  "\r",
       escape: "\x1b",
       f1:     "\x1bOP",
-      g:      "g",
-      f:      "f",
-      i:      "i",
-      c:      "c",
+      g: "g", f: "f", i: "i", c: "c",
     };
+
+    const statusEl     = document.getElementById("status");
+    const reconnectBtn = document.getElementById("reconnect");
+    const controlsEl   = document.getElementById("controls");
 
     // ── terminal ──────────────────────────────────────────────────────────
     const term = new Terminal({
-      cols: COLS,
-      rows: ROWS,
       theme: {
         background:   "#111111",
         foreground:   "#d4d4d4",
         cursor:       "#d4d4d4",
         black:        "#111111",
         brightBlack:  "#555555",
-        red:          "#cc3333",
-        brightRed:    "#ff5555",
-        green:        "#33aa33",
-        brightGreen:  "#55cc55",
-        yellow:       "#aa8833",
-        brightYellow: "#ffcc44",
-        cyan:         "#33aacc",
-        brightCyan:   "#55ccff",
-        white:        "#cccccc",
-        brightWhite:  "#ffffff",
+        red:          "#cc3333", brightRed:    "#ff5555",
+        green:        "#33aa33", brightGreen:  "#55cc55",
+        yellow:       "#aa8833", brightYellow: "#ffcc44",
+        cyan:         "#33aacc", brightCyan:   "#55ccff",
+        white:        "#cccccc", brightWhite:  "#ffffff",
       },
-      fontFamily:  "'Courier New', Courier, monospace",
-      fontSize:    14,
-      cursorBlink: false,
-      disableStdin: false,
-      convertEol:  false,
+      fontFamily:   "'Courier New', Courier, monospace",
+      fontSize:     14,
+      cursorBlink:  false,
+      convertEol:   false,
+      scrollback:   0,  // no scroll buffer — game redraws the whole frame
     });
+
+    const fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
     term.open(document.getElementById("terminal"));
 
-    // ── touch detection — show on-screen controls on touch devices ────────
+    // ── touch detection — show controls, then refit to account for them ───
     function isTouchDevice() {
       return "ontouchstart" in window || navigator.maxTouchPoints > 0;
     }
+
     if (isTouchDevice()) {
       controlsEl.style.display = "flex";
     } else {
       term.focus();
     }
+
+    // ── FitAddon — resize terminal to fill its container ──────────────────
+    // Run after the controls (if any) are visible so the container height is
+    // correct.  requestAnimationFrame lets the browser do one layout pass first.
+    function fitAndNotify() {
+      requestAnimationFrame(() => {
+        try { fitAddon.fit(); } catch (_) {}
+        sendResize();
+      });
+    }
+
+    // Send the xterm resize report (CSI 8 ; rows ; cols t) so the server's
+    // WebRenderer re-creates its grid at the actual terminal dimensions.
+    function sendResize() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(`\x1b[8;${term.rows};${term.cols}t`);
+      }
+    }
+
+    window.addEventListener("resize", fitAndNotify);
+    // Initial fit — called before connect() so size is known at WS open.
+    fitAndNotify();
 
     // ── WebSocket ─────────────────────────────────────────────────────────
     let ws = null;
@@ -229,6 +249,8 @@
       ws.onopen = () => {
         setStatus("Connected");
         term.reset();
+        // Tell the server the actual terminal size immediately.
+        sendResize();
         if (!isTouchDevice()) term.focus();
       };
 
@@ -240,7 +262,7 @@
       };
 
       ws.onerror = () => {
-        setStatus(`Connection error — server on port ${WS_PORT}?`, true);
+        setStatus(`Error — server on port ${WS_PORT}?`, true);
         reconnectBtn.style.display = "inline-block";
       };
 
@@ -248,24 +270,11 @@
     }
 
     // ── on-screen button wiring ───────────────────────────────────────────
-    // Use touchstart so response is instant (no 300 ms tap delay).
-    // preventDefault stops the browser also firing a click and doubling input.
     document.querySelectorAll(".ctrl-btn").forEach((btn) => {
-      const key = btn.dataset.key;
-      const seq = KEY_SEQUENCES[key];
+      const seq = KEY_SEQUENCES[btn.dataset.key];
       if (!seq) return;
-
-      // touchstart for fast response on mobile
-      btn.addEventListener("touchstart", (e) => {
-        e.preventDefault();
-        send(seq);
-      }, { passive: false });
-
-      // mousedown so desktop users can also click the buttons
-      btn.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        send(seq);
-      });
+      btn.addEventListener("touchstart", (e) => { e.preventDefault(); send(seq); }, { passive: false });
+      btn.addEventListener("mousedown",  (e) => { e.preventDefault(); send(seq); });
     });
 
     connect();
