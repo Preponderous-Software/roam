@@ -30,6 +30,14 @@ class WebInputSource(TextInputSource):
         if data:
             self._inputQueue.put(data)
 
+    def consumeLeftClick(self):
+        """Clear the left-button-down state after a button callback fires.
+
+        Called by WebRenderer.drawButton() to prevent the same tap from
+        triggering the callback on every frame until the mouse_up arrives.
+        """
+        self._mouseButtons[0] = False
+
     def updateMouse(self, x, y, button, isDown):
         """Update mouse state and queue a MOUSE_DOWN or MOUSE_UP event.
 

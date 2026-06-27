@@ -37,8 +37,8 @@ class WebSession:
 
     def _build(self):
         self._sendQueue = asyncio.Queue()
-        self._renderer = WebRenderer(self._enqueueFrame)
         self._inputSource = WebInputSource()
+        self._renderer = WebRenderer(self._enqueueFrame, inputSource=self._inputSource)
         self._clock = TextClock()
 
     def _enqueueFrame(self, data):
