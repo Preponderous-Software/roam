@@ -1,10 +1,8 @@
-from entity.drawableEntity import DrawableEntity
+from entity.wood import Wood
 
 
 # @author Daniel McCoy Stephenson
 # @since August 8th, 2022
-class JungleWood(DrawableEntity):
+class JungleWood(Wood):
     def __init__(self):
-        DrawableEntity.__init__(
-            self, "Jungle Wood", "assets/images/jungleWood.png", True
-        )
+        Wood.__init__(self, "Jungle Wood", "assets/images/jungleWood.png", True)

@@ -1,4 +1,7 @@
 from src.crafting.recipeRegistry import RecipeRegistry
+from entity.coalOre import CoalOre
+from entity.stone import Stone
+from entity.wood import Wood
 
 
 def test_recipeRegistry_has_wood_floor_recipe():
@@ -8,8 +11,7 @@ def test_recipeRegistry_has_wood_floor_recipe():
     assert len(woodFloorRecipes) == 1
     recipe = woodFloorRecipes[0]
     ingredients = recipe.getIngredients()
-    ingredientNames = {cls.__name__: count for cls, count in ingredients.items()}
-    assert ingredientNames == {"OakWood": 4}
+    assert ingredients == {Wood: 4}
 
 
 def test_recipeRegistry_has_bed_recipe():
@@ -19,8 +21,7 @@ def test_recipeRegistry_has_bed_recipe():
     assert len(bedRecipes) == 1
     recipe = bedRecipes[0]
     ingredients = recipe.getIngredients()
-    ingredientNames = {cls.__name__: count for cls, count in ingredients.items()}
-    assert ingredientNames == {"OakWood": 3, "Stone": 2}
+    assert ingredients == {Wood: 3, Stone: 2}
 
 
 def test_recipeRegistry_has_stone_floor_recipe():
@@ -30,8 +31,7 @@ def test_recipeRegistry_has_stone_floor_recipe():
     assert len(stoneFloorRecipes) == 1
     recipe = stoneFloorRecipes[0]
     ingredients = recipe.getIngredients()
-    ingredientNames = {cls.__name__: count for cls, count in ingredients.items()}
-    assert ingredientNames == {"Stone": 4}
+    assert ingredients == {Stone: 4}
 
 
 def test_recipeRegistry_has_stone_bed_recipe():
@@ -41,8 +41,7 @@ def test_recipeRegistry_has_stone_bed_recipe():
     assert len(stoneBedRecipes) == 1
     recipe = stoneBedRecipes[0]
     ingredients = recipe.getIngredients()
-    ingredientNames = {cls.__name__: count for cls, count in ingredients.items()}
-    assert ingredientNames == {"Stone": 3, "OakWood": 2}
+    assert ingredients == {Stone: 3, Wood: 2}
 
 
 def test_recipeRegistry_has_fence_recipe():
@@ -52,8 +51,7 @@ def test_recipeRegistry_has_fence_recipe():
     assert len(fenceRecipes) == 1
     recipe = fenceRecipes[0]
     ingredients = recipe.getIngredients()
-    ingredientNames = {cls.__name__: count for cls, count in ingredients.items()}
-    assert ingredientNames == {"JungleWood": 3}
+    assert ingredients == {Wood: 3}
 
 
 def test_recipeRegistry_has_campfire_recipe():
@@ -63,8 +61,7 @@ def test_recipeRegistry_has_campfire_recipe():
     assert len(campfireRecipes) == 1
     recipe = campfireRecipes[0]
     ingredients = recipe.getIngredients()
-    ingredientNames = {cls.__name__: count for cls, count in ingredients.items()}
-    assert ingredientNames == {"OakWood": 2, "CoalOre": 1}
+    assert ingredients == {Wood: 2, CoalOre: 1}
 
 
 def test_recipeRegistry_has_chest_recipe():
@@ -74,5 +71,4 @@ def test_recipeRegistry_has_chest_recipe():
     assert len(chestRecipes) == 1
     recipe = chestRecipes[0]
     ingredients = recipe.getIngredients()
-    ingredientNames = {cls.__name__: count for cls, count in ingredients.items()}
-    assert ingredientNames == {"OakWood": 6}
+    assert ingredients == {Wood: 6}
