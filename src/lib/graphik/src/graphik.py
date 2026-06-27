@@ -17,6 +17,20 @@ class Graphik:
 
     def __init__(self, gameDisplay):
         self.gameDisplay = gameDisplay
+        self._mouseDownPrev = False
+        self._mouseDownCurrent = False
+        self._frameStarted = False
+
+    def beginFrame(self):
+        """Snapshot mouse state once per frame so drawButton fires only on the
+        down-transition (press), not continuously while the button is held."""
+        if not self._frameStarted:
+            self._mouseDownPrev = self._mouseDownCurrent
+            self._mouseDownCurrent = pygame.mouse.get_pressed()[0] == 1
+            self._frameStarted = True
+
+    def endFrame(self):
+        self._frameStarted = False
 
     def getGameDisplay(self):
         return self.gameDisplay
@@ -70,7 +84,5 @@ class Graphik:
             text, xpos + (width // 2), ypos + (height // 2), sizeText, colorText
         )
 
-        if hovering:
-            click = pygame.mouse.get_pressed()
-            if click[0] == 1:
-                function()
+        if hovering and self._mouseDownCurrent and not self._mouseDownPrev:
+            function()

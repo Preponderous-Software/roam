@@ -590,12 +590,35 @@ class WorldScreen:
         else:
             self.status.set("Nothing notable ahead")
 
+    def _locationHasSomethingToGather(self, location):
+        """Return True if _executeGatherAt would find something at this location."""
+        if location == -1:
+            return False
+        for entityId in location.getEntities():
+            entity = location.getEntity(entityId)
+            if isinstance(entity, (YoungCrop, MatureCrop)):
+                return True
+            if self.canBePickedUp(entity):
+                return True
+            if (
+                isinstance(entity, Chest)
+                and entity.getStoredInventory().getNumItems() > 0
+            ):
+                return True
+        return False
+
     def executeGatherAtFront(self):
-        targetLocation = self.getLocationInFrontOfPlayer()
-        if targetLocation == -1:
+        facingLocation = self.getLocationInFrontOfPlayer()
+        if self._locationHasSomethingToGather(facingLocation):
+            self._executeGatherAt(facingLocation, self.currentRoom)
+            return
+        # Nothing pickable in front — try the player's own tile so items
+        # on the same cell can be picked up without needing to face away.
+        playerLocation = self.getLocationOfPlayer()
+        if playerLocation == -1:
             self.status.set("Nothing to pick up here")
             return
-        self._executeGatherAt(targetLocation, self.currentRoom)
+        self._executeGatherAt(playerLocation, self.currentRoom)
 
     def _executeGatherAt(self, targetLocation, targetRoom):
         if self._tryHarvestCrop(targetLocation, targetRoom):
@@ -1761,6 +1784,15 @@ class WorldScreen:
             hintX = self.renderer.getDisplayWidth() - 50
             hintY = self.renderer.getDisplayHeight() - 20
             self.renderer.drawText(hintLabel, hintX, hintY, 16, palette.MEDIUM_GRAY)
+
+            if not self.renderer.supportsImageLoading():
+                kb = self.keyBindings
+                gatherKey = kb.getKeyName("gather").upper()
+                placeKey = kb.getKeyName("place").upper()
+                actionHint = f"{gatherKey}: Gather  {placeKey}: Place"
+                self.renderer.drawTextLeftAligned(
+                    actionHint, 0, hintY, 16, palette.MEDIUM_GRAY
+                )
 
         self.drawCursorSlot()
 
