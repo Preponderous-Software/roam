@@ -10,6 +10,7 @@ pygame>=2.6.1
 Pillow>=10.0.0
 jsonschema>=4.17.3
 structlog>=25.0.0
+websockets>=12.0
 
 # Test
 pytest>=7.1.3

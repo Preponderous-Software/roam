@@ -10,7 +10,7 @@ import sys
 # is ever initialised, preventing log lines from corrupting the TUI display.
 # ---------------------------------------------------------------------------
 def _earlyDetectTextMode():
-    if "--text" in sys.argv:
+    if "--text" in sys.argv or "--web" in sys.argv:
         return True
     try:
         import pygame as _pg
@@ -65,15 +65,18 @@ _logger = getLogger(__name__)
 # @author Daniel McCoy Stephenson
 # @since August 8th, 2022
 class Roam:
-    def __init__(self, config: Config, textMode=False):
+    def __init__(self, config: Config, textMode=False, frontend=None):
         self.config = config
         self.textMode = textMode
         # The frontend owns the display + input lifecycle; the game depends only
         # on the Renderer/InputSource/Clock it provides (epic #433). Selecting a
         # different frontend swaps the whole backend with no game-logic change.
-        self.frontend = (
-            createTextFrontend(config) if textMode else createFrontend(config)
-        )
+        if frontend is not None:
+            self.frontend = frontend
+        else:
+            self.frontend = (
+                createTextFrontend(config) if textMode else createFrontend(config)
+            )
         self._initializeDependencies()
         _logger.info("game initialized", savePath=config.pathToSaveDirectory)
 
@@ -256,6 +259,24 @@ def main(argv):
         return runSelfTest()
 
     config = Config()
+
+    if "--web" in argv:
+        from rendering.webFrontend import WebFrontend
+
+        def _sessionGameLoop(session):
+            roam = Roam(config, frontend=session)
+            try:
+                while True:
+                    result = roam.run()
+                    if result != "restart":
+                        break
+                    roam.restart()
+            except KeyboardInterrupt:
+                pass
+
+        WebFrontend().serve(_sessionGameLoop)
+        return 0
+
     roam = Roam(config, textMode=_shouldUseTextMode(argv))
     try:
         while True:
