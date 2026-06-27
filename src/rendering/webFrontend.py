@@ -3,17 +3,12 @@ import functools
 import http.server
 import json
 import os
-import re
 import threading
 
 from rendering.inputEvent import EventType, InputEvent
 from rendering.textClock import TextClock
 from rendering.webInputSource import WebInputSource
-from rendering.webRenderer import WebRenderer, _DEFAULT_COLUMNS, _DEFAULT_ROWS
-
-# CSI 8 ; <rows> ; <cols> t  — the standard xterm window-resize report that
-# xterm-addon-fit sends to tell the server its computed terminal dimensions.
-_RESIZE_RE = re.compile(r"\x1b\[8;(\d+);(\d+)t")
+from rendering.webRenderer import WebRenderer, _DEFAULT_WIDTH, _DEFAULT_HEIGHT
 
 _DEFAULT_WS_PORT = 8765
 _DEFAULT_HTTP_PORT = 8080
@@ -25,9 +20,16 @@ _DEFAULT_HTTP_PORT = 8080
 # Per-connection frontend: owns one WebRenderer + WebInputSource + TextClock for
 # a single browser session.  Implements the same interface as PygameFrontend /
 # TextFrontend (getRenderer, getInputSource, getClock, setCaption, reset, quit)
-# so Roam.__init__ can accept it as a drop-in frontend.  Thread-safe I/O is
-# handled by _enqueueFrame (game thread → asyncio send queue) and feed()
-# (asyncio receive → input queue).
+# so Roam.__init__ can accept it as a drop-in frontend.
+#
+# Input protocol (browser → server, all messages are JSON strings):
+#   {"type":"resize",    "w":800, "h":600}         — viewport size changed
+#   {"type":"mouse_down","x":320,"y":240,"button":1} — tap / left-click
+#   {"type":"mouse_up",  "x":320,"y":240,"button":1} — release
+#   raw ANSI bytes (e.g. "\x1b[A" for ↑, "g" for gather) — keyboard / D-pad
+#
+# Output protocol (server → browser):
+#   JSON frame: {"type":"frame","w":W,"h":H,"calls":[{op,…},…]}
 class WebSession:
     def __init__(self, websocket, loop):
         self._websocket = websocket
@@ -45,24 +47,21 @@ class WebSession:
         asyncio.run_coroutine_threadsafe(self._sendQueue.put(data), self._loop)
 
     def feedInput(self, data):
-        # --- resize report (CSI 8 ; rows ; cols t) ---
-        m = _RESIZE_RE.fullmatch(data.strip())
-        if m:
-            rows, cols = int(m.group(1)), int(m.group(2))
-            if cols > 0 and rows > 0:
-                self._renderer.resize(cols, rows)
-                # Mirror what TextFrontend does on SIGWINCH: queue a WINDOW_RESIZE
-                # event so screens recalculate their pixel layout for the new size.
-                self._inputSource.queueEvent(
-                    InputEvent(EventType.WINDOW_RESIZE, size=(cols, rows))
-                )
-            return
-
-        # --- JSON mouse event {"type":"mouse_down"|"mouse_up","x":…,"y":…,"button":…} ---
+        # --- JSON control messages (resize, mouse) ---
         if data.startswith("{"):
             try:
                 msg = json.loads(data)
                 t = msg.get("type")
+
+                if t == "resize":
+                    w, h = int(msg.get("w", 0)), int(msg.get("h", 0))
+                    if w > 0 and h > 0:
+                        self._renderer.resize(w, h)
+                        self._inputSource.queueEvent(
+                            InputEvent(EventType.WINDOW_RESIZE, size=(w, h))
+                        )
+                    return
+
                 if t in ("mouse_down", "mouse_up"):
                     self._inputSource.updateMouse(
                         int(msg.get("x", 0)),
@@ -74,6 +73,7 @@ class WebSession:
             except (json.JSONDecodeError, KeyError, ValueError):
                 pass
 
+        # --- ANSI key sequences from keyboard / on-screen buttons ---
         self._inputSource.feed(data)
 
     # --- Frontend interface (mirrors PygameFrontend / TextFrontend) ---
@@ -88,11 +88,9 @@ class WebSession:
         return self._clock
 
     def setCaption(self, caption):
-        self._renderer.setCaption(caption)
+        pass
 
     def reset(self):
-        # Rebuild renderer/input for a fresh game session (return-to-main-menu),
-        # keeping the same _enqueueFrame callback so the WebSocket is unchanged.
         self._build()
 
     def quit(self):
@@ -126,21 +124,14 @@ class WebSession:
 # @since June 27th, 2026
 #
 # WebSocket game server.  serve(gameFactory) starts two listeners:
-#   - HTTP on httpPort: serves web/index.html so players can open a browser URL.
+#   - HTTP on httpPort: serves web/index.html + game assets (assets/ dir)
 #   - WebSocket on wsPort: each connection spawns a WebSession + a game thread.
-#
-# gameFactory(session) is called in a daemon thread per connection; it should
-# run the full Roam game loop and return (or raise SystemExit) when the session
-# ends.  Multiple concurrent sessions are supported — each gets its own
-# independent game state.
 class WebFrontend:
     def __init__(self, wsPort=_DEFAULT_WS_PORT, httpPort=_DEFAULT_HTTP_PORT):
         self._wsPort = wsPort
         self._httpPort = httpPort
 
     def serve(self, gameFactory):
-        """Block until Ctrl+C, accepting WebSocket connections and running a
-        game session per connection."""
         try:
             asyncio.run(self._serveAsync(gameFactory))
         except KeyboardInterrupt:
@@ -183,22 +174,44 @@ class WebFrontend:
 
 
 def _startHttpServer(port):
-    """Serve web/ over HTTP on a background daemon thread."""
+    """Serve web/index.html + game assets (assets/) over HTTP.
+
+    Routes:
+      /            → web/index.html
+      /index.html  → web/index.html
+      /assets/...  → <projectRoot>/assets/...   (tile sprites etc.)
+      anything else → 404
+    """
     webDir = os.path.normpath(
         os.path.join(os.path.dirname(__file__), "..", "..", "web")
     )
+    rootDir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-    class _QuietHandler(http.server.SimpleHTTPRequestHandler):
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, directory=webDir, **kwargs)
+    # Closure-based handler so webDir / rootDir are captured without needing
+    # instance state on the handler class.
+    def _makeHandler(webDir, rootDir):
+        class _Handler(http.server.SimpleHTTPRequestHandler):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, directory=rootDir, **kwargs)
 
-        def log_message(self, format, *args):
-            pass
+            def translate_path(self, path):
+                from urllib.parse import unquote, urlparse
+
+                path = unquote(urlparse(path).path)
+                if path in ("/", "/index.html"):
+                    return os.path.join(webDir, "index.html")
+                # /assets/... served directly from project root
+                return super().translate_path(path)
+
+            def log_message(self, *args):
+                pass
+
+        return _Handler
 
     class _ReuseServer(http.server.HTTPServer):
         allow_reuse_address = True
 
-    httpd = _ReuseServer(("", port), _QuietHandler)
+    httpd = _ReuseServer(("", port), _makeHandler(webDir, rootDir))
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     return httpd
 

@@ -1,383 +1,477 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <!-- user-scalable=yes lets players pinch-zoom if they want; the layout itself
-       already fits the viewport so there is no forced double-tap zoom surprise. -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Roam</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* Fill the viewport exactly; 100dvh accounts for mobile browser chrome. */
-    html, body {
-      height: 100%;
+    body {
+      background: #000;
+      color: #ccc;
+      font-family: system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
       height: 100dvh;
       overflow: hidden;
-      background: #111;
-      color: #ccc;
-      font-family: "Courier New", Courier, monospace;
-    }
-
-    body {
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      padding: 4px;
-      gap: 4px;
-    }
-
-    /* ── header ── */
-    #header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-shrink: 0;
-      gap: 8px;
-      padding: 0 2px;
-    }
-    h1    { font-size: 1.1rem; letter-spacing: 0.1em; color: #e8c97a; white-space: nowrap; }
-    #status { font-size: 0.75rem; color: #888; text-align: right; flex: 1; }
-    #reconnect {
-      display: none;
-      padding: 3px 10px;
-      background: #2a2a2a;
-      color: #e8c97a;
-      border: 1px solid #555;
-      border-radius: 3px;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 0.75rem;
-      flex-shrink: 0;
-    }
-    #reconnect:active { background: #3a3a3a; }
-
-    /* ── terminal ─────────────────────────────────────────────────────────
-       flex: 1 + min-height: 0 lets the terminal shrink to share space with
-       the controls row.  FitAddon measures the final pixel dimensions and
-       adjusts cols/rows so the canvas never overflows this container.
-    ── */
-    #terminal-outer {
-      flex: 1;
-      min-height: 0;
-      width: 100%;
-      overflow: hidden;
-      border: 1px solid #222;
-      border-radius: 3px;
-    }
-
-    /* xterm.js needs the host element to fill the container. */
-    #terminal {
-      width: 100%;
-      height: 100%;
-    }
-
-    /* ── on-screen controls (shown on touch devices) ── */
-    #controls {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      flex-shrink: 0;
-    }
-
-    .btn-row {
-      display: flex;
-      gap: 5px;
-      justify-content: center;
-    }
-
-    .ctrl-btn {
-      background: #1e1e1e;
-      color: #ddd;
-      border: 1px solid #444;
-      border-radius: 6px;
-      font-family: inherit;
-      font-size: 1.1rem;
-      cursor: pointer;
-      min-width: 48px;
-      min-height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       user-select: none;
       -webkit-user-select: none;
-      touch-action: manipulation;
+      touch-action: none;
     }
-    .ctrl-btn:active { background: #333; border-color: #e8c97a; color: #e8c97a; }
-    .ctrl-btn.wide  { min-width: 96px; font-size: 0.8rem; }
-    .ctrl-btn.small { min-width: 42px; min-height: 42px; font-size: 0.8rem; }
-    .ctrl-spacer    { min-width: 48px; min-height: 48px; }
+
+    /* ── top status bar ──────────────────────────────────────────────────── */
+    #bar {
+      flex-shrink: 0;
+      background: #111;
+      border-bottom: 1px solid #222;
+      padding: 4px 10px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #bar-status { flex: 1; color: #666; }
+    #bar-reconnect {
+      background: #1e1e1e;
+      border: 1px solid #444;
+      color: #aaa;
+      padding: 2px 10px;
+      cursor: pointer;
+      font-size: 11px;
+      border-radius: 3px;
+    }
+    #bar-reconnect:hover { background: #2a2a2a; }
+
+    /* ── game canvas ─────────────────────────────────────────────────────── */
+    #canvas-wrap {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+    }
+    #game-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    /* ── mobile controls ─────────────────────────────────────────────────── */
+    #controls {
+      display: none;
+      flex-shrink: 0;
+      background: #0e0e0e;
+      border-top: 1px solid #222;
+      padding: 8px 12px;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* D-pad: 3×3 grid with corners empty */
+    .dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 48px);
+      grid-template-rows: repeat(3, 48px);
+      gap: 4px;
+    }
+
+    /* Action buttons: 3×2 grid */
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(3, 48px);
+      grid-template-rows: repeat(2, 48px);
+      gap: 4px;
+    }
+
+    .btn {
+      background: #1c1c1c;
+      border: 1px solid #333;
+      border-radius: 8px;
+      color: #ccc;
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+      transition: background 0.06s;
+    }
+    .btn:active, .btn.pressed { background: #3a3a3a; }
+    .btn.confirm { background: #0f2a0f; color: #4e4; border-color: #2a5a2a; }
+    .btn.back    { background: #2a0f0f; color: #e44; border-color: #5a2a2a; }
+    .btn.label   { font-size: 14px; font-weight: 600; letter-spacing: 0.03em; }
+    .dpad-spacer { }
   </style>
 </head>
 <body>
-  <div id="header">
-    <h1>Roam</h1>
-    <div id="status">Connecting&hellip;</div>
-    <button id="reconnect" onclick="connect()">Reconnect</button>
+
+<!-- status bar -->
+<div id="bar">
+  <span id="bar-status">Connecting…</span>
+  <button id="bar-reconnect" onclick="connect()">Reconnect</button>
+</div>
+
+<!-- game canvas -->
+<div id="canvas-wrap">
+  <canvas id="game-canvas"></canvas>
+</div>
+
+<!-- mobile on-screen controls (touch devices only) -->
+<div id="controls">
+  <div class="dpad">
+    <div class="dpad-spacer"></div>
+    <button class="btn" data-key="up">▲</button>
+    <div class="dpad-spacer"></div>
+    <button class="btn" data-key="left">◀</button>
+    <button class="btn confirm" data-key="enter">✔</button>
+    <button class="btn" data-key="right">▶</button>
+    <div class="dpad-spacer"></div>
+    <button class="btn" data-key="down">▼</button>
+    <div class="dpad-spacer"></div>
   </div>
-
-  <div id="terminal-outer">
-    <div id="terminal"></div>
+  <div class="actions">
+    <button class="btn label" data-key="g">G</button>
+    <button class="btn label" data-key="f">F</button>
+    <button class="btn label" data-key="i">I</button>
+    <button class="btn label" data-key="c">C</button>
+    <button class="btn back" data-key="escape">✕</button>
+    <button class="btn label" data-key="f1">?</button>
   </div>
+</div>
 
-  <!-- On-screen controls — revealed on touch devices via JS -->
-  <div id="controls">
-    <div class="btn-row">
-      <div class="ctrl-spacer"></div>
-      <button class="ctrl-btn" data-key="up"    title="Up">▲</button>
-      <div class="ctrl-spacer"></div>
-    </div>
-    <div class="btn-row">
-      <button class="ctrl-btn" data-key="left"  title="Left">◀</button>
-      <button class="ctrl-btn" data-key="enter" title="Confirm / Interact">✔</button>
-      <button class="ctrl-btn" data-key="right" title="Right">▶</button>
-    </div>
-    <div class="btn-row">
-      <div class="ctrl-spacer"></div>
-      <button class="ctrl-btn" data-key="down"  title="Down">▼</button>
-      <div class="ctrl-spacer"></div>
-    </div>
-    <div class="btn-row">
-      <button class="ctrl-btn small" data-key="g"      title="Gather (G)">G</button>
-      <button class="ctrl-btn small" data-key="f"      title="Place / Use (F)">F</button>
-      <button class="ctrl-btn small" data-key="i"      title="Inventory (I)">I</button>
-      <button class="ctrl-btn small" data-key="c"      title="Crafting (C)">C</button>
-      <button class="ctrl-btn small" data-key="escape" title="Back / Escape">✕</button>
-      <button class="ctrl-btn wide"  data-key="f1"     title="Help (F1)">Help</button>
-    </div>
-  </div>
+<script>
+  "use strict";
 
-  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
-  <script>
-    const WS_PORT = 8765;
+  const WS_PORT = 8765;
 
-    const KEY_SEQUENCES = {
-      up:     "\x1b[A",
-      down:   "\x1b[B",
-      right:  "\x1b[C",
-      left:   "\x1b[D",
-      enter:  "\r",
-      escape: "\x1b",
-      f1:     "\x1bOP",
-      g: "g", f: "f", i: "i", c: "c",
-    };
+  const canvas   = document.getElementById("game-canvas");
+  const ctx      = canvas.getContext("2d");
+  const statusEl = document.getElementById("bar-status");
 
-    const statusEl     = document.getElementById("status");
-    const reconnectBtn = document.getElementById("reconnect");
-    const controlsEl   = document.getElementById("controls");
-
-    // ── terminal ──────────────────────────────────────────────────────────
-    const term = new Terminal({
-      theme: {
-        background:   "#111111",
-        foreground:   "#d4d4d4",
-        cursor:       "#d4d4d4",
-        black:        "#111111",
-        brightBlack:  "#555555",
-        red:          "#cc3333", brightRed:    "#ff5555",
-        green:        "#33aa33", brightGreen:  "#55cc55",
-        yellow:       "#aa8833", brightYellow: "#ffcc44",
-        cyan:         "#33aacc", brightCyan:   "#55ccff",
-        white:        "#cccccc", brightWhite:  "#ffffff",
-      },
-      fontFamily:   "'Courier New', Courier, monospace",
-      fontSize:     14,
-      cursorBlink:  false,
-      convertEol:   false,
-      scrollback:   0,  // no scroll buffer — game redraws the whole frame
-    });
-
-    const fitAddon = new FitAddon.FitAddon();
-    term.loadAddon(fitAddon);
-    term.open(document.getElementById("terminal"));
-
-    // ── touch detection — show controls, then refit to account for them ───
-    function isTouchDevice() {
-      return "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  // ── image cache ────────────────────────────────────────────────────────────
+  const imgCache = {};
+  function cachedImg(path) {
+    if (!imgCache[path]) {
+      const im = new Image();
+      im.src = "/" + path;
+      imgCache[path] = im;
     }
+    return imgCache[path];
+  }
 
-    if (isTouchDevice()) {
-      controlsEl.style.display = "flex";
-      // Disable xterm's input proxy so tapping the canvas doesn't trigger the
-      // virtual keyboard.  All input on mobile goes through on-screen buttons
-      // (which call send() directly) or tap-to-interact (mouse events).
-      term.options.disableStdin = true;
-    } else {
-      term.focus();
-    }
+  // ── game dimensions (server's coordinate space for the current session) ────
+  let gameW = 800, gameH = 600;
 
-    // ── FitAddon — resize terminal to fill its container ──────────────────
-    // Run after the controls (if any) are visible so the container height is
-    // correct.  requestAnimationFrame lets the browser do one layout pass first.
-    function fitAndNotify() {
-      requestAnimationFrame(() => {
-        try { fitAddon.fit(); } catch (_) {}
-        sendResize();
-      });
-    }
+  // ── canvas sizing ──────────────────────────────────────────────────────────
+  function resizeCanvas() {
+    const wrap = canvas.parentElement;
+    const dpr  = window.devicePixelRatio || 1;
+    canvas.width  = Math.floor(wrap.clientWidth  * dpr);
+    canvas.height = Math.floor(wrap.clientHeight * dpr);
+    ctx.scale(dpr, dpr);   // compensate so CSS pixel = one game unit from here on
+    sendResize();
+  }
 
-    // Send the xterm resize report (CSI 8 ; rows ; cols t) so the server's
-    // WebRenderer re-creates its grid at the actual terminal dimensions.
-    function sendResize() {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(`\x1b[8;${term.rows};${term.cols}t`);
+  function sendResize() {
+    const dpr = window.devicePixelRatio || 1;
+    const w   = Math.floor(canvas.parentElement.clientWidth  * dpr);
+    const h   = Math.floor(canvas.parentElement.clientHeight * dpr);
+    sendJSON({ type: "resize", w, h });
+  }
+
+  window.addEventListener("resize", () => {
+    // After resize, the DPR scale set in resizeCanvas is reset; redo it.
+    resizeCanvas();
+  });
+
+  // ── frame rendering ────────────────────────────────────────────────────────
+  function renderFrame(raw) {
+    let frame;
+    try { frame = JSON.parse(raw); } catch { return; }
+    if (frame.type !== "frame") return;
+
+    gameW = frame.w;
+    gameH = frame.h;
+
+    const dpr   = window.devicePixelRatio || 1;
+    const cssW  = canvas.clientWidth;
+    const cssH  = canvas.clientHeight;
+    const scaleX = cssW / gameW;
+    const scaleY = cssH / gameH;
+
+    ctx.save();
+    ctx.scale(scaleX, scaleY);
+
+    let clipDepth = 0;
+
+    for (const c of frame.calls) {
+      switch (c.op) {
+
+        case "clear":
+          ctx.fillStyle = rgb(c.color);
+          ctx.fillRect(0, 0, gameW, gameH);
+          break;
+
+        case "rect":
+          ctx.fillStyle = rgb(c.color);
+          ctx.fillRect(c.x, c.y, c.w, c.h);
+          break;
+
+        case "img": {
+          const im = cachedImg(c.path);
+          ctx.drawImage(im, c.x, c.y, c.w || 32, c.h || 32);
+          break;
+        }
+
+        case "text": {
+          ctx.font         = `${c.size}px monospace`;
+          ctx.fillStyle    = rgb(c.color);
+          ctx.textAlign    = c.align === "l" ? "left" : "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(c.text, c.x, c.y);
+          break;
+        }
+
+        case "button": {
+          // Box fill
+          ctx.fillStyle = rgb(c.bc || [40, 40, 40]);
+          ctx.fillRect(c.x, c.y, c.w, c.h);
+          // Border
+          ctx.strokeStyle = "#666";
+          ctx.lineWidth   = 2;
+          ctx.strokeRect(c.x + 1, c.y + 1, c.w - 2, c.h - 2);
+          // Label
+          const fs = Math.min(Math.floor(c.h * 0.42), 28);
+          ctx.font         = `bold ${fs}px sans-serif`;
+          ctx.fillStyle    = rgb(c.tc || [255, 255, 255]);
+          ctx.textAlign    = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(c.text, c.x + c.w / 2, c.y + c.h / 2);
+          break;
+        }
+
+        case "overlay": {
+          const [r, g, b, a = 128] = c.color;
+          ctx.fillStyle = `rgba(${r},${g},${b},${a / 255})`;
+          ctx.fillRect(0, 0, gameW, gameH);
+          break;
+        }
+
+        case "daynight":
+          renderDayNight(c);
+          break;
+
+        case "clip":
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(c.x, c.y, c.w, c.h);
+          ctx.clip();
+          clipDepth++;
+          break;
+
+        case "unclip":
+          if (clipDepth > 0) { ctx.restore(); clipDepth--; }
+          break;
       }
     }
 
-    window.addEventListener("resize", fitAndNotify);
-    // Initial fit — called before connect() so size is known at WS open.
-    fitAndNotify();
+    // Restore any unclosed clip saves
+    while (clipDepth-- > 0) ctx.restore();
+    ctx.restore();  // undo scale(scaleX, scaleY)
+  }
 
-    // ── WebSocket ─────────────────────────────────────────────────────────
-    let ws = null;
+  function renderDayNight(c) {
+    const [gx, gy, gw, gh] = c.rect;
+    const alpha = c.opacity / 255;
+    if (alpha < 0.05) return;
 
-    function send(data) {
-      if (ws && ws.readyState === WebSocket.OPEN) ws.send(data);
+    const oc   = new OffscreenCanvas(gw, gh);
+    const oc2d = oc.getContext("2d");
+
+    oc2d.fillStyle = `rgba(0,0,20,${alpha})`;
+    oc2d.fillRect(0, 0, gw, gh);
+
+    oc2d.globalCompositeOperation = "destination-out";
+    for (const [sx, sy, r] of c.lights) {
+      const lx   = sx - gx;
+      const ly   = sy - gy;
+      const grad = oc2d.createRadialGradient(lx, ly, 0, lx, ly, r);
+      grad.addColorStop(0,   "rgba(0,0,0,1)");
+      grad.addColorStop(0.5, "rgba(0,0,0,0.8)");
+      grad.addColorStop(1,   "rgba(0,0,0,0)");
+      oc2d.fillStyle = grad;
+      oc2d.beginPath();
+      oc2d.arc(lx, ly, r, 0, Math.PI * 2);
+      oc2d.fill();
     }
 
-    function setStatus(msg, isError) {
-      statusEl.textContent = msg;
-      statusEl.style.color = isError ? "#cc5555" : "#888";
-    }
+    ctx.drawImage(oc, gx, gy);
+  }
 
-    function connect() {
-      if (ws && ws.readyState === WebSocket.OPEN) ws.close();
-      reconnectBtn.style.display = "none";
-      setStatus("Connecting…");
+  function rgb([r, g, b]) { return `rgb(${r},${g},${b})`; }
 
-      ws = new WebSocket(`ws://${location.hostname}:${WS_PORT}`);
+  // ── WebSocket ──────────────────────────────────────────────────────────────
+  let ws = null;
 
-      ws.onopen = () => {
-        setStatus("Connected");
-        term.reset();
-        // Tell the server the actual terminal size immediately.
-        sendResize();
-        if (!isTouchDevice()) term.focus();
-      };
+  function send(data) {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(data);
+  }
+  function sendJSON(obj) { send(JSON.stringify(obj)); }
 
-      ws.onmessage = (evt) => term.write(evt.data);
+  function setStatus(msg, isError) {
+    statusEl.textContent = msg;
+    statusEl.style.color = isError ? "#c55" : "#666";
+  }
 
-      ws.onclose = () => {
-        setStatus("Disconnected.", true);
-        reconnectBtn.style.display = "inline-block";
-      };
+  function connect() {
+    if (ws && ws.readyState !== WebSocket.CLOSED) ws.close();
+    setStatus("Connecting…");
+    ws = new WebSocket(`ws://${location.hostname}:${WS_PORT}`);
+    ws.onopen    = () => { setStatus("Connected"); sendResize(); };
+    ws.onmessage = (e) => renderFrame(e.data);
+    ws.onclose   = () => setStatus("Disconnected — click Reconnect to retry", true);
+    ws.onerror   = () => setStatus(`Cannot reach ${location.hostname}:${WS_PORT}`, true);
+  }
 
-      ws.onerror = () => {
-        setStatus(`Error — server on port ${WS_PORT}?`, true);
-        reconnectBtn.style.display = "inline-block";
-      };
+  // ── touch detection ────────────────────────────────────────────────────────
+  function isTouchDevice() {
+    return "ontouchstart" in window || navigator.maxTouchPoints > 0;
+  }
 
-      term.onData((data) => send(data));
-    }
+  // ── key sequences (ANSI — parsed by TextInputSource on the server) ─────────
+  const KEY_SEQS = {
+    ArrowUp: "\x1b[A", ArrowDown: "\x1b[B", ArrowRight: "\x1b[C", ArrowLeft: "\x1b[D",
+    Enter: "\r", Escape: "\x1b", F1: "\x1bOP", F2: "\x1bOQ", F3: "\x1bOR",
+    Backspace: "\x7f",
+    // D-pad button data-key aliases
+    up: "\x1b[A", down: "\x1b[B", right: "\x1b[C", left: "\x1b[D",
+    enter: "\r", escape: "\x1b", f1: "\x1bOP",
+  };
+  const REPEAT_KEYS = new Set(["up", "down", "left", "right",
+                                "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
 
-    // ── on-screen button wiring ───────────────────────────────────────────
-    // Directional keys repeat at 120 ms while held so the player can walk
-    // continuously by holding the button instead of tapping for every step.
-    // Action keys (G, F, I, C, Esc, Help) fire once per touch.
-    const REPEAT_KEYS = new Set(["up", "down", "left", "right"]);
-
-    let _repeatTimer = null;
-    function _startKey(seq, repeats) {
-      send(seq);
-      if (repeats) {
-        clearInterval(_repeatTimer);
-        _repeatTimer = setInterval(() => send(seq), 120);
-      }
-    }
-    function _stopKey() {
+  // ── key repeat (D-pad hold) ────────────────────────────────────────────────
+  let _repeatTimer = null;
+  function startKey(key, seq) {
+    send(seq);
+    if (REPEAT_KEYS.has(key)) {
       clearInterval(_repeatTimer);
-      _repeatTimer = null;
+      _repeatTimer = setInterval(() => send(seq), 120);
     }
+  }
+  function stopKey() {
+    clearInterval(_repeatTimer);
+    _repeatTimer = null;
+  }
 
-    document.querySelectorAll(".ctrl-btn").forEach((btn) => {
-      const key  = btn.dataset.key;
-      const seq  = KEY_SEQUENCES[key];
-      if (!seq) return;
-      const repeats = REPEAT_KEYS.has(key);
-      btn.addEventListener("touchstart",  (e) => { e.preventDefault(); _startKey(seq, repeats); }, { passive: false });
-      btn.addEventListener("touchend",    (e) => { e.preventDefault(); _stopKey(); },              { passive: false });
-      btn.addEventListener("touchcancel", (e) => { e.preventDefault(); _stopKey(); },              { passive: false });
-      btn.addEventListener("mousedown",   (e) => { e.preventDefault(); _startKey(seq, repeats); });
-      btn.addEventListener("mouseup",     () => _stopKey());
-      btn.addEventListener("mouseleave",  () => _stopKey());
-    });
-
-    // ── tap-to-interact ───────────────────────────────────────────────────
-    // Convert a browser-pixel position inside the xterm canvas to the game's
-    // pixel coordinate system (server uses cellWidth=8, cellHeight=16).
-    // The mapping: browser tap → character cell (col,row) → game pixels.
-    function terminalGamePixels(clientX, clientY) {
-      const screen = document.querySelector(".xterm-screen");
-      if (!screen) return null;
-      const rect  = screen.getBoundingClientRect();
-      const bx    = clientX - rect.left;
-      const by    = clientY - rect.top;
-      const cellW = rect.width  / term.cols;
-      const cellH = rect.height / term.rows;
-      const col   = Math.floor(bx / cellW);
-      const row   = Math.floor(by / cellH);
-      return { x: col * 8, y: row * 16 };   // 8/16 = server's cellWidth/cellHeight
-    }
-
-    function sendMouse(type, clientX, clientY, button) {
-      const gp = terminalGamePixels(clientX, clientY);
-      if (gp) send(JSON.stringify({ type, x: gp.x, y: gp.y, button }));
-    }
-
-    const termOuter = document.getElementById("terminal-outer");
-
-    // Touch: tap or long-press on the game canvas
-    let _tapTimer    = null;
-    let _tapStart    = null;
-    let _longPressed = false;
-
-    termOuter.addEventListener("touchstart", (e) => {
-      // Ignore multi-touch — we only handle single-finger taps
-      if (e.touches.length !== 1) return;
+  // ── desktop keyboard ───────────────────────────────────────────────────────
+  document.addEventListener("keydown", (e) => {
+    if (e.ctrlKey || e.metaKey) return;
+    const seq = KEY_SEQS[e.key];
+    if (seq) {
       e.preventDefault();
-      const t = e.touches[0];
-      _tapStart    = { x: t.clientX, y: t.clientY };
-      _longPressed = false;
-
-      // Long-press (≥450 ms) → right-click → place/interact
-      _tapTimer = setTimeout(() => {
-        _longPressed = true;
-        sendMouse("mouse_down", _tapStart.x, _tapStart.y, 3);  // button 3 = right
-      }, 450);
-    }, { passive: false });
-
-    termOuter.addEventListener("touchend", (e) => {
+      startKey(e.key, seq);
+      return;
+    }
+    if (!e.altKey && e.key.length === 1) {
       e.preventDefault();
-      clearTimeout(_tapTimer);
-      if (_longPressed) {
-        const t = e.changedTouches[0];
-        sendMouse("mouse_up", t.clientX, t.clientY, 3);
-      } else if (_tapStart) {
-        // Short tap → left-click → gather
-        sendMouse("mouse_down", _tapStart.x, _tapStart.y, 1);
-        // Release immediately so setGathering is cleared on the next frame
-        setTimeout(() => sendMouse("mouse_up", _tapStart.x, _tapStart.y, 1), 80);
-      }
-      _tapStart = null;
-    }, { passive: false });
+      send(e.key);
+    }
+  });
+  document.addEventListener("keyup", (e) => {
+    if (REPEAT_KEYS.has(e.key)) stopKey();
+  });
 
-    // Desktop mouse clicks on the terminal (same code path, different trigger)
-    termOuter.addEventListener("mousedown", (e) => {
-      // button 0=left, 2=right in MouseEvent; map to SDL 1=left, 3=right
-      const btn = e.button === 2 ? 3 : 1;
-      sendMouse("mouse_down", e.clientX, e.clientY, btn);
-    });
-    termOuter.addEventListener("mouseup", (e) => {
-      const btn = e.button === 2 ? 3 : 1;
-      sendMouse("mouse_up", e.clientX, e.clientY, btn);
-    });
-    // Prevent context-menu on right-click so the right-click reaches the game
-    termOuter.addEventListener("contextmenu", (e) => e.preventDefault());
+  // ── on-screen buttons ──────────────────────────────────────────────────────
+  document.querySelectorAll(".btn[data-key]").forEach((btn) => {
+    const key  = btn.dataset.key;
+    const seq  = KEY_SEQS[key];
+    if (!seq) return;
+    const rep = REPEAT_KEYS.has(key);
 
-    connect();
-  </script>
+    btn.addEventListener("touchstart",  (e) => { e.preventDefault(); btn.classList.add("pressed");    startKey(key, seq); }, { passive: false });
+    btn.addEventListener("touchend",    (e) => { e.preventDefault(); btn.classList.remove("pressed"); stopKey(); },          { passive: false });
+    btn.addEventListener("touchcancel", (e) => { e.preventDefault(); btn.classList.remove("pressed"); stopKey(); },          { passive: false });
+    btn.addEventListener("mousedown",   (e) => { e.preventDefault(); btn.classList.add("pressed");    startKey(key, seq); });
+    btn.addEventListener("mouseup",     ()  => { btn.classList.remove("pressed"); stopKey(); });
+    btn.addEventListener("mouseleave",  ()  => { btn.classList.remove("pressed"); stopKey(); });
+  });
+
+  // ── tap-to-interact ────────────────────────────────────────────────────────
+  // Convert a browser-pixel position on the canvas to the server's game-pixel
+  // coordinate space.  gameW / gameH are updated each frame from the server.
+  function canvasToGame(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const bx = clientX - rect.left;
+    const by = clientY - rect.top;
+    return {
+      x: Math.round(bx * gameW / rect.width),
+      y: Math.round(by * gameH / rect.height),
+    };
+  }
+
+  function sendMouseEvent(type, clientX, clientY, button) {
+    const gp = canvasToGame(clientX, clientY);
+    sendJSON({ type, x: gp.x, y: gp.y, button });
+  }
+
+  const canvasWrap = document.getElementById("canvas-wrap");
+
+  // Touch: short tap = left-click (gather/select); long-press = right-click (place)
+  let _tapTimer = null, _tapStart = null, _tapLong = false;
+
+  canvasWrap.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 1) return;
+    e.preventDefault();
+    const t    = e.touches[0];
+    _tapStart  = { x: t.clientX, y: t.clientY };
+    _tapLong   = false;
+    _tapTimer  = setTimeout(() => {
+      _tapLong = true;
+      sendMouseEvent("mouse_down", _tapStart.x, _tapStart.y, 3);
+    }, 450);
+  }, { passive: false });
+
+  canvasWrap.addEventListener("touchend", (e) => {
+    e.preventDefault();
+    clearTimeout(_tapTimer);
+    if (_tapLong) {
+      const t = e.changedTouches[0];
+      sendMouseEvent("mouse_up", t.clientX, t.clientY, 3);
+    } else if (_tapStart) {
+      sendMouseEvent("mouse_down", _tapStart.x, _tapStart.y, 1);
+      setTimeout(() => sendMouseEvent("mouse_up", _tapStart.x, _tapStart.y, 1), 60);
+    }
+    _tapStart = null;
+  }, { passive: false });
+
+  canvasWrap.addEventListener("touchcancel", (e) => {
+    clearTimeout(_tapTimer);
+    _tapStart = null;
+  }, { passive: false });
+
+  // Desktop mouse
+  canvasWrap.addEventListener("mousedown", (e) => {
+    const btn = e.button === 2 ? 3 : 1;
+    sendMouseEvent("mouse_down", e.clientX, e.clientY, btn);
+  });
+  canvasWrap.addEventListener("mouseup", (e) => {
+    const btn = e.button === 2 ? 3 : 1;
+    sendMouseEvent("mouse_up", e.clientX, e.clientY, btn);
+  });
+  canvasWrap.addEventListener("contextmenu", (e) => e.preventDefault());
+
+  // ── init ────────────────────────────────────────────────────────────────────
+  if (isTouchDevice()) {
+    document.getElementById("controls").style.display = "flex";
+  }
+
+  resizeCanvas();
+  connect();
+</script>
 </body>
 </html>
