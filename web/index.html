@@ -33,6 +33,7 @@
     }
     #bar-status { flex: 1; color: #666; }
     #bar-reconnect {
+      display: none;   /* hidden until disconnected */
       background: #1e1e1e;
       border: 1px solid #444;
       color: #aaa;
@@ -48,6 +49,7 @@
       flex: 1;
       min-height: 0;
       position: relative;
+      cursor: crosshair;
     }
     #game-canvas {
       width: 100%;
@@ -148,9 +150,11 @@
 
   const WS_PORT = 8765;
 
-  const canvas   = document.getElementById("game-canvas");
-  const ctx      = canvas.getContext("2d");
-  const statusEl = document.getElementById("bar-status");
+  const canvas      = document.getElementById("game-canvas");
+  const ctx         = canvas.getContext("2d");
+  const statusEl    = document.getElementById("bar-status");
+  const reconnectEl = document.getElementById("bar-reconnect");
+  const canvasWrap  = document.getElementById("canvas-wrap");
 
   // ── image cache ────────────────────────────────────────────────────────────
   const imgCache = {};
@@ -183,10 +187,25 @@
     sendJSON({ type: "resize", w, h });
   }
 
-  window.addEventListener("resize", () => {
-    // After resize, the DPR scale set in resizeCanvas is reset; redo it.
-    resizeCanvas();
-  });
+  window.addEventListener("resize", resizeCanvas);
+
+  // ── loading overlay ────────────────────────────────────────────────────────
+  let _firstFrame = false;
+
+  function drawLoading() {
+    const dpr  = window.devicePixelRatio || 1;
+    const cssW = canvas.clientWidth;
+    const cssH = canvas.clientHeight;
+    ctx.save();
+    ctx.fillStyle = "#0a0a0a";
+    ctx.fillRect(0, 0, cssW, cssH);
+    ctx.fillStyle = "#444";
+    ctx.font = `${Math.round(cssH * 0.025 + 10)}px system-ui`;
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Loading…", cssW / 2, cssH / 2);
+    ctx.restore();
+  }
 
   // ── frame rendering ────────────────────────────────────────────────────────
   function renderFrame(raw) {
@@ -194,10 +213,10 @@
     try { frame = JSON.parse(raw); } catch { return; }
     if (frame.type !== "frame") return;
 
+    _firstFrame = true;
     gameW = frame.w;
     gameH = frame.h;
 
-    const dpr   = window.devicePixelRatio || 1;
     const cssW  = canvas.clientWidth;
     const cssH  = canvas.clientHeight;
     const scaleX = cssW / gameW;
@@ -223,7 +242,15 @@
 
         case "img": {
           const im = cachedImg(c.path);
-          ctx.drawImage(im, c.x, c.y, c.w || 32, c.h || 32);
+          const w  = c.w || 32;
+          const h  = c.h || 32;
+          if (im.complete && im.naturalWidth > 0) {
+            ctx.drawImage(im, c.x, c.y, w, h);
+          } else {
+            // Placeholder tile while browser fetches the image
+            ctx.fillStyle = "#222";
+            ctx.fillRect(c.x, c.y, w, h);
+          }
           break;
         }
 
@@ -237,14 +264,11 @@
         }
 
         case "button": {
-          // Box fill
           ctx.fillStyle = rgb(c.bc || [40, 40, 40]);
           ctx.fillRect(c.x, c.y, c.w, c.h);
-          // Border
-          ctx.strokeStyle = "#666";
-          ctx.lineWidth   = 2;
-          ctx.strokeRect(c.x + 1, c.y + 1, c.w - 2, c.h - 2);
-          // Label
+          ctx.strokeStyle = "rgba(255,255,255,0.15)";
+          ctx.lineWidth   = 1;
+          ctx.strokeRect(c.x + 0.5, c.y + 0.5, c.w - 1, c.h - 1);
           const fs = Math.min(Math.floor(c.h * 0.42), 28);
           ctx.font         = `bold ${fs}px sans-serif`;
           ctx.fillStyle    = rgb(c.tc || [255, 255, 255]);
@@ -329,12 +353,25 @@
 
   function connect() {
     if (ws && ws.readyState !== WebSocket.CLOSED) ws.close();
+    _firstFrame = false;
     setStatus("Connecting…");
+    reconnectEl.style.display = "none";
     ws = new WebSocket(`ws://${location.hostname}:${WS_PORT}`);
-    ws.onopen    = () => { setStatus("Connected"); sendResize(); };
+    ws.onopen    = () => {
+      setStatus("Connected");
+      reconnectEl.style.display = "none";
+      sendResize();
+      drawLoading();
+    };
     ws.onmessage = (e) => renderFrame(e.data);
-    ws.onclose   = () => setStatus("Disconnected — click Reconnect to retry", true);
-    ws.onerror   = () => setStatus(`Cannot reach ${location.hostname}:${WS_PORT}`, true);
+    ws.onclose   = () => {
+      setStatus("Disconnected — tap Reconnect to retry", true);
+      reconnectEl.style.display = "";
+    };
+    ws.onerror   = () => {
+      setStatus(`Cannot reach ${location.hostname}:${WS_PORT}`, true);
+      reconnectEl.style.display = "";
+    };
   }
 
   // ── touch detection ────────────────────────────────────────────────────────
@@ -391,7 +428,6 @@
     const key  = btn.dataset.key;
     const seq  = KEY_SEQS[key];
     if (!seq) return;
-    const rep = REPEAT_KEYS.has(key);
 
     btn.addEventListener("touchstart",  (e) => { e.preventDefault(); btn.classList.add("pressed");    startKey(key, seq); }, { passive: false });
     btn.addEventListener("touchend",    (e) => { e.preventDefault(); btn.classList.remove("pressed"); stopKey(); },          { passive: false });
@@ -401,9 +437,7 @@
     btn.addEventListener("mouseleave",  ()  => { btn.classList.remove("pressed"); stopKey(); });
   });
 
-  // ── tap-to-interact ────────────────────────────────────────────────────────
-  // Convert a browser-pixel position on the canvas to the server's game-pixel
-  // coordinate space.  gameW / gameH are updated each frame from the server.
+  // ── mouse coordinate conversion ────────────────────────────────────────────
   function canvasToGame(clientX, clientY) {
     const rect = canvas.getBoundingClientRect();
     const bx = clientX - rect.left;
@@ -419,39 +453,88 @@
     sendJSON({ type, x: gp.x, y: gp.y, button });
   }
 
-  const canvasWrap = document.getElementById("canvas-wrap");
+  function sendMouseMove(clientX, clientY) {
+    const gp = canvasToGame(clientX, clientY);
+    sendJSON({ type: "mouse_move", x: gp.x, y: gp.y });
+  }
 
-  // Touch: short tap = left-click (gather/select); long-press = right-click (place)
-  let _tapTimer = null, _tapStart = null, _tapLong = false;
+  // ── tap-to-interact ────────────────────────────────────────────────────────
+  // Gesture states:
+  //   short tap  (<450ms, <5px move) → left click (gather / select button)
+  //   long press (≥450ms, <5px move) → right click (place)
+  //   drag       (≥5px move)         → left-click-drag (HUD repositioning)
+  let _tapTimer  = null;
+  let _tapStart  = null;
+  let _tapLong   = false;
+  let _dragActive = false;
+  let _lastMoveSent = 0;
 
   canvasWrap.addEventListener("touchstart", (e) => {
     if (e.touches.length !== 1) return;
     e.preventDefault();
-    const t    = e.touches[0];
+    const t   = e.touches[0];
     _tapStart  = { x: t.clientX, y: t.clientY };
     _tapLong   = false;
+    _dragActive = false;
     _tapTimer  = setTimeout(() => {
       _tapLong = true;
       sendMouseEvent("mouse_down", _tapStart.x, _tapStart.y, 3);
     }, 450);
   }, { passive: false });
 
+  canvasWrap.addEventListener("touchmove", (e) => {
+    if (e.touches.length !== 1) return;
+    e.preventDefault();
+    const t = e.touches[0];
+
+    if (!_dragActive && _tapStart) {
+      const dx = t.clientX - _tapStart.x;
+      const dy = t.clientY - _tapStart.y;
+      if (Math.hypot(dx, dy) > 5) {
+        clearTimeout(_tapTimer);
+        _tapLong    = false;
+        _dragActive = true;
+        // Send mouse_down at original touch position to start the drag
+        sendMouseEvent("mouse_down", _tapStart.x, _tapStart.y, 1);
+      }
+    }
+
+    if (_dragActive) {
+      const now = Date.now();
+      if (now - _lastMoveSent >= 40) {
+        _lastMoveSent = now;
+        sendMouseMove(t.clientX, t.clientY);
+      }
+    }
+  }, { passive: false });
+
   canvasWrap.addEventListener("touchend", (e) => {
     e.preventDefault();
     clearTimeout(_tapTimer);
+    const t = e.changedTouches[0];
     if (_tapLong) {
-      const t = e.changedTouches[0];
       sendMouseEvent("mouse_up", t.clientX, t.clientY, 3);
+    } else if (_dragActive) {
+      sendMouseEvent("mouse_up", t.clientX, t.clientY, 1);
     } else if (_tapStart) {
+      // Short tap: fire click at original touch-down position
       sendMouseEvent("mouse_down", _tapStart.x, _tapStart.y, 1);
       setTimeout(() => sendMouseEvent("mouse_up", _tapStart.x, _tapStart.y, 1), 60);
     }
-    _tapStart = null;
+    _tapStart   = null;
+    _tapLong    = false;
+    _dragActive = false;
   }, { passive: false });
 
   canvasWrap.addEventListener("touchcancel", (e) => {
     clearTimeout(_tapTimer);
-    _tapStart = null;
+    if (_dragActive) {
+      const t = e.changedTouches[0];
+      sendMouseEvent("mouse_up", t.clientX, t.clientY, 1);
+    }
+    _tapStart   = null;
+    _tapLong    = false;
+    _dragActive = false;
   }, { passive: false });
 
   // Desktop mouse
@@ -462,6 +545,12 @@
   canvasWrap.addEventListener("mouseup", (e) => {
     const btn = e.button === 2 ? 3 : 1;
     sendMouseEvent("mouse_up", e.clientX, e.clientY, btn);
+  });
+  canvasWrap.addEventListener("mousemove", (e) => {
+    const now = Date.now();
+    if (now - _lastMoveSent < 40) return;
+    _lastMoveSent = now;
+    sendMouseMove(e.clientX, e.clientY);
   });
   canvasWrap.addEventListener("contextmenu", (e) => e.preventDefault());
 

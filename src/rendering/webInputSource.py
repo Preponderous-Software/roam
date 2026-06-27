@@ -52,6 +52,15 @@ class WebInputSource(TextInputSource):
         evtType = EventType.MOUSE_DOWN if isDown else EventType.MOUSE_UP
         self.queueEvent(InputEvent(evtType, position=(x, y), button=button))
 
+    def moveMouse(self, x, y):
+        """Update mouse position and queue a MOUSE_MOTION event.
+
+        Sets _mousePos before queuing so getMousePosition() returns the right
+        coords when the game loop processes the event (e.g. hudDragManager).
+        """
+        self._mousePos = (x, y)
+        self.queueEvent(InputEvent(EventType.MOUSE_MOTION, position=(x, y)))
+
     def getMousePosition(self):
         return self._mousePos
 

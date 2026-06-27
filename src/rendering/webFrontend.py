@@ -70,6 +70,13 @@ class WebSession:
                         t == "mouse_down",
                     )
                     return
+
+                if t == "mouse_move":
+                    self._inputSource.moveMouse(
+                        int(msg.get("x", 0)),
+                        int(msg.get("y", 0)),
+                    )
+                    return
             except (json.JSONDecodeError, KeyError, ValueError):
                 pass
 
