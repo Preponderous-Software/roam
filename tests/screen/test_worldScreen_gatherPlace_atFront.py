@@ -65,6 +65,8 @@ def _makeWorldScreen(room=None):
 def test_gather_at_front_no_location_sets_status():
     ws = _makeWorldScreen()
     ws.getLocationInFrontOfPlayer = lambda: -1
+    # Both the facing tile and the player's own tile are absent.
+    ws.getLocationOfPlayer = lambda: -1
 
     ws.executeGatherAtFront()
 
@@ -93,12 +95,34 @@ def test_gather_at_front_sets_nothing_to_pick_up_when_empty():
     ws = _makeWorldScreen(room)
 
     emptyLoc = room.getGrid().getLocationByCoordinates(2, 2)
+    playerLoc = room.getGrid().getLocationByCoordinates(1, 1)
     ws.getLocationInFrontOfPlayer = lambda: emptyLoc
+    # Player's own tile is also empty — final fallback shows nothing message.
+    ws.getLocationOfPlayer = lambda: playerLoc
     ws._tryHarvestCrop = lambda loc, r: False
 
     ws.executeGatherAtFront()
 
     ws.status.set.assert_called_with("Nothing to pick up here")
+
+
+def test_gather_at_front_falls_back_to_player_tile_when_facing_empty():
+    room = _makeRoom(gridSize=5)
+    ws = _makeWorldScreen(room)
+
+    apple = Apple()
+    playerLoc = room.getGrid().getLocationByCoordinates(1, 1)
+    room.addEntityToLocation(apple, playerLoc)
+
+    emptyFacingLoc = room.getGrid().getLocationByCoordinates(2, 2)
+    ws.getLocationInFrontOfPlayer = lambda: emptyFacingLoc
+    ws.getLocationOfPlayer = lambda: playerLoc
+    ws._tryHarvestCrop = lambda loc, r: False
+
+    ws.executeGatherAtFront()
+
+    assert ws.player.getInventory().getNumItems() == 1
+    ws.status.set.assert_called_with("Picked up " + apple.getName())
 
 
 def test_gather_at_front_full_inventory_sets_status():

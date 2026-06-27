@@ -48,9 +48,11 @@ class PygameRenderer(Renderer):
         return self._display().get_height()
 
     def clearScreen(self, color):
+        self.graphik.beginFrame()
         self._display().fill(color)
 
     def present(self):
+        self.graphik.endFrame()
         pygame.display.update()
 
     def setCaption(self, text):

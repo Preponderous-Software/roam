@@ -212,11 +212,11 @@ class SaveSelectionScreen(Screen):
             return
         if key == KeyCode.ESCAPE:
             self.switchToMainMenuScreen()
-        elif key == KeyCode.UP:
+        elif key in (KeyCode.UP, KeyCode.W):
             saves = self.getSaveDirectories()
             maxVisible = self._maxVisible()
             self._moveCursorUp(saves, maxVisible)
-        elif key == KeyCode.DOWN:
+        elif key in (KeyCode.DOWN, KeyCode.S):
             saves = self.getSaveDirectories()
             maxVisible = self._maxVisible()
             self._moveCursorDown(saves, maxVisible)
@@ -263,15 +263,37 @@ class SaveSelectionScreen(Screen):
     def drawNoSavesMessage(self):
         x, y = self.renderer.getDisplaySize()
         xpos = x / 2
-        ypos = y / 3
-        self.renderer.drawText("No save files found.", xpos, ypos, 28, palette.WHITE)
-        ypos += 40
+        ypos = y / 5
+        self.renderer.drawText("Welcome to Roam!", xpos, ypos, 32, palette.WHITE)
+        ypos += 44
         self.renderer.drawText(
-            "Press C to create a new save.",
+            "No saves found. Create your first save to start playing.",
             xpos,
             ypos,
-            24,
+            20,
             palette.GRAY,
+        )
+        btnWidth = x / 4
+        btnHeight = y / 9
+        btnX = xpos - btnWidth / 2
+        btnY = y * 0.40
+        self.renderer.drawButton(
+            btnX,
+            btnY,
+            btnWidth,
+            btnHeight,
+            palette.GREEN,
+            palette.WHITE,
+            28,
+            "Create New Save",
+            self.startNamingNewSave,
+        )
+        self.renderer.drawText(
+            "or press C",
+            xpos,
+            btnY + btnHeight + 22,
+            18,
+            palette.MEDIUM_GRAY,
         )
 
     def drawSaveList(self, saves):
@@ -603,7 +625,8 @@ class SaveSelectionScreen(Screen):
         self.drawTitle()
 
         saves = self.getSaveDirectories()
-        if len(saves) == 0:
+        hasSaves = len(saves) > 0
+        if not hasSaves:
             self.drawNoSavesMessage()
         else:
             self.drawSaveList(saves)
@@ -615,17 +638,15 @@ class SaveSelectionScreen(Screen):
         elif self.namingNewSave:
             self.drawNamingDialog()
         else:
-            self.drawControlsHint()
+            self.drawControlsHint(hasSaves)
 
-    def drawControlsHint(self):
+    def drawControlsHint(self, hasSaves=True):
         x, y = self.renderer.getDisplaySize()
-        self.renderer.drawText(
-            "Up/Down: choose  -  Enter: play  -  C: new  -  Bksp: delete  -  T: sort  -  Esc: back",
-            x / 2,
-            y - 14,
-            16,
-            palette.MEDIUM_GRAY,
-        )
+        if hasSaves:
+            hint = "W/S or Up/Down: choose  -  Enter: play  -  C: new  -  Bksp: delete  -  T: sort  -  Esc: back"
+        else:
+            hint = "C or click button: create new save  -  Esc: back"
+        self.renderer.drawText(hint, x / 2, y - 14, 16, palette.MEDIUM_GRAY)
 
     def onExit(self):
         if self.nextScreen == ScreenType.WORLD_SCREEN:

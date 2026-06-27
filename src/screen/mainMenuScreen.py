@@ -91,7 +91,7 @@ class MainMenuScreen(Screen):
         hintY = startY + len(self._MENU_ITEMS) * (height + margin) + 6
         selectedLabel = self._MENU_ITEMS[self._selectedIndex][0]
         self.renderer.drawText(
-            f"Up/Down: navigate  -  Enter: {selectedLabel}  -  Esc: Quit",
+            f"W/S or Up/Down: navigate  -  Enter: {selectedLabel}  -  Esc: Quit",
             x / 2,
             hintY,
             16,
@@ -135,9 +135,9 @@ class MainMenuScreen(Screen):
     def handleKeyDownEvent(self, key):
         if key == KeyCode.ESCAPE:
             self.quitApplication()
-        elif key == KeyCode.UP:
+        elif key in (KeyCode.UP, KeyCode.W):
             self._selectedIndex = (self._selectedIndex - 1) % len(self._MENU_ITEMS)
-        elif key == KeyCode.DOWN:
+        elif key in (KeyCode.DOWN, KeyCode.S):
             self._selectedIndex = (self._selectedIndex + 1) % len(self._MENU_ITEMS)
         elif key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
             getattr(self, self._MENU_ITEMS[self._selectedIndex][1])()

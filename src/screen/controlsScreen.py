@@ -238,9 +238,9 @@ class ControlsScreen(Screen):
             return
         if key == KeyCode.ESCAPE:
             self.cancelAndReturn()
-        elif key == KeyCode.UP:
+        elif key in (KeyCode.UP, KeyCode.W):
             self._cursor = max(0, self._cursor - 1)
-        elif key == KeyCode.DOWN:
+        elif key in (KeyCode.DOWN, KeyCode.S):
             actions = self.keyBindings.getActions()
             self._cursor = min(len(actions) - 1, self._cursor + 1)
         elif key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):
