@@ -1,6 +1,7 @@
 import asyncio
 import functools
 import http.server
+import json
 import os
 import re
 import threading
@@ -44,9 +45,7 @@ class WebSession:
         asyncio.run_coroutine_threadsafe(self._sendQueue.put(data), self._loop)
 
     def feedInput(self, data):
-        # Intercept the xterm resize report (CSI 8 ; rows ; cols t) before it
-        # reaches the ANSI key parser — it's a terminal control sequence, not a
-        # keystroke.  The renderer's resize() forces a full redraw at the new size.
+        # --- resize report (CSI 8 ; rows ; cols t) ---
         m = _RESIZE_RE.fullmatch(data.strip())
         if m:
             rows, cols = int(m.group(1)), int(m.group(2))
@@ -58,6 +57,23 @@ class WebSession:
                     InputEvent(EventType.WINDOW_RESIZE, size=(cols, rows))
                 )
             return
+
+        # --- JSON mouse event {"type":"mouse_down"|"mouse_up","x":…,"y":…,"button":…} ---
+        if data.startswith("{"):
+            try:
+                msg = json.loads(data)
+                t = msg.get("type")
+                if t in ("mouse_down", "mouse_up"):
+                    self._inputSource.updateMouse(
+                        int(msg.get("x", 0)),
+                        int(msg.get("y", 0)),
+                        int(msg.get("button", 1)),
+                        t == "mouse_down",
+                    )
+                    return
+            except (json.JSONDecodeError, KeyError, ValueError):
+                pass
+
         self._inputSource.feed(data)
 
     # --- Frontend interface (mirrors PygameFrontend / TextFrontend) ---

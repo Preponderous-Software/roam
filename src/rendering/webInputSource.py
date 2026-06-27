@@ -1,6 +1,7 @@
 import queue
 import time
 
+from rendering.inputEvent import EventType, InputEvent
 from rendering.textInputSource import TextInputSource
 
 
@@ -12,15 +13,42 @@ from rendering.textInputSource import TextInputSource
 # de-bounce) — the only difference is the char source: instead of os.read on
 # stdin, characters arrive via feed() from the WebSocket handler and are
 # buffered in a thread-safe queue.
+#
+# Unlike TextInputSource (which always returns (0,0) / all-False for mouse),
+# this class tracks real mouse state so the game's existing click handling
+# (gather on left-click, place on right-click, hotbar slot selection) works
+# when the browser sends tap/click events as JSON mouse messages.
 class WebInputSource(TextInputSource):
     def __init__(self):
         self._inputQueue = queue.Queue()
+        self._mousePos = (0, 0)
+        self._mouseButtons = [False, False, False]  # left, middle, right
         super().__init__(charReader=self._readFromQueue)
 
     def feed(self, data: str):
         """Deliver a burst of raw terminal bytes received from xterm.js."""
         if data:
             self._inputQueue.put(data)
+
+    def updateMouse(self, x, y, button, isDown):
+        """Update mouse state and queue a MOUSE_DOWN or MOUSE_UP event.
+
+        Called by WebSession when a JSON mouse message arrives from the browser.
+        button follows SDL convention: 1=left, 2=middle, 3=right.
+        Thread-safe under CPython's GIL via the parent's queueEvent().
+        """
+        self._mousePos = (x, y)
+        idx = button - 1
+        if 0 <= idx < 3:
+            self._mouseButtons[idx] = isDown
+        evtType = EventType.MOUSE_DOWN if isDown else EventType.MOUSE_UP
+        self.queueEvent(InputEvent(evtType, position=(x, y), button=button))
+
+    def getMousePosition(self):
+        return self._mousePos
+
+    def getMouseButtons(self):
+        return tuple(self._mouseButtons)
 
     def _readFromQueue(self):
         try:

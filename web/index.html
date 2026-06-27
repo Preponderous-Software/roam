@@ -277,6 +277,78 @@
       btn.addEventListener("mousedown",  (e) => { e.preventDefault(); send(seq); });
     });
 
+    // ── tap-to-interact ───────────────────────────────────────────────────
+    // Convert a browser-pixel position inside the xterm canvas to the game's
+    // pixel coordinate system (server uses cellWidth=8, cellHeight=16).
+    // The mapping: browser tap → character cell (col,row) → game pixels.
+    function terminalGamePixels(clientX, clientY) {
+      const screen = document.querySelector(".xterm-screen");
+      if (!screen) return null;
+      const rect  = screen.getBoundingClientRect();
+      const bx    = clientX - rect.left;
+      const by    = clientY - rect.top;
+      const cellW = rect.width  / term.cols;
+      const cellH = rect.height / term.rows;
+      const col   = Math.floor(bx / cellW);
+      const row   = Math.floor(by / cellH);
+      return { x: col * 8, y: row * 16 };   // 8/16 = server's cellWidth/cellHeight
+    }
+
+    function sendMouse(type, clientX, clientY, button) {
+      const gp = terminalGamePixels(clientX, clientY);
+      if (gp) send(JSON.stringify({ type, x: gp.x, y: gp.y, button }));
+    }
+
+    const termOuter = document.getElementById("terminal-outer");
+
+    // Touch: tap or long-press on the game canvas
+    let _tapTimer    = null;
+    let _tapStart    = null;
+    let _longPressed = false;
+
+    termOuter.addEventListener("touchstart", (e) => {
+      // Ignore multi-touch — we only handle single-finger taps
+      if (e.touches.length !== 1) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      _tapStart    = { x: t.clientX, y: t.clientY };
+      _longPressed = false;
+
+      // Long-press (≥450 ms) → right-click → place/interact
+      _tapTimer = setTimeout(() => {
+        _longPressed = true;
+        sendMouse("mouse_down", _tapStart.x, _tapStart.y, 3);  // button 3 = right
+      }, 450);
+    }, { passive: false });
+
+    termOuter.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      clearTimeout(_tapTimer);
+      if (_longPressed) {
+        const t = e.changedTouches[0];
+        sendMouse("mouse_up", t.clientX, t.clientY, 3);
+      } else if (_tapStart) {
+        // Short tap → left-click → gather
+        sendMouse("mouse_down", _tapStart.x, _tapStart.y, 1);
+        // Release immediately so setGathering is cleared on the next frame
+        setTimeout(() => sendMouse("mouse_up", _tapStart.x, _tapStart.y, 1), 80);
+      }
+      _tapStart = null;
+    }, { passive: false });
+
+    // Desktop mouse clicks on the terminal (same code path, different trigger)
+    termOuter.addEventListener("mousedown", (e) => {
+      // button 0=left, 2=right in MouseEvent; map to SDL 1=left, 3=right
+      const btn = e.button === 2 ? 3 : 1;
+      sendMouse("mouse_down", e.clientX, e.clientY, btn);
+    });
+    termOuter.addEventListener("mouseup", (e) => {
+      const btn = e.button === 2 ? 3 : 1;
+      sendMouse("mouse_up", e.clientX, e.clientY, btn);
+    });
+    // Prevent context-menu on right-click so the right-click reaches the game
+    termOuter.addEventListener("contextmenu", (e) => e.preventDefault());
+
     connect();
   </script>
 </body>
