@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Roam — Cave Generation System Design</title>
+  <style>
+    :root {
+      --bg: #0e0c0a;
+      --surface: #1a1714;
+      --card: #221e1b;
+      --border: #3a3028;
+      --accent: #c8922a;
+      --accent2: #7a5c2e;
+      --text: #d4c8b8;
+      --muted: #7a6e62;
+      --stone: #555050;
+      --ore-coal: #3a3a3e;
+      --ore-iron: #8a7060;
+      --ore-gold: #c8a020;
+      --cave-shallow: #2a2018;
+      --cave-deep: #181210;
+      --cave-abyss: #0c0a08;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.65;
+      padding: 0 16px 80px;
+    }
+
+    /* ── layout ── */
+    .hero {
+      text-align: center;
+      padding: 60px 24px 48px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 48px;
+    }
+    .hero h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+    .hero p {
+      margin-top: 12px;
+      color: var(--muted);
+      max-width: 600px;
+      margin-inline: auto;
+    }
+    main { max-width: 900px; margin-inline: auto; }
+
+    section { margin-bottom: 56px; }
+    h2 {
+      font-size: 1.35rem;
+      color: var(--accent);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      margin-bottom: 24px;
+    }
+    h3 { font-size: 1.05rem; color: var(--text); margin: 20px 0 8px; }
+
+    p { margin-bottom: 12px; }
+    ul, ol { padding-left: 22px; margin-bottom: 12px; }
+    li { margin-bottom: 5px; }
+
+    code {
+      background: #2a2520;
+      color: #c8a87a;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 0.85em;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    pre {
+      background: #1a1612;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      overflow-x: auto;
+      margin: 12px 0 20px;
+      font-family: 'Cascadia Code', 'Fira Code', monospace;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #c8b898;
+    }
+
+    /* ── cards ── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px;
+    }
+    .card .label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .card .title { font-weight: 600; font-size: 1rem; margin-bottom: 6px; }
+    .card p { font-size: 0.88rem; color: var(--muted); margin: 0; }
+
+    /* ── depth diagram ── */
+    .depth-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      max-width: 680px;
+    }
+    .depth-layer {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .depth-layer:last-child { border-bottom: none; }
+    .depth-badge {
+      font-family: monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      min-width: 36px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .depth-info { flex: 1; }
+    .depth-info strong { display: block; margin-bottom: 2px; font-size: 0.95rem; }
+    .depth-info span { font-size: 0.82rem; color: var(--muted); }
+    .ores { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+    .ore-tag {
+      font-size: 0.72rem;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+
+    /* ── cave diagram (ASCII tile grid) ── */
+    .tile-grid {
+      display: inline-grid;
+      gap: 1px;
+      background: #111;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px;
+      font-family: monospace;
+      font-size: 13px;
+      line-height: 1;
+    }
+    .tile-grid-row { display: contents; }
+    .tile {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 2px;
+    }
+    .t-stone { background: #3a3535; color: #5a5252; }
+    .t-open  { background: #1a1512; color: transparent; }
+    .t-ore-c { background: #2e2e32; color: #777; }
+    .t-ore-i { background: #4a3828; color: #8a6050; }
+    .t-ore-g { background: #3a2e10; color: #c8a020; }
+    .t-ladder{ background: #3a2e18; color: #c8922a; font-weight: 700; }
+    .t-entry { background: #181210; color: #444; font-weight: 700; }
+    .t-floor { background: #1c1814; }
+
+    /* ── algo steps ── */
+    .steps { counter-reset: step; list-style: none; padding: 0; }
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .steps li::before {
+      content: counter(step);
+      background: var(--accent2);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 0.78rem;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .steps li p { margin: 0; font-size: 0.92rem; }
+
+    /* ── entity table ── */
+    table { border-collapse: collapse; width: 100%; margin-bottom: 12px; }
+    th {
+      text-align: left;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      padding: 6px 10px;
+    }
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #1e1a17;
+      font-size: 0.88rem;
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    td:first-child { font-family: monospace; color: var(--accent); }
+
+    /* ── file tree ── */
+    .filetree {
+      background: #1a1612;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 18px;
+      font-family: monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      color: #b0a090;
+    }
+    .filetree .new { color: #68c468; }
+    .filetree .mod { color: var(--accent); }
+    .filetree .dir { color: var(--muted); }
+
+    /* ── algorithm diagram ── */
+    .algo-steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+      margin: 16px 0;
+    }
+    .algo-step {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      text-align: center;
+      font-size: 0.8rem;
+    }
+    .algo-step .num {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+      display: block;
+      margin-bottom: 4px;
+    }
+    .algo-step p { color: var(--muted); margin: 0; }
+
+    .tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 3px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .tag.new { background: #1a3a1a; color: #68c468; }
+    .tag.modified { background: #3a2a10; color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>⛏ Cave Generation System</h1>
+  <p>Design document for Roam's underground cave system — procedural generation, vertical traversal, depth-scaled loot, and multi-level exploration.</p>
+</div>
+
+<main>
+
+<!-- ── OVERVIEW ── -->
+<section>
+  <h2>Overview</h2>
+  <p>
+    The cave system adds a <strong>vertical (z-axis) dimension</strong> to Roam's existing 2D tile world.
+    The surface world (z = 0) is unchanged. Caves exist at z = −1, −2, and −3, each progressively darker,
+    more dangerous, and richer in rare ore.
+  </p>
+  <p>
+    Players discover a <strong>Cave Entrance</strong> entity in the world (most commonly in mountain
+    and forest rooms). Interacting with it descends into the cave below the same (x, y) map coordinate.
+    A <strong>Cave Ladder</strong> inside every cave room leads back up. Deeper cave levels contain
+    additional entrances to go further down — up to Abyss depth.
+  </p>
+
+  <div class="depth-stack" style="margin-top:24px;">
+    <div class="depth-layer" style="background:#2a2018;">
+      <div class="depth-badge" style="background:#3a3028;color:#c8922a;">z=0</div>
+      <div class="depth-info">
+        <strong>Surface</strong>
+        <span>Grassland, Forest, Jungle, Mountain — existing room types. Cave Entrances spawn here.</span>
+        <div class="ores">
+          <span class="ore-tag" style="background:#2e2e32;color:#999;">Coal</span>
+          <span class="ore-tag" style="background:#4a3828;color:#b08060;">Iron</span>
+        </div>
+      </div>
+    </div>
+    <div class="depth-layer" style="background:var(--cave-shallow);">
+      <div class="depth-badge" style="background:#2a2018;color:#a07840;">z=−1</div>
+      <div class="depth-info">
+        <strong>Shallow Cave</strong>
+        <span>First underground level. Cellular-automata corridors, coal &amp; iron ore. 30 % chance of a deeper entrance.</span>
+        <div class="ores">
+          <span class="ore-tag" style="background:#2e2e32;color:#999;">Coal</span>
+          <span class="ore-tag" style="background:#4a3828;color:#b08060;">Iron</span>
+        </div>
+      </div>
+    </div>
+    <div class="depth-layer" style="background:var(--cave-deep);">
+      <div class="depth-badge" style="background:#201814;color:#806030;">z=−2</div>
+      <div class="depth-info">
+        <strong>Deep Cave</strong>
+        <span>Tighter corridors, richer iron, first gold veins. 20 % chance of an abyss entrance.</span>
+        <div class="ores">
+          <span class="ore-tag" style="background:#4a3828;color:#b08060;">Iron</span>
+          <span class="ore-tag" style="background:#3a2e10;color:#c8a020;">Gold</span>
+        </div>
+      </div>
+    </div>
+    <div class="depth-layer" style="background:var(--cave-abyss);">
+      <div class="depth-badge" style="background:#181210;color:#604820;">z=−3</div>
+      <div class="depth-info">
+        <strong>Abyss</strong>
+        <span>Deepest layer. Dense stone, abundant gold, rare gem veins. No further descent.</span>
+        <div class="ores">
+          <span class="ore-tag" style="background:#3a2e10;color:#c8a020;">Gold</span>
+          <span class="ore-tag" style="background:#1a1a2e;color:#8080e0;">Gem (future)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── GENERATION ALGORITHM ── -->
+<section>
+  <h2>Cave Generation Algorithm</h2>
+  <p>
+    Each cave room uses a <strong>cellular automata (CA) smoothing</strong> pass to carve natural-looking
+    corridors from a random initial state. The algorithm runs entirely at room-generation time; no
+    pre-planning across rooms is needed.
+  </p>
+
+  <h3>Steps</h3>
+  <ul class="steps">
+    <li><p><strong>Fill with Stone.</strong> Every tile in the grid is initialised as a solid Stone entity.</p></li>
+    <li><p><strong>Random seeding.</strong> Each cell is cleared (made open floor) with probability <em>p_open</em>. Default: 45 % at z=−1, 40 % at z=−2, 35 % at z=−3 — deeper levels are more enclosed.</p></li>
+    <li>
+      <p><strong>Cellular automata smoothing (4 iterations).</strong> For every cell, count the number
+      of stone cells among its 8 Moore-neighbourhood neighbours. If the count ≥ 5, the cell becomes
+      (or stays) stone; otherwise it becomes open. The pass runs on a copy of the grid so cells don't
+      interfere with each other.</p>
+    </li>
+    <li><p><strong>Flood-fill connectivity check.</strong> BFS from the centre tile identifies the largest connected open region. All open cells outside the largest region are sealed back to stone, preventing disconnected pockets.</p></li>
+    <li><p><strong>Guarantee centre access.</strong> If the centre tile ended up as stone (rare but possible), the centre and its four cardinal neighbours are force-cleared to create a player entry point.</p></li>
+    <li><p><strong>Place Cave Ladder.</strong> A single CaveLadder entity is placed at a random open cell inside the largest connected region — always reachable by the player.</p></li>
+    <li><p><strong>Scatter ores.</strong> Each open or open-adjacent cell has a small depth-scaled chance to spawn ore (coal → iron → gold as depth increases). Ore sits inside stone cells so the player must have mined/cleared a path to reach it.</p></li>
+    <li><p><strong>Optional deeper entrance.</strong> If z &gt; −3, a CaveEntrance is placed at a second random open cell far from the ladder, giving access to the next depth level.</p></li>
+  </ul>
+
+  <h3>Example output (17 × 17 grid, z = −1)</h3>
+  <p style="color:var(--muted);font-size:0.82rem;margin-bottom:8px;">
+    Legend: <code>■</code> stone  <code>·</code> open floor  <code>c</code> coal  <code>i</code> iron  <code>L</code> ladder  <code>▼</code> deeper entrance
+  </p>
+  <pre style="line-height:1.3;letter-spacing:1px;">■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■
+■ ■ ■ ■ ■ ■ · · · ■ ■ ■ ■ ■ ■ ■ ■
+■ ■ ■ ■ · · · · · · ■ ■ ■ ■ ■ ■ ■
+■ ■ ■ · · · · c · · · ■ ■ ■ ■ ■ ■
+■ ■ · · · · i · · · · · ■ ■ ■ ■ ■
+■ ■ · · · · · · · · · · ■ ■ ■ ■ ■
+■ ■ · · · · · · L · · · · ■ ■ ■ ■
+■ ■ · · · · · · · · · · · ■ ■ ■ ■
+■ · · · · · · · · · · · · · ■ ■ ■
+■ · · c · · · · · · · · · · ■ ■ ■
+■ · · · · · · · · · ▼ · · · ■ ■ ■
+■ ■ · · · · · · · · · · · ■ ■ ■ ■
+■ ■ ■ · · · i · · · · · ■ ■ ■ ■ ■
+■ ■ ■ ■ · · · · · c · ■ ■ ■ ■ ■ ■
+■ ■ ■ ■ ■ · · · · · ■ ■ ■ ■ ■ ■ ■
+■ ■ ■ ■ ■ ■ · · · ■ ■ ■ ■ ■ ■ ■ ■
+■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■ ■</pre>
+
+  <div class="algo-steps">
+    <div class="algo-step"><span class="num">45%</span><p>Initial open-cell probability (z=−1)</p></div>
+    <div class="algo-step"><span class="num">4×</span><p>CA smoothing iterations</p></div>
+    <div class="algo-step"><span class="num">≥5</span><p>Stone-neighbour threshold to seal a cell</p></div>
+    <div class="algo-step"><span class="num">1</span><p>Flood-fill pass to remove isolated pockets</p></div>
+    <div class="algo-step"><span class="num">8</span><p>Moore neighbourhood (all 8 adjacent cells)</p></div>
+  </div>
+</section>
+
+<!-- ── ENTITIES ── -->
+<section>
+  <h2>New Entities</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Class</th>
+        <th>Name</th>
+        <th>Solid</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>CaveEntrance</td>
+        <td>Cave Entrance</td>
+        <td>Yes</td>
+        <td>Appears in surface mountain/forest/grassland rooms. Interacting (place action on it) descends to z − 1.</td>
+      </tr>
+      <tr>
+        <td>CaveLadder</td>
+        <td>Ladder</td>
+        <td>Yes</td>
+        <td>Always present in every cave room. Interacting ascends to z + 1. At z = −1 this returns the player to the surface.</td>
+      </tr>
+      <tr>
+        <td>CaveFloor</td>
+        <td>Cave Floor</td>
+        <td>No</td>
+        <td>Non-solid dark floor tile used as the base surface in cave rooms. Background tile under all open cave cells.</td>
+      </tr>
+      <tr>
+        <td>GoldOre</td>
+        <td>Gold Ore</td>
+        <td>Yes</td>
+        <td>Rare ore found in deep caves (z = −2) and abundantly in the Abyss (z = −3). Gatherable like Coal/Iron Ore.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ── ARCHITECTURE ── -->
+<section>
+  <h2>Architecture Changes</h2>
+  <p>The cave system extends the existing room-based world with a third dimension (z) while keeping full backward compatibility with existing saves.</p>
+
+  <h3>Z-axis dimension in <code>Map</code></h3>
+  <p>
+    <code>Map._roomIndex</code> changes from <code>{(x, y): Room}</code> to <code>{(x, y, z): Room}</code>.
+    All methods (<code>hasRoom</code>, <code>getRoom</code>, <code>generateNewRoom</code>, <code>addRoom</code>,
+    <code>consumeIsNewRoom</code>) gain an optional <code>z=0</code> parameter. Surface rooms continue to work
+    at z = 0 with no code changes in callers that don't pass z.
+  </p>
+
+  <h3>Z-axis in <code>Room</code></h3>
+  <p>
+    <code>Room.__init__</code> gains a <code>z=0</code> parameter and a <code>getZ()</code> accessor. This lets
+    <code>WorldScreenPersistence.saveRoomToFile</code> derive the correct file path from the room itself rather
+    than needing a separate z argument.
+  </p>
+
+  <h3>Save-file path for cave rooms</h3>
+  <p>
+    <code>Config.getRoomFilePath(x, y, z=0)</code> returns <code>room_x_y.json</code> for z = 0 (preserving
+    old saves) and <code>room_x_y_z.json</code> for z ≠ 0. No migration of existing saves required.
+  </p>
+
+  <h3>Player depth tracking in <code>WorldScreen</code></h3>
+  <p>
+    A new field <code>self.currentZ = 0</code> tracks the player's depth. The methods
+    <code>_descend()</code> and <code>_ascend()</code> move the player between levels, saving the current
+    room, loading or generating the target room, and placing the player at the target entry point (nearest
+    open cell to the room centre).
+  </p>
+  <p>
+    Depth is persisted in <code>playerLocation.json</code> as an optional <code>roomZ</code> field
+    (defaults to 0 for old saves). When underground, a small depth indicator is drawn in the HUD.
+  </p>
+
+  <h3>Cave room generation in <code>RoomFactory</code></h3>
+  <p>
+    <code>Map.generateNewRoom</code> delegates to <code>RoomFactory.createCaveRoom(x, y, z)</code>
+    when z &lt; 0. The cave factory runs the CA algorithm and populates ore, ladder, and optional
+    deeper entrance. Surface generation (z = 0) is entirely unchanged.
+  </p>
+
+  <h3>Files changed</h3>
+  <div class="filetree">
+    <span class="dir">roam/</span><br>
+    &nbsp;&nbsp;<span class="dir">src/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">entity/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="new">caveEntrance.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [NEW]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="new">caveLadder.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [NEW]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="new">caveFloor.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [NEW]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="new">goldOre.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [NEW]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">world/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="mod">room.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [z param, getZ()]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="mod">roomType.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [CAVE constant]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="mod">roomFactory.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [createCaveRoom + CA algorithm]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="mod">map.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [z-level indexing]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="mod">roomPreloader.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [z param thread]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="mod">roomJsonReaderWriter.py &nbsp;[cave entity types, z in JSON]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">screen/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="mod">worldScreen.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [currentZ, _descend, _ascend, depth HUD]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="mod">worldScreenPersistence.py [room.getZ(), roomZ save/load]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">config/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="mod">config.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [getRoomFilePath z param]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="dir">codex/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="mod">codex.py &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [new entity display names + image paths]</span><br>
+    &nbsp;&nbsp;<span class="dir">assets/images/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="new">caveEntrance.png &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [NEW — placeholder]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="new">caveLadder.png &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [NEW — placeholder]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="new">caveFloor.png &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [NEW — placeholder]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="new">goldOre.png &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [NEW — placeholder]</span><br>
+    &nbsp;&nbsp;<span class="dir">schemas/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="mod">room.json &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [optional z field]</span><br>
+    &nbsp;&nbsp;<span class="dir">tests/world/</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="new">test_caveGeneration.py &nbsp;[NEW]</span>
+  </div>
+</section>
+
+<!-- ── UX ── -->
+<section>
+  <h2>Player Experience</h2>
+  <div class="card-grid">
+    <div class="card">
+      <div class="label">Discovery</div>
+      <div class="title">Finding Caves</div>
+      <p>Cave Entrances appear as solid structures in mountain (40 %), forest (15 %), and grassland rooms (5 %). The codex logs each cave entity discovered, rewarding exploration.</p>
+    </div>
+    <div class="card">
+      <div class="label">Navigation</div>
+      <div class="title">Descending &amp; Ascending</div>
+      <p>Walk adjacent to a Cave Entrance or Ladder and use the <em>place</em> action (right-click / F key). The HUD immediately shows the new depth level.</p>
+    </div>
+    <div class="card">
+      <div class="label">Exploration</div>
+      <div class="title">Cave Movement</div>
+      <p>Cave corridors funnel movement along carved paths. Rooms connect horizontally at each depth level (walk off an edge → adjacent cave room). The existing push-stone mechanic lets players excavate blocked routes.</p>
+    </div>
+    <div class="card">
+      <div class="label">Loot</div>
+      <div class="title">Depth-Scaled Ore</div>
+      <p>Shallow caves hold coal and iron. Deep caves add gold. The Abyss concentrates gold and sets the stage for future gem types. Players mine ore via the gather action as on the surface.</p>
+    </div>
+    <div class="card">
+      <div class="label">HUD</div>
+      <div class="title">Depth Indicator</div>
+      <p>A small "Depth: X" label appears in the corner when underground. Hidden at the surface to keep the HUD uncluttered.</p>
+    </div>
+    <div class="card">
+      <div class="label">Persistence</div>
+      <div class="title">Save &amp; Load</div>
+      <p>Cave rooms are saved to disk on the same room-transition trigger as surface rooms. Player depth is stored in <code>playerLocation.json</code> and restored on load.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── FUTURE ── -->
+<section>
+  <h2>Future Extensions</h2>
+  <ul>
+    <li><strong>Cave creatures</strong> — bats, cave spiders, or blind fish as new living entities with unique drops</li>
+    <li><strong>Gem ore</strong> — a fourth ore tier (diamond / ruby) exclusive to the Abyss</li>
+    <li><strong>Cave water</strong> — pools that slow movement and flood passages over time</li>
+    <li><strong>Mushrooms &amp; cave plants</strong> — new food sources underground that glow faintly</li>
+    <li><strong>Torches matter</strong> — link day-night overlay to depth so deep caves are pitch-black without placed torches</li>
+    <li><strong>Structural caves</strong> — pre-built ruins at rare spawn points with loot chests</li>
+    <li><strong>z-aware minimap</strong> — separate minimap layer per depth, toggled with a key</li>
+  </ul>
+</section>
+
+</main>
+</body>
+</html>

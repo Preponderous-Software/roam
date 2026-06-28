@@ -41,19 +41,19 @@ class Map:
     def getRooms(self):
         return self.rooms
 
-    def hasRoom(self, x, y):
-        key = (x, y)
+    def hasRoom(self, x, y, z=0):
+        key = (x, y, z)
         with self._lock:
             return key in self._roomIndex
 
-    def getRoom(self, x, y):
-        key = (x, y)
+    def getRoom(self, x, y, z=0):
+        key = (x, y, z)
         with self._lock:
             if key in self._roomIndex:
                 return self._roomIndex[key]
 
         # attempt to load room if file exists, otherwise generate new room
-        nextRoomPath = self.config.getRoomFilePath(x, y)
+        nextRoomPath = self.config.getRoomFilePath(x, y, z)
         if os.path.exists(nextRoomPath):
             if self._roomJsonReaderWriterFactory is not None:
                 roomJsonReaderWriter = self._roomJsonReaderWriterFactory()
@@ -63,17 +63,17 @@ class Map:
                 )
             room = roomJsonReaderWriter.loadRoom(nextRoomPath)
             if room is None:
-                # The room file exists but is corrupt/unreadable. Treat it as
-                # absent (return -1) so the caller generates a fresh room
-                # instead of crashing on startup.
                 _logger.error(
                     "room file unreadable; generating a fresh room instead",
                     roomX=x,
                     roomY=y,
+                    roomZ=z,
                     path=nextRoomPath,
                 )
                 return -1
-            _logger.info("room loaded from file", roomX=x, roomY=y, path=nextRoomPath)
+            _logger.info(
+                "room loaded from file", roomX=x, roomY=y, roomZ=z, path=nextRoomPath
+            )
             return self.addRoom(room)
 
         return -1
@@ -83,33 +83,34 @@ class Map:
         grid = room.getGrid()
         return grid.getLocation(locationID)
 
-    def generateNewRoom(self, x, y):
+    def generateNewRoom(self, x, y, z=0):
         with self._lock:
-            if (x, y) in self._roomIndex:
-                return self._roomIndex[(x, y)]
-        # 50% chance to generate last room type
+            if (x, y, z) in self._roomIndex:
+                return self._roomIndex[(x, y, z)]
         newRoom = None
-        if random.randrange(1, 101) > 50:
+        if z < 0:
+            newRoom = self.roomFactory.createCaveRoom(x, y, z)
+        elif random.randrange(1, 101) > 50:
             newRoom = self.roomFactory.createRoom(
-                self.roomFactory.lastRoomTypeCreated, x, y
+                self.roomFactory.lastRoomTypeCreated, x, y, z
             )
         else:
-            newRoom = self.roomFactory.createRandomRoom(x, y)
+            newRoom = self.roomFactory.createRandomRoom(x, y, z)
         with self._lock:
-            if (x, y) in self._roomIndex:
-                return self._roomIndex[(x, y)]
+            if (x, y, z) in self._roomIndex:
+                return self._roomIndex[(x, y, z)]
             self.rooms.append(newRoom)
-            self._roomIndex[(x, y)] = newRoom
-            self._freshlyGeneratedRooms.add((x, y))
+            self._roomIndex[(x, y, z)] = newRoom
+            self._freshlyGeneratedRooms.add((x, y, z))
 
-        _logger.info("room generated", roomX=x, roomY=y)
+        _logger.info("room generated", roomX=x, roomY=y, roomZ=z)
         return newRoom
 
-    def consumeIsNewRoom(self, x, y):
-        """Return True and clear the flag if the room at (x, y) was freshly
+    def consumeIsNewRoom(self, x, y, z=0):
+        """Return True and clear the flag if the room at (x, y, z) was freshly
         generated (never existed on disk).  Thread-safe; can be called from
         any thread."""
-        key = (x, y)
+        key = (x, y, z)
         with self._lock:
             if key in self._freshlyGeneratedRooms:
                 self._freshlyGeneratedRooms.discard(key)
@@ -117,7 +118,7 @@ class Map:
         return False
 
     def addRoom(self, room):
-        key = (room.getX(), room.getY())
+        key = (room.getX(), room.getY(), room.getZ())
         with self._lock:
             if key in self._roomIndex:
                 return self._roomIndex[key]

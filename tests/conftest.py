@@ -34,7 +34,7 @@ def test_config(tmp_path):
     # Delegate to the real implementation so room-path construction reflects
     # the (possibly per-test overridden) pathToSaveDirectory.
     config.getRoomsDirectory = lambda: Config.getRoomsDirectory(config)
-    config.getRoomFilePath = lambda x, y: Config.getRoomFilePath(config, x, y)
+    config.getRoomFilePath = lambda x, y, z=0: Config.getRoomFilePath(config, x, y, z)
     return config
 
 

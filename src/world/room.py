@@ -21,11 +21,12 @@ _logger = getLogger(__name__)
 class Room(Environment):
     _scaledImageCache = {}
 
-    def __init__(self, name, gridSize, backgroundColor, x, y, renderer: Renderer):
+    def __init__(self, name, gridSize, backgroundColor, x, y, renderer: Renderer, z=0):
         Environment.__init__(self, name, gridSize)
         self.backgroundColor = backgroundColor
         self.x = x
         self.y = y
+        self.z = z
         self.renderer = renderer
         self.livingEntities = dict()
 
@@ -37,6 +38,9 @@ class Room(Environment):
 
     def getY(self):
         return self.y
+
+    def getZ(self):
+        return self.z
 
     def draw(self, locationWidth, locationHeight):
         for locationId in self.grid.getLocations():

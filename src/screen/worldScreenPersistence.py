@@ -32,10 +32,11 @@ class WorldScreenPersistence:
         self.tickCounter = tickCounter
         self.roomJsonReaderWriter = roomJsonReaderWriter
 
-    def savePlayerLocationToFile(self, currentRoom):
+    def savePlayerLocationToFile(self, currentRoom, currentZ=0):
         jsonPlayerLocation = {
             "roomX": currentRoom.getX(),
             "roomY": currentRoom.getY(),
+            "roomZ": currentZ,
             "locationId": str(self.player.getLocationID()),
         }
 
@@ -44,14 +45,14 @@ class WorldScreenPersistence:
         jsonschema.validate(jsonPlayerLocation, playerLocationSchema)
 
         path = self.config.pathToSaveDirectory + "/playerLocation.json"
-        _logger.info("saving player location", path=path)
+        _logger.info("saving player location", path=path, roomZ=currentZ)
         writeJsonAtomically(path, jsonPlayerLocation)
 
     def loadPlayerLocationFromFile(self, mapInstance):
         path = self.config.pathToSaveDirectory + "/playerLocation.json"
         jsonPlayerLocation = readJsonFile(path)
         if jsonPlayerLocation is None:
-            return None
+            return None, 0
 
         _logger.info("loading player location", path=path)
         with open("schemas/playerLocation.json") as f:
@@ -60,15 +61,17 @@ class WorldScreenPersistence:
 
         roomX = jsonPlayerLocation["roomX"]
         roomY = jsonPlayerLocation["roomY"]
-        currentRoom = mapInstance.getRoom(roomX, roomY)
+        roomZ = jsonPlayerLocation.get("roomZ", 0)
+        currentRoom = mapInstance.getRoom(roomX, roomY, roomZ)
 
         if currentRoom == -1:
             _logger.warning(
                 "saved room not found, falling back to spawn",
                 roomX=roomX,
                 roomY=roomY,
+                roomZ=roomZ,
             )
-            return None
+            return None, 0
 
         locationId = jsonPlayerLocation["locationId"]
         try:
@@ -80,10 +83,10 @@ class WorldScreenPersistence:
                 roomX=roomX,
                 roomY=roomY,
             )
-            return None
+            return None, 0
 
         currentRoom.addEntityToLocation(self.player, location)
-        return currentRoom
+        return currentRoom, roomZ
 
     def savePlayerAttributesToFile(self):
         jsonPlayerAttributes = {"energy": ceil(self.player.getEnergy())}
@@ -124,7 +127,7 @@ class WorldScreenPersistence:
             self.player.setInventory(inventory)
 
     def saveRoomToFile(self, room):
-        roomPath = self.config.getRoomFilePath(room.getX(), room.getY())
+        roomPath = self.config.getRoomFilePath(room.getX(), room.getY(), room.getZ())
         _logger.info("saving room", path=roomPath)
         os.makedirs(self.config.getRoomsDirectory(), exist_ok=True)
 

@@ -127,7 +127,7 @@ def test_loaded_from_disk_room_does_not_increment(resolve, test_config, tmp_path
 
     # Remove from in-memory map to simulate a fresh load
     gameMap.rooms.remove(room)
-    del gameMap._roomIndex[(3, 3)]
+    del gameMap._roomIndex[(3, 3, 0)]
 
     initial = stats.getRoomsExplored()
     _simulate_load_or_generate(gameMap, stats, status, 3, 3)

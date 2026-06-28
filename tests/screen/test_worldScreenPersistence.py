@@ -53,12 +53,14 @@ def test_save_player_location_writes_expected_json(resolve, test_config, tmp_pat
     wsp.savePlayerLocationToFile(currentRoom)
 
     data = readJsonFile(str(tmp_path / "playerLocation.json"))
-    assert data == {"roomX": 2, "roomY": -3, "locationId": "loc-1"}
+    assert data == {"roomX": 2, "roomY": -3, "roomZ": 0, "locationId": "loc-1"}
 
 
 def test_load_player_location_missing_file_returns_none(resolve):
     wsp = resolve(WorldScreenPersistence)
-    assert wsp.loadPlayerLocationFromFile(MagicMock()) is None
+    result, z = wsp.loadPlayerLocationFromFile(MagicMock())
+    assert result is None
+    assert z == 0
 
 
 def test_load_player_location_room_not_found_returns_none(resolve):
@@ -69,7 +71,9 @@ def test_load_player_location_room_not_found_returns_none(resolve):
     mapInstance = MagicMock()
     mapInstance.getRoom.return_value = -1  # saved room no longer exists
 
-    assert wsp.loadPlayerLocationFromFile(mapInstance) is None
+    result, z = wsp.loadPlayerLocationFromFile(mapInstance)
+    assert result is None
+    assert z == 0
 
 
 def test_load_player_location_happy_path(resolve):
@@ -83,10 +87,11 @@ def test_load_player_location_happy_path(resolve):
     mapInstance = MagicMock()
     mapInstance.getRoom.return_value = loadedRoom
 
-    result = wsp.loadPlayerLocationFromFile(mapInstance)
+    result, z = wsp.loadPlayerLocationFromFile(mapInstance)
 
     assert result is loadedRoom
-    mapInstance.getRoom.assert_called_once_with(4, 5)
+    assert z == 0
+    mapInstance.getRoom.assert_called_once_with(4, 5, 0)
     loadedRoom.addEntityToLocation.assert_called_once_with(wsp.player, location)
 
 
@@ -141,8 +146,9 @@ def test_save_room_to_file_writes_to_expected_path(resolve, test_config):
     assert readJsonFile(expectedPath) == {"x": 1, "y": 1}
 
 
-def _room(x, y):
+def _room(x, y, z=0):
     room = MagicMock()
     room.getX.return_value = x
     room.getY.return_value = y
+    room.getZ.return_value = z
     return room

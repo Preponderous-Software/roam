@@ -10,6 +10,9 @@
         "y": {
             "type": "number"
         },
+        "z": {
+            "type": "number"
+        },
         "livingEntityIds": {
             "type": "array",
             "items": {

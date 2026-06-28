@@ -51,6 +51,8 @@ from ui.hotbarLayout import (
     HOTBAR_BOTTOM_OFFSET,
 )
 from ui.hudDragManager import HudDragManager
+from entity.caveEntrance import CaveEntrance
+from entity.caveLadder import CaveLadder
 from entity.chest import Chest
 from entity.gravestone import Gravestone
 from entity.wheat import Wheat
@@ -132,6 +134,7 @@ class WorldScreen:
         self._isRunning = False
         self._isCrouching = False
         self.startingHomeGenerator = StartingHomeGenerator()
+        self.currentZ = 0
 
     def initialize(self):
         self.map = self.container.resolve(Map)
@@ -178,7 +181,7 @@ class WorldScreen:
         self.initializeLocationWidthAndHeight()
 
         self.roomPreloader.preloadNearbyRooms(
-            self.currentRoom.getX(), self.currentRoom.getY(), self.map
+            self.currentRoom.getX(), self.currentRoom.getY(), self.map, self.currentZ
         )
 
         self.status.set("Entered the world")
@@ -223,10 +226,12 @@ class WorldScreen:
         self.config.displayWidth = max(w, minSize)
         self.config.displayHeight = max(h, minSize)
 
-    def getOrLoadRoom(self, x, y):
-        room = self.map.getRoom(x, y)
+    def getOrLoadRoom(self, x, y, z=None):
+        if z is None:
+            z = self.currentZ
+        room = self.map.getRoom(x, y, z)
         if room == -1:
-            room = self.map.generateNewRoom(x, y)
+            room = self.map.generateNewRoom(x, y, z)
         return room
 
     def printStatsToConsole(self):
@@ -334,7 +339,7 @@ class WorldScreen:
         """Save a room to file on the background thread (non-blocking).
         Prepares the JSON snapshot on the main thread to avoid dict-iteration
         races, then writes the file in the background."""
-        roomPath = self.config.getRoomFilePath(room.getX(), room.getY())
+        roomPath = self.config.getRoomFilePath(room.getX(), room.getY(), room.getZ())
         try:
             roomJson = self.roomJsonReaderWriter.generateJsonForRoom(room)
         except Exception as e:
@@ -349,12 +354,14 @@ class WorldScreen:
         except Exception as e:
             _logger.error("error writing JSON file", error=str(e), path=path)
 
-    def _loadOrGenerateRoom(self, x, y, updateStats=True):
-        wasCached = self.map.hasRoom(x, y)
-        room = self.map.getRoom(x, y)
+    def _loadOrGenerateRoom(self, x, y, z=None, updateStats=True):
+        if z is None:
+            z = self.currentZ
+        wasCached = self.map.hasRoom(x, y, z)
+        room = self.map.getRoom(x, y, z)
         if room == -1:
-            room = self.map.generateNewRoom(x, y)
-        if updateStats and self.map.consumeIsNewRoom(x, y):
+            room = self.map.generateNewRoom(x, y, z)
+        if updateStats and self.map.consumeIsNewRoom(x, y, z):
             self.status.set("New area discovered")
             self.stats.incrementScore()
             self.stats.incrementRoomsExplored()
@@ -429,7 +436,7 @@ class WorldScreen:
         )
 
         self.roomPreloader.preloadNearbyRooms(
-            self.currentRoom.getX(), self.currentRoom.getY(), self.map
+            self.currentRoom.getX(), self.currentRoom.getY(), self.map, self.currentZ
         )
 
         self.discoverEntitiesInRoom()
@@ -777,7 +784,7 @@ class WorldScreen:
         self._executePlaceAt(targetLocation, self.currentRoom)
 
     def _executePlaceAt(self, targetLocation, targetRoom):
-        # Check for chest/gravestone interaction before checking solid/blocked
+        # Check for special interactions before checking solid/blocked
         for entityId in list(targetLocation.getEntities().keys()):
             entity = targetLocation.getEntity(entityId)
             if isinstance(entity, Chest):
@@ -785,6 +792,12 @@ class WorldScreen:
                 return
             if isinstance(entity, Gravestone):
                 self._interactWithGravestone(entity, targetRoom, targetLocation)
+                return
+            if isinstance(entity, CaveEntrance):
+                self._descend()
+                return
+            if isinstance(entity, CaveLadder):
+                self._ascend()
                 return
 
         if self.player.getInventory().getNumTakenInventorySlots() == 0:
@@ -918,6 +931,73 @@ class WorldScreen:
             else:
                 return False
         return True
+
+    def _descend(self):
+        """Move the player one level deeper (z − 1) into the cave below."""
+        if self.currentZ <= -3:
+            self.status.set("Too deep — no way further down")
+            return
+        self.currentRoom.removeEntity(self.player)
+        self.currentZ -= 1
+        self.currentRoom = self._loadOrGenerateRoom(
+            self.currentRoom.getX(), self.currentRoom.getY(), z=self.currentZ
+        )
+        self._placePlayerAtCaveEntry()
+        self.initializeLocationWidthAndHeight()
+        depth = abs(self.currentZ)
+        self.status.set(f"Descended to depth {depth}")
+        _logger.info("player descended", z=self.currentZ)
+        self.roomPreloader.preloadNearbyRooms(
+            self.currentRoom.getX(), self.currentRoom.getY(), self.map, self.currentZ
+        )
+        self.discoverEntitiesInRoom()
+        self.save()
+
+    def _ascend(self):
+        """Move the player one level up (z + 1) toward the surface."""
+        if self.currentZ >= 0:
+            self.status.set("Already at the surface")
+            return
+        self.currentRoom.removeEntity(self.player)
+        self.currentZ += 1
+        self.currentRoom = self._loadOrGenerateRoom(
+            self.currentRoom.getX(), self.currentRoom.getY(), z=self.currentZ
+        )
+        self._placePlayerAtCaveEntry()
+        self.initializeLocationWidthAndHeight()
+        if self.currentZ == 0:
+            self.status.set("Returned to the surface")
+        else:
+            self.status.set(f"Ascended to depth {abs(self.currentZ)}")
+        _logger.info("player ascended", z=self.currentZ)
+        self.roomPreloader.preloadNearbyRooms(
+            self.currentRoom.getX(), self.currentRoom.getY(), self.map, self.currentZ
+        )
+        self.discoverEntitiesInRoom()
+        self.save()
+
+    def _placePlayerAtCaveEntry(self):
+        centre = self.config.gridSize // 2
+        targetLocation = self.currentRoom.getGrid().getLocationByCoordinates(
+            centre, centre
+        )
+        if targetLocation != -1 and not self.locationContainsSolidEntity(
+            targetLocation
+        ):
+            self.currentRoom.addEntityToLocation(self.player, targetLocation)
+            return
+        loc = self._findFirstOpenLocation(self.currentRoom)
+        if loc is not None:
+            self.currentRoom.addEntityToLocation(self.player, loc)
+        else:
+            self.currentRoom.addEntity(self.player)
+
+    def _findFirstOpenLocation(self, room):
+        for locationId in room.getGrid().getLocations():
+            location = room.getGrid().getLocation(locationId)
+            if not self.locationContainsSolidEntity(location):
+                return location
+        return None
 
     def changeSelectedInventorySlot(self, index):
         self.player.getInventory().setSelectedInventorySlotIndex(index)
@@ -1688,6 +1768,13 @@ class WorldScreen:
                 palette.LIGHT_GRAY,
             )
 
+    def _drawDepthIndicator(self):
+        depth = abs(self.currentZ)
+        label = f"Depth: {depth}"
+        x = self.renderer.getDisplayWidth() - 100
+        y = 60
+        self.renderer.drawText(label, x, y, 18, (180, 140, 80))
+
     def _drawDebugInfo(self):
         displayWidth = self.renderer.getDisplayWidth()
         displayHeight = self.renderer.getDisplayHeight()
@@ -1761,6 +1848,9 @@ class WorldScreen:
         self.energyBar.draw(energyOx, energyOy)
 
         self._drawHotbar()
+
+        if self.currentZ < 0:
+            self._drawDepthIndicator()
 
         if self.config.dayNightCycleEnabled and self.renderer.supportsImageLoading():
             self._drawDayNightPhaseIndicator()
@@ -2004,12 +2094,13 @@ class WorldScreen:
             self.status.set(fallbackName)
 
     def savePlayerLocationToFile(self):
-        self.persistence.savePlayerLocationToFile(self.currentRoom)
+        self.persistence.savePlayerLocationToFile(self.currentRoom, self.currentZ)
 
     def loadPlayerLocationFromFile(self):
-        result = self.persistence.loadPlayerLocationFromFile(self.map)
+        result, z = self.persistence.loadPlayerLocationFromFile(self.map)
         if result is not None:
             self.currentRoom = result
+            self.currentZ = z
 
     def savePlayerAttributesToFile(self):
         self.persistence.savePlayerAttributesToFile()
