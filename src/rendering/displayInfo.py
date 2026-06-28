@@ -1,4 +1,9 @@
-import pygame
+try:
+    import pygame as _pygame
+
+    _PYGAME_AVAILABLE = True
+except ImportError:
+    _PYGAME_AVAILABLE = False
 
 
 # @author Daniel McCoy Stephenson
@@ -12,9 +17,12 @@ import pygame
 def getScreenSize():
     """Return the OS screen size as an (width, height) tuple.
 
+    Returns a safe default when pygame is not available (e.g. Pyodide/WASM).
     Initializes the display subsystem first (idempotent) so the query works
     regardless of construction order — Config may run before the frontend has
     created the window."""
-    pygame.display.init()
-    info = pygame.display.Info()
+    if not _PYGAME_AVAILABLE:
+        return (1920, 1080)
+    _pygame.display.init()
+    info = _pygame.display.Info()
     return (info.current_w, info.current_h)
