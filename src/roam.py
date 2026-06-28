@@ -31,7 +31,19 @@ if _earlyDetectTextMode() and os.environ.get("LOG_FILE") is None:
 # ---------------------------------------------------------------------------
 import json
 
-import pygame
+try:
+    import pygame
+    from rendering.pygameFrontend import createFrontend
+
+    _PYGAME_AVAILABLE = True
+except ImportError:
+    pygame = None
+    _PYGAME_AVAILABLE = False
+
+    def createFrontend(config):
+        raise RuntimeError("pygame is not available in this environment")
+
+
 from appPaths import prepareWorkingDirectory
 from bootstrap import createContainer
 from config.config import Config
@@ -42,7 +54,6 @@ from player.player import Player
 from rendering.renderer import Renderer
 from rendering.inputSource import InputSource
 from rendering.clock import Clock
-from rendering.pygameFrontend import createFrontend
 from rendering.textFrontend import createTextFrontend
 from screen.configScreen import ConfigScreen
 from screen.controlsScreen import ControlsScreen

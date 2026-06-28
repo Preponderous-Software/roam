@@ -2,28 +2,31 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# SDL2 libs required by pygame even when running headless (web mode)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        libsdl2-2.0-0 \
-        libsdl2-image-2.0-0 \
-        libfreetype6 \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
 COPY . .
 
-# Suppress pygame display errors — web mode never opens a window
-ENV PYGAME_HIDE_SUPPORT_PROMPT=1
-ENV SDL_VIDEODRIVER=dummy
-ENV SDL_AUDIODRIVER=dummy
+# Build the Python game bundle downloaded by the browser's Pyodide Worker.
+# game.zip contains all source code + schemas + config; assets are served
+# separately over HTTP (they're large and already in the image via COPY).
+RUN python3 -c "
+import zipfile, os
 
-# HTTP game server + WebSocket server
-EXPOSE 8282 8766
+with zipfile.ZipFile('web/game.zip', 'w', zipfile.ZIP_DEFLATED) as z:
+    for root, dirs, files in os.walk('src'):
+        dirs[:] = [d for d in dirs if d != '__pycache__']
+        for f in files:
+            if not f.endswith('.pyc'):
+                path = os.path.join(root, f)
+                z.write(path, path)
+    for root, dirs, files in os.walk('schemas'):
+        dirs[:] = [d for d in dirs if d != '__pycache__']
+        for f in files:
+            z.write(os.path.join(root, f), os.path.join(root, f))
+    for name in ('config.yml', 'version.txt'):
+        if os.path.exists(name):
+            z.write(name, name)
+print('Built web/game.zip')
+"
 
-# Save files written to /data; mount a volume here for persistence
-ENV ROAM_SAVE_DIR=/data
-RUN mkdir -p /data
+EXPOSE 8080
 
-CMD ["python3", "src/roam.py", "--web"]
+CMD ["python3", "web/serve.py"]

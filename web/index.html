@@ -119,8 +119,7 @@
 <body>
 
 <div id="bar">
-  <span id="bar-status">Connecting…</span>
-  <button id="bar-reconnect" onclick="manualReconnect()">Reconnect</button>
+  <span id="bar-status">Loading…</span>
 </div>
 
 <div id="canvas-wrap">
@@ -152,14 +151,11 @@
 <script>
   "use strict";
 
-  const WS_PORT = 8765;
-
-  const canvas      = document.getElementById("game-canvas");
-  const ctx         = canvas.getContext("2d");
-  const barEl       = document.getElementById("bar");
-  const statusEl    = document.getElementById("bar-status");
-  const reconnectEl = document.getElementById("bar-reconnect");
-  const canvasWrap  = document.getElementById("canvas-wrap");
+  const canvas     = document.getElementById("game-canvas");
+  const ctx        = canvas.getContext("2d");
+  const barEl      = document.getElementById("bar");
+  const statusEl   = document.getElementById("bar-status");
+  const canvasWrap = document.getElementById("canvas-wrap");
 
   const _isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
 
@@ -428,14 +424,29 @@
 
   function rgb([r, g, b]) { return `rgb(${r},${g},${b})`; }
 
-  // ── WebSocket ──────────────────────────────────────────────────────────────
-  let ws = null;
-  let _manualClose    = false;  // true when we triggered the close ourselves
-  let _retryTimer     = null;
-  let _retryCountdown = null;
+  // ── Pyodide Worker + SharedArrayBuffer input ring ─────────────────────────
+  //
+  // Python runs in a Web Worker (so it can block without freezing the page).
+  // Input (key/mouse) is delivered via a SharedArrayBuffer ring buffer: the
+  // main thread writes newline-terminated UTF-8 messages directly to shared
+  // memory; Python reads them each frame without waiting for onmessage.
+  // COOP/COEP headers on the server enable SharedArrayBuffer.
+
+  const SAB_RING_SIZE = 8192;
+  const sab     = new SharedArrayBuffer(8 + SAB_RING_SIZE);
+  const sabMeta = new Int32Array(sab, 0, 2);       // [writeIdx, readIdx]
+  const sabData = new Uint8Array(sab, 8, SAB_RING_SIZE);
+
+  let worker = null;
+  let _firstFrame = true;
 
   function send(data) {
-    if (ws && ws.readyState === WebSocket.OPEN) ws.send(data);
+    const bytes = new TextEncoder().encode(data + '\n');
+    let wi = Atomics.load(sabMeta, 0);
+    for (let i = 0; i < bytes.length; i++) {
+      sabData[(wi + i) % SAB_RING_SIZE] = bytes[i];
+    }
+    Atomics.store(sabMeta, 0, wi + bytes.length);
   }
   function sendJSON(obj) { send(JSON.stringify(obj)); }
 
@@ -444,78 +455,26 @@
     statusEl.style.color = isError ? "#c55" : "#666";
   }
 
-  function _cancelRetry() {
-    clearTimeout(_retryTimer);
-    clearInterval(_retryCountdown);
-    _retryTimer     = null;
-    _retryCountdown = null;
-  }
-
-  function _scheduleAutoRetry() {
-    _cancelRetry();
-    let secs = 5;
-    setStatus(`Reconnecting in ${secs}…`, true);
-    _retryCountdown = setInterval(() => {
-      secs--;
-      if (secs > 0) {
-        setStatus(`Reconnecting in ${secs}…`, true);
-      } else {
-        clearInterval(_retryCountdown);
-        _retryCountdown = null;
-      }
-    }, 1000);
-    _retryTimer = setTimeout(() => {
-      _retryTimer = null;
-      connect();
-    }, 5000);
-  }
-
-  function manualReconnect() {
-    _cancelRetry();
-    connect();
-  }
-
-  function connect() {
-    _cancelRetry();
-    if (ws && ws.readyState !== WebSocket.CLOSED) {
-      _manualClose = true;
-      ws.close();
-    }
-    _manualClose = false;
-    setStatus("Connecting…");
+  function startWorker() {
+    setStatus("Loading…");
     showBar();
-    // Behind HTTPS (nginx in prod) use wss:// and route through /ws path.
-    // In dev (HTTP) connect directly to the injected WS port.
-    const _wsUrl = location.protocol === "https:"
-      ? `wss://${location.hostname}/ws`
-      : `ws://${location.hostname}:${WS_PORT}`;
-    ws = new WebSocket(_wsUrl);
-    ws.onopen = () => {
-      _cancelRetry();
-      setStatus("Connected");
-      reconnectEl.style.display = "none";
-      // Collapse bar after a beat, then send the larger resize
-      setTimeout(() => {
-        hideBar();
-        setTimeout(() => { resizeCanvas(); drawLoading(); }, 270);
-      }, 600);
-    };
-    ws.onmessage = (e) => renderFrame(e.data);
-    ws.onclose   = () => {
-      showBar();
-      if (_manualClose) {
-        setStatus("Disconnected", true);
-        reconnectEl.style.display = "";
+    worker = new Worker('/web/game-worker.js');
+    worker.onmessage = (e) => {
+      const d = e.data;
+      if (typeof d === 'string') {
+        // JSON frame string from Python's WebRenderer.present()
+        renderFrame(d);
+        if (_firstFrame) {
+          _firstFrame = false;
+          setTimeout(hideBar, 600);
+        }
         return;
       }
-      reconnectEl.style.display = "";
-      _scheduleAutoRetry();
+      if (d.type === 'status') { setStatus(d.msg); return; }
+      if (d.type === 'ready')  { return; }
+      if (d.type === 'error')  { setStatus('Error: ' + d.msg, true); showBar(); }
     };
-    ws.onerror   = () => {
-      showBar();
-      reconnectEl.style.display = "";
-      _scheduleAutoRetry();
-    };
+    worker.postMessage({ type: 'init', sab });
   }
 
   // ── key sequences ──────────────────────────────────────────────────────────
@@ -682,7 +641,7 @@
   // ── init ────────────────────────────────────────────────────────────────────
   if (_isTouch) document.getElementById("controls").style.display = "flex";
   resizeCanvas();
-  connect();
+  startWorker();
 </script>
 </body>
 </html>
