@@ -135,11 +135,62 @@ class RoomFactory:
             y,
             z,
         )
-        self.spawnSomeOre(newRoom)
-        self.fillWithRocks(newRoom)
+        self._fillMountainWithOpenAreas(newRoom)
         if random.randrange(1, 101) <= 40:
             self._spawnCaveEntrance(newRoom)
         return newRoom
+
+    def _fillMountainWithOpenAreas(self, room: Room):
+        """Fill with stone but carve open corridors so the room is traversable.
+        Uses a two-pass approach: fill ~70% with stone, then smooth once to
+        create natural boulder clusters with walkable paths between them."""
+        size = self.gridSize
+        grid = room.getGrid()
+
+        # first pass: random stone placement (~70%) with ore mixed in
+        stone_grid = [[False] * size for _ in range(size)]
+        for row in range(size):
+            for col in range(size):
+                r = random.random()
+                if r < 0.70:
+                    stone_grid[row][col] = True
+
+        # smooth once: a cell becomes stone if 5+ of its 8 neighbours are stone
+        smoothed = [row[:] for row in stone_grid]
+        for row in range(size):
+            for col in range(size):
+                stone_neighbors = 0
+                for dr in range(-1, 2):
+                    for dc in range(-1, 2):
+                        if dr == 0 and dc == 0:
+                            continue
+                        nr, nc = row + dr, col + dc
+                        if nr < 0 or nr >= size or nc < 0 or nc >= size:
+                            stone_neighbors += 1
+                        elif stone_grid[nr][nc]:
+                            stone_neighbors += 1
+                smoothed[row][col] = stone_neighbors >= 5
+        stone_grid = smoothed
+
+        # keep the centre cell clear so the player always has a landing spot
+        if size >= 3:
+            centre = size // 2
+            stone_grid[centre][centre] = False
+
+        for row in range(size):
+            for col in range(size):
+                location = grid.getLocationByCoordinates(col, row)
+                if location == -1:
+                    continue
+                if stone_grid[row][col]:
+                    # chance to replace stone with ore
+                    r = random.random()
+                    if r < 0.04:
+                        room.addEntityToLocation(CoalOre(), location)
+                    elif r < 0.06:
+                        room.addEntityToLocation(IronOre(), location)
+                    else:
+                        room.addEntityToLocation(Stone(), location)
 
     def createCaveRoom(self, x, y, z):
         depth = abs(z)
@@ -308,8 +359,40 @@ class RoomFactory:
         return (location.getX(), location.getY())
 
     def _spawnCaveEntrance(self, room):
-        entrance = CaveEntrance()
-        room.addEntity(entrance)
+        grid = room.getGrid()
+        size = self.gridSize
+        # prefer an open (non-solid) cell; clear one stone if none is available
+        candidates = []
+        fallback = []
+        for locationId in grid.getLocations():
+            loc = grid.getLocation(locationId)
+            entities = list(loc.getEntities().values())
+            if not any(e.isSolid() for e in entities):
+                candidates.append(loc)
+            elif all(isinstance(e, Stone) for e in entities):
+                fallback.append(loc)
+        if candidates:
+            loc = random.choice(candidates)
+        elif fallback:
+            loc = random.choice(fallback)
+            for eid in list(loc.getEntities().keys()):
+                loc.removeEntity(loc.getEntity(eid))
+        else:
+            return
+        room.addEntityToLocation(CaveEntrance(), loc)
+        # clear a 1-tile radius around the entrance so it's approachable
+        ex, ey = loc.getX(), loc.getY()
+        for dr in range(-1, 2):
+            for dc in range(-1, 2):
+                if dr == 0 and dc == 0:
+                    continue
+                neighbor = grid.getLocationByCoordinates(ex + dc, ey + dr)
+                if neighbor == -1:
+                    continue
+                for eid in list(neighbor.getEntities().keys()):
+                    entity = neighbor.getEntity(eid)
+                    if isinstance(entity, Stone):
+                        neighbor.removeEntity(entity)
 
     def spawnGrass(self, room: Room):
         for locationId in room.getGrid().getLocations():
