@@ -72,12 +72,13 @@ class Config:
 
     @staticmethod
     def getSavesBaseDirectory():
-        # The single source of truth for where save folders live. On Windows we
-        # store them under %APPDATA% (e.g. C:\Users\<you>\AppData\Roaming\Roam\saves)
-        # and on macOS under ~/Library/Application Support/Roam/saves, so saves
-        # live with the user rather than in a possibly read-only install
-        # directory (Program Files, /Applications). Other platforms keep the
-        # repository-relative "saves" directory.
+        # ROAM_SAVE_DIR env var overrides everything — used in Docker deployments
+        # to point at a mounted volume (e.g. /data).
+        envDir = os.environ.get("ROAM_SAVE_DIR")
+        if envDir:
+            return envDir
+        # On Windows store under %APPDATA%; on macOS under ~/Library/Application
+        # Support/Roam/saves; everywhere else use the repo-relative "saves" dir.
         if os.name == "nt":
             appData = os.environ.get("APPDATA")
             if appData:

@@ -264,7 +264,20 @@ def main(argv):
         from rendering.webFrontend import WebFrontend
 
         def _sessionGameLoop(session):
-            roam = Roam(config, frontend=session)
+            # Route each browser session to its own save directory so multiple
+            # players don't clobber each other's worlds.
+            sessionConfig = config
+            if hasattr(session, "sessionId") and session.sessionId:
+                import os as _os
+
+                sessionConfig = config.__class__.__new__(config.__class__)
+                sessionConfig.__dict__.update(config.__dict__)
+                sessionConfig.pathToSaveDirectory = _os.path.join(
+                    config.__class__.getSavesBaseDirectory(),
+                    session.sessionId,
+                    "defaultsavefile",
+                )
+            roam = Roam(sessionConfig, frontend=session)
             try:
                 while True:
                     result = roam.run()

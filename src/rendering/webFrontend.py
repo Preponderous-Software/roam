@@ -4,6 +4,7 @@ import http.server
 import json
 import os
 import threading
+import uuid
 
 from rendering.inputEvent import EventType, InputEvent
 from rendering.textClock import TextClock
@@ -30,11 +31,22 @@ _DEFAULT_HTTP_PORT = 8080
 #
 # Output protocol (server → browser):
 #   JSON frame: {"type":"frame","w":W,"h":H,"calls":[{op,…},…]}
+def _parseSessionId(headers):
+    """Extract roam_session value from a Cookie header string, or return None."""
+    cookie_header = headers.get("Cookie", "") or headers.get("cookie", "")
+    for part in cookie_header.split(";"):
+        name, _, value = part.strip().partition("=")
+        if name.strip() == "roam_session":
+            return value.strip() or None
+    return None
+
+
 class WebSession:
-    def __init__(self, websocket, loop):
+    def __init__(self, websocket, loop, sessionId=None):
         self._websocket = websocket
         self._loop = loop
         self._stopped = threading.Event()
+        self.sessionId = sessionId or str(uuid.uuid4())
         self._build()
 
     def _build(self):
@@ -154,7 +166,12 @@ class WebFrontend:
 
         async def handler(websocket):
             loop = asyncio.get_event_loop()
-            session = WebSession(websocket, loop)
+            try:
+                headers = websocket.request.headers
+            except AttributeError:
+                headers = getattr(websocket, "request_headers", {})
+            sessionId = _parseSessionId(headers)
+            session = WebSession(websocket, loop, sessionId=sessionId)
 
             def runGame():
                 try:
@@ -204,10 +221,14 @@ def _startHttpServer(port, wsPort):
 
                 path = unquote(urlparse(self.path).path)
                 if path in ("/", "/index.html"):
+                    # Ensure each browser has a persistent session cookie so
+                    # its save files survive page reloads and reconnects.
+                    existing = _parseSessionId(dict(self.headers))
+                    sessionId = existing or str(uuid.uuid4())
+
                     indexPath = os.path.join(webDir, "index.html")
                     with open(indexPath, "rb") as f:
                         html = f.read().decode("utf-8")
-                    # replace the hardcoded WS port so config.yml drives it
                     html = html.replace(
                         "const WS_PORT = 8765;",
                         f"const WS_PORT = {wsPort};",
@@ -216,6 +237,12 @@ def _startHttpServer(port, wsPort):
                     self.send_response(200)
                     self.send_header("Content-Type", "text/html; charset=utf-8")
                     self.send_header("Content-Length", str(len(body)))
+                    if not existing:
+                        # Max-Age 400 days (browser maximum per spec)
+                        self.send_header(
+                            "Set-Cookie",
+                            f"roam_session={sessionId}; Path=/; SameSite=Strict; HttpOnly; Max-Age=34560000",
+                        )
                     self.end_headers()
                     self.wfile.write(body)
                     return

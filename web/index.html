@@ -484,7 +484,12 @@
     _manualClose = false;
     setStatus("Connecting…");
     showBar();
-    ws = new WebSocket(`ws://${location.hostname}:${WS_PORT}`);
+    // Behind HTTPS (nginx in prod) use wss:// and route through /ws path.
+    // In dev (HTTP) connect directly to the injected WS port.
+    const _wsUrl = location.protocol === "https:"
+      ? `wss://${location.hostname}/ws`
+      : `ws://${location.hostname}:${WS_PORT}`;
+    ws = new WebSocket(_wsUrl);
     ws.onopen = () => {
       _cancelRetry();
       setStatus("Connected");
