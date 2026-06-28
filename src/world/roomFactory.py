@@ -141,56 +141,25 @@ class RoomFactory:
         return newRoom
 
     def _fillMountainWithOpenAreas(self, room: Room):
-        """Fill with stone but carve open corridors so the room is traversable.
-        Uses a two-pass approach: fill ~70% with stone, then smooth once to
-        create natural boulder clusters with walkable paths between them."""
+        """Scatter boulders and ore at ~35% density, leaving ~65% open."""
         size = self.gridSize
         grid = room.getGrid()
-
-        # first pass: random stone placement (~70%) with ore mixed in
-        stone_grid = [[False] * size for _ in range(size)]
-        for row in range(size):
-            for col in range(size):
-                r = random.random()
-                if r < 0.70:
-                    stone_grid[row][col] = True
-
-        # smooth once: a cell becomes stone if 5+ of its 8 neighbours are stone
-        smoothed = [row[:] for row in stone_grid]
-        for row in range(size):
-            for col in range(size):
-                stone_neighbors = 0
-                for dr in range(-1, 2):
-                    for dc in range(-1, 2):
-                        if dr == 0 and dc == 0:
-                            continue
-                        nr, nc = row + dr, col + dc
-                        if nr < 0 or nr >= size or nc < 0 or nc >= size:
-                            stone_neighbors += 1
-                        elif stone_grid[nr][nc]:
-                            stone_neighbors += 1
-                smoothed[row][col] = stone_neighbors >= 5
-        stone_grid = smoothed
-
-        # keep the centre cell clear so the player always has a landing spot
-        if size >= 3:
-            centre = size // 2
-            stone_grid[centre][centre] = False
+        centre = size // 2
 
         for row in range(size):
             for col in range(size):
+                if row == centre and col == centre:
+                    continue
                 location = grid.getLocationByCoordinates(col, row)
                 if location == -1:
                     continue
-                if stone_grid[row][col]:
-                    # chance to replace stone with ore
-                    r = random.random()
-                    if r < 0.04:
-                        room.addEntityToLocation(CoalOre(), location)
-                    elif r < 0.06:
-                        room.addEntityToLocation(IronOre(), location)
-                    else:
-                        room.addEntityToLocation(Stone(), location)
+                r = random.random()
+                if r < 0.04:
+                    room.addEntityToLocation(CoalOre(), location)
+                elif r < 0.06:
+                    room.addEntityToLocation(IronOre(), location)
+                elif r < 0.35:
+                    room.addEntityToLocation(Stone(), location)
 
     def createCaveRoom(self, x, y, z):
         depth = abs(z)
