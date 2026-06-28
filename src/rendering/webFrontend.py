@@ -220,7 +220,7 @@ def _startHttpServer(port, wsPort):
                 from urllib.parse import unquote, urlparse
 
                 path = unquote(urlparse(self.path).path)
-                if path in ("/", "/index.html"):
+                if path in ("/", "/index.html", "/play", "/play/"):
                     # Ensure each browser has a persistent session cookie so
                     # its save files survive page reloads and reconnects.
                     existing = _parseSessionId(dict(self.headers))

@@ -278,6 +278,10 @@ def main(argv):
                     "defaultsavefile",
                 )
             roam = Roam(sessionConfig, frontend=session)
+            # Web sessions have a fixed per-session save path — skip the main
+            # menu's save selection screen and go straight to the world.
+            roam.initializeWorldScreen()
+            roam.currentScreen = roam.worldScreen
             try:
                 while True:
                     result = roam.run()
