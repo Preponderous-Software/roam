@@ -1,0 +1,18 @@
+[Unit]
+Description=Roam Web Game Server
+After=network.target
+
+[Service]
+Type=simple
+# Update User/WorkingDirectory to match your deployment path
+User=www-data
+WorkingDirectory=/opt/roam
+ExecStart=/usr/bin/python3 src/roam.py --web
+Restart=on-failure
+RestartSec=5s
+# Capture logs: journalctl -u roam-web -f
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
