@@ -286,6 +286,8 @@ class Config:
         self.pathToSaveDirectory = self.getStringValue(
             configValues, "pathToSaveDirectory", Config.getDefaultSaveDirectory()
         )
+        self.webHttpPort = self.getIntValue(configValues, "webHttpPort", 8080)
+        self.webWsPort = self.getIntValue(configValues, "webWsPort", 8765)
 
         # dynamic (can be changed in game)
         self.debug = self.getBoolValue(configValues, "debug", True)
@@ -328,10 +330,14 @@ class Config:
         of truth for the `<saveDir>/rooms` location."""
         return self.pathToSaveDirectory + "/rooms"
 
-    def getRoomFilePath(self, x, y):
-        """Return the path to a room's JSON save file, built on top of
-        getRoomsDirectory so the `/rooms` layout lives in one place."""
-        return self.getRoomsDirectory() + "/room_" + str(x) + "_" + str(y) + ".json"
+    def getRoomFilePath(self, x, y, z=0):
+        """Return the path to a room's JSON save file. Surface rooms (z=0) use
+        the legacy room_x_y.json filename so existing saves load unchanged.
+        Underground rooms use room_x_y_z.json."""
+        base = self.getRoomsDirectory() + "/room_" + str(x) + "_" + str(y)
+        if z == 0:
+            return base + ".json"
+        return base + "_" + str(z) + ".json"
 
     def _writeKeyValues(self, savedValues, errorMessage):
         configFilePath = self.getConfigFilePath()

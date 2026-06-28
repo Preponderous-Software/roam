@@ -38,7 +38,7 @@ class RoomPreloader:
         self._pending = set()
         self._pendingLock = threading.Lock()
 
-    def preloadNearbyRooms(self, currentX, currentY, gameMap: Map):
+    def preloadNearbyRooms(self, currentX, currentY, gameMap: Map, z=0):
         """Submit background tasks to load/generate the four rooms adjacent
         to (currentX, currentY) that are not already loaded."""
         for dx, dy in self.NEIGHBOR_OFFSETS:
@@ -49,40 +49,43 @@ class RoomPreloader:
             ):
                 continue
 
+            key = (nx, ny, z)
             with self._pendingLock:
-                if (nx, ny) in self._pending:
+                if key in self._pending:
                     continue
-                self._pending.add((nx, ny))
+                self._pending.add(key)
 
-            if gameMap.hasRoom(nx, ny):
+            if gameMap.hasRoom(nx, ny, z):
                 with self._pendingLock:
-                    self._pending.discard((nx, ny))
+                    self._pending.discard(key)
                 continue
 
-            self._executor.submit(self._loadOrGenerate, nx, ny, gameMap)
+            self._executor.submit(self._loadOrGenerate, nx, ny, z, gameMap)
 
-    def _loadOrGenerate(self, x, y, gameMap: Map):
+    def _loadOrGenerate(self, x, y, z, gameMap: Map):
         """Load a room from disk or generate a new one, then add it to the
         map.  Runs on a background thread."""
+        key = (x, y, z)
         try:
-            # Double-check the room was not loaded while queued
-            if gameMap.hasRoom(x, y):
+            if gameMap.hasRoom(x, y, z):
                 return
 
-            nextRoomPath = self.config.getRoomFilePath(x, y)
+            nextRoomPath = self.config.getRoomFilePath(x, y, z)
             if os.path.exists(nextRoomPath):
                 roomJsonReaderWriter = self._roomJsonReaderWriterFactory()
                 room = roomJsonReaderWriter.loadRoom(nextRoomPath)
                 gameMap.addRoom(room)
-                _logger.debug("preloaded room from file", roomX=x, roomY=y)
+                _logger.debug("preloaded room from file", roomX=x, roomY=y, roomZ=z)
             else:
-                gameMap.generateNewRoom(x, y)
-                _logger.debug("preloaded room via generation", roomX=x, roomY=y)
+                gameMap.generateNewRoom(x, y, z)
+                _logger.debug(
+                    "preloaded room via generation", roomX=x, roomY=y, roomZ=z
+                )
         except Exception:
-            _logger.exception("room preload failed", roomX=x, roomY=y)
+            _logger.exception("room preload failed", roomX=x, roomY=y, roomZ=z)
         finally:
             with self._pendingLock:
-                self._pending.discard((x, y))
+                self._pending.discard(key)
 
     def shutdown(self, wait=False):
         """Cleanly shut down the background thread pool and recreate it so the

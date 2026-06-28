@@ -9,12 +9,16 @@ from entity.banana import Banana
 from entity.bearMeat import BearMeat
 from entity.bed import Bed
 from entity.campfire import Campfire
+from entity.caveEntrance import CaveEntrance
+from entity.caveFloor import CaveFloor
+from entity.caveLadder import CaveLadder
 from entity.chest import Chest
 from entity.chickenMeat import ChickenMeat
 from entity.coalOre import CoalOre
 from entity.excrement import Excrement
 from entity.fence import Fence
 from entity.food import Food
+from entity.goldOre import GoldOre
 from entity.grass import Grass
 from entity.gravestone import Gravestone
 from entity.ironOre import IronOre
@@ -58,7 +62,11 @@ class RoomJsonReaderWriter:
         self.livingEntities = dict()
         self.entityConstructors = {
             "Apple": Apple,
+            "CaveEntrance": CaveEntrance,
+            "CaveFloor": CaveFloor,
+            "CaveLadder": CaveLadder,
             "CoalOre": CoalOre,
+            "GoldOre": GoldOre,
             "Grass": Grass,
             "IronOre": IronOre,
             "JungleWood": JungleWood,
@@ -98,6 +106,7 @@ class RoomJsonReaderWriter:
         roomJson["backgroundColor"] = str(room.getBackgroundColor())
         roomJson["x"] = room.getX()
         roomJson["y"] = room.getY()
+        roomJson["z"] = room.getZ()
         roomJson["name"] = room.getName()
         roomJson["id"] = str(room.getID())
         roomJson["livingEntityIds"] = [
@@ -174,6 +183,7 @@ class RoomJsonReaderWriter:
             roomJson["x"],
             roomJson["y"],
             self.renderer,
+            roomJson.get("z", 0),
         )
         room.setID(roomJson["id"])
         room.setGrid(self.generateGridFromJson(roomJson["grid"]))

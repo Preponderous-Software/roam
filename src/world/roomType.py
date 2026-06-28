@@ -5,3 +5,4 @@ class RoomType:
     FOREST = "forest"
     JUNGLE = "jungle"
     MOUNTAIN = "mountain"
+    CAVE = "cave"

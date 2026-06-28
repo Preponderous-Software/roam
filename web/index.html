@@ -96,12 +96,14 @@
       border: 1px solid #333;
       border-radius: 8px;
       color: #ccc;
-      font-size: 20px;
+      font-size: 16px;
       line-height: 1;
       cursor: pointer;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 2px;
       -webkit-tap-highlight-color: transparent;
       touch-action: none;
       transition: background 0.06s;
@@ -109,7 +111,8 @@
     .btn:active, .btn.pressed { background: #3a3a3a; }
     .btn.confirm { background: #0f2a0f; color: #4e4; border-color: #2a5a2a; }
     .btn.back    { background: #2a0f0f; color: #e44; border-color: #5a2a2a; }
-    .btn.label   { font-size: 14px; font-weight: 600; letter-spacing: 0.03em; }
+    .btn.label   { font-size: 16px; font-weight: 600; letter-spacing: 0.03em; }
+    .btn-label   { font-size: 9px; font-weight: 400; color: #777; letter-spacing: 0.02em; line-height: 1; }
     .dpad-spacer { }
   </style>
 </head>
@@ -117,7 +120,7 @@
 
 <div id="bar">
   <span id="bar-status">Connecting…</span>
-  <button id="bar-reconnect" onclick="connect()">Reconnect</button>
+  <button id="bar-reconnect" onclick="manualReconnect()">Reconnect</button>
 </div>
 
 <div id="canvas-wrap">
@@ -137,12 +140,12 @@
     <div class="dpad-spacer"></div>
   </div>
   <div class="actions">
-    <button class="btn label" data-key="g">G</button>
-    <button class="btn label" data-key="f">F</button>
-    <button class="btn label" data-key="i">I</button>
-    <button class="btn label" data-key="c">C</button>
-    <button class="btn back" data-key="escape">✕</button>
-    <button class="btn label" data-key="f1">?</button>
+    <button class="btn label" data-key="g">G<span class="btn-label">Gather</span></button>
+    <button class="btn label" data-key="f">F<span class="btn-label">Interact</span></button>
+    <button class="btn label" data-key="f1">?<span class="btn-label">Help</span></button>
+    <button class="btn label" data-key="r">R<span class="btn-label">Run</span></button>
+    <button class="btn label" data-key="i">I<span class="btn-label">Bag</span></button>
+    <button class="btn back" data-key="escape">✕<span class="btn-label">Cancel</span></button>
   </div>
 </div>
 
@@ -427,6 +430,9 @@
 
   // ── WebSocket ──────────────────────────────────────────────────────────────
   let ws = null;
+  let _manualClose    = false;  // true when we triggered the close ourselves
+  let _retryTimer     = null;
+  let _retryCountdown = null;
 
   function send(data) {
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(data);
@@ -438,12 +444,49 @@
     statusEl.style.color = isError ? "#c55" : "#666";
   }
 
+  function _cancelRetry() {
+    clearTimeout(_retryTimer);
+    clearInterval(_retryCountdown);
+    _retryTimer     = null;
+    _retryCountdown = null;
+  }
+
+  function _scheduleAutoRetry() {
+    _cancelRetry();
+    let secs = 5;
+    setStatus(`Reconnecting in ${secs}…`, true);
+    _retryCountdown = setInterval(() => {
+      secs--;
+      if (secs > 0) {
+        setStatus(`Reconnecting in ${secs}…`, true);
+      } else {
+        clearInterval(_retryCountdown);
+        _retryCountdown = null;
+      }
+    }, 1000);
+    _retryTimer = setTimeout(() => {
+      _retryTimer = null;
+      connect();
+    }, 5000);
+  }
+
+  function manualReconnect() {
+    _cancelRetry();
+    connect();
+  }
+
   function connect() {
-    if (ws && ws.readyState !== WebSocket.CLOSED) ws.close();
+    _cancelRetry();
+    if (ws && ws.readyState !== WebSocket.CLOSED) {
+      _manualClose = true;
+      ws.close();
+    }
+    _manualClose = false;
     setStatus("Connecting…");
     showBar();
     ws = new WebSocket(`ws://${location.hostname}:${WS_PORT}`);
     ws.onopen = () => {
+      _cancelRetry();
       setStatus("Connected");
       reconnectEl.style.display = "none";
       // Collapse bar after a beat, then send the larger resize
@@ -454,14 +497,19 @@
     };
     ws.onmessage = (e) => renderFrame(e.data);
     ws.onclose   = () => {
-      setStatus("Disconnected — tap Reconnect to retry", true);
-      reconnectEl.style.display = "";
       showBar();
+      if (_manualClose) {
+        setStatus("Disconnected", true);
+        reconnectEl.style.display = "";
+        return;
+      }
+      reconnectEl.style.display = "";
+      _scheduleAutoRetry();
     };
     ws.onerror   = () => {
-      setStatus(`Cannot reach ${location.hostname}:${WS_PORT}`, true);
-      reconnectEl.style.display = "";
       showBar();
+      reconnectEl.style.display = "";
+      _scheduleAutoRetry();
     };
   }
 

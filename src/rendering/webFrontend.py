@@ -147,7 +147,7 @@ class WebFrontend:
     async def _serveAsync(self, gameFactory):
         import websockets
 
-        _startHttpServer(self._httpPort)
+        _startHttpServer(self._httpPort, self._wsPort)
         print(f"Roam web server: http://localhost:{self._httpPort}/")
         print(f"  (WebSocket on ws://localhost:{self._wsPort})")
         print("Press Ctrl+C to stop.")
@@ -180,11 +180,11 @@ class WebFrontend:
                 pass
 
 
-def _startHttpServer(port):
+def _startHttpServer(port, wsPort):
     """Serve web/index.html + game assets (assets/) over HTTP.
 
     Routes:
-      /            → web/index.html
+      /            → web/index.html  (WS_PORT injected at serve time)
       /index.html  → web/index.html
       /assets/...  → <projectRoot>/assets/...   (tile sprites etc.)
       anything else → 404
@@ -194,19 +194,37 @@ def _startHttpServer(port):
     )
     rootDir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-    # Closure-based handler so webDir / rootDir are captured without needing
-    # instance state on the handler class.
-    def _makeHandler(webDir, rootDir):
+    def _makeHandler(webDir, rootDir, wsPort):
         class _Handler(http.server.SimpleHTTPRequestHandler):
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, directory=rootDir, **kwargs)
+
+            def do_GET(self):
+                from urllib.parse import unquote, urlparse
+
+                path = unquote(urlparse(self.path).path)
+                if path in ("/", "/index.html"):
+                    indexPath = os.path.join(webDir, "index.html")
+                    with open(indexPath, "rb") as f:
+                        html = f.read().decode("utf-8")
+                    # replace the hardcoded WS port so config.yml drives it
+                    html = html.replace(
+                        "const WS_PORT = 8765;",
+                        f"const WS_PORT = {wsPort};",
+                    )
+                    body = html.encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/html; charset=utf-8")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
+                super().do_GET()
 
             def translate_path(self, path):
                 from urllib.parse import unquote, urlparse
 
                 path = unquote(urlparse(path).path)
-                if path in ("/", "/index.html"):
-                    return os.path.join(webDir, "index.html")
                 # /assets/... served directly from project root
                 return super().translate_path(path)
 
@@ -218,7 +236,7 @@ def _startHttpServer(port):
     class _ReuseServer(http.server.HTTPServer):
         allow_reuse_address = True
 
-    httpd = _ReuseServer(("", port), _makeHandler(webDir, rootDir))
+    httpd = _ReuseServer(("", port), _makeHandler(webDir, rootDir, wsPort))
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     return httpd
 
