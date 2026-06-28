@@ -18,6 +18,9 @@ cropGrowthTicks: 1800
 # pathToSaveDirectory: leave unset to use the platform default save location
 # ("saves/defaultsavefile", or %APPDATA%\Roam\saves\defaultsavefile on Windows).
 # Set it explicitly to override, e.g. pathToSaveDirectory: saves/defaultsavefile
+# Web frontend ports — change these if the defaults conflict with other services.
+webHttpPort: 8282
+webWsPort: 8766
 
 # dynamic (can be changed in game)
 debug: true
@@ -33,3 +36,5 @@ dayNightCycleLengthTicks: 54000
 # Check GitHub for a newer release on launch and show a notice on the main menu.
 # Set to false to disable the only network request Roam makes.
 checkForUpdates: true
+savedWindowWidth: 1079
+savedWindowHeight: 1603

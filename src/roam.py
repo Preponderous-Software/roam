@@ -274,7 +274,9 @@ def main(argv):
             except KeyboardInterrupt:
                 pass
 
-        WebFrontend().serve(_sessionGameLoop)
+        WebFrontend(wsPort=config.webWsPort, httpPort=config.webHttpPort).serve(
+            _sessionGameLoop
+        )
         return 0
 
     roam = Roam(config, textMode=_shouldUseTextMode(argv))

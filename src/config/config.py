@@ -286,6 +286,8 @@ class Config:
         self.pathToSaveDirectory = self.getStringValue(
             configValues, "pathToSaveDirectory", Config.getDefaultSaveDirectory()
         )
+        self.webHttpPort = self.getIntValue(configValues, "webHttpPort", 8080)
+        self.webWsPort = self.getIntValue(configValues, "webWsPort", 8765)
 
         # dynamic (can be changed in game)
         self.debug = self.getBoolValue(configValues, "debug", True)
