@@ -18,13 +18,12 @@ def test_default_rect_spans_full_width_at_the_bottom(resolve):
 
 def test_draw_renders_the_bar_through_the_renderer(resolve):
     # Headless smoke: the bar's draw path (black frame, white interior, energy
-    # fill, centered text) must run against the renderer without raising.
+    # fill) must run against the renderer without raising.
     bar = resolve(EnergyBar)
 
     bar.draw()
 
     assert bar.renderer.drawRectangle.called
-    assert bar.renderer.drawText.called
 
 
 # --- text mode (_drawText) ---

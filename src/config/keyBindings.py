@@ -76,7 +76,7 @@ class KeyBindings:
         "hotbar_9": "Hotbar 9",
         "hotbar_0": "Hotbar 0",
         "gather": "Gather",
-        "place": "Place / Interact",
+        "place": "Interact / Place",
         "toggle_minimap": "Toggle Minimap",
         "minimap_zoom_in": "Minimap Zoom In",
         "minimap_zoom_out": "Minimap Zoom Out",

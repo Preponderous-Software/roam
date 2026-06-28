@@ -143,7 +143,7 @@ def test_gather_at_front_full_inventory_sets_status():
 
     ws.executeGatherAtFront()
 
-    ws.status.set.assert_called_with("Inventory full")
+    ws.status.set.assert_called_with("Inventory full", duration=150)
 
 
 # --- executePlaceAtFront ---
@@ -155,7 +155,7 @@ def test_place_at_front_no_location_sets_status():
 
     ws.executePlaceAtFront()
 
-    ws.status.set.assert_called_with("Cannot place here")
+    ws.status.set.assert_called_with("Cannot place here", duration=150)
 
 
 def test_place_at_front_no_items_sets_status():
@@ -167,7 +167,7 @@ def test_place_at_front_no_items_sets_status():
 
     ws.executePlaceAtFront()
 
-    ws.status.set.assert_called_with("No items to place")
+    ws.status.set.assert_called_with("No items to place", duration=150)
 
 
 def test_place_at_front_places_item_in_front():

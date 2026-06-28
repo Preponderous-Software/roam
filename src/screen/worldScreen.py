@@ -567,7 +567,7 @@ class WorldScreen:
                 if not self.player.getInventory().placeIntoFirstAvailableInventorySlot(
                     wheat
                 ):
-                    self.status.set("Inventory full")
+                    self.status.set("Inventory full", duration=150)
                     return True
                 targetRoom.removeEntity(entity)
                 self.status.set("Harvested Wheat")
@@ -582,7 +582,7 @@ class WorldScreen:
             self.status.set("Nothing to pick up here")
             return
         if self.isLocationTooFar(targetLocation, targetRoom):
-            self.status.set("Too far away")
+            self.status.set("Too far away", duration=150)
             return
         self._executeGatherAt(targetLocation, targetRoom)
 
@@ -656,7 +656,7 @@ class WorldScreen:
         if not self.player.getInventory().placeIntoFirstAvailableInventorySlot(
             toRemove
         ):
-            self.status.set("Inventory full")
+            self.status.set("Inventory full", duration=150)
             return
         targetRoom.removeEntity(toRemove)
         if isinstance(toRemove, LivingEntity):
@@ -766,20 +766,20 @@ class WorldScreen:
     def executePlaceAction(self):
         targetLocation, targetRoom = self.getLocationAndRoomAtMousePosition()
         if targetLocation == -1:
-            self.status.set("Cannot place here")
+            self.status.set("Cannot place here", duration=150)
             return
         if targetLocation == -2:
-            self.status.set("Stop moving to place items")
+            self.status.set("Stop moving to place items", duration=150)
             return
         if self.isLocationTooFar(targetLocation, targetRoom):
-            self.status.set("Too far away")
+            self.status.set("Too far away", duration=150)
             return
         self._executePlaceAt(targetLocation, targetRoom)
 
     def executePlaceAtFront(self):
         targetLocation = self.getLocationInFrontOfPlayer()
         if targetLocation == -1:
-            self.status.set("Cannot place here")
+            self.status.set("Cannot place here", duration=150)
             return
         self._executePlaceAt(targetLocation, self.currentRoom)
 
@@ -801,17 +801,17 @@ class WorldScreen:
                 return
 
         if self.player.getInventory().getNumTakenInventorySlots() == 0:
-            self.status.set("No items to place")
+            self.status.set("No items to place", duration=150)
             return
 
         if self.locationContainsSolidEntity(targetLocation):
-            self.status.set("Location is blocked")
+            self.status.set("Location is blocked", duration=150)
             return
 
         for entityId in list(targetLocation.getEntities().keys()):
             entity = targetLocation.getEntity(entityId)
             if isinstance(entity, LivingEntity):
-                self.status.set("Blocked by " + entity.getName())
+                self.status.set("Blocked by " + entity.getName(), duration=150)
                 return
 
         inventorySlot = self.player.getInventory().getSelectedInventorySlot()
@@ -896,7 +896,7 @@ class WorldScreen:
 
         # Pre-check capacity: simulate placement to ensure all items fit
         if not self._inventoryCanFitAll(self.player.getInventory(), itemsToTransfer):
-            self.status.set("Inventory full")
+            self.status.set("Inventory full", duration=150)
             return
 
         # All items fit — transfer atomically
@@ -932,10 +932,25 @@ class WorldScreen:
                 return False
         return True
 
+    def _setFacingTileHint(self):
+        """Show a contextual status hint when facing an interactive entity."""
+        loc = self.getLocationInFrontOfPlayer()
+        if loc == -1:
+            return
+        for entity in loc.getEntities().values():
+            if isinstance(entity, CaveEntrance):
+                placeKey = self.keyBindings.getKeyName("place").upper()
+                self.status.setHint(f"Cave Entrance — press {placeKey} to descend")
+                return
+            if isinstance(entity, CaveLadder):
+                placeKey = self.keyBindings.getKeyName("place").upper()
+                self.status.setHint(f"Ladder — press {placeKey} to ascend")
+                return
+
     def _descend(self):
         """Move the player one level deeper (z − 1) into the cave below."""
         if self.currentZ <= -3:
-            self.status.set("Too deep — no way further down")
+            self.status.set("Too deep — no way further down", duration=150)
             return
         self.currentRoom.removeEntity(self.player)
         self.currentZ -= 1
@@ -1244,7 +1259,7 @@ class WorldScreen:
     def removeEnergyAndCheckForPlayerDeath(self):
         self.player.removeEnergy(self.config.energyDepletionRate)
         if self.player.getEnergy() < self.player.getTargetEnergy() * 0.10:
-            self.status.set("Low on energy!")
+            self.status.set("Low on energy!", duration=150)
         if self.player.isDead() and self.deathRespawnTicksRemaining == 0:
             self.status.set("You died! Respawning...")
             self.stats.setScore(math.floor(self.stats.getScore() * 0.9))
@@ -1600,52 +1615,101 @@ class WorldScreen:
         def keyName(action):
             return kb.getKeyName(action).upper()
 
+        # Render sectioned help: None-entries are section headers, strings are items
+        # Build sectioned structure from flat helpLines by inserting headers
         if isTextMode:
-            helpLines = [
-                "W/A/S/D or Arrows  -  Move",
-                f"{keyName('gather')}  -  Gather / Pick up (facing tile)",
-                f"{keyName('place')}  -  Place / open chest (facing tile)",
-                "1-0  -  Select hotbar slot",
-                "[ ]  -  Cycle hotbar",
-                f"{keyName('inventory')}  -  Open / Close inventory",
-                f"{keyName('run_toggle')}  -  Run toggle",
-                f"{keyName('crouch_toggle')}  -  Crouch toggle",
-                f"{keyName('look')}  -  Examine facing tile",
-                f"{keyName('toggle_minimap')}  -  Toggle minimap",
-                f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",
-                f"{keyName('alt_toggle_debug')}  -  Toggle debug info",
-                f"{keyName('screenshot')}  -  Take screenshot (saved as .txt)",
-                f"{keyName('codex')}  -  Open Codex",
-                "Esc  -  Open menu",
-                f"{keyName('alt_toggle_help')}  -  Toggle this help",
+            sections = [
+                (
+                    "MOVEMENT",
+                    [
+                        "W/A/S/D or Arrows  -  Move",
+                        f"{keyName('run_toggle')}  -  Run toggle",
+                        f"{keyName('crouch_toggle')}  -  Crouch toggle",
+                    ],
+                ),
+                (
+                    "ACTIONS",
+                    [
+                        f"{keyName('gather')}  -  Gather / Pick up (facing tile)",
+                        f"{keyName('place')}  -  Interact / Place (facing tile)",
+                        f"{keyName('look')}  -  Examine facing tile",
+                        "1-0  -  Select hotbar slot",
+                        "[ ]  -  Cycle hotbar",
+                        f"{keyName('inventory')}  -  Inventory",
+                        f"{keyName('codex')}  -  Codex",
+                    ],
+                ),
+                (
+                    "HUD",
+                    [
+                        f"{keyName('toggle_minimap')}  -  Toggle minimap",
+                        f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",
+                        f"{keyName('alt_toggle_debug')}  -  Toggle debug info",
+                        f"{keyName('screenshot')}  -  Take screenshot (.txt)",
+                    ],
+                ),
+                (
+                    "SYSTEM",
+                    [
+                        "Esc  -  Open menu",
+                        f"{keyName('alt_toggle_help')}  -  Toggle this help",
+                    ],
+                ),
             ]
         else:
-            helpLines = [
-                "W/A/S/D or Arrows  -  Move",
-                f"Left Click / {keyName('gather')}  -  Gather / Pick up (facing tile)",
-                f"Right Click / {keyName('place')}  -  Place item / open chest (facing tile)",
-                "Middle Click  -  Drag HUD elements to reposition",
-                "1-0  -  Select hotbar slot",
-                "Scroll Wheel / [ ]  -  Cycle hotbar",
-                f"{keyName('inventory')}  -  Open / Close inventory",
-                f"{keyName('run')}  -  Run (hold)  /  {keyName('run_toggle')}  -  Run toggle",
-                f"{keyName('crouch')}  -  Crouch (hold)  /  {keyName('crouch_toggle')}  -  Crouch toggle",
-                f"{keyName('look')}  -  Examine facing tile",
-                f"{keyName('toggle_minimap')}  -  Toggle minimap",
-                f"{keyName('minimap_zoom_in')}/{keyName('minimap_zoom_out')}  -  Resize minimap",
-                f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",
-                f"{keyName('toggle_debug')}  -  Toggle debug info",
-                f"{keyName('screenshot')}  -  Take screenshot",
-                f"{keyName('codex')}  -  Open Codex",
-                "Esc  -  Open menu",
-                f"{keyName('toggle_help')}  -  Toggle this help",
+            sections = [
+                (
+                    "MOVEMENT",
+                    [
+                        "W/A/S/D or Arrows  -  Move",
+                        f"{keyName('run')}  -  Run (hold)  /  {keyName('run_toggle')}  -  Toggle",
+                        f"{keyName('crouch')}  -  Crouch (hold)  /  {keyName('crouch_toggle')}  -  Toggle",
+                    ],
+                ),
+                (
+                    "ACTIONS",
+                    [
+                        f"Left Click / {keyName('gather')}  -  Gather / Pick up (facing tile)",
+                        f"Right Click / {keyName('place')}  -  Interact / Place (facing tile)",
+                        f"Middle Click  -  Drag HUD elements",
+                        f"{keyName('look')}  -  Examine facing tile",
+                        "1-0 / Scroll  -  Select hotbar slot",
+                        f"{keyName('inventory')}  -  Inventory",
+                        f"{keyName('codex')}  -  Codex",
+                    ],
+                ),
+                (
+                    "HUD",
+                    [
+                        f"{keyName('toggle_minimap')}  -  Toggle minimap",
+                        f"{keyName('minimap_zoom_in')}/{keyName('minimap_zoom_out')}  -  Resize minimap",
+                        f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",
+                        f"{keyName('toggle_debug')}  -  Toggle debug info",
+                        f"{keyName('screenshot')}  -  Take screenshot",
+                    ],
+                ),
+                (
+                    "SYSTEM",
+                    [
+                        "Esc  -  Open menu",
+                        f"{keyName('toggle_help')}  -  Toggle this help",
+                    ],
+                ),
             ]
 
         lineY = titleY + 40
-        lineSpacing = 24
-        for line in helpLines:
-            self.renderer.drawText(line, x / 2, lineY, 20, palette.LIGHT_GRAY)
-            lineY += lineSpacing
+        lineSpacing = 22
+        headerSpacing = 30
+        indent = "  "
+        for sectionTitle, items in sections:
+            self.renderer.drawText(sectionTitle, x / 2, lineY, 18, palette.WHITE)
+            lineY += headerSpacing
+            for line in items:
+                self.renderer.drawText(
+                    indent + line, x / 2, lineY, 18, palette.LIGHT_GRAY
+                )
+                lineY += lineSpacing
+            lineY += 6
 
     def _getHotbarDefaultRect(self):
         """Return the default bounding rect for the hotbar (no drag offset)."""
@@ -1742,10 +1806,18 @@ class WorldScreen:
                     slotX, slotY, HOTBAR_SLOT_SIZE, HOTBAR_SLOT_SIZE
                 )
 
+            label = str(i + 1) if i < 9 else "0"
             if isTextMode:
-                label = str(i + 1) if i < 9 else "0"
                 self.renderer.drawTextLeftAligned(
                     label, slotX, slotY - HOTBAR_SLOT_SIZE // 2, 12, palette.MEDIUM_GRAY
+                )
+            else:
+                self.renderer.drawText(
+                    label,
+                    slotX + HOTBAR_SLOT_SIZE / 2,
+                    slotY + HOTBAR_SLOT_SIZE + 8,
+                    12,
+                    (120, 120, 120),
                 )
 
             slotX += HOTBAR_SLOT_SIZE + HOTBAR_SLOT_GAP
@@ -1770,10 +1842,25 @@ class WorldScreen:
 
     def _drawDepthIndicator(self):
         depth = abs(self.currentZ)
-        label = f"Depth: {depth}"
-        x = self.renderer.getDisplayWidth() - 100
+        isTextMode = not self.renderer.supportsImageLoading()
+        if isTextMode:
+            label = f"[Cave Lvl {depth}]"
+            self.renderer.drawText(
+                label, self.renderer.getDisplayWidth() - 10, 1, 12, (200, 160, 50)
+            )
+            return
+        label = f"Cave — Level {depth}"
+        fontSize = 18
+        displayWidth = self.renderer.getDisplayWidth()
+        x = int(displayWidth * 0.85)
         y = 60
-        self.renderer.drawText(label, x, y, 18, (180, 140, 80))
+        # draw a dark pill behind the text for legibility
+        pillW = len(label) * 10 + 16
+        pillH = fontSize + 12
+        self.renderer.drawRectangle(
+            x - pillW // 2, y - pillH // 2, pillW, pillH, (20, 20, 20)
+        )
+        self.renderer.drawText(label, x, y, fontSize, (200, 160, 50))
 
     def _drawDebugInfo(self):
         displayWidth = self.renderer.getDisplayWidth()
@@ -1879,7 +1966,7 @@ class WorldScreen:
                 kb = self.keyBindings
                 gatherKey = kb.getKeyName("gather").upper()
                 placeKey = kb.getKeyName("place").upper()
-                actionHint = f"{gatherKey}: Gather  {placeKey}: Place"
+                actionHint = f"{gatherKey}: Gather  {placeKey}: Interact"
                 self.renderer.drawTextLeftAligned(
                     actionHint, 0, hintY, 16, palette.MEDIUM_GRAY
                 )
@@ -1932,7 +2019,7 @@ class WorldScreen:
 
         self.cursorSlot.setContents(remainingItems)
         if len(remainingItems) > 0:
-            self.status.set("Inventory full")
+            self.status.set("Inventory full", duration=150)
 
     def drawCursorSlot(self):
         if self.cursorSlot.isEmpty():
@@ -1980,7 +2067,7 @@ class WorldScreen:
                         remaining.append(item)
                 if len(remaining) > 0:
                     hotbarSlot.setContents(remaining)
-                    self.status.set("Inventory full")
+                    self.status.set("Inventory full", duration=150)
                 else:
                     self.status.set("Moved to inventory")
         elif self.inputSource.getMouseButtons()[0]:  # left click
@@ -2392,6 +2479,7 @@ class WorldScreen:
         self.removeEnergyAndCheckForPlayerDeath()
         if self.config.removeDeadEntities:
             self.checkForLivingEntityDeaths()
+        self._setFacingTileHint()
         self.status.checkForExpiration(self.tickCounter.getTick())
         self.draw()
 

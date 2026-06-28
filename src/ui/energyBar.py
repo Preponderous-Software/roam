@@ -54,20 +54,6 @@ class EnergyBar:
         # fill interior with energy
         self.renderer.drawRectangle(xpos + 1, ypos + 1, width - 2, height - 2, color)
 
-        # draw text in center of bar
-        text = (
-            str(ceil(self.player.getEnergy()))
-            + "/"
-            + str(self.player.getTargetEnergy())
-        )
-        self.renderer.drawText(
-            text,
-            xpos + fullWidth / 2,
-            ypos + height / 2,
-            ceil(height) - 1,
-            palette.BLACK,
-        )
-
     def _drawText(self, xpos, ypos, energyRatio):
         BAR_WIDTH = 16
         filled = max(0, min(BAR_WIDTH, round(energyRatio * BAR_WIDTH)))

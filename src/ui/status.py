@@ -16,22 +16,35 @@ class Status:
         self.textSize = 18
         self.textColor = palette.BLACK
         self.tickLastSet = -1
-        self.durationInTicks = 60
+        self.durationInTicks = 120
         self.tickCounter = tickCounter
 
-    def set(self, text):
+    def set(self, text, duration=None):
         self.text = text
         self.tickLastSet = self.tickCounter.getTick()
+        self._currentDuration = (
+            duration if duration is not None else self.durationInTicks
+        )
+
+    def setHint(self, text):
+        """Show text only when the status is currently empty (won't clobber action feedback)."""
+        if self.text == -1:
+            self.set(text, duration=60)
 
     def clear(self):
         self.text = -1
+        self._currentDuration = self.durationInTicks
+
+    def _calcWidth(self, displayW):
+        raw = len(self.text) * 11
+        return min(raw, int(displayW * 0.8))
 
     def getDefaultRect(self):
         """Return the default bounding rect for the status text (no drag offset)."""
         if self.text == -1:
             return Rect(0, 0, 0, 0)
         x, y = self.renderer.getDisplaySize()
-        width = len(self.text) * 10
+        width = self._calcWidth(x)
         height = self.textSize * 2
         xpos = x / 2 - width / 2
         hotbarTop = getHotbarTop(y)
@@ -42,7 +55,7 @@ class Status:
         if self.text == -1:
             return
         x, y = self.renderer.getDisplaySize()
-        width = len(self.text) * 10
+        width = self._calcWidth(x)
         height = self.textSize * 2
         xpos = x / 2 - width / 2 + offsetX
         hotbarTop = getHotbarTop(y)
@@ -63,6 +76,7 @@ class Status:
         return self.tickLastSet
 
     def checkForExpiration(self, currentTick):
-        expiryTick = self.tickLastSet + self.durationInTicks
+        duration = getattr(self, "_currentDuration", self.durationInTicks)
+        expiryTick = self.tickLastSet + duration
         if currentTick > expiryTick:
             self.clear()

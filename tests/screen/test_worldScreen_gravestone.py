@@ -202,4 +202,4 @@ def test_interact_with_gravestone_full_inventory_leaves_gravestone():
 
     # Gravestone should still be in place
     assert loc.isEntityPresent(gravestone)
-    ws.status.set.assert_called_with("Inventory full")
+    ws.status.set.assert_called_with("Inventory full", duration=150)
