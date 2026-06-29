@@ -12,7 +12,18 @@ so all js module globals are reachable via `from js import ...`.
 import json
 import queue
 
+import js as _js
 from js import Atomics, sabData, sabMeta, sabRingSize, sendToMain
+from pyodide.ffi import to_js as _to_js
+
+
+def _post(obj):
+    """Send obj to the main thread, converting Python dicts to JS objects."""
+    if isinstance(obj, str):
+        sendToMain(obj)
+    else:
+        sendToMain(_to_js(obj, dict_converter=_js.Object.fromEntries))
+
 
 from config.config import Config
 from rendering.textClock import TextClock
@@ -125,7 +136,7 @@ class _PyodideFrontend:
 config = Config()
 roam = Roam(config, frontend=_PyodideFrontend())
 
-sendToMain({"type": "ready"})
+_post({"type": "ready"})
 
 while True:
     result = roam.run()
