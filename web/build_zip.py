@@ -21,5 +21,8 @@ with zipfile.ZipFile("web/game.zip", "w", zipfile.ZIP_DEFLATED) as z:
     for name in ("config.yml", "version.txt"):
         if os.path.exists(name):
             z.write(name, name)
+    # Entry point run by the Web Worker after unpacking to /game/
+    if os.path.exists("web/pyodide_main.py"):
+        z.write("web/pyodide_main.py", "web/pyodide_main.py")
 
 print("Built web/game.zip")
