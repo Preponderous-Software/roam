@@ -50,6 +50,14 @@ self.onmessage = async (e) => {
             console.warn('[roam] OPFS unavailable; saves will not persist across reloads');
         }
 
+        self.postMessage({ type: 'status', msg: 'Installing Python packages…' });
+
+        // Pillow and jsonschema are bundled with Pyodide; structlog comes from PyPI.
+        // micropip handles PyPI installs and skips packages already available.
+        await pyodide.loadPackage(['Pillow', 'jsonschema', 'micropip']);
+        const micropip = pyodide.pyimport('micropip');
+        await micropip.install('structlog');
+
         self.postMessage({ type: 'status', msg: 'Downloading game…' });
 
         const resp = await fetch('/web/game.zip');
