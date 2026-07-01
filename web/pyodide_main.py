@@ -12,7 +12,6 @@ so all js module globals are reachable via `from js import ...`.
 import concurrent.futures as _cf
 import json
 import queue
-import threading as _threading
 
 import js as _js
 from js import Atomics, sabData, sabMeta, sabRingSize, sendToMain
@@ -66,19 +65,6 @@ class _PyodideExecutor:
 
 
 _cf.ThreadPoolExecutor = _PyodideExecutor
-
-_orig_thread_start = _threading.Thread.start
-
-
-def _safe_thread_start(self):
-    try:
-        _orig_thread_start(self)
-    except RuntimeError:
-        if not self.daemon:
-            raise  # non-daemon failure is unexpected; let it propagate
-
-
-_threading.Thread.start = _safe_thread_start
 
 # ── game imports (must come after the patches above) ─────────────────────────
 from config.config import Config
