@@ -40,6 +40,7 @@
       border-bottom-width: 0;
     }
     #bar-status { flex: 1; color: #666; }
+    #bar-status.error { color: #c55; user-select: text; -webkit-user-select: text; cursor: text; }
     #bar-reconnect {
       display: none;
       background: #1e1e1e;
@@ -452,7 +453,7 @@
 
   function setStatus(msg, isError) {
     statusEl.textContent = msg;
-    statusEl.style.color = isError ? "#c55" : "#666";
+    statusEl.classList.toggle('error', !!isError);
   }
 
   function startWorker() {
