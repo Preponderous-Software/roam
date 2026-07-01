@@ -124,3 +124,14 @@ def test_async_check_is_noop_when_disabled():
     checker.checkForUpdatesAsync()
     assert checker._checkStarted is False
     assert checker.isUpdateAvailable() is False
+
+
+def test_async_check_survives_runtime_error_on_thread_start():
+    # Pyodide/WASM can't spawn threads; thread.start() raises RuntimeError.
+    # checkForUpdatesAsync must not propagate the error so the main menu loads.
+    checker = _checker()
+    with patch(
+        "threading.Thread.start", side_effect=RuntimeError("can't start new thread")
+    ):
+        checker.checkForUpdatesAsync()
+    assert checker.isUpdateAvailable() is False

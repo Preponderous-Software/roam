@@ -43,8 +43,11 @@ class UpdateChecker:
         if self._checkStarted or not self.config.checkForUpdates:
             return
         self._checkStarted = True
-        thread = threading.Thread(target=self._checkForUpdates, daemon=True)
-        thread.start()
+        try:
+            thread = threading.Thread(target=self._checkForUpdates, daemon=True)
+            thread.start()
+        except RuntimeError:
+            self._checkStarted = False
 
     def _checkForUpdates(self):
         latest = self._fetchLatestVersion()
