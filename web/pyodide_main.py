@@ -9,8 +9,10 @@ This file is exec()'d by pyodide.runPythonAsync() and shares that namespace,
 so all js module globals are reachable via `from js import ...`.
 """
 
+import concurrent.futures as _cf
 import json
 import queue
+import threading as _threading
 
 import js as _js
 from js import Atomics, sabData, sabMeta, sabRingSize, sendToMain
@@ -25,6 +27,60 @@ def _post(obj):
         sendToMain(_to_js(obj, dict_converter=_js.Object.fromEntries))
 
 
+# ── Pyodide thread compatibility ──────────────────────────────────────────────
+# Pyodide's CDN WASM build cannot spawn OS threads.  Patch both
+# concurrent.futures and threading BEFORE game modules import them so all
+# ThreadPoolExecutor usage runs tasks synchronously rather than crashing, and
+# daemon thread starts (e.g. UpdateChecker) are silently dropped.
+
+
+class _PyodideFuture:
+    _result = None
+    _exc = None
+
+    def result(self, timeout=None):
+        if self._exc is not None:
+            raise self._exc
+        return self._result
+
+
+class _PyodideExecutor:
+    """Synchronous stand-in for ThreadPoolExecutor on Pyodide."""
+
+    def submit(self, fn, /, *args, **kwargs):
+        f = _PyodideFuture()
+        try:
+            f._result = fn(*args, **kwargs)
+        except Exception as e:
+            f._exc = e
+        return f
+
+    def shutdown(self, wait=True, cancel_futures=False):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        self.shutdown()
+
+
+_cf.ThreadPoolExecutor = _PyodideExecutor
+
+_orig_thread_start = _threading.Thread.start
+
+
+def _safe_thread_start(self):
+    try:
+        _orig_thread_start(self)
+    except RuntimeError:
+        if not self.daemon:
+            raise  # non-daemon failure is unexpected; let it propagate
+
+
+_threading.Thread.start = _safe_thread_start
+
+# ── game imports (must come after the patches above) ─────────────────────────
 from config.config import Config
 from rendering.textClock import TextClock
 from rendering.webInputSource import WebInputSource
