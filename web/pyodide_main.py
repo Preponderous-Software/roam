@@ -46,6 +46,9 @@ class _PyodideFuture:
 class _PyodideExecutor:
     """Synchronous stand-in for ThreadPoolExecutor on Pyodide."""
 
+    def __init__(self, *args, **kwargs):
+        pass
+
     def submit(self, fn, /, *args, **kwargs):
         f = _PyodideFuture()
         try:
