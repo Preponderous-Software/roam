@@ -1,9 +1,10 @@
 """Pyodide entry point — runs inside a Web Worker after game.zip is unpacked.
 
 The Worker has already:
-  - inserted /game/src into sys.path
+  - inserted /game/src and /game/web into sys.path
   - set os.environ['ROAM_SAVE_DIR'] = '/saves'  (OPFS mount)
   - exposed globalThis.sabMeta / sabData / sabRingSize / Atomics / sendToMain
+  - exposed globalThis.syncSaves() which flushes the OPFS mount
 
 This file is exec()'d by pyodide.runPythonAsync() and shares that namespace,
 so all js module globals are reachable via `from js import ...`.
@@ -17,6 +18,15 @@ import js as _js
 from js import Atomics, sabData, sabMeta, sabRingSize, sendToMain
 from pyodide.ffi import to_js as _to_js
 
+# ── Pyodide thread compatibility ──────────────────────────────────────────────
+# Pyodide's CDN WASM build cannot spawn OS threads.  Patch concurrent.futures
+# BEFORE game modules import them so all ThreadPoolExecutor usage runs tasks
+# synchronously rather than crashing.
+# pyodide_compat.py lives at /game/web/, which the Worker adds to sys.path.
+from pyodide_compat import _PyodideExecutor  # noqa: E402
+
+_cf.ThreadPoolExecutor = _PyodideExecutor
+
 
 def _post(obj):
     """Send obj to the main thread, converting Python dicts to JS objects."""
@@ -25,49 +35,6 @@ def _post(obj):
     else:
         sendToMain(_to_js(obj, dict_converter=_js.Object.fromEntries))
 
-
-# ── Pyodide thread compatibility ──────────────────────────────────────────────
-# Pyodide's CDN WASM build cannot spawn OS threads.  Patch both
-# concurrent.futures and threading BEFORE game modules import them so all
-# ThreadPoolExecutor usage runs tasks synchronously rather than crashing, and
-# daemon thread starts (e.g. UpdateChecker) are silently dropped.
-
-
-class _PyodideFuture:
-    _result = None
-    _exc = None
-
-    def result(self, timeout=None):
-        if self._exc is not None:
-            raise self._exc
-        return self._result
-
-
-class _PyodideExecutor:
-    """Synchronous stand-in for ThreadPoolExecutor on Pyodide."""
-
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def submit(self, fn, /, *args, **kwargs):
-        f = _PyodideFuture()
-        try:
-            f._result = fn(*args, **kwargs)
-        except Exception as e:
-            f._exc = e
-        return f
-
-    def shutdown(self, wait=True, cancel_futures=False):
-        pass
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *a):
-        self.shutdown()
-
-
-_cf.ThreadPoolExecutor = _PyodideExecutor
 
 # ── game imports (must come after the patches above) ─────────────────────────
 from config.config import Config

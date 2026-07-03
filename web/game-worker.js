@@ -41,14 +41,33 @@ self.onmessage = async (e) => {
         // OPFS gives Python synchronous persistent file I/O without needing
         // Emscripten's async IDBFS flush cycle — saves survive page reloads and
         // are isolated per browser profile (no shared server filesystem).
+        //
+        // pyodide.mountNativeFS() returns { syncfs } — call syncfs() to flush
+        // Emscripten's in-memory cache to the actual OPFS backing store.
         pyodide.FS.mkdir('/saves');
+        let _nativeFSMount = null;
         try {
             const opfsRoot = await navigator.storage.getDirectory();
-            await pyodide.mountNativeFS('/saves', opfsRoot);
-        } catch {
-            // OPFS not available in older browsers — saves are session-only
-            console.warn('[roam] OPFS unavailable; saves will not persist across reloads');
+            _nativeFSMount = await pyodide.mountNativeFS('/saves', opfsRoot);
+            console.log('[roam] OPFS mounted; saves will persist across reloads');
+        } catch(err) {
+            // OPFS not available in older browsers or non-secure contexts
+            console.warn('[roam] OPFS unavailable; saves will not persist:', err);
         }
+
+        // Expose syncSaves() to Python (accessible as js.syncSaves) so that
+        // after every write the in-memory FS is flushed to OPFS.
+        // Also called on a 3-second interval so saves persist even if the tab
+        // is closed between explicit sync points.
+        globalThis.syncSaves = () => {
+            if (_nativeFSMount && typeof _nativeFSMount.syncfs === 'function') {
+                _nativeFSMount.syncfs().catch(
+                    (err) => console.warn('[roam] syncfs failed:', err)
+                );
+            }
+        };
+        // Periodic flush — fires during Python's time.sleep() yields.
+        setInterval(syncSaves, 3000);
 
         self.postMessage({ type: 'status', msg: 'Installing Python packages…' });
 
@@ -69,9 +88,12 @@ self.onmessage = async (e) => {
         self.postMessage({ type: 'status', msg: 'Starting game…' });
 
         // Run the game — this blocks for the lifetime of the session.
+        // /game/web/ is added to sys.path so pyodide_main.py can import
+        // pyodide_compat (the synchronous ThreadPoolExecutor shim).
         await pyodide.runPythonAsync(`
 import sys, os
 sys.path.insert(0, '/game/src')
+sys.path.insert(0, '/game/web')
 os.chdir('/game')
 os.environ['ROAM_SAVE_DIR'] = '/saves'
 exec(open('/game/web/pyodide_main.py').read())
