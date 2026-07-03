@@ -15,6 +15,119 @@ importScripts('https://cdn.jsdelivr.net/pyodide/v0.26.0/full/pyodide.js');
 
 const SAB_RING_SIZE = 8192;
 
+// ── Save persistence via raw IndexedDB ────────────────────────────────────────
+// localStorage is not available in Workers; Emscripten's IDBFS/OPFS backends
+// are unreliable in Pyodide 0.26 (IDBFS may not be bundled; OPFS Access Handle
+// Pool FS only opens handles for files that already exist at mount time).
+// Direct IndexedDB from the Worker is the simplest approach that is guaranteed
+// to work across sessions and browser vendors.
+//
+// Layout: one database ("roam-saves"), one object store ("files").
+// Keys = Emscripten FS paths ("/saves/slot1/player.json"), values = content.
+//
+// Two operations:
+//   loadSavesFromIDB(pyodide)  — called once at startup, awaited before Python
+//   syncSaves()                — flushes /saves snapshot to IDB; called after
+//                                every write (from Python) + on a 3 s interval
+
+const IDB_NAME    = 'roam-saves';
+const IDB_STORE   = 'files';
+const IDB_VERSION = 1;
+
+function idbOpen() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(IDB_STORE)) {
+                db.createObjectStore(IDB_STORE);
+            }
+        };
+        req.onsuccess = (e) => resolve(e.target.result);
+        req.onerror   = (e) => reject(e.target.error);
+    });
+}
+
+async function loadSavesFromIDB(pyodide) {
+    let db;
+    try { db = await idbOpen(); }
+    catch(err) { console.warn('[roam] IDB open failed on load:', err); return; }
+
+    await new Promise((resolve) => {
+        const tx      = db.transaction(IDB_STORE, 'readonly');
+        const store   = tx.objectStore(IDB_STORE);
+        const keysReq = store.getAllKeys();
+        const valsReq = store.getAll();
+        let keys = null, vals = null;
+
+        function done() {
+            if (keys === null || vals === null) return;
+            let n = 0;
+            for (let i = 0; i < keys.length; i++) {
+                const path  = keys[i];
+                const value = vals[i];
+                // Ensure all ancestor directories exist
+                const parts = path.split('/').filter(Boolean);
+                let cur = '';
+                for (let j = 0; j < parts.length - 1; j++) {
+                    cur += '/' + parts[j];
+                    try { pyodide.FS.mkdir(cur); } catch {}
+                }
+                try {
+                    pyodide.FS.writeFile(path, value, { encoding: 'utf8' });
+                    n++;
+                } catch(e) { console.warn('[roam] could not restore', path, e); }
+            }
+            if (n > 0) console.log(`[roam] ${n} save file(s) restored from IndexedDB`);
+            resolve();
+        }
+
+        keysReq.onsuccess = () => { keys = keysReq.result; done(); };
+        valsReq.onsuccess = () => { vals = valsReq.result; done(); };
+        keysReq.onerror   = () => resolve();
+        valsReq.onerror   = () => resolve();
+    });
+    db.close();
+}
+
+function flushSavesToIDB(pyodide) {
+    // Walk /saves and snapshot every file into a flat path→content map.
+    const files = {};
+    function walk(path) {
+        let entries;
+        try { entries = pyodide.FS.readdir(path); } catch { return; }
+        for (const name of entries) {
+            if (name === '.' || name === '..') continue;
+            const full = `${path}/${name}`;
+            const stat = pyodide.FS.stat(full);
+            if (pyodide.FS.isDir(stat.mode)) {
+                walk(full);
+            } else {
+                try { files[full] = pyodide.FS.readFile(full, { encoding: 'utf8' }); }
+                catch {}
+            }
+        }
+    }
+    walk('/saves');
+
+    return new Promise((resolve) => {
+        idbOpen()
+            .then((db) => {
+                const tx    = db.transaction(IDB_STORE, 'readwrite');
+                const store = tx.objectStore(IDB_STORE);
+                store.clear();
+                for (const [path, content] of Object.entries(files)) {
+                    store.put(content, path);
+                }
+                tx.oncomplete = () => { db.close(); resolve(); };
+                tx.onerror    = () => { db.close(); resolve(); };
+            })
+            .catch(() => resolve());
+    });
+}
+
+// ── Worker entry point ────────────────────────────────────────────────────────
+
 self.onmessage = async (e) => {
     if (e.data.type !== 'init') return;
 
@@ -23,10 +136,10 @@ self.onmessage = async (e) => {
     const sabData = new Uint8Array(sab, 8, SAB_RING_SIZE);
 
     // Expose SAB and helpers to Python via globalThis (accessible as js.* in Pyodide)
-    globalThis.sabMeta    = sabMeta;
-    globalThis.sabData    = sabData;
+    globalThis.sabMeta     = sabMeta;
+    globalThis.sabData     = sabData;
     globalThis.sabRingSize = SAB_RING_SIZE;
-    globalThis.sendToMain = (data) => self.postMessage(data);
+    globalThis.sendToMain  = (data) => self.postMessage(data);
 
     try {
         self.postMessage({ type: 'status', msg: 'Loading Python runtime…' });
@@ -36,48 +149,28 @@ self.onmessage = async (e) => {
             stderr: (msg) => console.warn('[roam]', msg),
         });
 
-        self.postMessage({ type: 'status', msg: 'Mounting save storage…' });
+        self.postMessage({ type: 'status', msg: 'Restoring saves…' });
 
-        // IDBFS (IndexedDB-backed Emscripten FS) persists saves across page
-        // reloads.  Two-step pattern required:
-        //   1. Mount + syncfs(true)  → populate /saves FROM IndexedDB on load
-        //   2. syncfs(false)         → flush /saves TO IndexedDB after each write
-        // Omitting step 1 meant the filesystem always started empty even when
-        // IndexedDB held data from prior sessions.
+        // Create /saves in the Emscripten in-memory FS, then populate it with
+        // any files written in prior sessions.  This must be awaited before
+        // Python starts so the save-selection screen sees existing slots.
         pyodide.FS.mkdir('/saves');
-        let _idbfsOk = false;
-        try {
-            pyodide.FS.mount(pyodide.FS.filesystems.IDBFS, {}, '/saves');
-            await new Promise((resolve) => {
-                pyodide.FS.syncfs(true, (err) => {
-                    if (err) {
-                        console.warn('[roam] IDBFS initial load failed:', err);
-                    } else {
-                        _idbfsOk = true;
-                        console.log('[roam] IDBFS mounted; prior saves loaded');
-                    }
-                    resolve();  // non-fatal: start with empty /saves on failure
-                });
-            });
-        } catch(err) {
-            console.warn('[roam] IDBFS unavailable; saves will not persist:', err);
-        }
+        await loadSavesFromIDB(pyodide);
 
-        // syncSaves() flushes /saves to IndexedDB.  Called explicitly after
-        // every write (from Python via jsonPersistence._try_opfs_sync) and on
-        // a short interval as a backstop for unexpected exits.
+        // syncSaves() is exposed to Python (js.syncSaves) and called:
+        //   • immediately after every writeJsonAtomically (via _try_opfs_sync)
+        //   • every 3 s as a backstop for unexpected exits
+        //   • explicitly at end of session in pyodide_main.py
         globalThis.syncSaves = () => {
-            if (!_idbfsOk) return;
-            pyodide.FS.syncfs(false, (err) => {
-                if (err) console.warn('[roam] IDBFS flush failed:', err);
-            });
+            flushSavesToIDB(pyodide).catch(
+                (err) => console.warn('[roam] IDB flush failed:', err)
+            );
         };
         setInterval(syncSaves, 3000);
 
         self.postMessage({ type: 'status', msg: 'Installing Python packages…' });
 
         // Pillow and jsonschema are bundled with Pyodide; structlog comes from PyPI.
-        // micropip handles PyPI installs and skips packages already available.
         await pyodide.loadPackage(['Pillow', 'jsonschema', 'micropip']);
         const micropip = pyodide.pyimport('micropip');
         await micropip.install('structlog');
