@@ -38,35 +38,40 @@ self.onmessage = async (e) => {
 
         self.postMessage({ type: 'status', msg: 'Mounting save storage…' });
 
-        // OPFS gives Python synchronous persistent file I/O without needing
-        // Emscripten's async IDBFS flush cycle — saves survive page reloads and
-        // are isolated per browser profile (no shared server filesystem).
-        //
-        // pyodide.mountNativeFS() returns { syncfs } — call syncfs() to flush
-        // Emscripten's in-memory cache to the actual OPFS backing store.
+        // IDBFS (IndexedDB-backed Emscripten FS) persists saves across page
+        // reloads.  Two-step pattern required:
+        //   1. Mount + syncfs(true)  → populate /saves FROM IndexedDB on load
+        //   2. syncfs(false)         → flush /saves TO IndexedDB after each write
+        // Omitting step 1 meant the filesystem always started empty even when
+        // IndexedDB held data from prior sessions.
         pyodide.FS.mkdir('/saves');
-        let _nativeFSMount = null;
+        let _idbfsOk = false;
         try {
-            const opfsRoot = await navigator.storage.getDirectory();
-            _nativeFSMount = await pyodide.mountNativeFS('/saves', opfsRoot);
-            console.log('[roam] OPFS mounted; saves will persist across reloads');
+            pyodide.FS.mount(pyodide.FS.filesystems.IDBFS, {}, '/saves');
+            await new Promise((resolve) => {
+                pyodide.FS.syncfs(true, (err) => {
+                    if (err) {
+                        console.warn('[roam] IDBFS initial load failed:', err);
+                    } else {
+                        _idbfsOk = true;
+                        console.log('[roam] IDBFS mounted; prior saves loaded');
+                    }
+                    resolve();  // non-fatal: start with empty /saves on failure
+                });
+            });
         } catch(err) {
-            // OPFS not available in older browsers or non-secure contexts
-            console.warn('[roam] OPFS unavailable; saves will not persist:', err);
+            console.warn('[roam] IDBFS unavailable; saves will not persist:', err);
         }
 
-        // Expose syncSaves() to Python (accessible as js.syncSaves) so that
-        // after every write the in-memory FS is flushed to OPFS.
-        // Also called on a 3-second interval so saves persist even if the tab
-        // is closed between explicit sync points.
+        // syncSaves() flushes /saves to IndexedDB.  Called explicitly after
+        // every write (from Python via jsonPersistence._try_opfs_sync) and on
+        // a short interval as a backstop for unexpected exits.
         globalThis.syncSaves = () => {
-            if (_nativeFSMount && typeof _nativeFSMount.syncfs === 'function') {
-                _nativeFSMount.syncfs().catch(
-                    (err) => console.warn('[roam] syncfs failed:', err)
-                );
-            }
+            if (!_idbfsOk) return;
+            pyodide.FS.syncfs(false, (err) => {
+                if (err) console.warn('[roam] IDBFS flush failed:', err);
+            });
         };
-        // Periodic flush — fires during Python's time.sleep() yields.
         setInterval(syncSaves, 3000);
 
         self.postMessage({ type: 'status', msg: 'Installing Python packages…' });

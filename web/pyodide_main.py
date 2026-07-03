@@ -155,3 +155,15 @@ while True:
     if result != "restart":
         break
     roam.restart()
+
+# Game exited — flush final saves to IndexedDB before the Worker goes idle.
+# time.sleep() yields to the JS event loop so the syncfs() callback fires.
+try:
+    import time as _time
+
+    from js import syncSaves as _syncSaves
+
+    _syncSaves()
+    _time.sleep(0.5)
+except Exception:
+    pass
