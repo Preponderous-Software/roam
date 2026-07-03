@@ -21,23 +21,47 @@ def writeJsonAtomically(path, data, indent=4):
     raises mid-write, the previous good file is left intact and the temporary
     file is discarded, instead of the old behaviour of truncating the target
     with ``open(path, "w")`` before dumping into it.
+
+    Falls back to a direct (non-atomic) write when the filesystem does not
+    support ``os.replace()`` (e.g. Pyodide's Emscripten OPFS layer), so that
+    saves still persist rather than failing silently.
     """
     directory = os.path.dirname(path) or "."
     os.makedirs(directory, exist_ok=True)
+
+    # Attempt atomic write via temp-file + rename.
     fd, tempPath = tempfile.mkstemp(dir=directory, suffix=".tmp")
+    _renamed = False
     try:
         with os.fdopen(fd, "w") as f:
             json.dump(data, f, indent=indent)
             f.flush()
-            os.fsync(f.fileno())
-        os.replace(tempPath, path)
+            try:
+                os.fsync(f.fileno())
+            except OSError:
+                pass  # some FS backends (OPFS, network) don't support fsync
+        try:
+            os.replace(tempPath, path)
+            _renamed = True
+        except OSError:
+            pass  # rename unsupported on this FS — fall through to direct write
     except BaseException:
-        # A failed save must not leave a stray temp file behind.
         try:
             os.remove(tempPath)
         except OSError:
             pass
         raise
+
+    if _renamed:
+        return
+
+    # Rename failed (e.g. OPFS in Pyodide): clean up temp file, write directly.
+    try:
+        os.remove(tempPath)
+    except OSError:
+        pass
+    with open(path, "w") as f:
+        json.dump(data, f, indent=indent)
 
 
 def readJsonFile(path, default=None):
