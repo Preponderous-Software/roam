@@ -2279,7 +2279,7 @@ class WorldScreen:
                 )
                 toRemove.append(livingEntityId)
                 continue
-            if livingEntity.getEnergy() == 0:
+            if livingEntity.isDead():
                 toRemove.append(livingEntityId)
 
         for livingEntityId in toRemove:
@@ -2320,6 +2320,32 @@ class WorldScreen:
             )
 
         self.npcManager.cleanupDeadNpcs(self.currentRoom)
+        if self.config.npcEnabled:
+            self._cleanupDeadNpcsInRadius()
+
+    def _cleanupDeadNpcsInRadius(self):
+        """Remove dead NPCs from off-screen rooms in the simulation radius."""
+        radius = self.config.npcSimulationRadius
+        for dx in range(-radius, radius + 1):
+            for dy in range(-radius, radius + 1):
+                if dx == 0 and dy == 0:
+                    continue
+                room = self.map.getRoom(
+                    self.currentRoom.getX() + dx,
+                    self.currentRoom.getY() + dy,
+                    self.currentZ,
+                )
+                if room == -1 or room is None:
+                    continue
+                for entityId in list(room.getLivingEntities().keys()):
+                    entity = room.getLivingEntities().get(entityId)
+                    if entity is None or not isinstance(entity, Npc):
+                        continue
+                    if entity.isDead():
+                        self.npcManager.dropInventoryAtDeath(entity, room)
+                        room.removeEntity(entity)
+                        room.removeLivingEntity(entity)
+                self.npcManager.cleanupDeadNpcs(room)
 
     def save(self):
         """Submit save operations to the background thread.

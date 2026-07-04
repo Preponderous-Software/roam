@@ -15,3 +15,12 @@ class Chicken(LivingEntity):
             [Grass],
             tickCreated,
         )
+
+    def getDefaultImagePath(self):
+        return "assets/images/chicken.png"
+
+    def getReproductionCooldownImagePath(self):
+        return "assets/images/chickenOnReproductionCooldown.png"
+
+    def createOffspring(self, tick):
+        return Chicken(tick)

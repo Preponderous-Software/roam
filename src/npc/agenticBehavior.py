@@ -22,13 +22,17 @@ from entity.living.livingEntity import LivingEntity
 from entity.oakWood import OakWood
 from entity.stone import Stone
 from entity.woodFloor import WoodFloor
+from gameLogging.logger import getLogger
 from npc.npcBehavior import NpcBehavior
 from npc.programmaticBehavior import (
     ProgrammaticBehavior,
     _getNeighbor,
     _hasSolid,
     _locationOf,
+    _npcMove,
 )
+
+_logger = getLogger(__name__)
 
 _MODEL = "claude-haiku-4-5-20251001"
 _CALL_INTERVAL_TICKS = 90  # ~3 s at 30 TPS
@@ -100,6 +104,7 @@ class AgenticBehavior(NpcBehavior):
         self._ticksSinceCall = _CALL_INTERVAL_TICKS  # trigger on first opportunity
         self._stateName = "cpc-idle"
         self._goalDescription = ""
+        self._wantsRoomChange = False
 
     # ------------------------------------------------------------------ #
     # NpcBehavior interface                                                #
@@ -110,6 +115,12 @@ class AgenticBehavior(NpcBehavior):
 
     def getGoalDescription(self):
         return self._goalDescription
+
+    def wantsRoomChange(self) -> bool:
+        return self._wantsRoomChange
+
+    def clearRoomChangeRequest(self):
+        self._wantsRoomChange = False
 
     def tick(self, npc, room, tick, config):
         if self._client is None:
@@ -182,8 +193,8 @@ class AgenticBehavior(NpcBehavior):
             for action in data.get("actions", []):
                 if isinstance(action, dict) and "type" in action:
                     self._actionQueue.put(action)
-        except Exception:
-            pass
+        except Exception as exc:
+            _logger.warning("AI call failed", error=str(exc))
         finally:
             self._pendingCall = False
 
@@ -240,7 +251,12 @@ class AgenticBehavior(NpcBehavior):
 
         if atype == "move":
             direction = int(action.get("direction", 2)) % 4
-            self._doMove(npc, location, room, tick, direction)
+            if _getNeighbor(location, direction, room.getGrid()) is None:
+                # At the room boundary — request crossing rather than sliding.
+                self._wantsRoomChange = True
+                npc.setTickLastMoved(tick)
+            else:
+                _npcMove(npc, location, room, tick, direction)
             self._stateName = "cpc-move"
 
         elif atype == "gather":
@@ -262,24 +278,7 @@ class AgenticBehavior(NpcBehavior):
             self._stateName = "cpc-idle"
 
     def _doMove(self, npc, location, room, tick, direction):
-        grid = room.getGrid()
-        neighbor = _getNeighbor(location, direction, grid)
-        if neighbor is None or _hasSolid(neighbor):
-            for alt in [(direction + 1) % 4, (direction + 3) % 4, (direction + 2) % 4]:
-                candidate = _getNeighbor(location, alt, grid)
-                if candidate is not None and not _hasSolid(candidate):
-                    neighbor = candidate
-                    direction = alt
-                    break
-            else:
-                npc.setTickLastMoved(tick)
-                return
-        location.removeEntity(npc)
-        neighbor.addEntity(npc)
-        npc.setLocationID(neighbor.getID())
-        npc.setDirection(direction)
-        npc.setTickLastMoved(tick)
-        npc.removeEnergy(0.5)
+        _npcMove(npc, location, room, tick, direction)
 
     def _doGather(self, npc, location, room, tick):
         for entity in list(location.getEntities().values()):

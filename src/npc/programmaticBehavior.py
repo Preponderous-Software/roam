@@ -1,4 +1,5 @@
 import random
+from collections import deque
 
 from entity.apple import Apple
 from entity.banana import Banana
@@ -71,6 +72,34 @@ def _directionToward(current, target):
     return 2 if dy > 0 else 0
 
 
+def _npcMove(npc, location, room, tick, direction, allowReverse=True):
+    """Move npc one step in direction (with fallback to perpendiculars).
+
+    Returns True if the npc moved, False if completely blocked.
+    """
+    neighbor = _getNeighbor(location, direction, room.getGrid())
+    if neighbor is None or _hasSolid(neighbor):
+        alts = [(direction + 1) % 4, (direction + 3) % 4]
+        if allowReverse:
+            alts.append((direction + 2) % 4)
+        for alt in alts:
+            candidate = _getNeighbor(location, alt, room.getGrid())
+            if candidate is not None and not _hasSolid(candidate):
+                neighbor = candidate
+                direction = alt
+                break
+        else:
+            npc.setTickLastMoved(tick)
+            return False
+    location.removeEntity(npc)
+    neighbor.addEntity(npc)
+    npc.setLocationID(neighbor.getID())
+    npc.setDirection(direction)
+    npc.setTickLastMoved(tick)
+    npc.removeEnergy(0.5)
+    return True
+
+
 # ------------------------------------------------------------------ #
 # Behavior                                                             #
 # ------------------------------------------------------------------ #
@@ -140,10 +169,12 @@ class ProgrammaticBehavior(NpcBehavior):
         self._wanderDir = random.randint(0, 3)
         self._wanderStepsLeft = 0
         self._seekBudget = 0
-        self._blockedTargets = set()  # locations given up on; skipped until next gather
-        self._posHistory = (
-            []
-        )  # recent location IDs while seeking, for oscillation detect
+        self._blockedTargets = (
+            set()
+        )  # location IDs given up on; skipped until next gather
+        self._posHistory: deque = deque(
+            maxlen=4
+        )  # recent loc IDs for oscillation detect
         self._oscillationCount = 0
 
     # --- NpcBehavior interface ---
@@ -183,7 +214,7 @@ class ProgrammaticBehavior(NpcBehavior):
                 self._nearestCache = None  # picked something up — rescan next time
                 self._seekBudget = 0
                 self._blockedTargets = set()
-                self._posHistory = []
+                self._posHistory = deque(maxlen=4)
                 self._oscillationCount = 0
                 return
 
@@ -227,29 +258,27 @@ class ProgrammaticBehavior(NpcBehavior):
             if self._seekBudget <= 0:
                 # Couldn't reach this target — blacklist it so the next scan
                 # picks a different location instead of immediately re-caching it.
-                self._blockedTargets.add(target)
+                self._blockedTargets.add(target.getID())
                 self._nearestCache = None
                 self._scanCooldown = 0
-                self._posHistory = []
+                self._posHistory = deque(maxlen=4)
                 self._oscillationCount = 0
             else:
                 # Detect A-B-A positional oscillation before moving.
                 curLocId = str(location.getID())
                 if not self._posHistory or self._posHistory[-1] != curLocId:
                     self._posHistory.append(curLocId)
-                    if len(self._posHistory) > 4:
-                        self._posHistory.pop(0)
                 ph = self._posHistory
                 if len(ph) >= 3 and ph[-3] == ph[-1] and ph[-3] != ph[-2]:
                     self._oscillationCount += 1
                     if self._oscillationCount >= 2:
-                        self._blockedTargets.add(target)
+                        self._blockedTargets.add(target.getID())
                         # Safety cap: if we've blocked many targets, clear all and wander.
                         if len(self._blockedTargets) >= 6:
                             self._blockedTargets = set()
                         self._nearestCache = None
                         self._scanCooldown = _SCAN_INTERVAL * 3
-                        self._posHistory = []
+                        self._posHistory = deque(maxlen=4)
                         self._oscillationCount = 0
                         return
                 else:
@@ -378,12 +407,12 @@ class ProgrammaticBehavior(NpcBehavior):
 
     def _findNearest(self, location, room, entityTypes):
         """Return the location of the nearest entity of the given types, or None.
-        Skips _blockedTargets (locations given up on) to avoid re-caching them."""
+        Skips _blockedTargets (location IDs given up on) to avoid re-caching them."""
         best = None
         bestDist = float("inf")
         for lid in room.getGrid().getLocations():
             loc = room.getGrid().getLocation(lid)
-            if loc in self._blockedTargets:
+            if loc.getID() in self._blockedTargets:
                 continue
             for entity in loc.getEntities().values():
                 if isinstance(entity, entityTypes):
@@ -394,26 +423,4 @@ class ProgrammaticBehavior(NpcBehavior):
         return best
 
     def _move(self, npc, location, room, tick, direction, allowReverse=True):
-        """Attempt to move npc in direction. Returns True if the npc actually moved."""
-        neighbor = _getNeighbor(location, direction, room.getGrid())
-        # Blocked — try perpendicular directions (and optionally the reverse).
-        if neighbor is None or _hasSolid(neighbor):
-            alts = [(direction + 1) % 4, (direction + 3) % 4]
-            if allowReverse:
-                alts.append((direction + 2) % 4)
-            for alt in alts:
-                candidate = _getNeighbor(location, alt, room.getGrid())
-                if candidate is not None and not _hasSolid(candidate):
-                    neighbor = candidate
-                    direction = alt
-                    break
-            else:
-                npc.setTickLastMoved(tick)
-                return False
-        location.removeEntity(npc)
-        neighbor.addEntity(npc)
-        npc.setLocationID(neighbor.getID())
-        npc.setDirection(direction)
-        npc.setTickLastMoved(tick)
-        npc.removeEnergy(0.5)
-        return True
+        return _npcMove(npc, location, room, tick, direction, allowReverse)

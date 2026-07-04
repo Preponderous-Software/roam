@@ -50,6 +50,9 @@ class LivingEntity(DrawableEntity):
                 return True
         return False
 
+    def isDead(self):
+        return self.energy < 1
+
     def kill(self):
         self.energy = 0
 
@@ -67,3 +70,12 @@ class LivingEntity(DrawableEntity):
 
     def setTickLastReproduced(self, tick):
         self.tickLastReproduced = tick
+
+    def getDefaultImagePath(self):
+        return None
+
+    def getReproductionCooldownImagePath(self):
+        return None
+
+    def createOffspring(self, tick):
+        return None

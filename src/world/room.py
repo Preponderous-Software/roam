@@ -4,8 +4,6 @@ from entity.excrement import Excrement
 from entity.grass import Grass
 from entity.matureCrop import MatureCrop
 from entity.youngCrop import YoungCrop
-from entity.living.bear import Bear
-from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
 from entity.living.npc import Npc
 from entity.stoneFloor import StoneFloor
@@ -15,6 +13,8 @@ from rendering.renderer import Renderer
 from gameLogging.logger import getLogger
 
 _logger = getLogger(__name__)
+
+_IMAGE_CACHE_MAX = 512
 
 
 # @author Daniel McCoy Stephenson
@@ -88,6 +88,8 @@ class Room(Environment):
             scaledHeight = int(height)
             cacheKey = (imagePath, scaledWidth, scaledHeight)
             if cacheKey not in Room._scaledImageCache:
+                if len(Room._scaledImageCache) >= _IMAGE_CACHE_MAX:
+                    del Room._scaledImageCache[next(iter(Room._scaledImageCache))]
                 image = self.renderer.loadImage(imagePath)
                 Room._scaledImageCache[cacheKey] = self.renderer.scaleImage(
                     image, (scaledWidth, scaledHeight)
@@ -361,20 +363,14 @@ class Room(Environment):
         return True
 
     def _setDefaultEntityImage(self, entity):
-        if isinstance(entity, Chicken):
-            entity.setImagePath("assets/images/chicken.png")
-        elif isinstance(entity, Bear):
-            entity.setImagePath("assets/images/bear.png")
+        path = entity.getDefaultImagePath()
+        if path is not None:
+            entity.setImagePath(path)
 
     def _setReproductionCooldownImage(self, entity):
-        if isinstance(entity, Chicken):
-            entity.setImagePath("assets/images/chickenOnReproductionCooldown.png")
-        elif isinstance(entity, Bear):
-            entity.setImagePath("assets/images/bearOnReproductionCooldown.png")
+        path = entity.getReproductionCooldownImagePath()
+        if path is not None:
+            entity.setImagePath(path)
 
     def _createOffspring(self, entity, tick):
-        if isinstance(entity, Bear):
-            return Bear(tick)
-        if isinstance(entity, Chicken):
-            return Chicken(tick)
-        return None
+        return entity.createOffspring(tick)

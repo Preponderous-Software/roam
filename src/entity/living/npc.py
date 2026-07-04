@@ -124,11 +124,6 @@ class Npc(LivingEntity):
     def setMode(self, mode):
         self.mode = mode
 
-    # --- lifecycle ---
-
-    def isDead(self):
-        return self.energy < 1
-
 
 def randomNpcName():
     return random.choice(_NPC_NAMES)
