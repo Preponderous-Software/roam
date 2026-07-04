@@ -77,6 +77,7 @@ def _directionToward(current, target):
 
 
 _SCAN_INTERVAL = 30  # ticks between full-room scans for nearest resource
+_WANDER_STEPS = 8  # steps before picking a new wander direction
 
 
 class _RoomKnowledge:
@@ -135,6 +136,8 @@ class ProgrammaticBehavior(NpcBehavior):
         self._scanCooldown = 0  # ticks until next scan is allowed
         self._knowledge = _RoomKnowledge()
         self._wantsRoomChange = False
+        self._wanderDir = random.randint(0, 3)
+        self._wanderStepsLeft = 0
 
     # --- NpcBehavior interface ---
 
@@ -184,7 +187,7 @@ class ProgrammaticBehavior(NpcBehavior):
         if npc.getInventory().getNumFreeInventorySlots() == 0:
             self._state = NpcState.WANDERING
             self._lastGoal = "inventory full"
-            self._move(npc, location, room, tick, random.randint(0, 3))
+            self._move(npc, location, room, tick, self._pickWanderDir())
             return
 
         self._scanCooldown -= 1
@@ -217,9 +220,17 @@ class ProgrammaticBehavior(NpcBehavior):
         # 6. Wander.
         self._state = NpcState.WANDERING
         self._lastGoal = "exploring"
-        self._move(npc, location, room, tick, random.randint(0, 3))
+        self._move(npc, location, room, tick, self._pickWanderDir())
 
     # --- private helpers ---
+
+    def _pickWanderDir(self):
+        """Return the current wander direction, re-rolling after _WANDER_STEPS moves."""
+        if self._wanderStepsLeft <= 0:
+            self._wanderDir = random.randint(0, 3)
+            self._wanderStepsLeft = _WANDER_STEPS
+        self._wanderStepsLeft -= 1
+        return self._wanderDir
 
     def _tryEat(self, npc, tick):
         for slot in npc.getInventory().getInventorySlots():
