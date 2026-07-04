@@ -2472,44 +2472,17 @@ class WorldScreen:
 
         self.currentRoom.reproduceLivingEntities(self.tickCounter.getTick())
         if self.config.npcEnabled:
-            npcsWantingExit = self.npcManager.tickRoom(
-                self.currentRoom, self.tickCounter.getTick()
+            dirtyRooms = self.npcManager.tickActiveRooms(
+                self.map,
+                self.currentRoom.getX(),
+                self.currentRoom.getY(),
+                self.currentZ,
+                self.config.npcSimulationRadius,
+                self.tickCounter.getTick(),
             )
-            for npcEntity in npcsWantingExit:
-                try:
-                    (
-                        newRoomX,
-                        newRoomY,
-                    ) = self.getCoordinatesForNewRoomBasedOnLivingEntityLocation(
-                        npcEntity
-                    )
-                except Exception:
-                    continue
-                newRoom = self._loadOrGenerateRoom(
-                    newRoomX, newRoomY, updateStats=False
-                )
-                currentLocation = self.currentRoom.getGrid().getLocation(
-                    npcEntity.getLocationID()
-                )
-                try:
-                    (
-                        newLocX,
-                        newLocY,
-                    ) = self.getNewLocationCoordinatesForLivingEntityBasedOnLocation(
-                        currentLocation
-                    )
-                except Exception:
-                    continue
-                newLocation = newRoom.getGrid().getLocationByCoordinates(
-                    newLocX, newLocY
-                )
-                if newLocation == -1:
-                    continue
-                self.currentRoom.removeEntity(npcEntity)
-                self.currentRoom.removeLivingEntity(npcEntity)
-                newRoom.addEntityToLocation(npcEntity, newLocation)
-                newRoom.addLivingEntity(npcEntity)
-                self.saveRoomToFileAsync(newRoom)
+            for room in dirtyRooms:
+                if room is not self.currentRoom:
+                    self.saveRoomToFileAsync(room)
 
     def _updateGoals(self):
         # Re-evaluate goals; announce and persist any fresh completions.

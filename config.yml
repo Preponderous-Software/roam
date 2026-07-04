@@ -41,5 +41,7 @@ checkForUpdates: true
 npcEnabled: true
 npcCount: 1
 npcMode: npc
+# Radius of rooms around the player where NPCs are actively ticked (1 = 3x3 grid).
+npcSimulationRadius: 1
 savedWindowWidth: 1079
 savedWindowHeight: 1603

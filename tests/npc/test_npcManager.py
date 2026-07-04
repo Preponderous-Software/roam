@@ -46,11 +46,18 @@ def test_toggle_mode_cpc_back_to_npc():
     assert m.getMode() == "npc"
 
 
+def _tick_room(manager, room, tick):
+    """Helper: tick one room by wrapping tickActiveRooms with a minimal map mock."""
+    mock_map = MagicMock()
+    mock_map.getRoom.return_value = room
+    manager.tickActiveRooms(mock_map, 0, 0, 0, 0, tick)
+
+
 def test_toggle_mode_clears_behavior_cache():
     m = _manager()
     room = _room()
     m.spawnNpc(room, 0)
-    m.tickRoom(room, 0)  # creates behavior entries
+    _tick_room(m, room, 0)  # creates behavior entries
     assert len(m._behaviors) > 0
     m.toggleMode()
     assert len(m._behaviors) == 0
@@ -123,7 +130,7 @@ def test_cleanup_removes_behavior_for_dead_npc():
     m = _manager()
     room = _room()
     npc = m.spawnNpc(room, 0)
-    m.tickRoom(room, 0)  # creates behavior record
+    _tick_room(m, room, 0)  # creates behavior record
     assert npc.getID() in m._behaviors
     room.removeLivingEntity(npc)
     m.cleanupDeadNpcs(room)
@@ -148,7 +155,7 @@ def test_get_behavior_info_after_tick_has_state():
     m = _manager()
     room = _room()
     npc = m.spawnNpc(room, 0)
-    m.tickRoom(room, 0)
+    _tick_room(m, room, 0)
     state, goal = m.getBehaviorInfo(npc)
     assert isinstance(state, str)
     assert len(state) > 0

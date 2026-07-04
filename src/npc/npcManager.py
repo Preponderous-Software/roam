@@ -63,21 +63,89 @@ class NpcManager:
     # Per-tick update                                                      #
     # ------------------------------------------------------------------ #
 
-    def tickRoom(self, room, tick):
-        """Tick all NPCs in room. Returns list of NPCs that want to cross a room edge."""
+    def tickActiveRooms(self, map, roomX, roomY, z, radius, tick):
+        """Tick NPCs in every loaded room within *radius* of (roomX, roomY, z).
+
+        Returns a set of Room objects that were dirtied by NPC activity so the
+        caller can persist non-current rooms asynchronously.
+        """
         from entity.living.npc import Npc
 
-        wantingExit = []
-        for entityId in list(room.getLivingEntities().keys()):
-            entity = room.getLivingEntities().get(entityId)
-            if entity is None or not isinstance(entity, Npc):
-                continue
-            behavior = self._getBehavior(entity)
-            behavior.tick(entity, room, tick, self._config)
-            if behavior.wantsRoomChange():
-                behavior.clearRoomChangeRequest()
-                wantingExit.append(entity)
-        return wantingExit
+        dirtyRooms = set()
+        for dx in range(-radius, radius + 1):
+            for dy in range(-radius, radius + 1):
+                room = map.getRoom(roomX + dx, roomY + dy, z)
+                if room == -1 or room is None:
+                    continue
+                wantingExit = []
+                for entityId in list(room.getLivingEntities().keys()):
+                    entity = room.getLivingEntities().get(entityId)
+                    if entity is None or not isinstance(entity, Npc):
+                        continue
+                    behavior = self._getBehavior(entity)
+                    behavior.tick(entity, room, tick, self._config)
+                    if behavior.wantsRoomChange():
+                        behavior.clearRoomChangeRequest()
+                        wantingExit.append(entity)
+                if wantingExit:
+                    dirtyRooms.add(room)
+                for npc in wantingExit:
+                    targetRoom = self._handleRoomCrossing(npc, room, map, z)
+                    if targetRoom is not None:
+                        dirtyRooms.add(targetRoom)
+        return dirtyRooms
+
+    def _handleRoomCrossing(self, npc, fromRoom, map, z):
+        """Move npc from fromRoom into the adjacent room it walked into.
+
+        Only moves to rooms that are already loaded or saved to disk; returns
+        the target Room on success, None if the crossing could not be completed.
+        """
+        locationId = npc.getLocationID()
+        try:
+            location = fromRoom.getGrid().getLocation(locationId)
+        except Exception:
+            return None
+
+        x, y = location.getX(), location.getY()
+        gridEdge = fromRoom.getGrid().getRows() - 1
+
+        # Skip corners (same limitation as player movement).
+        if (x == 0 or x == gridEdge) and (y == 0 or y == gridEdge):
+            return None
+
+        fromRoomX, fromRoomY = fromRoom.getX(), fromRoom.getY()
+
+        if x == 0:
+            targetRoomX, targetRoomY = fromRoomX - 1, fromRoomY
+            targetLocX, targetLocY = gridEdge, y
+        elif x == gridEdge:
+            targetRoomX, targetRoomY = fromRoomX + 1, fromRoomY
+            targetLocX, targetLocY = 0, y
+        elif y == 0:
+            targetRoomX, targetRoomY = fromRoomX, fromRoomY - 1
+            targetLocX, targetLocY = x, gridEdge
+        elif y == gridEdge:
+            targetRoomX, targetRoomY = fromRoomX, fromRoomY + 1
+            targetLocX, targetLocY = x, 0
+        else:
+            return None
+
+        targetRoom = map.getRoom(targetRoomX, targetRoomY, z)
+        if targetRoom == -1 or targetRoom is None:
+            return None
+
+        targetLoc = targetRoom.getGrid().getLocationByCoordinates(
+            targetLocX, targetLocY
+        )
+        if targetLoc == -1:
+            return None
+
+        fromRoom.removeEntity(npc)
+        fromRoom.removeLivingEntity(npc)
+        targetRoom.addEntityToLocation(npc, targetLoc)
+        targetRoom.addLivingEntity(npc)
+        return targetRoom
 
     # ------------------------------------------------------------------ #
     # Introspection for HUD / tooltip                                     #
