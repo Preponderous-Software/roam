@@ -456,6 +456,43 @@
     statusEl.classList.toggle('error', !!isError);
   }
 
+  // ── IndexedDB save persistence (main-thread side) ─────────────────────────
+  // The Worker can't write to IDB while Python runs (Atomics.wait blocks the
+  // Worker event loop). Instead, the Worker postMessages the file map and the
+  // main thread writes to IDB from its own unblocked event loop.
+
+  const _IDB_NAME    = 'roam-saves';
+  const _IDB_STORE   = 'files';
+  const _IDB_VERSION = 1;
+
+  function _idbOpen() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(_IDB_NAME, _IDB_VERSION);
+      req.onupgradeneeded = (ev) => {
+        const db = ev.target.result;
+        if (!db.objectStoreNames.contains(_IDB_STORE)) {
+          db.createObjectStore(_IDB_STORE);
+        }
+      };
+      req.onsuccess = (ev) => resolve(ev.target.result);
+      req.onerror   = (ev) => reject(ev.target.error);
+    });
+  }
+
+  function _idbWrite(files) {
+    _idbOpen().then((db) => {
+      let tx;
+      try { tx = db.transaction(_IDB_STORE, 'readwrite'); }
+      catch(e) { console.warn('[roam] IDB write tx failed:', e); db.close(); return; }
+      try { tx.objectStore(_IDB_STORE).clear(); } catch {}
+      for (const [path, content] of Object.entries(files)) {
+        try { tx.objectStore(_IDB_STORE).put(content, path); } catch {}
+      }
+      tx.oncomplete = () => db.close();
+      tx.onerror    = () => { console.warn('[roam] IDB write error:', tx.error); db.close(); };
+    }).catch((err) => console.warn('[roam] IDB open failed:', err));
+  }
+
   function startWorker() {
     setStatus("Loading…");
     showBar();
@@ -474,6 +511,7 @@
       if (d.type === 'status') { setStatus(d.msg); return; }
       if (d.type === 'ready')  { return; }
       if (d.type === 'error')  { setStatus('Error: ' + d.msg, true); showBar(); }
+      if (d.type === 'save')   { _idbWrite(d.files); return; }
     };
     worker.postMessage({ type: 'init', sab });
   }
