@@ -36,7 +36,8 @@ class NpcManager:
         npc.setMode(self._mode)
         for _ in range(3):
             npc.getInventory().placeIntoFirstAvailableInventorySlot(OakWood())
-        npc.getInventory().placeIntoFirstAvailableInventorySlot(Apple())
+        for _ in range(3):
+            npc.getInventory().placeIntoFirstAvailableInventorySlot(Apple())
         spawnLoc = self._findOpenSpawnLocation(room)
         if spawnLoc is not None:
             room.addEntityToLocation(npc, spawnLoc)
@@ -63,14 +64,20 @@ class NpcManager:
     # ------------------------------------------------------------------ #
 
     def tickRoom(self, room, tick):
+        """Tick all NPCs in room. Returns list of NPCs that want to cross a room edge."""
         from entity.living.npc import Npc
 
+        wantingExit = []
         for entityId in list(room.getLivingEntities().keys()):
             entity = room.getLivingEntities().get(entityId)
             if entity is None or not isinstance(entity, Npc):
                 continue
             behavior = self._getBehavior(entity)
             behavior.tick(entity, room, tick, self._config)
+            if behavior.wantsRoomChange():
+                behavior.clearRoomChangeRequest()
+                wantingExit.append(entity)
+        return wantingExit
 
     # ------------------------------------------------------------------ #
     # Introspection for HUD / tooltip                                     #

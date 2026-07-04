@@ -9,6 +9,7 @@ class NpcState(Enum):
     SEEKING_BUILD_SITE = "seeking_build_site"
     PLACING = "placing"
     EATING = "eating"
+    SEEKING_EXIT = "seeking_exit"
 
 
 class NpcBehavior:
@@ -23,3 +24,11 @@ class NpcBehavior:
 
     def getGoalDescription(self):
         return ""
+
+    def wantsRoomChange(self) -> bool:
+        """Return True if the NPC has reached a room edge and wants to cross."""
+        return False
+
+    def clearRoomChangeRequest(self):
+        """Reset the room-change flag after the manager has handled it."""
+        pass

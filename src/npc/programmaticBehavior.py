@@ -79,6 +79,44 @@ def _directionToward(current, target):
 _SCAN_INTERVAL = 30  # ticks between full-room scans for nearest resource
 
 
+class _RoomKnowledge:
+    """Remembers which (roomX, roomY) rooms have food and wood resources."""
+
+    def __init__(self):
+        self._data = {}  # (x, y) -> {"food": bool, "wood": bool}
+
+    def record(self, roomX, roomY, hasFood, hasWood):
+        self._data[(roomX, roomY)] = {"food": hasFood, "wood": hasWood}
+
+    def hasFood(self, roomX, roomY):
+        return self._data.get((roomX, roomY), {}).get("food", True)
+
+    def hasWood(self, roomX, roomY):
+        return self._data.get((roomX, roomY), {}).get("wood", True)
+
+    def bestExitDirection(self, currentX, currentY, wantFood):
+        """Return a preferred exit direction (0-3) toward a room known to have
+        the desired resource, or None if no preference."""
+        best = None
+        bestDist = float("inf")
+        for (rx, ry), info in self._data.items():
+            if wantFood and not info.get("food", False):
+                continue
+            if not wantFood and not info.get("wood", False):
+                continue
+            dist = abs(rx - currentX) + abs(ry - currentY)
+            if dist < bestDist:
+                bestDist = dist
+                best = (rx, ry)
+        if best is None:
+            return None
+        dx = best[0] - currentX
+        dy = best[1] - currentY
+        if abs(dx) >= abs(dy):
+            return 3 if dx > 0 else 1
+        return 2 if dy > 0 else 0
+
+
 class ProgrammaticBehavior(NpcBehavior):
     """Reactive decision loop — each tick picks the highest-priority action:
 
@@ -86,7 +124,8 @@ class ProgrammaticBehavior(NpcBehavior):
     2. Gather a resource sitting on the current tile.
     3. Place one OakWood on an adjacent tile when carrying ≥ _BUILD_THRESHOLD.
     4. Step toward the nearest visible resource.
-    5. Wander (random step).
+    5. If room is depleted, seek a room exit toward a better room.
+    6. Wander (random step).
     """
 
     def __init__(self):
@@ -94,6 +133,8 @@ class ProgrammaticBehavior(NpcBehavior):
         self._lastGoal = ""
         self._nearestCache = None  # cached result of last _findNearest scan
         self._scanCooldown = 0  # ticks until next scan is allowed
+        self._knowledge = _RoomKnowledge()
+        self._wantsRoomChange = False
 
     # --- NpcBehavior interface ---
 
@@ -102,6 +143,12 @@ class ProgrammaticBehavior(NpcBehavior):
 
     def getGoalDescription(self):
         return self._lastGoal
+
+    def wantsRoomChange(self) -> bool:
+        return self._wantsRoomChange
+
+    def clearRoomChangeRequest(self):
+        self._wantsRoomChange = False
 
     def tick(self, npc, room, tick, config):
         tps = config.ticksPerSecond
@@ -135,7 +182,6 @@ class ProgrammaticBehavior(NpcBehavior):
 
         # 4. Step toward nearest resource (cached scan every _SCAN_INTERVAL ticks).
         if npc.getInventory().getNumFreeInventorySlots() == 0:
-            # Inventory full — just wander until wood is placed / food is eaten.
             self._state = NpcState.WANDERING
             self._lastGoal = "inventory full"
             self._move(npc, location, room, tick, random.randint(0, 3))
@@ -145,6 +191,10 @@ class ProgrammaticBehavior(NpcBehavior):
         if self._scanCooldown <= 0:
             want = _FOOD_TYPES if npc.needsEnergy() else _RESOURCE_TYPES
             self._nearestCache = self._findNearest(location, room, want)
+            # Record what this room has so future cross-room decisions are informed.
+            hasFood = self._findNearest(location, room, _FOOD_TYPES) is not None
+            hasWood = self._findNearest(location, room, _RESOURCE_TYPES) is not None
+            self._knowledge.record(room.getX(), room.getY(), hasFood, hasWood)
             self._scanCooldown = _SCAN_INTERVAL
 
         target = self._nearestCache
@@ -154,7 +204,17 @@ class ProgrammaticBehavior(NpcBehavior):
             self._move(npc, location, room, tick, _directionToward(location, target))
             return
 
-        # 5. Wander.
+        # 5. Room appears depleted — seek an exit toward a better room.
+        if npc.needsEnergy():
+            self._state = NpcState.SEEKING_EXIT
+            self._lastGoal = "leaving room to find food"
+            preferredDir = self._knowledge.bestExitDirection(
+                room.getX(), room.getY(), wantFood=True
+            )
+            self._moveTowardExit(npc, location, room, tick, preferredDir)
+            return
+
+        # 6. Wander.
         self._state = NpcState.WANDERING
         self._lastGoal = "exploring"
         self._move(npc, location, room, tick, random.randint(0, 3))
@@ -211,6 +271,39 @@ class ProgrammaticBehavior(NpcBehavior):
             npc.setTickLastMoved(tick)
             return True
         return False
+
+    def _moveTowardExit(self, npc, location, room, tick, preferredDir):
+        """Walk toward the nearest room edge; signal room-change when reached."""
+        grid = room.getGrid()
+        gridSize = grid.getRows()
+        x, y = location.getX(), location.getY()
+
+        # Distance from each edge (direction 0=up=north means y decreases).
+        edgeDist = {0: y, 2: gridSize - 1 - y, 1: x, 3: gridSize - 1 - x}
+
+        # Pick preferred direction first, then nearest edge as fallback.
+        candidates = sorted(edgeDist, key=edgeDist.get)
+        if preferredDir is not None and preferredDir not in candidates[:1]:
+            candidates.insert(0, preferredDir)
+
+        for direction in candidates:
+            neighbor = _getNeighbor(location, direction, grid)
+            if neighbor is None:
+                # We are already at this edge — signal the manager to cross rooms.
+                self._wantsRoomChange = True
+                npc.setTickLastMoved(tick)
+                return
+            if not _hasSolid(neighbor):
+                location.removeEntity(npc)
+                neighbor.addEntity(npc)
+                npc.setLocationID(neighbor.getID())
+                npc.setDirection(direction)
+                npc.setTickLastMoved(tick)
+                npc.removeEnergy(0.5)
+                return
+
+        # Completely boxed in — just wait.
+        npc.setTickLastMoved(tick)
 
     def _findNearest(self, location, room, entityTypes):
         """Return the location of the nearest entity of the given types, or None."""
