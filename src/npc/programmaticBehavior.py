@@ -78,6 +78,7 @@ def _directionToward(current, target):
 
 _SCAN_INTERVAL = 30  # ticks between full-room scans for nearest resource
 _WANDER_STEPS = 8  # steps before picking a new wander direction
+_SEEK_BUDGET = 60  # ticks before giving up on a cached target that can't be reached
 
 
 class _RoomKnowledge:
@@ -138,6 +139,12 @@ class ProgrammaticBehavior(NpcBehavior):
         self._wantsRoomChange = False
         self._wanderDir = random.randint(0, 3)
         self._wanderStepsLeft = 0
+        self._seekBudget = 0
+        self._blockedTargets = set()  # locations given up on; skipped until next gather
+        self._posHistory = (
+            []
+        )  # recent location IDs while seeking, for oscillation detect
+        self._oscillationCount = 0
 
     # --- NpcBehavior interface ---
 
@@ -174,6 +181,10 @@ class ProgrammaticBehavior(NpcBehavior):
                 self._state = NpcState.GATHERING
                 self._lastGoal = "gathering"
                 self._nearestCache = None  # picked something up — rescan next time
+                self._seekBudget = 0
+                self._blockedTargets = set()
+                self._posHistory = []
+                self._oscillationCount = 0
                 return
 
         # 3. Place wood if carrying enough.
@@ -192,20 +203,69 @@ class ProgrammaticBehavior(NpcBehavior):
 
         self._scanCooldown -= 1
         if self._scanCooldown <= 0:
-            want = _FOOD_TYPES if npc.needsEnergy() else _RESOURCE_TYPES
-            self._nearestCache = self._findNearest(location, room, want)
-            # Record what this room has so future cross-room decisions are informed.
-            hasFood = self._findNearest(location, room, _FOOD_TYPES) is not None
-            hasWood = self._findNearest(location, room, _RESOURCE_TYPES) is not None
-            self._knowledge.record(room.getX(), room.getY(), hasFood, hasWood)
+            # Always refresh room knowledge for cross-room planning.
+            nearestFood = self._findNearest(location, room, _FOOD_TYPES)
+            nearestWood = self._findNearest(location, room, _RESOURCE_TYPES)
+            self._knowledge.record(
+                room.getX(),
+                room.getY(),
+                nearestFood is not None,
+                nearestWood is not None,
+            )
+            # Only pick a new target when we don't have one — avoids target-flip
+            # oscillation where alternating scans point at resources on opposite sides.
+            if self._nearestCache is None:
+                want = _FOOD_TYPES if npc.needsEnergy() else _RESOURCE_TYPES
+                self._nearestCache = nearestFood if want is _FOOD_TYPES else nearestWood
+                if self._nearestCache is not None:
+                    self._seekBudget = _SEEK_BUDGET
             self._scanCooldown = _SCAN_INTERVAL
 
         target = self._nearestCache
         if target is not None:
-            self._state = NpcState.SEEKING_RESOURCE
-            self._lastGoal = "moving to resource"
-            self._move(npc, location, room, tick, _directionToward(location, target))
-            return
+            self._seekBudget -= 1
+            if self._seekBudget <= 0:
+                # Couldn't reach this target — blacklist it so the next scan
+                # picks a different location instead of immediately re-caching it.
+                self._blockedTargets.add(target)
+                self._nearestCache = None
+                self._scanCooldown = 0
+                self._posHistory = []
+                self._oscillationCount = 0
+            else:
+                # Detect A-B-A positional oscillation before moving.
+                curLocId = str(location.getID())
+                if not self._posHistory or self._posHistory[-1] != curLocId:
+                    self._posHistory.append(curLocId)
+                    if len(self._posHistory) > 4:
+                        self._posHistory.pop(0)
+                ph = self._posHistory
+                if len(ph) >= 3 and ph[-3] == ph[-1] and ph[-3] != ph[-2]:
+                    self._oscillationCount += 1
+                    if self._oscillationCount >= 2:
+                        self._blockedTargets.add(target)
+                        # Safety cap: if we've blocked many targets, clear all and wander.
+                        if len(self._blockedTargets) >= 6:
+                            self._blockedTargets = set()
+                        self._nearestCache = None
+                        self._scanCooldown = _SCAN_INTERVAL * 3
+                        self._posHistory = []
+                        self._oscillationCount = 0
+                        return
+                else:
+                    self._oscillationCount = 0
+
+                self._state = NpcState.SEEKING_RESOURCE
+                self._lastGoal = "moving to resource"
+                self._move(
+                    npc,
+                    location,
+                    room,
+                    tick,
+                    _directionToward(location, target),
+                    allowReverse=False,
+                )
+                return
 
         # 5. Room appears depleted — seek an exit toward a better room.
         if npc.needsEnergy():
@@ -317,11 +377,14 @@ class ProgrammaticBehavior(NpcBehavior):
         npc.setTickLastMoved(tick)
 
     def _findNearest(self, location, room, entityTypes):
-        """Return the location of the nearest entity of the given types, or None."""
+        """Return the location of the nearest entity of the given types, or None.
+        Skips _blockedTargets (locations given up on) to avoid re-caching them."""
         best = None
         bestDist = float("inf")
         for lid in room.getGrid().getLocations():
             loc = room.getGrid().getLocation(lid)
+            if loc in self._blockedTargets:
+                continue
             for entity in loc.getEntities().values():
                 if isinstance(entity, entityTypes):
                     d = _manhattanDist(location, loc)
@@ -330,11 +393,15 @@ class ProgrammaticBehavior(NpcBehavior):
                         best = loc
         return best
 
-    def _move(self, npc, location, room, tick, direction):
+    def _move(self, npc, location, room, tick, direction, allowReverse=True):
+        """Attempt to move npc in direction. Returns True if the npc actually moved."""
         neighbor = _getNeighbor(location, direction, room.getGrid())
-        # Blocked by edge or solid — try perpendicular directions before giving up.
+        # Blocked — try perpendicular directions (and optionally the reverse).
         if neighbor is None or _hasSolid(neighbor):
-            for alt in [(direction + 1) % 4, (direction + 3) % 4, (direction + 2) % 4]:
+            alts = [(direction + 1) % 4, (direction + 3) % 4]
+            if allowReverse:
+                alts.append((direction + 2) % 4)
+            for alt in alts:
                 candidate = _getNeighbor(location, alt, room.getGrid())
                 if candidate is not None and not _hasSolid(candidate):
                     neighbor = candidate
@@ -342,10 +409,11 @@ class ProgrammaticBehavior(NpcBehavior):
                     break
             else:
                 npc.setTickLastMoved(tick)
-                return
+                return False
         location.removeEntity(npc)
         neighbor.addEntity(npc)
         npc.setLocationID(neighbor.getID())
         npc.setDirection(direction)
         npc.setTickLastMoved(tick)
         npc.removeEnergy(0.5)
+        return True
