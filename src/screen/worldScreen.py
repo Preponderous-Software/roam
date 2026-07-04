@@ -2288,6 +2288,10 @@ class WorldScreen:
                 self.currentRoom.removeLivingEntityById(livingEntityId)
                 continue
 
+            # drop NPC inventory before removing it
+            if isinstance(livingEntity, Npc):
+                self.npcManager.dropInventoryAtDeath(livingEntity, self.currentRoom)
+
             # spawn meat at the living entity's location before removing it
             locationId = livingEntity.getLocationID()
             if str(locationId) != "-1" and not isinstance(livingEntity, Npc):

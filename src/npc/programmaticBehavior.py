@@ -76,6 +76,9 @@ def _directionToward(current, target):
 # ------------------------------------------------------------------ #
 
 
+_SCAN_INTERVAL = 30  # ticks between full-room scans for nearest resource
+
+
 class ProgrammaticBehavior(NpcBehavior):
     """Reactive decision loop — each tick picks the highest-priority action:
 
@@ -89,6 +92,8 @@ class ProgrammaticBehavior(NpcBehavior):
     def __init__(self):
         self._state = NpcState.WANDERING
         self._lastGoal = ""
+        self._nearestCache = None  # cached result of last _findNearest scan
+        self._scanCooldown = 0  # ticks until next scan is allowed
 
     # --- NpcBehavior interface ---
 
@@ -113,11 +118,13 @@ class ProgrammaticBehavior(NpcBehavior):
             self._lastGoal = "eating"
             return
 
-        # 2. Gather resource at current tile.
-        if self._tryGather(npc, location, room, tick):
-            self._state = NpcState.GATHERING
-            self._lastGoal = "gathering"
-            return
+        # 2. Gather resource at current tile (skip if inventory full).
+        if npc.getInventory().getNumFreeInventorySlots() > 0:
+            if self._tryGather(npc, location, room, tick):
+                self._state = NpcState.GATHERING
+                self._lastGoal = "gathering"
+                self._nearestCache = None  # picked something up — rescan next time
+                return
 
         # 3. Place wood if carrying enough.
         woodCount = npc.getInventory().getNumItemsByType(OakWood)
@@ -126,9 +133,21 @@ class ProgrammaticBehavior(NpcBehavior):
             self._lastGoal = "building shelter"
             return
 
-        # 4. Step toward nearest resource.
-        want = _FOOD_TYPES if npc.needsEnergy() else _RESOURCE_TYPES
-        target = self._findNearest(location, room, want)
+        # 4. Step toward nearest resource (cached scan every _SCAN_INTERVAL ticks).
+        if npc.getInventory().getNumFreeInventorySlots() == 0:
+            # Inventory full — just wander until wood is placed / food is eaten.
+            self._state = NpcState.WANDERING
+            self._lastGoal = "inventory full"
+            self._move(npc, location, room, tick, random.randint(0, 3))
+            return
+
+        self._scanCooldown -= 1
+        if self._scanCooldown <= 0:
+            want = _FOOD_TYPES if npc.needsEnergy() else _RESOURCE_TYPES
+            self._nearestCache = self._findNearest(location, room, want)
+            self._scanCooldown = _SCAN_INTERVAL
+
+        target = self._nearestCache
         if target is not None:
             self._state = NpcState.SEEKING_RESOURCE
             self._lastGoal = "moving to resource"
@@ -168,7 +187,7 @@ class ProgrammaticBehavior(NpcBehavior):
         return False
 
     def _tryPlace(self, npc, location, room, tick):
-        """Place one OakWood on the first clear adjacent tile."""
+        """Place one OakWood on a random clear adjacent tile."""
         woodSlot = None
         for slot in npc.getInventory().getInventorySlots():
             if not slot.isEmpty() and isinstance(slot.getContents()[0], OakWood):
@@ -178,7 +197,9 @@ class ProgrammaticBehavior(NpcBehavior):
             return False
 
         grid = room.getGrid()
-        for direction in range(4):
+        directions = list(range(4))
+        random.shuffle(directions)
+        for direction in directions:
             neighbor = _getNeighbor(location, direction, grid)
             if neighbor is None or _hasSolid(neighbor) or _hasLiving(neighbor):
                 continue

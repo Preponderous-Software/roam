@@ -37,9 +37,26 @@ class NpcManager:
         for _ in range(3):
             npc.getInventory().placeIntoFirstAvailableInventorySlot(OakWood())
         npc.getInventory().placeIntoFirstAvailableInventorySlot(Apple())
-        room.addEntity(npc)
+        spawnLoc = self._findOpenSpawnLocation(room)
+        if spawnLoc is not None:
+            room.addEntityToLocation(npc, spawnLoc)
+        else:
+            room.addEntity(npc)
         room.addLivingEntity(npc)
         return npc
+
+    def dropInventoryAtDeath(self, npc, room):
+        """Scatter NPC inventory items at its current location when it dies."""
+        from npc.programmaticBehavior import _locationOf
+
+        location = _locationOf(npc, room)
+        if location is None:
+            return
+        for slot in npc.getInventory().getInventorySlots():
+            while not slot.isEmpty():
+                item = slot.pop()
+                if item and item != -1:
+                    room.addEntityToLocation(item, location)
 
     # ------------------------------------------------------------------ #
     # Per-tick update                                                      #
@@ -65,6 +82,19 @@ class NpcManager:
         if behavior is None:
             return (self._mode, "")
         return (behavior.getStateName(), behavior.getGoalDescription())
+
+    def _findOpenSpawnLocation(self, room):
+        """Return a random non-solid location, or None if all are occupied."""
+        import random
+
+        grid = room.getGrid()
+        lids = list(grid.getLocations())
+        random.shuffle(lids)
+        for lid in lids:
+            loc = grid.getLocation(lid)
+            if not any(e.isSolid() for e in loc.getEntities().values()):
+                return loc
+        return None
 
     def cleanupDeadNpcs(self, room):
         """Discard behavior records for NPCs no longer in the room."""

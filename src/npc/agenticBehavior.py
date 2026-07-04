@@ -131,7 +131,7 @@ class AgenticBehavior(NpcBehavior):
             pass
 
         # Schedule an AI call when the queue is drained and the interval elapsed.
-        self._ticksSinceCall += 1
+        self._ticksSinceCall = min(self._ticksSinceCall + 1, _CALL_INTERVAL_TICKS)
         if self._ticksSinceCall >= _CALL_INTERVAL_TICKS and not self._pendingCall:
             self._ticksSinceCall = 0
             self._pendingCall = True
@@ -169,17 +169,19 @@ class AgenticBehavior(NpcBehavior):
                 max_tokens=512,
                 system=_SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": worldState}],
-                output_config={
-                    "format": {"type": "json_schema", "schema": _RESPONSE_SCHEMA}
-                },
             )
             text = next((b.text for b in response.content if b.type == "text"), "{}")
+            # Strip markdown fences the model may add despite instructions.
+            text = text.strip()
+            if text.startswith("```"):
+                text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
             data = json.loads(text)
             goal = data.get("goal", "")
             if goal:
                 self._goalDescription = goal
             for action in data.get("actions", []):
-                self._actionQueue.put(action)
+                if isinstance(action, dict) and "type" in action:
+                    self._actionQueue.put(action)
         except Exception:
             pass
         finally:
@@ -262,7 +264,7 @@ class AgenticBehavior(NpcBehavior):
     def _doMove(self, npc, location, room, tick, direction):
         grid = room.getGrid()
         neighbor = _getNeighbor(location, direction, grid)
-        if neighbor is None:
+        if neighbor is None or _hasSolid(neighbor):
             for alt in [(direction + 1) % 4, (direction + 3) % 4, (direction + 2) % 4]:
                 candidate = _getNeighbor(location, alt, grid)
                 if candidate is not None and not _hasSolid(candidate):
@@ -272,9 +274,6 @@ class AgenticBehavior(NpcBehavior):
             else:
                 npc.setTickLastMoved(tick)
                 return
-        if _hasSolid(neighbor):
-            npc.setTickLastMoved(tick)
-            return
         location.removeEntity(npc)
         neighbor.addEntity(npc)
         npc.setLocationID(neighbor.getID())
