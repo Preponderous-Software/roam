@@ -1,4 +1,4 @@
-"""Agentic (CPC) NPC behavior driven by Claude claude-haiku-4-5 via the Anthropic API.
+"""Agentic (CPC) NPC behavior driven by Claude claude-haiku-4-5-20251001 via the Anthropic API.
 
 Falls back transparently to ProgrammaticBehavior when ANTHROPIC_API_KEY is unset
 or the `anthropic` package is not installed.
@@ -30,7 +30,7 @@ from npc.programmaticBehavior import (
     _locationOf,
 )
 
-_MODEL = "claude-haiku-4-5"
+_MODEL = "claude-haiku-4-5-20251001"
 _CALL_INTERVAL_TICKS = 90  # ~3 s at 30 TPS
 
 _SYSTEM_PROMPT = """You are the brain of a player character in a top-down 2-D survival game.
