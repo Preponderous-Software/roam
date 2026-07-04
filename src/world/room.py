@@ -7,6 +7,7 @@ from entity.youngCrop import YoungCrop
 from entity.living.bear import Bear
 from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
+from entity.living.npc import Npc
 from entity.stoneFloor import StoneFloor
 from entity.woodFloor import WoodFloor
 from lib.pyenvlib.environment import Environment
@@ -132,11 +133,13 @@ class Room(Environment):
     def moveLivingEntities(self, tick) -> list:
         entitiesToMoveToNewRoom = []
         for entityId in self.livingEntities:
+            entity = self.livingEntities[entityId]
+            # NPCs are driven by NpcManager — skip them here
+            if isinstance(entity, Npc):
+                continue
             # 1% chance to skip
             if random.randrange(1, 101) > 1:
                 continue
-
-            entity = self.livingEntities[entityId]
             locationId = entity.getLocationID()
             if locationId == -1:
                 continue
@@ -169,6 +172,8 @@ class Room(Environment):
         reproductionCooldown = minAgeToReproduce / 2  # 2.5 minutes
         for entityId in self.livingEntities:
             entity = self.livingEntities[entityId]
+            if isinstance(entity, Npc):
+                continue
             locationId = entity.getLocationID()
             if not self._isEntityReadyToReproduce(
                 entity, tick, minAgeToReproduce, locationId

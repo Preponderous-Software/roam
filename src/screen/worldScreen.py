@@ -11,6 +11,8 @@ from entity.chickenMeat import ChickenMeat
 from entity.living.bear import Bear
 from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
+from entity.living.npc import Npc
+from npc.npcManager import NpcManager
 from codex.codex import Codex, ENTITY_DISPLAY_NAMES
 from codex.codexJsonReaderWriter import CodexJsonReaderWriter
 from inventory.inventoryJsonReaderWriter import InventoryJsonReaderWriter
@@ -135,6 +137,7 @@ class WorldScreen:
         self._isCrouching = False
         self.startingHomeGenerator = StartingHomeGenerator()
         self.currentZ = 0
+        self.npcManager = NpcManager(config)
 
     def initialize(self):
         self.map = self.container.resolve(Map)
@@ -157,6 +160,11 @@ class WorldScreen:
                     self.currentRoom.addEntityToLocation(self.player, spawnLocation)
                 else:
                     self.currentRoom.addEntity(self.player)
+                if self.config.npcEnabled:
+                    for _ in range(self.config.npcCount):
+                        self.npcManager.spawnNpc(
+                            self.currentRoom, self.tickCounter.getTick()
+                        )
             else:
                 self.currentRoom.addEntity(self.player)
 
@@ -1140,6 +1148,11 @@ class WorldScreen:
         elif key == kb.getKey("codex"):
             self.nextScreen = ScreenType.CODEX_SCREEN
             self.changeScreen = True
+        elif key == kb.getKey("toggle_npc_mode") or key == kb.getKey(
+            "alt_toggle_npc_mode"
+        ):
+            self.npcManager.toggleMode()
+            self.status.set("NPC mode: " + self.npcManager.getModeDisplay())
         elif key == KeyCode.LEFTBRACKET:
             current = self.player.getInventory().getSelectedInventorySlotIndex()
             self.changeSelectedInventorySlot((current - 1) % 10)
@@ -2155,7 +2168,12 @@ class WorldScreen:
             entity = location.getEntity(entityId)
             if isinstance(entity, LivingEntity):
                 statusString = entity.getName()
-                if self.config.debug:
+                if isinstance(entity, Npc):
+                    state, goal = self.npcManager.getBehaviorInfo(entity)
+                    statusString += f" [{self.npcManager.getModeDisplay()}:{state}]"
+                    if goal:
+                        statusString += f" — {goal}"
+                elif self.config.debug:
                     # include energy and age
                     statusString += (
                         " (energy="
@@ -2272,7 +2290,7 @@ class WorldScreen:
 
             # spawn meat at the living entity's location before removing it
             locationId = livingEntity.getLocationID()
-            if str(locationId) != "-1":
+            if str(locationId) != "-1" and not isinstance(livingEntity, Npc):
                 try:
                     location = self.currentRoom.getGrid().getLocation(locationId)
                     if isinstance(livingEntity, Chicken):
@@ -2296,6 +2314,8 @@ class WorldScreen:
                 entityName=livingEntity.getName(),
                 roomName=self.currentRoom.getName(),
             )
+
+        self.npcManager.cleanupDeadNpcs(self.currentRoom)
 
     def save(self):
         """Submit save operations to the background thread.
@@ -2447,6 +2467,8 @@ class WorldScreen:
                 self.saveRoomToFileAsync(newRoom)
 
         self.currentRoom.reproduceLivingEntities(self.tickCounter.getTick())
+        if self.config.npcEnabled:
+            self.npcManager.tickRoom(self.currentRoom, self.tickCounter.getTick())
 
     def _updateGoals(self):
         # Re-evaluate goals; announce and persist any fresh completions.

@@ -26,6 +26,7 @@ from entity.jungleWood import JungleWood
 from entity.leaves import Leaves
 from entity.living.livingEntity import LivingEntity
 from entity.living.livingEntityRegistry import LIVING_ENTITY_TYPES
+from entity.living.npc import Npc
 from entity.matureCrop import MatureCrop
 from entity.oakWood import OakWood
 from entity.stone import Stone
@@ -164,6 +165,11 @@ class RoomJsonReaderWriter:
             entityJson["tickCreated"] = entity.getTickCreated()
             entityJson["tickLastReproduced"] = entity.getTickLastReproduced()
             entityJson["imagePath"] = entity.getImagePath()
+            if isinstance(entity, Npc):
+                entityJson["npcMode"] = entity.getMode()
+                entityJson["npcInventory"] = self._generateJsonForStoredInventory(
+                    entity.getInventory()
+                )
         elif isinstance(entity, Excrement):
             entityJson["tickCreated"] = entity.getTickCreated()
         elif isinstance(entity, (YoungCrop, MatureCrop)):
@@ -251,6 +257,13 @@ class RoomJsonReaderWriter:
                 entity.getStoredInventory(), entityJson["storedInventory"]
             )
 
+        if isinstance(entity, Npc):
+            entity.setMode(entityJson.get("npcMode", "npc"))
+            if "npcInventory" in entityJson:
+                self._restoreStoredInventory(
+                    entity.getInventory(), entityJson["npcInventory"]
+                )
+
         return entity
 
     def _parseBackgroundColor(self, backgroundColorText):
@@ -261,6 +274,10 @@ class RoomJsonReaderWriter:
         return red, green, blue
 
     def _createEntity(self, entityClass, entityJson):
+        if entityClass == "Npc":
+            from entity.living.npc import randomNpcName
+
+            return Npc(randomNpcName(), entityJson["tickCreated"])
         livingEntityConstructor = LIVING_ENTITY_TYPES.get(entityClass)
         if livingEntityConstructor is not None:
             return livingEntityConstructor(entityJson["tickCreated"])
