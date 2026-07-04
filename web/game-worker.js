@@ -15,20 +15,11 @@ importScripts('https://cdn.jsdelivr.net/pyodide/v0.26.0/full/pyodide.js');
 
 const SAB_RING_SIZE = 8192;
 
-// ── Save persistence via raw IndexedDB ────────────────────────────────────────
-// localStorage is not available in Workers; Emscripten's IDBFS/OPFS backends
-// are unreliable in Pyodide 0.26 (IDBFS may not be bundled; OPFS Access Handle
-// Pool FS only opens handles for files that already exist at mount time).
-// Direct IndexedDB from the Worker is the simplest approach that is guaranteed
-// to work across sessions and browser vendors.
-//
-// Layout: one database ("roam-saves"), one object store ("files").
-// Keys = Emscripten FS paths ("/saves/slot1/player.json"), values = content.
-//
-// Two operations:
-//   loadSavesFromIDB(pyodide)  — called once at startup, awaited before Python
-//   syncSaves()                — flushes /saves snapshot to IDB; called after
-//                                every write (from Python) + on a 3 s interval
+// ── Save persistence via IndexedDB ────────────────────────────────────────────
+// Keys = Emscripten FS paths, values = UTF-8 file contents.
+// Both operations are fully non-throwing: any error is caught and logged so
+// the game always starts even when IDB is unavailable (mobile restrictions,
+// private-browsing quotas, Ecosia WebView quirks, etc.).
 
 const IDB_NAME    = 'roam-saves';
 const IDB_STORE   = 'files';
@@ -48,82 +39,118 @@ function idbOpen() {
     });
 }
 
+// Populate /saves in the Emscripten in-memory FS from IndexedDB.
+// Always resolves (never rejects) so a failed restore never prevents startup.
 async function loadSavesFromIDB(pyodide) {
-    let db;
-    try { db = await idbOpen(); }
-    catch(err) { console.warn('[roam] IDB open failed on load:', err); return; }
+    try {
+        // 5-second timeout guards against IDB hanging on some mobile WebViews.
+        const db = await Promise.race([
+            idbOpen(),
+            new Promise((_, rej) =>
+                setTimeout(() => rej(new Error('IDB open timeout')), 5000)
+            ),
+        ]);
 
-    await new Promise((resolve) => {
-        const tx      = db.transaction(IDB_STORE, 'readonly');
-        const store   = tx.objectStore(IDB_STORE);
-        const keysReq = store.getAllKeys();
-        const valsReq = store.getAll();
-        let keys = null, vals = null;
-
-        function done() {
-            if (keys === null || vals === null) return;
-            let n = 0;
-            for (let i = 0; i < keys.length; i++) {
-                const path  = keys[i];
-                const value = vals[i];
-                // Ensure all ancestor directories exist
-                const parts = path.split('/').filter(Boolean);
-                let cur = '';
-                for (let j = 0; j < parts.length - 1; j++) {
-                    cur += '/' + parts[j];
-                    try { pyodide.FS.mkdir(cur); } catch {}
-                }
-                try {
-                    pyodide.FS.writeFile(path, value, { encoding: 'utf8' });
-                    n++;
-                } catch(e) { console.warn('[roam] could not restore', path, e); }
+        const entries = await new Promise((resolve, reject) => {
+            const result  = [];
+            let tx, cursorReq;
+            try {
+                tx        = db.transaction(IDB_STORE, 'readonly');
+                cursorReq = tx.objectStore(IDB_STORE).openCursor();
+            } catch(e) {
+                // db.transaction() can throw synchronously on some WebViews.
+                reject(e);
+                return;
             }
-            if (n > 0) console.log(`[roam] ${n} save file(s) restored from IndexedDB`);
-            resolve();
-        }
+            cursorReq.onsuccess = (ev) => {
+                const c = ev.target.result;
+                if (c) { result.push({ path: c.key, content: c.value }); c.continue(); }
+                else   resolve(result);
+            };
+            cursorReq.onerror = () => reject(cursorReq.error);
+            tx.onerror        = () => reject(tx.error);
+            tx.onabort        = () => reject(new Error('IDB transaction aborted'));
+        });
 
-        keysReq.onsuccess = () => { keys = keysReq.result; done(); };
-        valsReq.onsuccess = () => { vals = valsReq.result; done(); };
-        keysReq.onerror   = () => resolve();
-        valsReq.onerror   = () => resolve();
-    });
-    db.close();
+        let n = 0;
+        for (const { path, content } of entries) {
+            // Ensure every ancestor directory exists before writing the file.
+            const parts = path.split('/').filter(Boolean);
+            let cur = '';
+            for (let i = 0; i < parts.length - 1; i++) {
+                cur += '/' + parts[i];
+                try { pyodide.FS.mkdir(cur); } catch {}
+            }
+            try { pyodide.FS.writeFile(path, content, { encoding: 'utf8' }); n++; }
+            catch(e) { console.warn('[roam] could not restore', path, e); }
+        }
+        if (n > 0) console.log(`[roam] ${n} save file(s) restored from IndexedDB`);
+        try { db.close(); } catch {}
+
+    } catch(err) {
+        // Non-fatal: game starts with an empty /saves.
+        console.warn('[roam] save restore skipped:', err);
+    }
 }
 
-function flushSavesToIDB(pyodide) {
-    // Walk /saves and snapshot every file into a flat path→content map.
+// Walk /saves in the Emscripten FS and write every file to IndexedDB.
+// Also always resolves — a failed flush is logged but never propagated.
+async function flushSavesToIDB(pyodide) {
     const files = {};
+
     function walk(path) {
         let entries;
         try { entries = pyodide.FS.readdir(path); } catch { return; }
         for (const name of entries) {
             if (name === '.' || name === '..') continue;
             const full = `${path}/${name}`;
-            const stat = pyodide.FS.stat(full);
+            let stat;
+            try { stat = pyodide.FS.stat(full); } catch { continue; }
             if (pyodide.FS.isDir(stat.mode)) {
                 walk(full);
             } else {
-                try { files[full] = pyodide.FS.readFile(full, { encoding: 'utf8' }); }
-                catch {}
+                // Binary files (e.g. map PNGs) are read as Uint8Array.
+                // Text files (JSON saves) are read as UTF-8 strings.
+                // We store them as-is; writeFile handles both types.
+                try {
+                    files[full] = pyodide.FS.readFile(full, { encoding: 'utf8' });
+                } catch {
+                    try { files[full] = pyodide.FS.readFile(full); } catch {}
+                }
             }
         }
     }
-    walk('/saves');
 
-    return new Promise((resolve) => {
-        idbOpen()
-            .then((db) => {
-                const tx    = db.transaction(IDB_STORE, 'readwrite');
-                const store = tx.objectStore(IDB_STORE);
-                store.clear();
-                for (const [path, content] of Object.entries(files)) {
-                    store.put(content, path);
-                }
-                tx.oncomplete = () => { db.close(); resolve(); };
-                tx.onerror    = () => { db.close(); resolve(); };
-            })
-            .catch(() => resolve());
-    });
+    try { walk('/saves'); } catch {}
+
+    try {
+        const db = await Promise.race([
+            idbOpen(),
+            new Promise((_, rej) =>
+                setTimeout(() => rej(new Error('IDB open timeout')), 5000)
+            ),
+        ]);
+
+        await new Promise((resolve, reject) => {
+            let tx;
+            try {
+                tx = db.transaction(IDB_STORE, 'readwrite');
+            } catch(e) { reject(e); return; }
+            tx.onerror    = () => reject(tx.error);
+            tx.onabort    = () => reject(new Error('IDB flush aborted'));
+            tx.oncomplete = () => resolve();
+            const store = tx.objectStore(IDB_STORE);
+            try { store.clear(); } catch {}
+            for (const [path, content] of Object.entries(files)) {
+                try { store.put(content, path); } catch {}
+            }
+        });
+
+        try { db.close(); } catch {}
+
+    } catch(err) {
+        console.warn('[roam] IDB flush failed:', err);
+    }
 }
 
 // ── Worker entry point ────────────────────────────────────────────────────────
@@ -151,26 +178,20 @@ self.onmessage = async (e) => {
 
         self.postMessage({ type: 'status', msg: 'Restoring saves…' });
 
-        // Create /saves in the Emscripten in-memory FS, then populate it with
-        // any files written in prior sessions.  This must be awaited before
-        // Python starts so the save-selection screen sees existing slots.
+        // Create /saves in the Emscripten in-memory FS, then pre-populate it
+        // from IndexedDB so Python sees prior-session save slots on startup.
         pyodide.FS.mkdir('/saves');
-        await loadSavesFromIDB(pyodide);
+        await loadSavesFromIDB(pyodide);  // always resolves; never throws
 
-        // syncSaves() is exposed to Python (js.syncSaves) and called:
-        //   • immediately after every writeJsonAtomically (via _try_opfs_sync)
-        //   • every 3 s as a backstop for unexpected exits
-        //   • explicitly at end of session in pyodide_main.py
+        // syncSaves is exposed to Python (js.syncSaves) and is fire-and-forget.
+        // It is also called every 3 s as a backstop for unexpected exits.
         globalThis.syncSaves = () => {
-            flushSavesToIDB(pyodide).catch(
-                (err) => console.warn('[roam] IDB flush failed:', err)
-            );
+            flushSavesToIDB(pyodide);  // errors handled inside; never throws
         };
         setInterval(syncSaves, 3000);
 
         self.postMessage({ type: 'status', msg: 'Installing Python packages…' });
 
-        // Pillow and jsonschema are bundled with Pyodide; structlog comes from PyPI.
         await pyodide.loadPackage(['Pillow', 'jsonschema', 'micropip']);
         const micropip = pyodide.pyimport('micropip');
         await micropip.install('structlog');
@@ -185,7 +206,6 @@ self.onmessage = async (e) => {
 
         self.postMessage({ type: 'status', msg: 'Starting game…' });
 
-        // Run the game — this blocks for the lifetime of the session.
         // /game/web/ is added to sys.path so pyodide_main.py can import
         // pyodide_compat (the synchronous ThreadPoolExecutor shim).
         await pyodide.runPythonAsync(`
