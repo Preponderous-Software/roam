@@ -100,6 +100,7 @@ class ProgrammaticBehavior(NpcBehavior):
         self._buildQueue = []  # remaining (dx, dy) slots to place
         self._scanCooldown = 0  # ticks until next room scan
         self._idleTicks = 0  # ticks spent wandering/idle
+        self._seekTicks = 0  # ticks spent walking toward current target
         self._lastGoal = ""
 
     # --- public API ---
@@ -189,6 +190,7 @@ class ProgrammaticBehavior(NpcBehavior):
                 # pick closest
                 candidates.sort(key=lambda x: _manhattanDist(location, x[0]))
                 self._targetLocation, self._targetEntity = candidates[0]
+                self._seekTicks = 0
 
         if self._targetLocation is None:
             self._wander(npc, location, room, tick)
@@ -196,6 +198,16 @@ class ProgrammaticBehavior(NpcBehavior):
 
         if location == self._targetLocation:
             self._state = NpcState.GATHERING
+            self._seekTicks = 0
+            return
+
+        # Give up on an unreachable target after ~4 seconds (120 ticks).
+        self._seekTicks += 1
+        if self._seekTicks > 120:
+            self._targetLocation = None
+            self._targetEntity = None
+            self._seekTicks = 0
+            self._scanCooldown = 0  # force re-scan next tick
             return
 
         direction = _directionToward(location, self._targetLocation)
@@ -304,17 +316,18 @@ class ProgrammaticBehavior(NpcBehavior):
 
     def _move(self, npc, location, room, tick, direction):
         neighbor = _getNeighbor(location, direction, room.getGrid())
-        if neighbor is None:
-            # At room edge – bounce: try perpendicular directions
+        # Blocked by room edge or solid — try perpendicular directions before giving up.
+        if neighbor is None or _hasSolid(neighbor):
             for alt in [(direction + 1) % 4, (direction + 3) % 4, (direction + 2) % 4]:
-                neighbor = _getNeighbor(location, alt, room.getGrid())
-                if neighbor is not None and not _hasSolid(neighbor):
+                candidate = _getNeighbor(location, alt, room.getGrid())
+                if candidate is not None and not _hasSolid(candidate):
+                    neighbor = candidate
                     direction = alt
                     break
             else:
+                # Completely boxed in — set cooldown so we don't spin.
+                npc.setTickLastMoved(tick)
                 return
-        if _hasSolid(neighbor):
-            return
         location.removeEntity(npc)
         neighbor.addEntity(npc)
         npc.setLocationID(neighbor.getID())
