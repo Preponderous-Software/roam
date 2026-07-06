@@ -1,4 +1,6 @@
 *.pyc
+web/game.zip
+web/game_version.txt
 screenshots/*.png
 saves/*/*.json
 saves/*/rooms/*.json

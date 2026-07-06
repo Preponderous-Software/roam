@@ -3,7 +3,12 @@
 
 Bundles the Python source tree, schemas, and config into a single zip that
 the browser's Pyodide Worker downloads and unpacks into its virtual filesystem.
+
+Also writes web/game_version.txt containing the SHA-256 of the zip so the
+Worker can request game.zip?v=<hash> — a content-addressed URL that forces
+the browser to fetch a new zip whenever the source changes.
 """
+import hashlib
 import os
 import zipfile
 
@@ -26,4 +31,9 @@ with zipfile.ZipFile("web/game.zip", "w", zipfile.ZIP_DEFLATED) as z:
         if os.path.exists(_web_file):
             z.write(_web_file, _web_file)
 
-print("Built web/game.zip")
+with open("web/game.zip", "rb") as _f:
+    _digest = hashlib.sha256(_f.read()).hexdigest()
+with open("web/game_version.txt", "w") as _f:
+    _f.write(_digest)
+
+print(f"Built web/game.zip ({_digest[:12]})")

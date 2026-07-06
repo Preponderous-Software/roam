@@ -43,10 +43,13 @@ class _Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
         self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
         self.send_header("Cross-Origin-Resource-Policy", "same-origin")
-        # Force revalidation of the game bundle and worker on every request so
-        # a redeployed container is never masked by a stale browser cache.
         path = getattr(self, "path", "") or ""
-        if any(path.split("?")[0].endswith(ext) for ext in (".zip", ".js")):
+        bare = path.split("?")[0]
+        if bare.endswith("game_version.txt"):
+            # Never cache — the Worker fetches this to get the current zip hash.
+            self.send_header("Cache-Control", "no-store")
+        elif any(bare.endswith(ext) for ext in (".zip", ".js")):
+            # Revalidate on every request so a new deploy is always picked up.
             self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 
