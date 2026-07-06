@@ -60,7 +60,11 @@ class MapImageGenerator:
     def getExistingMapImage(self):
         mapImagePath = self.getMapImagePath()
         _logger.debug("loading existing map image", path=mapImagePath)
-        return Image.open(mapImagePath)
+        try:
+            return Image.open(mapImagePath)
+        except Exception:
+            _logger.warning("map image unreadable, recreating", path=mapImagePath)
+            return self.createNewMapImage()
 
     def createNewMapImage(self):
         _logger.debug("creating new map image")
