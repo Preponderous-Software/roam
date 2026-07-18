@@ -141,6 +141,7 @@ class WorldScreen:
     def initialize(self):
         self.map = self.container.resolve(Map)
         self.currentRoom = None
+        shouldSaveNewWorld = False
 
         if os.path.exists(self.config.pathToSaveDirectory + "/playerLocation.json"):
             self.loadPlayerLocationFromFile()
@@ -150,6 +151,7 @@ class WorldScreen:
             if self.currentRoom == -1:
                 self.currentRoom = self.map.generateNewRoom(0, 0)
             if self.map.consumeIsNewRoom(0, 0):
+                shouldSaveNewWorld = True
                 # Brand-new world: build a starting home at the origin and give
                 # the player a little food so they don't starve immediately.
                 self.stats.incrementRoomsExplored()
@@ -190,6 +192,9 @@ class WorldScreen:
         self.energyBar = self.container.resolve(EnergyBar)
 
         self.discoverEntitiesInRoom()
+
+        if shouldSaveNewWorld:
+            self.save()
 
         self.hudDragManager.register("hotbar", self._getHotbarDefaultRect)
         self.hudDragManager.register("status", lambda: self.status.getDefaultRect())
