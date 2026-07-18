@@ -55,6 +55,8 @@ from entity.caveEntrance import CaveEntrance
 from entity.caveLadder import CaveLadder
 from entity.chest import Chest
 from entity.gravestone import Gravestone
+from entity.bed import Bed
+from entity.stoneBed import StoneBed
 from entity.wheat import Wheat
 from entity.wheatSeed import WheatSeed
 from entity.youngCrop import YoungCrop
@@ -799,6 +801,9 @@ class WorldScreen:
             if isinstance(entity, CaveLadder):
                 self._ascend()
                 return
+            if isinstance(entity, (Bed, StoneBed)):
+                self._sleepInBed(entity)
+                return
 
         if self.player.getInventory().getNumTakenInventorySlots() == 0:
             self.status.set("No items to place", duration=150)
@@ -883,6 +888,14 @@ class WorldScreen:
     def saveActiveChestRoom(self):
         if self.activeChestRoom is not None:
             self.saveRoomToFileAsync(self.activeChestRoom)
+
+    def _sleepInBed(self, bed):
+        if isinstance(bed, StoneBed):
+            self.player.addEnergy(50)
+            self.status.set("Rested on the Stone Bed")
+        else:
+            self.player.setEnergy(100)
+            self.status.set("Slept in the Bed")
 
     def _interactWithGravestone(self, gravestone, targetRoom, targetLocation):
         storedInventory = gravestone.getStoredInventory()
