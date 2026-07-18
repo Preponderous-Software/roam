@@ -42,6 +42,7 @@ class ConfigScreen(Screen):
             ("Limit Speed", "limitTps"),
             ("Pushable Stone", "pushableStone"),
             ("Day/Night Cycle", "dayNightCycleEnabled"),
+            ("Check For Updates", "checkForUpdates"),
         ]
 
     def handleKeyDownEvent(self, key):
