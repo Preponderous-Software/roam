@@ -379,6 +379,143 @@ def test_handleKeyDownEvent_keys_ignored_during_naming(temp_saves_dir):
     assert screen._selectedIndex == 0
 
 
+def test_startRenamingSave(temp_saves_dir):
+    savePath = os.path.join(temp_saves_dir, "old_name")
+    os.makedirs(savePath)
+
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.startRenamingSave(savePath)
+
+    assert screen.renamingSave == savePath
+    assert screen.renameNameInput == "old_name"
+    assert screen.renameNameError == ""
+
+
+def test_cancelRenamingSave(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.renamingSave = "saves/old_name"
+    screen.renameNameInput = "partial"
+
+    screen.cancelRenamingSave()
+    assert screen.renamingSave is None
+    assert screen.renameNameInput == ""
+
+
+def test_confirmRenameSave(temp_saves_dir):
+    oldPath = os.path.join(temp_saves_dir, "old_name")
+    os.makedirs(oldPath)
+
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.startRenamingSave(oldPath)
+    screen.renameNameInput = "new_name"
+
+    screen.confirmRenameSave()
+
+    assert screen.renamingSave is None
+    assert not os.path.exists(oldPath)
+    assert os.path.isdir(os.path.join(temp_saves_dir, "new_name"))
+    saves = screen.getSaveDirectories()
+    names = [s["name"] for s in saves]
+    assert names == ["new_name"]
+
+
+def test_confirmRenameSave_rejects_existing_name(temp_saves_dir):
+    oldPath = os.path.join(temp_saves_dir, "old_name")
+    os.makedirs(oldPath)
+    os.makedirs(os.path.join(temp_saves_dir, "taken_name"))
+
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.startRenamingSave(oldPath)
+    screen.renameNameInput = "taken_name"
+
+    screen.confirmRenameSave()
+
+    assert screen.renamingSave == oldPath
+    assert screen.renameNameError != ""
+    assert os.path.isdir(oldPath)
+
+
+def test_confirmRenameSave_rejects_invalid_name(temp_saves_dir):
+    oldPath = os.path.join(temp_saves_dir, "old_name")
+    os.makedirs(oldPath)
+
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.startRenamingSave(oldPath)
+    screen.renameNameInput = "../escape"
+
+    screen.confirmRenameSave()
+
+    assert screen.renamingSave == oldPath
+    assert screen.renameNameError != ""
+    assert os.path.isdir(oldPath)
+
+
+def test_confirmRenameSave_same_name_is_noop(temp_saves_dir):
+    oldPath = os.path.join(temp_saves_dir, "old_name")
+    os.makedirs(oldPath)
+
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.startRenamingSave(oldPath)
+    screen.renameNameInput = "old_name"
+
+    screen.confirmRenameSave()
+
+    assert screen.renamingSave is None
+    assert os.path.isdir(oldPath)
+
+
+def test_handleKeyDownEvent_r_starts_renaming_highlighted_save(temp_saves_dir):
+    os.makedirs(os.path.join(temp_saves_dir, "save_a"))
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.refreshSaveCache()
+
+    screen.handleKeyDownEvent(KeyCode.R)
+
+    assert screen.renamingSave == os.path.join(temp_saves_dir, "save_a")
+    assert screen.renameNameInput == "save_a"
+
+
+def test_handleKeyDownEvent_escape_cancels_renaming(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.renamingSave = "saves/old_name"
+    screen.renameNameInput = "partial"
+
+    screen.handleKeyDownEvent(pygame.K_ESCAPE)
+    assert screen.renamingSave is None
+    assert screen.changeScreen == False
+
+
+def test_handleKeyDownEvent_enter_confirms_renaming(temp_saves_dir):
+    oldPath = os.path.join(temp_saves_dir, "old_name")
+    os.makedirs(oldPath)
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.startRenamingSave(oldPath)
+    screen.renameNameInput = "renamed_save"
+
+    screen.handleKeyDownEvent(pygame.K_RETURN)
+    assert screen.renamingSave is None
+    assert os.path.isdir(os.path.join(temp_saves_dir, "renamed_save"))
+
+
+def test_handleKeyDownEvent_backspace_in_renaming(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.renamingSave = "saves/old_name"
+    screen.renameNameInput = "abc"
+
+    screen.handleKeyDownEvent(pygame.K_BACKSPACE)
+    assert screen.renameNameInput == "ab"
+
+
+def test_handleKeyDownEvent_keys_ignored_during_renaming(temp_saves_dir):
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.renamingSave = "saves/old_name"
+
+    screen.handleKeyDownEvent(pygame.K_DOWN)
+    assert screen._selectedIndex == 0
+    screen.handleKeyDownEvent(pygame.K_UP)
+    assert screen._selectedIndex == 0
+
+
 def test_createNewGameWithName_rejects_path_traversal(temp_saves_dir):
     screen = createSaveSelectionScreen(temp_saves_dir)
 
