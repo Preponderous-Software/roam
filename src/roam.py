@@ -165,6 +165,7 @@ class Roam:
         if self.renderer.supportsImageLoading():
             w, h = self.renderer.getDisplaySize()
             self.config.saveWindowSize(w, h)
+        self.worldScreen.hudDragManager.save(self.config)
         self.frontend.quit()
         quit()
 
