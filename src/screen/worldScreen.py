@@ -312,17 +312,17 @@ class WorldScreen:
 
         x = self.currentRoom.getX()
         y = self.currentRoom.getY()
-        if self.isCorner(location):
-            raise Exception("corner movement not implemented yet")
-        else:
-            if location.getX() == self.config.gridSize - 1:
-                x += 1
-            elif location.getX() == 0:
-                x -= 1
-            elif location.getY() == self.config.gridSize - 1:
-                y += 1
-            elif location.getY() == 0:
-                y -= 1
+        # Living entities have no facing direction, so corners resolve via the
+        # same X-axis-first branches used for edges, i.e. horizontal migration
+        # is preferred over vertical when both axes are at an edge.
+        if location.getX() == self.config.gridSize - 1:
+            x += 1
+        elif location.getX() == 0:
+            x -= 1
+        elif location.getY() == self.config.gridSize - 1:
+            y += 1
+        elif location.getY() == 0:
+            y -= 1
         return x, y
 
     def isCorner(self, location: Location):
@@ -2253,9 +2253,9 @@ class WorldScreen:
         currentLocationY = currentLocation.getY()
         gridEdge = self.currentRoom.getGrid().getRows() - 1
 
-        if self.isCorner(currentLocation):
-            raise Exception("corner movement not supported yet")
-
+        # Living entities have no facing direction, so corners resolve by
+        # falling through to the X-axis branches below, i.e. horizontal
+        # migration is preferred over vertical when both axes are at an edge.
         if currentLocationX == 0:
             return gridEdge, currentLocationY
         elif currentLocationX == gridEdge:
