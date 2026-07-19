@@ -7,7 +7,6 @@ import pytest
 from unittest.mock import MagicMock
 
 from entity.living.chicken import Chicken
-from lib.pyenvlib.grid import Grid
 from world.room import Room
 
 
