@@ -1,0 +1,4 @@
+# The main menu renders and shows the Play/Quit options.
+expect Roam
+assertContains Play
+assertContains Quit

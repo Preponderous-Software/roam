@@ -1,0 +1,4 @@
+# Enter advances the main menu to the save-selection screen.
+expect Roam
+send enter
+expect Select Save
