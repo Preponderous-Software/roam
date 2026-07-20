@@ -1,0 +1,10 @@
+# 'c' opens the new-save name field; its own keystroke must not leak into the
+# typed name, so the save folder created on disk is exactly {saveName}.
+expect Roam
+send enter
+expect Select Save
+send c
+expect Enter save name
+send {saveName} enter
+expect Tick timeout=15
+assertPathExists saves/{saveName}

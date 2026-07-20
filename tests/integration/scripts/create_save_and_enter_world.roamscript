@@ -1,0 +1,9 @@
+# Creating a save reaches the world and the HUD starts ticking.
+expect Roam
+send enter
+expect Select Save
+send c
+expect Enter save name
+send {saveName} enter
+expect Tick timeout=15
+assertContains TPS
