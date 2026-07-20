@@ -180,6 +180,7 @@ class Roam:
                     self.config.displayWidth = w
                     self.config.displayHeight = h
                     self.config.saveWindowSize(w, h)
+                self.worldScreen.hudDragManager.save(self.config)
                 _logger.info("returning to main menu")
                 return "restart"
             if result == ScreenType.WORLD_SCREEN:
