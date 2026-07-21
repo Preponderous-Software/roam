@@ -1,0 +1,35 @@
+# Opening the inventory from the world renders the panel and its close hint;
+# reopening after closing it proves the world screen is still alive and
+# responsive underneath (a round-trip, not just an open-once check) — the
+# risk case CLAUDE.md's frontend-abstraction note calls out, since
+# InventoryScreen is one of only two screens with explicit text/pygame
+# branching (self.renderer.supportsImageLoading()).
+#
+# resetBuffer before each close is what makes assertNotContains meaningful
+# here — without it, the close hint would still be sitting in the buffer's
+# history from having been on screen a moment ago, and assertNotContains
+# would fail every time regardless of whether the panel actually closed.
+#
+# The full nav-hint line (inventoryScreen.py:234) exists in source but the
+# text-mode grid overlaps it with the Craft button's border at this
+# viewport width, so it never appears as one contiguous substring in the
+# captured transcript — "discard held" is a short fragment confirmed to
+# land clear of the overlap.
+expect Roam
+send enter
+expect Select Save
+send c
+expect Enter save name
+send {saveName} enter
+expect Tick timeout=15
+send i
+assertContains "press [I] or [Esc] to close"
+assertContains "discard held"
+resetBuffer
+send esc
+assertNotContains "press [I] or [Esc] to close" timeout=1
+send i
+assertContains "press [I] or [Esc] to close"
+resetBuffer
+send esc
+assertNotContains "press [I] or [Esc] to close" timeout=1

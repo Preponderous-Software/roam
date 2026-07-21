@@ -1,0 +1,89 @@
+# The world's Options menu (Esc) reaches Stats, Inventory, Controls, and
+# Codex. Stats/Controls/Codex return to the Options menu; Inventory returns
+# straight to the world. (Codex is the subtle one: CodexScreen tracks
+# whichever screen it was opened *from* and returns there -- roam.py's
+# screen-switch dispatcher calls setReturnScreen(OPTIONS_SCREEN) when
+# entering from Options, WORLD_SCREEN otherwise -- so it only returns
+# straight to the world if opened directly from the world, e.g. via 'L'.)
+# The script reopens the Options menu explicitly wherever that matters.
+# Assertions target content unique to each destination screen rather than
+# its name, since the Options menu itself displays every sub-screen's name
+# as a button label (so "Controls"/"Codex" alone would trivially match the
+# menu, not the screen).
+#
+# Every screen transition is followed by resetBuffer + a fresh `expect` for
+# that screen's own marker before sending further keys, for two reasons:
+# (1) OptionsScreen resets its cursor to 0 on every entry (onStart, called by
+# Screen.run() at the start of every visit) -- but keys sent immediately
+# after an `esc` can arrive before the new screen's event loop is actually
+# polling again and get silently dropped rather than misapplied (confirmed:
+# sending "down down enter" right after an unsynchronized `esc` landed on
+# "Quit to Main Menu" instead of Inventory, i.e. both downs were lost and the
+# cursor was still at 0). A resetBuffer + expect pair only returns once that
+# screen has genuinely rendered a frame -- real evidence the next keypress
+# will land where intended. (2) it also makes each `expect` real evidence
+# instead of a trivial match against a screen already visited earlier in
+# this same script.
+expect Roam
+send enter
+expect Select Save
+send c
+expect Enter save name
+send {saveName} enter
+expect Tick timeout=15
+
+# Options menu opens; cursor starts at index 0 (Quit to Main Menu).
+send esc
+expect Menu
+
+# Stats is index 1 -> one Down.
+send down
+send enter
+expect Statistics
+resetBuffer
+
+# Esc from Stats returns to the Options menu, cursor reset to 0.
+# Inventory is index 2 -> two Downs.
+send esc
+expect Menu timeout=10
+send down down
+send enter
+assertContains "or [Esc] to close" timeout=5
+resetBuffer
+
+# Esc from Inventory returns straight to the world, not the Options menu.
+send esc
+expect Tick timeout=10
+assertContains TPS
+resetBuffer
+
+# Reopen the menu (cursor resets to 0 again). Controls is index 3 -> three Downs.
+send esc
+expect Menu timeout=10
+send down down down
+send enter
+assertContains "Enter/Space: remap" timeout=5
+resetBuffer
+
+# Esc from Controls returns to the Options menu, cursor reset to 0.
+# Codex is index 4 -> four Downs.
+send esc
+expect Menu timeout=10
+send down down down down
+send enter
+assertContains discovered timeout=5
+resetBuffer
+
+# Esc from Codex returns to the Options menu -- not straight to the world
+# like Inventory. CodexScreen tracks whichever screen it was opened *from*
+# and returns there (roam.py's screen-switch dispatcher:
+# codexScreen.setReturnScreen(OPTIONS_SCREEN if opened from Options else
+# WORLD_SCREEN)); since this script always opens Codex via the Options menu,
+# its Esc goes back to Options.
+send esc
+expect Menu timeout=10
+
+# One more Esc actually leaves the Options menu for the world.
+send esc
+expect Tick timeout=10
+assertContains TPS

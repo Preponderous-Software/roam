@@ -1,0 +1,40 @@
+# "Quit to Main Menu" (the Options menu's first, default-selected item) is
+# gated behind a confirmation overlay (optionsScreen.drawMainMenuConfirmation):
+# Escape cancels (confirmingMainMenu -> False, staying on the Options screen
+# per optionsScreen.handleKeyDownEvent) while Enter confirms and actually
+# switches to MAIN_MENU_SCREEN.
+#
+# Round trip: open menu -> select Quit -> cancel with Esc (still in-game) ->
+# close the menu -> reopen it -> select Quit again -> confirm with Enter this
+# time -> actually land on the main menu. "Roam" already appeared once at
+# boot, so resetBuffer runs right before the real confirm so the final
+# `expect Roam` is genuine fresh evidence the cancel path didn't quit early
+# and the confirm path did land back on the main menu, not a trivial match
+# against the initial boot text. assertPathExists is the other line of
+# evidence: the save created before quitting must still be there.
+expect Roam
+send enter
+expect Select Save
+send c
+expect Enter save name
+send {saveName} enter
+expect Tick timeout=15
+send esc
+expect Quit to Main Menu
+send enter
+expect Return to main menu?
+assertContains Your current session will end.
+assertContains Quit to Menu
+assertContains Cancel
+send esc
+wait 1
+send esc
+wait 1
+send esc
+wait 1
+send enter
+wait 1
+resetBuffer
+send enter
+expect Roam timeout=15
+assertPathExists saves/{saveName}

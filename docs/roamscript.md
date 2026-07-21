@@ -42,6 +42,8 @@ would otherwise look like a `timeout=` token.
 | `assertContains TEXT [timeout=N]` | Like `expect`, but framed as an assertion with a short default timeout (`1.0`s) — use when `TEXT` should already be on screen. |
 | `assertNotContains TEXT [timeout=N]` | Fails if `TEXT` appears within `timeout` seconds (default `0.5`). |
 | `assertPathExists PATH` | Fails unless `PATH` (repo-relative) exists on disk. |
+| `assertPathNotExists PATH` | Fails if `PATH` (repo-relative) exists on disk. |
+| `resetBuffer` | Discard captured output so far. See "Re-visiting a screen" below — required before `expect`/`assertContains`/`assertNotContains` can prove anything about a screen you've already been on. |
 | `wait SECONDS` | Pace the script without asserting anything. Prefer `expect`/`assertContains` — they fail fast and name what they were waiting for; reach for `wait` only when there's genuinely nothing to match on. |
 
 Named `send` tokens:
@@ -65,6 +67,29 @@ A script never needs to assert a clean exit itself: `runScript()` always
 checks, after the last line, that the child process exited without dumping a
 traceback — mirroring the `assert game.cleanExit()` convention in
 `test_text_playthrough.py`.
+
+## Re-visiting a screen
+
+The captured output is a running transcript of everything the game has ever
+printed, not a live snapshot of the current screen — it only ever grows.
+That has two consequences:
+
+- `expect`/`assertContains` for text a screen already showed once will match
+  instantly from history the *next* time you visit that screen too, even if
+  the real render is broken or slow — a false-pass risk, not real evidence.
+- `assertNotContains` can only prove text *never appeared at all* in the
+  whole run. It can't prove a "was on screen, now isn't" transition, because
+  the earlier occurrence is still sitting in the transcript.
+
+Call `resetBuffer` right before the transition you actually want evidence
+for, so the following `expect`/`assertContains`/`assertNotContains` can only
+match genuinely new output:
+
+```
+send esc
+resetBuffer
+expect Tick timeout=10
+```
 
 ## Example
 
