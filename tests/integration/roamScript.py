@@ -157,13 +157,19 @@ _HANDLERS = {
 }
 
 
-def runScript(path, saveName=None, verbose=False):
+def runScript(path, saveName=None, bootTimeout=None, verbose=False):
     """Run a `.roamscript` file end to end against a fresh TextPlaythrough.
     Raises RoamScriptError on a bad or failing step (including a non-clean
     exit after the last line). Returns the TextPlaythrough for callers that
-    want to inspect it further (e.g. game.tail())."""
+    want to inspect it further (e.g. game.tail()).
+
+    `bootTimeout` overrides the default wait for the *first* `expect` (an
+    individual step's own `timeout=N` always wins) — useful on machines
+    slower to import/boot the game than the CI runner this default is
+    tuned for."""
     steps = loadScript(path)
-    with TextPlaythrough(saveName=saveName) as game:
+    playthroughKwargs = {} if bootTimeout is None else {"bootTimeout": bootTimeout}
+    with TextPlaythrough(saveName=saveName, **playthroughKwargs) as game:
         for step in steps:
             if verbose:
                 print("  %-18s %s" % (step.command, step.rest))
@@ -181,13 +187,21 @@ def runScript(path, saveName=None, verbose=False):
 
 
 def main(argv):
-    if len(argv) != 2:
-        print("usage: python3 roamScript.py <script.roamscript>")
-        return 2
-    path = argv[1]
-    print(path)
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run a .roamscript file.")
+    parser.add_argument("script", help="path to a .roamscript file")
+    parser.add_argument(
+        "--boot-timeout",
+        type=float,
+        default=None,
+        help="override the default wait for the first `expect` "
+        "(e.g. on a machine slower to boot the game than CI)",
+    )
+    args = parser.parse_args(argv[1:])
+    print(args.script)
     try:
-        runScript(path, verbose=True)
+        runScript(args.script, bootTimeout=args.boot_timeout, verbose=True)
     except RoamScriptError as e:
         print("FAIL: %s" % e)
         return 1
