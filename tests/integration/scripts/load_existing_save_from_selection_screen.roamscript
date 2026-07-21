@@ -1,0 +1,31 @@
+# Loading an existing save (not creating a new one) reaches the ticking
+# world too — a path create_save_and_enter_world.roamscript never exercises.
+# Create {saveName}, back out to the main menu through the world's Options
+# menu (Esc -> Quit to Main Menu -> confirm), reopen save selection, and
+# press Enter on the now-listed save instead of 'c'.
+#
+# "Roam" and "Select Save" already appeared once during the initial boot
+# above, so resetBuffer runs right before the return-to-main-menu confirm —
+# without it, the re-`expect`s below would trivially match old history
+# instead of proving the main menu and save-selection screen actually
+# re-rendered after the round trip.
+expect Roam
+send enter
+expect Select Save
+send c
+expect Enter save name
+send {saveName} enter
+expect Tick timeout=15
+send esc
+expect Menu
+send enter
+expect Return to main menu?
+resetBuffer
+send enter
+expect Roam timeout=15
+send enter
+expect Select Save timeout=10
+assertContains {saveName}
+send enter
+expect Tick timeout=15
+assertContains TPS

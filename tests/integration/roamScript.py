@@ -21,12 +21,23 @@ from textPlaythrough import REPO_ROOT, TextPlaythrough
 #     assertContains TEXT [timeout=N]     TEXT must already be on screen
 #     assertNotContains TEXT [timeout=N]  TEXT must NOT appear within timeout
 #     assertPathExists PATH               a repo-relative path must exist
+#     assertPathNotExists PATH            a repo-relative path must NOT exist
+#     resetBuffer                         discard captured output so far
 #     wait SECONDS                        pace the script; asserts nothing
 #
 # `{saveName}` in any argument is replaced with the run's generated save
 # name. Quote an argument (`"like this"`) to keep spaces together as one
 # TEXT/PATH; unquoted words are joined with a single space. Lines starting
 # with `#` and blank lines are ignored.
+#
+# The captured output is a running transcript that only ever grows, not a
+# live screen snapshot — so once TEXT has appeared, `expect`/`assertContains`
+# match it forever, even long after navigating away. That makes a bare
+# `expect` a false-pass risk for "we're back on a screen we've already
+# visited" and makes `assertNotContains` unable to prove a "was on screen,
+# now isn't" transition. Use `resetBuffer` right before the transition you
+# actually want evidence for, so the following `expect`/`assertContains`/
+# `assertNotContains` can only match genuinely new output.
 #
 # A script never needs to ask for a clean-exit check: runScript() always
 # verifies the child exited without a traceback after the last line, mirroring
@@ -140,11 +151,26 @@ def _handleAssertPathExists(game, rest):
         raise AssertionError("path does not exist: %s" % fullPath)
 
 
+def _handleAssertPathNotExists(game, rest):
+    tokens = shlex.split(_substitute(rest, game))
+    if len(tokens) != 1:
+        raise RoamScriptError("assertPathNotExists takes exactly one path argument")
+    fullPath = os.path.join(REPO_ROOT, tokens[0])
+    if os.path.exists(fullPath):
+        raise AssertionError("path exists but was expected not to: %s" % fullPath)
+
+
 def _handleWait(game, rest):
     tokens = shlex.split(rest)
     if len(tokens) != 1:
         raise RoamScriptError("wait takes exactly one number of seconds")
     game.drain(float(tokens[0]))
+
+
+def _handleResetBuffer(game, rest):
+    if rest.strip():
+        raise RoamScriptError("resetBuffer takes no arguments")
+    game.resetBuffer()
 
 
 _HANDLERS = {
@@ -153,6 +179,8 @@ _HANDLERS = {
     "assertContains": _handleAssertContains,
     "assertNotContains": _handleAssertNotContains,
     "assertPathExists": _handleAssertPathExists,
+    "assertPathNotExists": _handleAssertPathNotExists,
+    "resetBuffer": _handleResetBuffer,
     "wait": _handleWait,
 }
 
