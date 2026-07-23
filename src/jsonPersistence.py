@@ -4,12 +4,30 @@
 # degrade to "no save" rather than crashing the game on every launch, and a
 # save interrupted mid-write must never destroy the previous good file.
 import json
+import importlib
 import os
 import tempfile
 
 from gameLogging.logger import getLogger
 
 _logger = getLogger(__name__)
+
+
+def syncWebSavesIfAvailable():
+    """Flush ``/saves`` to IndexedDB when running under Pyodide."""
+    try:
+        js = importlib.import_module("js")
+    except ImportError:
+        return
+
+    syncSaves = getattr(js, "syncSaves", None)
+    if syncSaves is None:
+        return
+
+    try:
+        syncSaves()
+    except Exception as e:
+        _logger.warning("could not sync web saves", error=str(e))
 
 
 def writeJsonAtomically(path, data, indent=4):
@@ -53,6 +71,7 @@ def writeJsonAtomically(path, data, indent=4):
         raise
 
     if _renamed:
+        syncWebSavesIfAvailable()
         return
 
     # Rename failed (e.g. OPFS in Pyodide): clean up temp file, write directly.
@@ -62,6 +81,7 @@ def writeJsonAtomically(path, data, indent=4):
         pass
     with open(path, "w") as f:
         json.dump(data, f, indent=indent)
+    syncWebSavesIfAvailable()
 
 
 def readJsonFile(path, default=None):

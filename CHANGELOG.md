@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-07-23 | 1 | fix: web save writes now flush to IndexedDB during Pyodide play — `writeJsonAtomically()` now best-effort calls the worker's `syncSaves` bridge when the `js` module is available, so startup codex/goal saves and later autosaves actually reach IndexedDB for the Playwright save-persistence integration test. +2 regression tests for the bridge/no-regression path; `tests/test_jsonPersistence.py` + `black --check` passing |
 | 2026-06-22 | 1+ | docs: Document the R/Z run/crouch toggles for text mode (#480) — the README controls table listed only the held Shift/Ctrl run/crouch, not the existing `run_toggle`(R)/`crouch_toggle`(Z) single-press toggles. Since a terminal can't detect held keys, the toggles are the only way to run/crouch in `--text` mode; the toggle feature (with status-bar state and unchanged pygame hold behavior) already existed, so this documents it (controls table + a text-mode tip). Docs only |
 | 2026-06-22 | 1+ | fix: pygame minimap never appeared — map image written to stale save dir (#495) — `MapImageGenerator` captured `config.pathToSaveDirectory` at construction (startup, before a save is selected), so after `saveSelectionScreen.selectSave()` reassigns it the map image was written to the old dir while `drawMiniMap` read the active dir → the file was never found. Made the generator resolve `roompngs/` and `mapImage.png` paths (and reload its canvas) lazily from the config per call; `MapImageUpdater._doUpdateMapImage` now uses `getMapImagePath()`. +1 regression test (stash-verified); 936 passing. ⚠️ Visual — recommend a live pygame minimap smoke before merge |
 | 2026-06-22 | 1+ | feat: Text-mode explored-rooms minimap + stop residual map-image work (#485) — `_drawTextMinimap` now renders a 5×5 ASCII grid of rooms centered on the current room (facing arrow `^<v>` for the current room, `#` for rooms known this session, `.` for unknown) below the existing `[x,y] facing phase` label, giving text mode a navigable map. Also gated the last ungated `mapImageUpdater.updateMapImage()` call (in `_doSave`) on `renderer.supportsImageLoading()`, so text mode no longer does wasted PNG-stitching work (the `saveCurrentRoomAsPNG` sites were already gated). +5 tests; 935 passing |
@@ -136,6 +137,14 @@ logged in detail below.
 | 2022-08-08 | 21 | Create version.txt; Update README.md; Modified README. (+9 more) |
 
 ## AI Agent Sessions
+
+### 2026-07-23 — Fix: web save writes were never flushed from OPFS to IndexedDB
+- **Context:** PR comment on #518 reported the integration tests were failing. The latest failed `Integration tests` workflow run (`28802690371`) showed `FAIL: no save files reached IndexedDB after 30s of gameplay` even though the browser logs showed immediate Python-side save activity (`codex saved`, `goals saved`).
+- **Root cause:** the web worker exposes `globalThis.syncSaves = makeSyncSaves(pyodide)` (`web/game-worker.js`), but no Python save path ever invoked that bridge. In the Pyodide/OPFS build, writing JSON files under `/saves` updated only the worker filesystem; nothing posted the file map back to the main thread for IndexedDB persistence, so the integration test's IDB poll stayed empty.
+- **Fix:** added `syncWebSavesIfAvailable()` in `src/jsonPersistence.py` and called it after each successful `writeJsonAtomically()` completion (both rename and direct-write fallback paths). In normal desktop/test runs it no-ops because there is no `js` module; in Pyodide it best-effort calls `js.syncSaves()`.
+- **Tests (+2):** extended `tests/test_jsonPersistence.py` to verify the helper calls a mocked Pyodide `js.syncSaves` bridge and that `writeJsonAtomically()` triggers that bridge after persisting the file.
+- **Validation:** `python3 -m pytest tests/test_jsonPersistence.py -q` → 13 passed; `python3 -m black --check src tests` clean. I also tried the Playwright integration locally, but this sandbox cannot fetch the external Pyodide CDN worker script (`https://cdn.jsdelivr.net/.../pyodide.js`), so the browser test could not complete here; the CI failure was investigated directly via the workflow logs instead.
+- **Learning Log:** `[not yet integrated]` — in the web/Pyodide build, writing under `/saves` is not enough for persistence: the game must also call the worker's `syncSaves` bridge so the main thread can mirror those files into IndexedDB. Without that bridge, Playwright sees an empty `roam-saves` database even while Python logs successful saves.
 
 ### 2026-06-22 — Fix: pygame minimap never appeared (map image written to stale save dir) (closes #495)
 - **Context:** Maintainer reported the minimap never renders in the pygame frontend (confirmed it never appears even after changing rooms; text mode was fine).
@@ -1401,4 +1410,3 @@ about this repository, add it here so the next agent benefits.
   and stats behavior, not a repository-wide contributor convention for
   `.github/copilot-instructions.md`.
 - 2026-04-23: `[not yet integrated]` When searching for Clean Code naming issues, Python's built-in `type` is a common shadowing victim — any method parameter named `type` (as in `getNumItemsByType(self, type)`) silently hides the built-in. Rename to a descriptive name like `itemType`. Similarly, predicate methods that return bool should be named with `is`/`has` prefixes, not `if` (e.g., `ifCorner` → `isCorner`). When the same string-building expression appears in multiple methods, extract it into a single private helper rather than duplicating it.
-
