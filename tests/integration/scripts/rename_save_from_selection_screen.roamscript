@@ -1,0 +1,34 @@
+# Renaming an existing save via 'R' actually renames the save folder on
+# disk (SaveSelectionScreen.confirmRenameSave calls os.rename), not just a
+# display label. Create {saveName}, back out to save selection, press R on
+# the highlighted (only) save to open the rename dialog — pre-filled with
+# the current name — append "_renamed" and confirm.
+#
+# "Roam" and "Select Save" already appeared once during the initial boot
+# above, so resetBuffer runs right before the return-to-main-menu confirm —
+# without it, the re-`expect`s below would trivially match old history
+# instead of proving the main menu and save-selection screen actually
+# re-rendered after the round trip.
+expect Roam
+send enter
+expect Select Save
+send c
+expect Enter save name
+send {saveName} enter
+expect Tick timeout=15
+send esc
+expect Menu
+send enter
+expect Return to main menu?
+resetBuffer
+send enter
+expect Roam timeout=15
+send enter
+expect Select Save timeout=10
+assertContains {saveName}
+send r
+expect Rename save:
+send _renamed enter
+assertContains {saveName}_renamed
+assertPathExists saves/{saveName}_renamed
+assertPathNotExists saves/{saveName}

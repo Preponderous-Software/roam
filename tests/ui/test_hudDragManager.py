@@ -6,6 +6,7 @@ os.environ["SDL_AUDIODRIVER"] = "dummy"
 import pygame
 import pytest
 
+from config.config import Config
 from ui.hudDragManager import HudDragManager, clampPosition
 
 
@@ -150,3 +151,110 @@ def test_motion_without_drag_is_noop(resolve):
     result = mgr.handleMouseMotion(100, 100, 800, 600)
     assert result is False
     assert mgr.getOffset("box") == (0, 0)
+
+
+def test_save_writes_offset_entries(resolve, tmp_path, monkeypatch):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text("debug: true\n", encoding="utf-8")
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
+
+    config = Config()
+    mgr = resolve(HudDragManager)
+    mgr.register("box", make_rect_func(50, 50, 100, 100))
+    mgr.handleMouseDown(75, 75)
+    mgr.handleMouseUp(125, 125, 800, 600)
+
+    mgr.save(config)
+
+    content = configFilePath.read_text(encoding="utf-8")
+    assert "hudOffset_box_x: 50" in content
+    assert "hudOffset_box_y: 50" in content
+    assert "debug: true" in content
+
+
+def test_save_writes_zero_offset_for_undragged_element(resolve, tmp_path, monkeypatch):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text("", encoding="utf-8")
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
+
+    config = Config()
+    mgr = resolve(HudDragManager)
+    mgr.register("box", make_rect_func(50, 50, 100, 100))
+
+    mgr.save(config)
+
+    content = configFilePath.read_text(encoding="utf-8")
+    assert "hudOffset_box_x: 0" in content
+    assert "hudOffset_box_y: 0" in content
+
+
+def test_load_restores_saved_offset(resolve):
+    mgr = resolve(HudDragManager)
+    mgr.register("box", make_rect_func(50, 50, 100, 100))
+
+    configValues = {"hudOffset_box_x": 30, "hudOffset_box_y": 20}
+    mgr.load(configValues, 800, 600)
+
+    assert mgr.getOffset("box") == (30, 20)
+
+
+def test_load_missing_keys_falls_back_to_default(resolve):
+    mgr = resolve(HudDragManager)
+    mgr.register("box", make_rect_func(50, 50, 100, 100))
+
+    mgr.load({}, 800, 600)
+
+    assert mgr.getOffset("box") == (0, 0)
+
+
+def test_load_ignores_malformed_entries(resolve):
+    mgr = resolve(HudDragManager)
+    mgr.register("box", make_rect_func(50, 50, 100, 100))
+
+    configValues = {"hudOffset_box_x": "not-a-number", "hudOffset_box_y": 20}
+    mgr.load(configValues, 800, 600)
+
+    # Malformed pair is skipped entirely rather than crashing or applying
+    # only half of it.
+    assert mgr.getOffset("box") == (0, 0)
+
+
+def test_load_clamps_offset_to_screen_bounds(resolve):
+    mgr = resolve(HudDragManager)
+    mgr.register("box", make_rect_func(50, 50, 100, 100))
+
+    # A huge saved offset (e.g. from a previous, larger display) should be
+    # clamped to the current screen size rather than pushing the element
+    # fully off-screen.
+    configValues = {"hudOffset_box_x": 100000, "hudOffset_box_y": 0}
+    mgr.load(configValues, 800, 600)
+
+    rect = mgr.elements["box"].getRect()
+    assert rect.x + rect.width * 0.2 <= 800
+
+
+def test_save_and_load_round_trip(tmp_path, monkeypatch):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text("", encoding="utf-8")
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
+
+    config = Config()
+    mgr = HudDragManager()
+    mgr.register("box", make_rect_func(50, 50, 100, 100))
+    mgr.handleMouseDown(75, 75)
+    mgr.handleMouseUp(150, 90, 800, 600)
+    savedOffset = mgr.getOffset("box")
+    mgr.save(config)
+
+    # Simulate a fresh process by creating a brand new manager instance.
+    mgr2 = HudDragManager()
+    mgr2.register("box", make_rect_func(50, 50, 100, 100))
+    mgr2.load(Config.readConfigFile(), 800, 600)
+
+    assert mgr2.getOffset("box") == savedOffset

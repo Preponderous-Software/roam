@@ -2,10 +2,8 @@
 web/game.zip
 web/game_version.txt
 screenshots/*.png
-saves/*/*.json
-saves/*/rooms/*.json
-saves/*/roompngs/*.png
-saves/*/mapImage.png
+saves/
+roam.log
 output.txt
 .coverage
 tests/stats/*.json
@@ -13,6 +11,9 @@ cov.xml
 tests/*/*.json
 src/media/icon.ico
 src/media/icon.icns
+
+# Claude Code project state (e.g. concurrent agent worktrees) — local only
+.claude/
 
 # PyInstaller build output
 build/

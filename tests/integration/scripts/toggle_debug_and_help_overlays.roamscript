@@ -1,0 +1,30 @@
+# Debug and help overlays both have a working ASCII alt binding, per
+# CLAUDE.md's "every terminal action needs an alt binding" rule:
+# toggle_debug is F3 (alt \) and toggle_help is F1 (alt h) — see
+# src/config/keyBindings.py. The repo's tracked config.yml ships
+# `debug: true`, so debug starts ON; the first \ turns it OFF, the second
+# turns it back ON. Each direction sets a distinct, brand-new status message
+# (worldScreen.py's handleKeyDownEvent) — that's what's asserted here rather
+# than presence/absence of the debug HUD text itself, since
+# TextPlaythrough's output buffer only ever grows (see
+# open_and_close_inventory.roamscript's note): a status message that is
+# genuinely new at the moment of the toggle is the one thing that's safe to
+# assertContains regardless of which direction the toggle went.
+#
+# Letter keys must be sent lowercase — KeyCode values for letters are their
+# lowercase ASCII ordinals (e.g. KeyCode.H = 104 = ord('h')), not the
+# uppercase letter shown in the UI/README.
+expect Roam
+send enter
+expect Select Save
+send c
+expect Enter save name
+send {saveName} enter
+expect Tick timeout=15
+send '\'
+assertContains "Debug info OFF"
+send '\'
+assertContains "Debug info ON"
+send h
+assertContains "Controls  (H to close)"
+send h

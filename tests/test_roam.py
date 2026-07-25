@@ -3,6 +3,8 @@ import os
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 
+from unittest.mock import MagicMock
+
 import pygame
 import pytest
 
@@ -30,3 +32,61 @@ def test_display_init_failure_falls_back_to_text_mode(monkeypatch):
         pg.display, "init", lambda: (_ for _ in ()).throw(pg.error("no display"))
     )
     assert _shouldUseTextMode(["roam.py"]) is True
+
+
+def _makeRoam(supportsImageLoading):
+    from roam import Roam
+
+    roamInstance = Roam.__new__(Roam)
+    roamInstance.renderer = MagicMock()
+    roamInstance.renderer.supportsImageLoading.return_value = supportsImageLoading
+    roamInstance.renderer.getDisplaySize.return_value = (1024, 768)
+    roamInstance.config = MagicMock()
+    roamInstance.worldScreen = MagicMock()
+    roamInstance.frontend = MagicMock()
+    roamInstance.currentScreen = MagicMock()
+    return roamInstance
+
+
+def test_quit_saves_hud_layout_in_pygame_mode():
+    roamInstance = _makeRoam(True)
+
+    with pytest.raises(SystemExit):
+        roamInstance.quitApplication()
+
+    roamInstance.worldScreen.hudDragManager.save.assert_called_once_with(
+        roamInstance.config
+    )
+
+
+def test_quit_does_not_save_hud_layout_in_text_mode():
+    roamInstance = _makeRoam(False)
+
+    with pytest.raises(SystemExit):
+        roamInstance.quitApplication()
+
+    roamInstance.worldScreen.hudDragManager.save.assert_not_called()
+
+
+def test_returning_to_main_menu_saves_hud_layout_in_pygame_mode():
+    from screen.screenType import ScreenType
+
+    roamInstance = _makeRoam(True)
+    roamInstance.currentScreen.run.return_value = ScreenType.MAIN_MENU_SCREEN
+
+    assert roamInstance.run() == "restart"
+
+    roamInstance.worldScreen.hudDragManager.save.assert_called_once_with(
+        roamInstance.config
+    )
+
+
+def test_returning_to_main_menu_does_not_save_hud_layout_in_text_mode():
+    from screen.screenType import ScreenType
+
+    roamInstance = _makeRoam(False)
+    roamInstance.currentScreen.run.return_value = ScreenType.MAIN_MENU_SCREEN
+
+    assert roamInstance.run() == "restart"
+
+    roamInstance.worldScreen.hudDragManager.save.assert_not_called()

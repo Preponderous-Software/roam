@@ -92,10 +92,19 @@ class TextPlaythrough:
         return False
 
     def _cleanupSave(self):
+        import glob
         import shutil
 
-        savePath = os.path.join(REPO_ROOT, "saves", self._saveName)
-        shutil.rmtree(savePath, ignore_errors=True)
+        # A prefix glob, not just an exact match on self._saveName: a script
+        # that renames the save mid-run (SaveSelectionScreen's rename dialog
+        # does a real os.rename) leaves the original name gone and a new one
+        # behind that this class was never told about. self._saveName is
+        # always a freshly generated, effectively-unique token, so matching
+        # anything starting with it can't catch a real user save.
+        for savePath in glob.glob(
+            os.path.join(REPO_ROOT, "saves", self._saveName + "*")
+        ):
+            shutil.rmtree(savePath, ignore_errors=True)
 
     # --- driving ---
 
@@ -139,6 +148,15 @@ class TextPlaythrough:
     def drain(self, seconds=0.5):
         self._pump(seconds)
         return self._buffer
+
+    def resetBuffer(self):
+        """Discard everything captured so far. The buffer only ever grows
+        (it's a running transcript, not a live screen snapshot), so text a
+        screen showed once keeps matching `expect`/`assertContains` forever
+        even after navigating away — resetting it is what makes "we left
+        that screen" or "this went from on to off" provable rather than
+        assumed."""
+        self._buffer = ""
 
     # --- inspection ---
 

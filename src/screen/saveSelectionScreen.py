@@ -43,6 +43,9 @@ class SaveSelectionScreen(Screen):
         self.namingNewSave = False
         self.newSaveNameInput = ""
         self.newSaveNameError = ""
+        self.renamingSave = None
+        self.renameNameInput = ""
+        self.renameNameError = ""
         # When naming opens via the 'C' key, that keypress also arrives as a
         # text-input event in the same batch; suppress text input for the frame
         # it opens so 'c' isn't typed into the new name. Cleared each draw().
@@ -164,6 +167,42 @@ class SaveSelectionScreen(Screen):
         self.scrollOffset = min(self.scrollOffset, maxOffset)
         self._selectedIndex = min(self._selectedIndex, maxOffset)
 
+    def startRenamingSave(self, savePath):
+        self.renamingSave = savePath
+        self._suppressTextInput = True
+        self.renameNameInput = os.path.basename(savePath)
+        self.renameNameError = ""
+
+    def confirmRenameSave(self):
+        name = self.renameNameInput.strip()
+        if not self._isValidSaveName(name):
+            self.renameNameError = "Invalid name."
+            return
+        oldPath = self.renamingSave
+        newPath = os.path.join(self.savesBaseDirectory, name)
+        if newPath == oldPath:
+            self.cancelRenamingSave()
+            return
+        resolvedOld = os.path.realpath(oldPath)
+        resolvedBase = os.path.realpath(self.savesBaseDirectory)
+        if not resolvedOld.startswith(resolvedBase + os.sep):
+            self.cancelRenamingSave()
+            return
+        if os.path.exists(newPath):
+            self.renameNameError = f'A save named "{name}" already exists.'
+            return
+        os.rename(oldPath, newPath)
+        _logger.info("save renamed", oldPath=oldPath, newPath=newPath)
+        self.renamingSave = None
+        self.renameNameInput = ""
+        self.renameNameError = ""
+        self.refreshSaveCache()
+
+    def cancelRenamingSave(self):
+        self.renamingSave = None
+        self.renameNameInput = ""
+        self.renameNameError = ""
+
     def toggleSort(self):
         if self.sortMode == self.SORT_BY_DATE:
             self.sortMode = self.SORT_BY_NAME
@@ -204,6 +243,15 @@ class SaveSelectionScreen(Screen):
                 self.newSaveNameInput = self.newSaveNameInput[:-1]
                 self.newSaveNameError = ""
             return
+        if self.renamingSave is not None:
+            if key == KeyCode.ESCAPE:
+                self.cancelRenamingSave()
+            elif key in (KeyCode.RETURN, KeyCode.KP_ENTER):
+                self.confirmRenameSave()
+            elif key == KeyCode.BACKSPACE:
+                self.renameNameInput = self.renameNameInput[:-1]
+                self.renameNameError = ""
+            return
         if self.confirmingDelete is not None:
             if key == KeyCode.ESCAPE:
                 self.confirmingDelete = None
@@ -226,6 +274,11 @@ class SaveSelectionScreen(Screen):
             self.startNamingNewSave()
         elif key == KeyCode.T:
             self.toggleSort()
+        elif key == KeyCode.R:
+            saves = self.getSaveDirectories()
+            if saves:
+                idx = min(self.getHighlightedSaveIndex(), len(saves) - 1)
+                self.startRenamingSave(saves[idx]["path"])
         elif key == KeyCode.BACKSPACE:
             saves = self.getSaveDirectories()
             if saves:
@@ -299,16 +352,21 @@ class SaveSelectionScreen(Screen):
     def drawSaveList(self, saves):
         x, y = self.renderer.getDisplaySize()
         saveWidth = x * 0.5
+        renameWidth = x * 0.08
         deleteWidth = x * 0.08
         height = y / 14
         margin = 8
-        totalRowWidth = saveWidth + margin + deleteWidth
+        totalRowWidth = saveWidth + margin + renameWidth + margin + deleteWidth
         xpos = x / 2 - totalRowWidth / 2
         ypos = y / 8
         bottomLimit = y - y / 4
         maxVisible = int((bottomLimit - ypos) / (height + margin))
         visibleSaves = saves[self.scrollOffset : self.scrollOffset + maxVisible]
-        interactive = self.confirmingDelete is None and not self.namingNewSave
+        interactive = (
+            self.confirmingDelete is None
+            and not self.namingNewSave
+            and self.renamingSave is None
+        )
 
         if len(saves) > maxVisible:
             shownEnd = min(self.scrollOffset + maxVisible, len(saves))
@@ -345,6 +403,17 @@ class SaveSelectionScreen(Screen):
                 self.renderer.drawButton(
                     xpos + saveWidth + margin,
                     ypos,
+                    renameWidth,
+                    height,
+                    palette.WHITE,
+                    palette.BLACK,
+                    20,
+                    "R",
+                    lambda p=savePath: self.startRenamingSave(p),
+                )
+                self.renderer.drawButton(
+                    xpos + saveWidth + margin + renameWidth + margin,
+                    ypos,
                     deleteWidth,
                     height,
                     palette.RED,
@@ -367,13 +436,27 @@ class SaveSelectionScreen(Screen):
                 self.renderer.drawRectangle(
                     xpos + saveWidth + margin,
                     ypos,
+                    renameWidth,
+                    height,
+                    palette.MEDIUM_GRAY,
+                )
+                self.renderer.drawText(
+                    "R",
+                    xpos + saveWidth + margin + renameWidth // 2,
+                    ypos + height // 2,
+                    20,
+                    palette.DIM_GRAY,
+                )
+                self.renderer.drawRectangle(
+                    xpos + saveWidth + margin + renameWidth + margin,
+                    ypos,
                     deleteWidth,
                     height,
                     (140, 0, 0),
                 )
                 self.renderer.drawText(
                     "X",
-                    xpos + saveWidth + margin + deleteWidth // 2,
+                    xpos + saveWidth + margin + renameWidth + margin + deleteWidth // 2,
                     ypos + height // 2,
                     20,
                     palette.MEDIUM_GRAY,
@@ -518,6 +601,81 @@ class SaveSelectionScreen(Screen):
             self.cancelNamingNewSave,
         )
 
+    def drawRenameDialog(self):
+        x, y = self.renderer.getDisplaySize()
+        overlayWidth = x * 0.5
+        overlayHeight = y * 0.35
+        overlayX = x / 2 - overlayWidth / 2
+        overlayY = y / 2 - overlayHeight / 2
+        self.renderer.drawRectangle(
+            overlayX, overlayY, overlayWidth, overlayHeight, palette.CHARCOAL
+        )
+        self.renderer.drawText(
+            "Rename save:",
+            x / 2,
+            overlayY + overlayHeight * 0.2,
+            28,
+            palette.WHITE,
+        )
+        inputWidth = overlayWidth * 0.8
+        inputHeight = overlayHeight * 0.18
+        inputX = x / 2 - inputWidth / 2
+        inputY = overlayY + overlayHeight * 0.38
+        self.renderer.drawRectangle(
+            inputX, inputY, inputWidth, inputHeight, palette.WHITE
+        )
+        displayText = self.renameNameInput + "_"
+        self.renderer.drawText(
+            displayText,
+            x / 2,
+            inputY + inputHeight / 2,
+            24,
+            palette.BLACK,
+        )
+        if self.renameNameError:
+            self.renderer.drawText(
+                self.renameNameError,
+                x / 2,
+                overlayY + overlayHeight * 0.60,
+                18,
+                (255, 120, 120),
+            )
+        self.renderer.drawText(
+            "(Enter to confirm, Escape to cancel)",
+            x / 2,
+            overlayY + overlayHeight * 0.68,
+            16,
+            palette.MEDIUM_GRAY,
+        )
+        buttonWidth = overlayWidth * 0.35
+        buttonHeight = overlayHeight * 0.18
+        buttonMargin = 20
+        totalBtnWidth = buttonWidth * 2 + buttonMargin
+        btnStartX = x / 2 - totalBtnWidth / 2
+        btnY = overlayY + overlayHeight * 0.78
+        self.renderer.drawButton(
+            btnStartX,
+            btnY,
+            buttonWidth,
+            buttonHeight,
+            palette.WHITE,
+            palette.BLACK,
+            24,
+            "Rename",
+            self.confirmRenameSave,
+        )
+        self.renderer.drawButton(
+            btnStartX + buttonWidth + buttonMargin,
+            btnY,
+            buttonWidth,
+            buttonHeight,
+            palette.WHITE,
+            palette.BLACK,
+            24,
+            "Cancel",
+            self.cancelRenamingSave,
+        )
+
     def drawBottomButtons(self):
         x, y = self.renderer.getDisplaySize()
         buttonWidth = x / 5
@@ -526,7 +684,11 @@ class SaveSelectionScreen(Screen):
         totalWidth = buttonWidth * 3 + margin * 2
         startX = x / 2 - totalWidth / 2
         ypos = y - buttonHeight - y / 12
-        interactive = self.confirmingDelete is None and not self.namingNewSave
+        interactive = (
+            self.confirmingDelete is None
+            and not self.namingNewSave
+            and self.renamingSave is None
+        )
 
         if interactive:
             self.renderer.drawButton(
@@ -617,6 +779,11 @@ class SaveSelectionScreen(Screen):
                     if ch.isalnum() or ch in "-_ ":
                         self.newSaveNameInput += ch
                         self.newSaveNameError = ""
+            elif self.renamingSave is not None and not self._suppressTextInput:
+                for ch in event.text:
+                    if ch.isalnum() or ch in "-_ ":
+                        self.renameNameInput += ch
+                        self.renameNameError = ""
 
     def draw(self):
         # The text-input suppression only lasts the frame naming opened in.
@@ -637,13 +804,15 @@ class SaveSelectionScreen(Screen):
             self.drawDeleteConfirmation()
         elif self.namingNewSave:
             self.drawNamingDialog()
+        elif self.renamingSave is not None:
+            self.drawRenameDialog()
         else:
             self.drawControlsHint(hasSaves)
 
     def drawControlsHint(self, hasSaves=True):
         x, y = self.renderer.getDisplaySize()
         if hasSaves:
-            hint = "W/S or Up/Down: choose  -  Enter: play  -  C: new  -  Bksp: delete  -  T: sort  -  Esc: back"
+            hint = "W/S or Up/Down: choose  -  Enter: play  -  C: new  -  R: rename  -  Bksp: delete  -  T: sort  -  Esc: back"
         else:
             hint = "C or click button: create new save  -  Esc: back"
         self.renderer.drawText(hint, x / 2, y - 14, 16, palette.MEDIUM_GRAY)
@@ -657,3 +826,5 @@ class SaveSelectionScreen(Screen):
         self.confirmingDelete = None
         self.namingNewSave = False
         self.newSaveNameInput = ""
+        self.renamingSave = None
+        self.renameNameInput = ""

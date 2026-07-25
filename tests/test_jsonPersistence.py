@@ -1,13 +1,15 @@
 import os
 import sys
-import types
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
 import pytest
 
-from jsonPersistence import readJsonFile, syncWebSavesIfAvailable, writeJsonAtomically
+from jsonPersistence import readJsonFile, writeJsonAtomically
 from stats.stats import Stats
 from world.tickCounter import TickCounter
 
@@ -114,25 +116,11 @@ def test_writeJsonAtomically_preserves_good_file_when_serialization_fails(tmp_pa
     assert leftovers == []
 
 
-def test_syncWebSavesIfAvailable_calls_pyodide_bridge(monkeypatch):
-    calls = []
-    jsModule = types.ModuleType("js")
-    jsModule.syncSaves = lambda: calls.append("called")
-    monkeypatch.setitem(sys.modules, "js", jsModule)
-
-    syncWebSavesIfAvailable()
-
-    assert calls == ["called"]
-
-
-def test_writeJsonAtomically_triggers_web_save_sync(monkeypatch, tmp_path):
-    calls = []
-    jsModule = types.ModuleType("js")
-    jsModule.syncSaves = lambda: calls.append("called")
-    monkeypatch.setitem(sys.modules, "js", jsModule)
-
+def test_writeJsonAtomically_syncs_browser_saves_when_available(monkeypatch, tmp_path):
     path = str(tmp_path / "out.json")
+    syncSaves = MagicMock()
+    monkeypatch.setitem(sys.modules, "js", SimpleNamespace(syncSaves=syncSaves))
+
     writeJsonAtomically(path, {"ok": True})
 
-    assert readJsonFile(path) == {"ok": True}
-    assert calls == ["called"]
+    syncSaves.assert_called_once_with()

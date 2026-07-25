@@ -36,6 +36,12 @@ Run the full suite with:
 python3 -m pytest tests/
 ```
 
+For straight-line functionality verification against the text/TUI frontend
+(boot to a screen, send keys, expect text), prefer adding a `.roamscript`
+file under `tests/integration/scripts/` over a hand-written
+`TextPlaythrough` test — see `docs/roamscript.md`. `test_roam_scripts.py`
+discovers and runs every script automatically; no wiring needed.
+
 Formatting is enforced by **black** (`python3 -m black src tests`). CI runs black in check mode — always format before pushing.
 
 After any text-interface change, verify:

@@ -55,6 +55,8 @@ from entity.caveEntrance import CaveEntrance
 from entity.caveLadder import CaveLadder
 from entity.chest import Chest
 from entity.gravestone import Gravestone
+from entity.bed import Bed
+from entity.stoneBed import StoneBed
 from entity.wheat import Wheat
 from entity.wheatSeed import WheatSeed
 from entity.youngCrop import YoungCrop
@@ -139,6 +141,7 @@ class WorldScreen:
     def initialize(self):
         self.map = self.container.resolve(Map)
         self.currentRoom = None
+        shouldSaveNewWorld = False
 
         if os.path.exists(self.config.pathToSaveDirectory + "/playerLocation.json"):
             self.loadPlayerLocationFromFile()
@@ -148,6 +151,7 @@ class WorldScreen:
             if self.currentRoom == -1:
                 self.currentRoom = self.map.generateNewRoom(0, 0)
             if self.map.consumeIsNewRoom(0, 0):
+                shouldSaveNewWorld = True
                 # Brand-new world: build a starting home at the origin and give
                 # the player a little food so they don't starve immediately.
                 self.stats.incrementRoomsExplored()
@@ -189,12 +193,17 @@ class WorldScreen:
 
         self.discoverEntitiesInRoom()
 
+        if shouldSaveNewWorld:
+            self.save()
+
         self.hudDragManager.register("hotbar", self._getHotbarDefaultRect)
         self.hudDragManager.register("status", lambda: self.status.getDefaultRect())
         self.hudDragManager.register(
             "energyBar", lambda: self.energyBar.getDefaultRect()
         )
         self.hudDragManager.register("minimap", self._getMinimapDefaultRect)
+        screenWidth, screenHeight = self.renderer.getDisplaySize()
+        self.hudDragManager.load(Config.readConfigFile(), screenWidth, screenHeight)
 
         _logger.info(
             "world screen initialized",
@@ -305,17 +314,17 @@ class WorldScreen:
 
         x = self.currentRoom.getX()
         y = self.currentRoom.getY()
-        if self.isCorner(location):
-            raise Exception("corner movement not implemented yet")
-        else:
-            if location.getX() == self.config.gridSize - 1:
-                x += 1
-            elif location.getX() == 0:
-                x -= 1
-            elif location.getY() == self.config.gridSize - 1:
-                y += 1
-            elif location.getY() == 0:
-                y -= 1
+        # Living entities have no facing direction, so corners resolve via the
+        # same X-axis-first branches used for edges, i.e. horizontal migration
+        # is preferred over vertical when both axes are at an edge.
+        if location.getX() == self.config.gridSize - 1:
+            x += 1
+        elif location.getX() == 0:
+            x -= 1
+        elif location.getY() == self.config.gridSize - 1:
+            y += 1
+        elif location.getY() == 0:
+            y -= 1
         return x, y
 
     def isCorner(self, location: Location):
@@ -799,6 +808,9 @@ class WorldScreen:
             if isinstance(entity, CaveLadder):
                 self._ascend()
                 return
+            if isinstance(entity, (Bed, StoneBed)):
+                self._sleepInBed(entity)
+                return
 
         if self.player.getInventory().getNumTakenInventorySlots() == 0:
             self.status.set("No items to place", duration=150)
@@ -883,6 +895,14 @@ class WorldScreen:
     def saveActiveChestRoom(self):
         if self.activeChestRoom is not None:
             self.saveRoomToFileAsync(self.activeChestRoom)
+
+    def _sleepInBed(self, bed):
+        if isinstance(bed, StoneBed):
+            self.player.addEnergy(50)
+            self.status.set("Rested on the Stone Bed")
+        else:
+            self.player.setEnergy(100)
+            self.status.set("Slept in the Bed")
 
     def _interactWithGravestone(self, gravestone, targetRoom, targetLocation):
         storedInventory = gravestone.getStoredInventory()
@@ -2235,9 +2255,9 @@ class WorldScreen:
         currentLocationY = currentLocation.getY()
         gridEdge = self.currentRoom.getGrid().getRows() - 1
 
-        if self.isCorner(currentLocation):
-            raise Exception("corner movement not supported yet")
-
+        # Living entities have no facing direction, so corners resolve by
+        # falling through to the X-axis branches below, i.e. horizontal
+        # migration is preferred over vertical when both axes are at an edge.
         if currentLocationX == 0:
             return gridEdge, currentLocationY
         elif currentLocationX == gridEdge:
