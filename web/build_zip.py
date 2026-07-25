@@ -31,8 +31,14 @@ with zipfile.ZipFile("web/game.zip", "w", zipfile.ZIP_DEFLATED) as z:
         if os.path.exists(_web_file):
             z.write(_web_file, _web_file)
 
+_hasher = hashlib.sha256()
 with open("web/game.zip", "rb") as _f:
-    _digest = hashlib.sha256(_f.read()).hexdigest()
+    while True:
+        _chunk = _f.read(1024 * 1024)
+        if not _chunk:
+            break
+        _hasher.update(_chunk)
+_digest = _hasher.hexdigest()
 with open("web/game_version.txt", "w") as _f:
     _f.write(_digest)
 
