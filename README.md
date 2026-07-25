@@ -22,6 +22,7 @@ I | Open / Close inventory
 M | Toggle minimap
 = / - | Minimap zoom in / out
 C | Toggle camera follow mode
+Middle Mouse (drag) | Reposition a HUD element — hotbar, status, energy bar or minimap (saved between sessions)
 F1 (or H) | Toggle controls help overlay
 F3 (or `\`) | Toggle debug info
 L | Open Codex
