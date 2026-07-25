@@ -202,6 +202,8 @@ class WorldScreen:
             "energyBar", lambda: self.energyBar.getDefaultRect()
         )
         self.hudDragManager.register("minimap", self._getMinimapDefaultRect)
+        screenWidth, screenHeight = self.renderer.getDisplaySize()
+        self.hudDragManager.load(Config.readConfigFile(), screenWidth, screenHeight)
 
         _logger.info(
             "world screen initialized",

@@ -27,6 +27,7 @@ Defined by `RoomType` in `src/world/roomType.py`:
 - Forest
 - Jungle
 - Mountain
+- Cave (generated below ground level by `roomFactory`, reached through a cave entrance)
 
 ## Mobs
 Living entities are registered in `src/entity/living/livingEntityRegistry.py`:
