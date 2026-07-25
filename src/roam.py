@@ -165,7 +165,10 @@ class Roam:
         if self.renderer.supportsImageLoading():
             w, h = self.renderer.getDisplaySize()
             self.config.saveWindowSize(w, h)
-        self.worldScreen.hudDragManager.save(self.config)
+            # HUD layout is only mutable by mouse drag, which text mode has no
+            # source of, so a text session must not write back offsets that
+            # load() clamped to the much smaller terminal-equivalent display.
+            self.worldScreen.hudDragManager.save(self.config)
         self.frontend.quit()
         quit()
 
@@ -180,7 +183,8 @@ class Roam:
                     self.config.displayWidth = w
                     self.config.displayHeight = h
                     self.config.saveWindowSize(w, h)
-                self.worldScreen.hudDragManager.save(self.config)
+                    # See quitApplication(): text mode never persists layout.
+                    self.worldScreen.hudDragManager.save(self.config)
                 _logger.info("returning to main menu")
                 return "restart"
             if result == ScreenType.WORLD_SCREEN:
