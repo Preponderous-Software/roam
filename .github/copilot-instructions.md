@@ -139,6 +139,7 @@ The module-level container singleton persists across game restarts. Rather than 
 - **Environment:** Ubuntu latest, Python 3.12, with `SDL_VIDEODRIVER=dummy` and `SDL_AUDIODRIVER=dummy` for headless Pygame.
 - **Steps:** Installs dependencies (`pygame`, `pytest`, `pytest-cov`, `jsonschema`, `Pillow`), then runs `python -m pytest --verbose -vv --cov=src --cov-report=term-missing`.
 - **Required checks:** The `test` job must pass before merging.
+- **Web persistence gotcha:** In the Pyodide/OPFS build, save persistence needs both an actual world/JSON save and an explicit `js.syncSaves()` bridge call after writes; otherwise the browser's IndexedDB mirror can stay empty even while Python logs successful saves.
 
 ## AI Agent Guidelines
 

@@ -178,7 +178,16 @@ self.onmessage = async (e) => {
 
         self.postMessage({ type: 'status', msg: 'Downloading game…' });
 
-        const resp = await fetch('/web/game.zip');
+        // Fetch the content-hash written by build_zip.py so the zip URL is
+        // unique per build. The browser may cache game.zip?v=<hash> freely;
+        // a new deploy changes the hash, forcing a fresh download.
+        let zipUrl = '/web/game.zip';
+        try {
+            const verResp = await fetch('/web/game_version.txt', { cache: 'no-store' });
+            if (verResp.ok) zipUrl += '?v=' + (await verResp.text()).trim();
+        } catch (_) { /* no version file — fall back to unversioned URL */ }
+
+        const resp = await fetch(zipUrl);
         if (!resp.ok) throw new Error(`game.zip fetch failed: ${resp.status}`);
         const buf = await resp.arrayBuffer();
         pyodide.FS.mkdir('/game');

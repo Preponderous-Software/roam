@@ -1,9 +1,9 @@
 import os
+import sys
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
 
-import sys
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
