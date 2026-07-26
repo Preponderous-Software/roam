@@ -1,5 +1,12 @@
+import os
+
 from rendering.renderer import Renderer
-from rendering.textRenderer import TextRenderer, _buildDiff
+from rendering.textRenderer import (
+    _GLYPH_COLORS,
+    _GLYPHS,
+    TextRenderer,
+    _buildDiff,
+)
 from textDemo import renderMainMenu
 
 
@@ -319,6 +326,50 @@ def test_load_image_known_terrain_glyphs():
     assert renderer.loadImage("grass.png") == "."
     assert renderer.loadImage("stone.png") == "#"
     assert renderer.loadImage("oakwood.png") == "T"
+
+
+def test_load_image_cave_assets_are_distinct_glyphs():
+    # Before this mapping the cave floor, the entrance leading down and the
+    # ladder leading up all fell back to "C", leaving a terminal player unable
+    # to find the way out of a cave.
+    renderer = TextRenderer()
+    caveFloor = renderer.loadImage("caveFloor.png")
+    caveEntrance = renderer.loadImage("caveEntrance.png")
+    caveLadder = renderer.loadImage("caveLadder.png")
+
+    assert caveEntrance == ">"  # roguelike convention: descend
+    assert caveLadder == "<"  # roguelike convention: ascend
+    assert len({caveFloor, caveEntrance, caveLadder}) == 3
+
+
+def test_load_image_ores_are_distinct_glyphs():
+    renderer = TextRenderer()
+    ores = {
+        renderer.loadImage("coalOre.png"),
+        renderer.loadImage("ironOre.png"),
+        renderer.loadImage("goldOre.png"),
+    }
+    assert renderer.loadImage("goldOre.png") == "$"
+    assert len(ores) == 3
+
+
+def test_every_shipped_asset_has_an_explicit_glyph():
+    # Guard against the first-letter fallback silently colliding for new
+    # assets (caveFloor/caveEntrance/caveLadder all became "C" this way).
+    # player_* sprites are handled by loadImage's own startswith branch.
+    unmapped = [
+        name
+        for name in os.listdir("assets/images")
+        if name.endswith(".png")
+        and not name.startswith("player")
+        and os.path.splitext(name)[0].lower() not in _GLYPHS
+    ]
+    assert unmapped == []
+
+
+def test_every_glyph_has_a_color():
+    uncolored = sorted({g for g in _GLYPHS.values() if g not in _GLYPH_COLORS})
+    assert uncolored == []
 
 
 def test_load_image_unknown_asset_falls_back_to_first_letter_uppercase():
