@@ -8,10 +8,12 @@ from entity.banana import Banana
 from entity.bearMeat import BearMeat
 from entity.bed import Bed
 from entity.campfire import Campfire
+from entity.chest import Chest
 from entity.chickenMeat import ChickenMeat
 from entity.coalOre import CoalOre
 from entity.fence import Fence
 from entity.food import Food
+from entity.goldOre import GoldOre
 from entity.grass import Grass
 from entity.ironOre import IronOre
 from entity.jungleWood import JungleWood
@@ -40,7 +42,9 @@ _logger = getLogger(__name__)
 # Simple entity classes that require no special constructor arguments
 _SIMPLE_ENTITY_CONSTRUCTORS = {
     "Apple": Apple,
+    "Chest": Chest,
     "CoalOre": CoalOre,
+    "GoldOre": GoldOre,
     "Grass": Grass,
     "IronOre": IronOre,
     "JungleWood": JungleWood,
