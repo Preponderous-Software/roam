@@ -2192,9 +2192,9 @@ class WorldScreen:
             if fallbackName is None and hasattr(entity, "getName"):
                 if isinstance(entity, Chest):
                     if entity.getStoredInventory().getNumItems() > 0:
-                        fallbackName = "Chest (contains items)"
+                        fallbackName = entity.getName() + " (contains items)"
                     else:
-                        fallbackName = "Chest (empty)"
+                        fallbackName = entity.getName() + " (empty)"
                 else:
                     fallbackName = entity.getName()
         if not livingDescribed and fallbackName is not None:
