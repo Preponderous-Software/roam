@@ -71,8 +71,8 @@ class ChestScreen(Screen):
         # it holds nothing (and is therefore safe to pick up) without scanning
         # the slots one by one (Nielsen #1, visibility of system status).
         if self.getChestInventory().getNumItems() == 0:
-            return "Chest (empty)"
-        return "Chest"
+            return self.chest.getName() + " (empty)"
+        return self.chest.getName()
 
     def switchToWorldScreen(self):
         self.nextScreen = ScreenType.WORLD_SCREEN

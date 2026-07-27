@@ -4,7 +4,11 @@ from entity.campfire import Campfire
 from entity.chest import Chest
 from entity.coalOre import CoalOre
 from entity.fence import Fence
+from entity.goldenLantern import GoldenLantern
+from entity.goldOre import GoldOre
 from entity.grass import Grass
+from entity.ironChest import IronChest
+from entity.ironOre import IronOre
 from entity.stone import Stone
 from entity.stoneBed import StoneBed
 from entity.stoneFloor import StoneFloor
@@ -91,6 +95,22 @@ class RecipeRegistry:
                 Torch,
                 "assets/images/torch.png",
                 2,
+            )
+        )
+        self.recipes.append(
+            Recipe(
+                "Iron Chest",
+                {Wood: 4, IronOre: 3},
+                IronChest,
+                "assets/images/ironChest.png",
+            )
+        )
+        self.recipes.append(
+            Recipe(
+                "Golden Lantern",
+                {Wood: 1, GoldOre: 2},
+                GoldenLantern,
+                "assets/images/goldenLantern.png",
             )
         )
 

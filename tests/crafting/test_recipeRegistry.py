@@ -1,5 +1,7 @@
 from src.crafting.recipeRegistry import RecipeRegistry
 from entity.coalOre import CoalOre
+from entity.goldOre import GoldOre
+from entity.ironOre import IronOre
 from entity.stone import Stone
 from entity.wood import Wood
 
@@ -72,3 +74,23 @@ def test_recipeRegistry_has_chest_recipe():
     recipe = chestRecipes[0]
     ingredients = recipe.getIngredients()
     assert ingredients == {Wood: 6}
+
+
+def test_recipeRegistry_has_iron_chest_recipe():
+    registry = RecipeRegistry()
+    recipes = registry.getRecipes()
+    ironChestRecipes = [r for r in recipes if r.getName() == "Iron Chest"]
+    assert len(ironChestRecipes) == 1
+    recipe = ironChestRecipes[0]
+    ingredients = recipe.getIngredients()
+    assert ingredients == {Wood: 4, IronOre: 3}
+
+
+def test_recipeRegistry_has_golden_lantern_recipe():
+    registry = RecipeRegistry()
+    recipes = registry.getRecipes()
+    lanternRecipes = [r for r in recipes if r.getName() == "Golden Lantern"]
+    assert len(lanternRecipes) == 1
+    recipe = lanternRecipes[0]
+    ingredients = recipe.getIngredients()
+    assert ingredients == {Wood: 1, GoldOre: 2}

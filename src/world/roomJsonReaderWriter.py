@@ -18,9 +18,11 @@ from entity.coalOre import CoalOre
 from entity.excrement import Excrement
 from entity.fence import Fence
 from entity.food import Food
+from entity.goldenLantern import GoldenLantern
 from entity.goldOre import GoldOre
 from entity.grass import Grass
 from entity.gravestone import Gravestone
+from entity.ironChest import IronChest
 from entity.ironOre import IronOre
 from entity.jungleWood import JungleWood
 from entity.leaves import Leaves
@@ -83,7 +85,9 @@ class RoomJsonReaderWriter:
             "Fence": Fence,
             "Campfire": Campfire,
             "Chest": Chest,
+            "IronChest": IronChest,
             "Torch": Torch,
+            "GoldenLantern": GoldenLantern,
             "WheatSeed": WheatSeed,
             "Wheat": Wheat,
         }

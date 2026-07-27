@@ -7,8 +7,10 @@ from entity.chest import Chest
 from entity.chickenMeat import ChickenMeat
 from entity.coalOre import CoalOre
 from entity.fence import Fence
+from entity.goldenLantern import GoldenLantern
 from entity.goldOre import GoldOre
 from entity.grass import Grass
+from entity.ironChest import IronChest
 from entity.ironOre import IronOre
 from entity.jungleWood import JungleWood
 from entity.leaves import Leaves
@@ -26,6 +28,7 @@ from entity.youngCrop import YoungCrop
 
 PICKUPABLE_TYPES = (
     Chest,
+    IronChest,
     OakWood,
     JungleWood,
     Leaves,
@@ -48,6 +51,7 @@ PICKUPABLE_TYPES = (
     Fence,
     Campfire,
     Torch,
+    GoldenLantern,
     WheatSeed,
     YoungCrop,
     MatureCrop,

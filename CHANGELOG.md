@@ -8,6 +8,7 @@ logged in detail below.
 
 | Date | Commits | Summary |
 |------|---------|---------|
+| 2026-07-26 | 1 | feat: give Iron Ore and Gold Ore a crafting payoff (#520) — both ores were minable, storable, save/load-safe, and Codex-discoverable, but no `Recipe` ever consumed either one, so the cave system's depth-scaled ore progression (coal → iron → gold) had no reward past Coal Ore needs. Added `IronChest` (`{Wood: 4, IronOre: 3}`, subclasses `Chest` so the existing empty-only pickup rule and world open/gather logic cover it for free) and `GoldenLantern` (`{Wood: 1, GoldOre: 2}`, subclasses `Torch` with a light radius of 10 vs. Torch's 6, so `worldScreen`'s generic `hasattr(entity, "getLightRadius")` lighting picks it up with no extra wiring). Registered both in `roomJsonReaderWriter`, `inventoryJsonReaderWriter`, `codex`, `pickupableEntities`, and `TextRenderer`'s glyph/color tables, and generalized `ChestScreen._chestTitle`/`worldScreen`'s chest status fallback to read `entity.getName()` instead of hardcoding "Chest" so the new variant's title displays correctly. +14 tests; 1069 passing |
 | 2026-07-26 | 1 | fix: cave-era entities missing from the inventory and text-glyph registries (#531, #532, #533) — three registries never picked up the entities the cave system added. `Chest` was in `PICKUPABLE_TYPES` and `canBePickedUp` deliberately allows an *empty* chest to be gathered, but `Chest` was absent from `inventoryJsonReaderWriter._SIMPLE_ENTITY_CONSTRUCTORS`, so `saveInventory` wrote `entityClass: "Chest"` (the schema's `entityClass` is an unconstrained string) and the next load raised `Unknown entity class: Chest` — an unloadable save from a supported action. `GoldOre` was spawned by the depth-scaled cave ore tables (`roomFactory.py`) and already wired into room persistence and the Codex, but was missing from *both* `PICKUPABLE_TYPES` and `_SIMPLE_ENTITY_CONSTRUCTORS`, making the Abyss's headline reward pure decoration. In `--text` mode `TextRenderer._GLYPHS` had no entry for `caveFloor`/`caveEntrance`/`caveLadder`, so `loadImage`'s first-letter fallback collapsed all three to an uncolored `C` and a terminal player could not find the ladder out of a cave; `goldOre` likewise fell back to `G`. Registered `Chest`/`GoldOre` in the inventory constructor map, added `GoldOre` to `PICKUPABLE_TYPES`, and mapped the four assets to distinct colored glyphs following the table's own convention (`` ` `` cave floor, `>` descend / `<` ascend per the roguelike stair pair, `$` gold). +11 tests, including a parametrized guard that round-trips every `PICKUPABLE_TYPES` entry through save/load and a guard that every shipped asset has an explicit glyph, so these registries cannot silently drift again; 1063 passing |
 | 2026-07-25 | 2 | chore: merge origin/main into PR #518 to resolve conflicts; fix: address PR #518 review-thread follow-ups — merged the latest `main`, kept the corrupt-map-image startup recovery plus web cache/versioning fixes, then tightened the corrupt-map-image reopen path to eagerly load/copy/close the PIL image with error details in the warning and switched `web/build_zip.py` to incremental SHA-256 hashing. Targeted `pytest` + `black --check` revalidated the touched files |
 | 2026-07-23 | 1 | fix: web save writes now flush to IndexedDB during Pyodide play — `writeJsonAtomically()` now best-effort calls the worker's `syncSaves` bridge when the `js` module is available, so startup codex/goal saves and later autosaves actually reach IndexedDB for the Playwright save-persistence integration test. +2 regression tests for the bridge/no-regression path; `tests/test_jsonPersistence.py` + `black --check` passing |
@@ -1434,3 +1435,25 @@ about this repository, add it here so the next agent benefits.
   and stats behavior, not a repository-wide contributor convention for
   `.github/copilot-instructions.md`.
 - 2026-04-23: `[not yet integrated]` When searching for Clean Code naming issues, Python's built-in `type` is a common shadowing victim — any method parameter named `type` (as in `getNumItemsByType(self, type)`) silently hides the built-in. Rename to a descriptive name like `itemType`. Similarly, predicate methods that return bool should be named with `is`/`has` prefixes, not `if` (e.g., `ifCorner` → `isCorner`). When the same string-building expression appears in multiple methods, extract it into a single private helper rather than duplicating it.
+- 2026-07-26: `[not yet integrated]` A new furniture/light entity that should behave
+  like an existing one (e.g., a material variant of `Chest` or `Torch`) is cheapest to
+  wire by *subclassing* the base entity — `DrawableEntity.__init__`/`StorableInventory.__init__`
+  (or just `DrawableEntity.__init__` + overriding `self.lightRadius`) called directly with
+  the new name/image — rather than duplicating the base class. `worldScreen.py` and
+  `pickupableEntities.py` gate chest-open/pickup behavior on `isinstance(entity, Chest)`,
+  and the lighting code uses generic `hasattr(entity, "getLightRadius")`; a subclass
+  satisfies both with zero changes to that logic. Still needs registering the subclass in
+  `roomJsonReaderWriter`, `inventoryJsonReaderWriter`, `codex`, `pickupableEntities`, and
+  `TextRenderer`'s glyph/color tables — subclassing only avoids duplicating *behavior*,
+  not persistence/discovery wiring.
+- 2026-07-26: `[not yet integrated]` This sandbox's default `python3` is 3.8.10 (too old
+  to parse a parenthesized multi-context-manager `with` statement, Python 3.10+ syntax,
+  present in `tests/mapimage/test_mapImageGenerator.py`), and a `python3.11` interpreter
+  exists at `/root/.local/bin/python3.11` but invoking any binary other than plain
+  `python3`/`git`/`gh` requires interactive approval that a headless run cannot obtain —
+  including prefixing the allowed `python3 -m pytest` with an inline `VAR=value` env
+  assignment, which is itself treated as a different, unapproved command. Plain
+  `python3 -m pytest -q --ignore=tests/mapimage/test_mapImageGenerator.py` runs
+  headlessly without issue (`tests/conftest.py` already sets the SDL dummy drivers via
+  `os.environ.setdefault`, so the env-var prefix isn't even needed locally); rely on CI
+  (Python 3.12) as the anchor for full-suite coverage including that one file.
