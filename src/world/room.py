@@ -4,9 +4,8 @@ from entity.excrement import Excrement
 from entity.grass import Grass
 from entity.matureCrop import MatureCrop
 from entity.youngCrop import YoungCrop
-from entity.living.bear import Bear
-from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
+from entity.living.npc import Npc
 from entity.stoneFloor import StoneFloor
 from entity.woodFloor import WoodFloor
 from lib.pyenvlib.environment import Environment
@@ -14,6 +13,8 @@ from rendering.renderer import Renderer
 from gameLogging.logger import getLogger
 
 _logger = getLogger(__name__)
+
+_IMAGE_CACHE_MAX = 512
 
 
 # @author Daniel McCoy Stephenson
@@ -87,6 +88,8 @@ class Room(Environment):
             scaledHeight = int(height)
             cacheKey = (imagePath, scaledWidth, scaledHeight)
             if cacheKey not in Room._scaledImageCache:
+                if len(Room._scaledImageCache) >= _IMAGE_CACHE_MAX:
+                    del Room._scaledImageCache[next(iter(Room._scaledImageCache))]
                 image = self.renderer.loadImage(imagePath)
                 Room._scaledImageCache[cacheKey] = self.renderer.scaleImage(
                     image, (scaledWidth, scaledHeight)
@@ -132,11 +135,13 @@ class Room(Environment):
     def moveLivingEntities(self, tick) -> list:
         entitiesToMoveToNewRoom = []
         for entityId in self.livingEntities:
+            entity = self.livingEntities[entityId]
+            # NPCs are driven by NpcManager — skip them here
+            if isinstance(entity, Npc):
+                continue
             # 1% chance to skip
             if random.randrange(1, 101) > 1:
                 continue
-
-            entity = self.livingEntities[entityId]
             locationId = entity.getLocationID()
             if locationId == -1:
                 continue
@@ -169,6 +174,8 @@ class Room(Environment):
         reproductionCooldown = minAgeToReproduce / 2  # 2.5 minutes
         for entityId in self.livingEntities:
             entity = self.livingEntities[entityId]
+            if isinstance(entity, Npc):
+                continue
             locationId = entity.getLocationID()
             if not self._isEntityReadyToReproduce(
                 entity, tick, minAgeToReproduce, locationId
@@ -356,20 +363,14 @@ class Room(Environment):
         return True
 
     def _setDefaultEntityImage(self, entity):
-        if isinstance(entity, Chicken):
-            entity.setImagePath("assets/images/chicken.png")
-        elif isinstance(entity, Bear):
-            entity.setImagePath("assets/images/bear.png")
+        path = entity.getDefaultImagePath()
+        if path is not None:
+            entity.setImagePath(path)
 
     def _setReproductionCooldownImage(self, entity):
-        if isinstance(entity, Chicken):
-            entity.setImagePath("assets/images/chickenOnReproductionCooldown.png")
-        elif isinstance(entity, Bear):
-            entity.setImagePath("assets/images/bearOnReproductionCooldown.png")
+        path = entity.getReproductionCooldownImagePath()
+        if path is not None:
+            entity.setImagePath(path)
 
     def _createOffspring(self, entity, tick):
-        if isinstance(entity, Bear):
-            return Bear(tick)
-        if isinstance(entity, Chicken):
-            return Chicken(tick)
-        return None
+        return entity.createOffspring(tick)

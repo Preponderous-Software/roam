@@ -29,6 +29,7 @@ class KeyCode(IntEnum):
     I = 105
     L = 108
     M = 109
+    N = 110
     P = 112
     R = 114
     S = 115
@@ -64,6 +65,7 @@ class KeyCode(IntEnum):
 
     # function / special
     F1 = 1073741882
+    F2 = 1073741883
     F3 = 1073741884
     PRINTSCREEN = 1073741894
     LEFTBRACKET = 91
@@ -91,6 +93,7 @@ _DISPLAY_NAMES = {
     KeyCode.I: "i",
     KeyCode.L: "l",
     KeyCode.M: "m",
+    KeyCode.N: "n",
     KeyCode.P: "p",
     KeyCode.S: "s",
     KeyCode.T: "t",

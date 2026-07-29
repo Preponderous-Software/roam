@@ -71,6 +71,7 @@ def writeJsonAtomically(path, data, indent=4):
         return
 
     # Rename failed (e.g. OPFS in Pyodide): clean up temp file, write directly.
+
     try:
         os.remove(tempPath)
     except OSError:

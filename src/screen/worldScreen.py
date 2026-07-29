@@ -11,6 +11,8 @@ from entity.chickenMeat import ChickenMeat
 from entity.living.bear import Bear
 from entity.living.chicken import Chicken
 from entity.living.livingEntity import LivingEntity
+from entity.living.npc import Npc
+from npc.npcManager import NpcManager
 from codex.codex import Codex, ENTITY_DISPLAY_NAMES
 from codex.codexJsonReaderWriter import CodexJsonReaderWriter
 from inventory.inventoryJsonReaderWriter import InventoryJsonReaderWriter
@@ -137,6 +139,7 @@ class WorldScreen:
         self._isCrouching = False
         self.startingHomeGenerator = StartingHomeGenerator()
         self.currentZ = 0
+        self.npcManager = NpcManager(config)
 
     def initialize(self):
         self.map = self.container.resolve(Map)
@@ -161,6 +164,11 @@ class WorldScreen:
                     self.currentRoom.addEntityToLocation(self.player, spawnLocation)
                 else:
                     self.currentRoom.addEntity(self.player)
+                if self.config.npcEnabled:
+                    for _ in range(self.config.npcCount):
+                        self.npcManager.spawnNpc(
+                            self.currentRoom, self.tickCounter.getTick()
+                        )
             else:
                 self.currentRoom.addEntity(self.player)
 
@@ -1160,6 +1168,11 @@ class WorldScreen:
         elif key == kb.getKey("codex"):
             self.nextScreen = ScreenType.CODEX_SCREEN
             self.changeScreen = True
+        elif key == kb.getKey("toggle_npc_mode") or key == kb.getKey(
+            "alt_toggle_npc_mode"
+        ):
+            self.npcManager.toggleMode()
+            self.status.set("NPC mode: " + self.npcManager.getModeDisplay())
         elif key == kb.getKey("hotbar_cycle_left"):
             current = self.player.getInventory().getSelectedInventorySlotIndex()
             self.changeSelectedInventorySlot((current - 1) % 10)
@@ -2176,7 +2189,12 @@ class WorldScreen:
             entity = location.getEntity(entityId)
             if isinstance(entity, LivingEntity):
                 statusString = entity.getName()
-                if self.config.debug:
+                if isinstance(entity, Npc):
+                    state, goal = self.npcManager.getBehaviorInfo(entity)
+                    statusString += f" [{self.npcManager.getModeDisplay()}:{state}]"
+                    if goal:
+                        statusString += f" — {goal}"
+                elif self.config.debug:
                     # include energy and age
                     statusString += (
                         " (energy="
@@ -2282,7 +2300,7 @@ class WorldScreen:
                 )
                 toRemove.append(livingEntityId)
                 continue
-            if livingEntity.getEnergy() == 0:
+            if livingEntity.isDead():
                 toRemove.append(livingEntityId)
 
         for livingEntityId in toRemove:
@@ -2291,9 +2309,13 @@ class WorldScreen:
                 self.currentRoom.removeLivingEntityById(livingEntityId)
                 continue
 
+            # drop NPC inventory before removing it
+            if isinstance(livingEntity, Npc):
+                self.npcManager.dropInventoryAtDeath(livingEntity, self.currentRoom)
+
             # spawn meat at the living entity's location before removing it
             locationId = livingEntity.getLocationID()
-            if str(locationId) != "-1":
+            if str(locationId) != "-1" and not isinstance(livingEntity, Npc):
                 try:
                     location = self.currentRoom.getGrid().getLocation(locationId)
                     if isinstance(livingEntity, Chicken):
@@ -2317,6 +2339,34 @@ class WorldScreen:
                 entityName=livingEntity.getName(),
                 roomName=self.currentRoom.getName(),
             )
+
+        self.npcManager.cleanupDeadNpcs(self.currentRoom)
+        if self.config.npcEnabled:
+            self._cleanupDeadNpcsInRadius()
+
+    def _cleanupDeadNpcsInRadius(self):
+        """Remove dead NPCs from off-screen rooms in the simulation radius."""
+        radius = self.config.npcSimulationRadius
+        for dx in range(-radius, radius + 1):
+            for dy in range(-radius, radius + 1):
+                if dx == 0 and dy == 0:
+                    continue
+                room = self.map.getRoom(
+                    self.currentRoom.getX() + dx,
+                    self.currentRoom.getY() + dy,
+                    self.currentZ,
+                )
+                if room == -1 or room is None:
+                    continue
+                for entityId in list(room.getLivingEntities().keys()):
+                    entity = room.getLivingEntities().get(entityId)
+                    if entity is None or not isinstance(entity, Npc):
+                        continue
+                    if entity.isDead():
+                        self.npcManager.dropInventoryAtDeath(entity, room)
+                        room.removeEntity(entity)
+                        room.removeLivingEntity(entity)
+                self.npcManager.cleanupDeadNpcs(room)
 
     def save(self):
         """Submit save operations to the background thread.
@@ -2468,6 +2518,18 @@ class WorldScreen:
                 self.saveRoomToFileAsync(newRoom)
 
         self.currentRoom.reproduceLivingEntities(self.tickCounter.getTick())
+        if self.config.npcEnabled:
+            dirtyRooms = self.npcManager.tickActiveRooms(
+                self.map,
+                self.currentRoom.getX(),
+                self.currentRoom.getY(),
+                self.currentZ,
+                self.config.npcSimulationRadius,
+                self.tickCounter.getTick(),
+            )
+            for room in dirtyRooms:
+                if room is not self.currentRoom:
+                    self.saveRoomToFileAsync(room)
 
     def _updateGoals(self):
         # Re-evaluate goals; announce and persist any fresh completions.

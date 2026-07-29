@@ -16,3 +16,12 @@ class Bear(LivingEntity):
             [Chicken, Player],
             tickCreated,
         )
+
+    def getDefaultImagePath(self):
+        return "assets/images/bear.png"
+
+    def getReproductionCooldownImagePath(self):
+        return "assets/images/bearOnReproductionCooldown.png"
+
+    def createOffspring(self, tick):
+        return Bear(tick)

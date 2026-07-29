@@ -314,6 +314,12 @@ class Config:
         )  # 30 minutes at the configured ticksPerSecond
         self.pushableStone = self.getBoolValue(configValues, "pushableStone", True)
         self.checkForUpdates = self.getBoolValue(configValues, "checkForUpdates", True)
+        self.npcEnabled = self.getBoolValue(configValues, "npcEnabled", True)
+        self.npcCount = self.getIntValue(configValues, "npcCount", 1)
+        self.npcMode = self.getStringValue(configValues, "npcMode", "npc")
+        self.npcSimulationRadius = self.getIntValue(
+            configValues, "npcSimulationRadius", 1
+        )
 
         _logger.debug(
             "config loaded",

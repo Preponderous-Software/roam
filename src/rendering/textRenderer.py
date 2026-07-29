@@ -36,6 +36,11 @@ _GLYPHS = {
     "rabbit": "r",
     "chicken": "c",
     "chickenonreproductioncooldown": "c",
+    "npc": "N",
+    "npc_down": "N",
+    "npc_up": "N",
+    "npc_left": "N",
+    "npc_right": "N",
     # items / food
     "bearmeat": "%",
     "chickenmeat": "%",
@@ -83,6 +88,7 @@ _GLYPH_COLORS = {
     "d": 33,  # deer          — yellow
     "r": 37,  # rabbit        — white
     "c": 37,  # chicken       — white
+    "N": 36,  # NPC           — cyan
     "%": 31,  # meat          — red
     "a": 91,  # apple         — bright red
     "b": 93,  # banana        — bright yellow

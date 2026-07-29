@@ -51,6 +51,8 @@ class KeyBindings:
         "toggle_help": KeyCode.F1,
         "alt_toggle_help": KeyCode.H,
         "codex": KeyCode.L,
+        "toggle_npc_mode": KeyCode.F2,
+        "alt_toggle_npc_mode": KeyCode.N,
     }
 
     ACTION_LABELS = {
@@ -93,6 +95,8 @@ class KeyBindings:
         "toggle_help": "Toggle Help",
         "alt_toggle_help": "Toggle Help (Alt)",
         "codex": "Codex",
+        "toggle_npc_mode": "Toggle NPC/CPC Mode",
+        "alt_toggle_npc_mode": "Toggle NPC/CPC Mode (Alt)",
     }
 
     CONFIG_PREFIX = "key_"
