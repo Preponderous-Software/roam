@@ -57,6 +57,20 @@ def test_toggle_resumes_after_the_cooldown_elapses(resolve):
     assert screen.config.debug is False
 
 
+def test_check_for_updates_is_a_toggleable_setting(resolve):
+    screen = resolve(ConfigScreen)
+
+    attributes = [attribute for _, attribute in screen._toggleButtons]
+    assert "checkForUpdates" in attributes
+
+    screen.config.checkForUpdates = False
+    screen._lastToggleAt = 0.0
+
+    screen._toggleConfigAttribute("checkForUpdates")
+
+    assert screen.config.checkForUpdates is True
+
+
 def test_scroll_moves_cursor_and_clamps(resolve):
     screen = resolve(ConfigScreen)
 

@@ -97,7 +97,7 @@ class InventoryScreen(Screen):
         if key == kb.getKey("inventory") or key == KeyCode.ESCAPE:
             self.switchToWorldScreen()
             return
-        if key == kb.getKey("screenshot"):
+        if key == kb.getKey("screenshot") or key == kb.getKey("alt_screenshot"):
             self.renderer.captureScreenshot()
             return
         # When the craft panel is open, arrow keys / W S and Enter navigate recipes.

@@ -238,9 +238,12 @@ class ControlsScreen(Screen):
             return
         if key == KeyCode.ESCAPE:
             self.cancelAndReturn()
-        elif key in (KeyCode.UP, KeyCode.W):
+        # Navigation is arrow-keys-only here (both frontends decode them): S is
+        # reserved for save and W is left free for symmetry, per the on-screen
+        # hint below. A W/S alias would shadow the save branch entirely.
+        elif key == KeyCode.UP:
             self._cursor = max(0, self._cursor - 1)
-        elif key in (KeyCode.DOWN, KeyCode.S):
+        elif key == KeyCode.DOWN:
             actions = self.keyBindings.getActions()
             self._cursor = min(len(actions) - 1, self._cursor + 1)
         elif key in (KeyCode.RETURN, KeyCode.KP_ENTER, KeyCode.SPACE):

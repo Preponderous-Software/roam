@@ -267,3 +267,26 @@ def test_unmodeled_key_round_trips_as_raw_int(tmp_path, monkeypatch):
     reloaded = KeyBindings()
     reloaded.loadFromConfig(Config.readConfigFile())
     assert reloaded.getKey("inventory") == pygame.K_TAB
+
+
+def test_hotbar_cycle_bindings_are_rebindable_actions():
+    # Cycling used to compare against KeyCode.LEFTBRACKET/RIGHTBRACKET directly
+    # in worldScreen, which kept it out of the Controls screen and out of
+    # conflict detection.
+    kb = KeyBindings()
+    assert kb.getKey("hotbar_cycle_left") == KeyCode.LEFTBRACKET
+    assert kb.getKey("hotbar_cycle_right") == KeyCode.RIGHTBRACKET
+    assert "hotbar_cycle_left" in kb.getActions()
+    assert "hotbar_cycle_right" in kb.getActions()
+    assert kb.getLabel("hotbar_cycle_left") == "Hotbar Cycle Left"
+    assert kb.getLabel("hotbar_cycle_right") == "Hotbar Cycle Right"
+
+
+def test_hotbar_cycle_participates_in_conflict_detection():
+    kb = KeyBindings()
+    assert not kb.hasConflicts()
+
+    kb.setKey("hotbar_cycle_left", KeyCode.G)
+    conflicts = kb.getConflicts()
+    assert "hotbar_cycle_left" in conflicts
+    assert "gather" in conflicts

@@ -1,0 +1,28 @@
+# Esc opens the in-world Options menu (optionsScreen.drawTitle() renders
+# "Menu", with "Quit to Main Menu" as the first, default-selected item); Esc
+# again closes it and returns to the world (optionsScreen.handleKeyDownEvent:
+# ESCAPE while not confirming -> switchToWorldScreen()).
+#
+# "Tick"/"TPS" already appeared once from the create-save lead-in below, so
+# re-`expect`ing them after closing the menu would trivially pass from
+# history without proving the world screen actually came back — resetBuffer
+# clears that history first so the final expect is genuine fresh evidence.
+expect Roam
+send enter
+expect Select Save
+send c
+expect Enter save name
+send {saveName} enter
+expect Tick timeout=15
+assertContains TPS
+send esc
+expect Quit to Main Menu
+assertContains Stats
+assertContains Inventory
+assertContains Controls
+assertContains Codex
+assertContains Back
+resetBuffer
+send esc
+expect Tick timeout=10
+assertContains TPS

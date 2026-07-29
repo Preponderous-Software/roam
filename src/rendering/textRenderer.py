@@ -17,6 +17,7 @@ _GLYPHS = {
     "stone": "#",
     "stonefloor": "-",
     "woodfloor": "_",
+    "cavefloor": "`",
     "fence": "|",
     # flora
     "oakwood": "T",
@@ -47,14 +48,20 @@ _GLYPHS = {
     "banana": "b",
     # furniture / structures
     "chest": "[",
+    "ironchest": "]",
     "gravestone": "+",
     "campfire": "^",
     "torch": "!",
+    "goldenlantern": "L",
     "bed": "=",
     "stonebed": "=",
+    # cave navigation (roguelike stair convention: > descends, < ascends)
+    "caveentrance": ">",
+    "caveladder": "<",
     # ores
     "coalore": "o",
     "ironore": "O",
+    "goldore": "$",
     # misc
     "excrement": "x",
 }
@@ -68,6 +75,7 @@ _GLYPH_COLORS = {
     "#": 37,  # stone         — white/light-gray
     "-": 90,  # stone floor   — dark gray
     "_": 33,  # wood floor    — yellow-brown
+    "`": 90,  # cave floor    — dark gray
     "|": 33,  # fence         — yellow-brown
     "T": 32,  # trees         — green
     "*": 32,  # leaves        — green
@@ -85,12 +93,17 @@ _GLYPH_COLORS = {
     "a": 91,  # apple         — bright red
     "b": 93,  # banana        — bright yellow
     "[": 33,  # chest         — yellow
+    "]": 37,  # iron chest    — white/light-gray
     "+": 37,  # gravestone    — white
     "^": 91,  # campfire      — bright red
     "!": 93,  # torch         — bright yellow
+    "L": 93,  # golden lantern — bright yellow
     "=": 36,  # bed           — cyan
+    ">": 97,  # cave entrance — bright white
+    "<": 97,  # ladder        — bright white
     "o": 90,  # coal ore      — dark gray
     "O": 37,  # iron ore      — white
+    "$": 93,  # gold ore      — bright yellow
     "x": 33,  # excrement     — yellow
 }
 

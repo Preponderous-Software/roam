@@ -43,6 +43,14 @@ class _Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
         self.send_header("Cross-Origin-Embedder-Policy", "require-corp")
         self.send_header("Cross-Origin-Resource-Policy", "same-origin")
+        path = getattr(self, "path", "") or ""
+        bare = path.split("?")[0]
+        if bare.endswith("game_version.txt"):
+            # Never cache — the Worker fetches this to get the current zip hash.
+            self.send_header("Cache-Control", "no-store")
+        elif any(bare.endswith(ext) for ext in (".zip", ".js")):
+            # Revalidate on every request so a new deploy is always picked up.
+            self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 
     def log_message(self, *args):

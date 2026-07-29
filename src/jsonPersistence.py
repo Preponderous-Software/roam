@@ -5,11 +5,25 @@
 # save interrupted mid-write must never destroy the previous good file.
 import json
 import os
+import sys
 import tempfile
 
 from gameLogging.logger import getLogger
 
 _logger = getLogger(__name__)
+
+
+def _syncBrowserSavesIfAvailable():
+    js = sys.modules.get("js")
+    if js is None:
+        return
+    syncSaves = getattr(js, "syncSaves", None)
+    if syncSaves is None:
+        return
+    try:
+        syncSaves()
+    except Exception as e:
+        _logger.warning("could not sync browser saves", error=str(e))
 
 
 def writeJsonAtomically(path, data, indent=4):
@@ -53,32 +67,18 @@ def writeJsonAtomically(path, data, indent=4):
         raise
 
     if _renamed:
-        _try_opfs_sync()
+        _syncBrowserSavesIfAvailable()
         return
 
-    # Rename failed (e.g. IDBFS in Pyodide): clean up temp file, write directly.
+    # Rename failed (e.g. OPFS in Pyodide): clean up temp file, write directly.
+
     try:
         os.remove(tempPath)
     except OSError:
         pass
     with open(path, "w") as f:
         json.dump(data, f, indent=indent)
-    _try_opfs_sync()
-
-
-def _try_opfs_sync():
-    """Fire-and-forget IDBFS flush when running inside Pyodide.
-
-    In a normal CPython process the ``js`` module doesn't exist and the import
-    silently fails — no overhead.  In Pyodide the call starts an async IndexedDB
-    write that completes on the next ``time.sleep()`` yield in the game loop.
-    """
-    try:
-        from js import syncSaves  # only resolvable inside a Pyodide Worker
-
-        syncSaves()
-    except Exception:
-        pass
+    _syncBrowserSavesIfAvailable()
 
 
 def readJsonFile(path, default=None):

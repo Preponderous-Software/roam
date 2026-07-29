@@ -1,7 +1,11 @@
 import os
+import sys
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
+
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -110,3 +114,13 @@ def test_writeJsonAtomically_preserves_good_file_when_serialization_fails(tmp_pa
     assert readJsonFile(path) == {"version": 1}
     leftovers = [name for name in os.listdir(str(tmp_path)) if name.endswith(".tmp")]
     assert leftovers == []
+
+
+def test_writeJsonAtomically_syncs_browser_saves_when_available(monkeypatch, tmp_path):
+    path = str(tmp_path / "out.json")
+    syncSaves = MagicMock()
+    monkeypatch.setitem(sys.modules, "js", SimpleNamespace(syncSaves=syncSaves))
+
+    writeJsonAtomically(path, {"ok": True})
+
+    syncSaves.assert_called_once_with()

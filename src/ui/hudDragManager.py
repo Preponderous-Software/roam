@@ -109,3 +109,39 @@ class HudDragManager:
         self.handleMouseMotion(mouseX, mouseY, screenWidth, screenHeight)
         self.dragging = None
         return True
+
+    def save(self, config):
+        """Persist every registered element's offset to config.yml, following
+        the same key-per-value pattern as Config.saveWindowSize()."""
+        savedValues = {}
+        for name, element in self.elements.items():
+            savedValues["hudOffset_" + name + "_x"] = str(int(element.offsetX))
+            savedValues["hudOffset_" + name + "_y"] = str(int(element.offsetY))
+        config._writeKeyValues(savedValues, "failed to save HUD layout to config file")
+
+    def load(self, configValues, screenWidth, screenHeight):
+        """Restore offsets for every registered element from config values
+        (as returned by Config.readConfigFile()). Elements with no saved
+        offset keep their current (default) position. Restored offsets are
+        re-clamped in case the screen size changed since they were saved."""
+        for name, element in self.elements.items():
+            rawX = configValues.get("hudOffset_" + name + "_x")
+            rawY = configValues.get("hudOffset_" + name + "_y")
+            if isinstance(rawX, bool) or not isinstance(rawX, (int, float)):
+                continue
+            if isinstance(rawY, bool) or not isinstance(rawY, (int, float)):
+                continue
+
+            defaultRect = element.rectFunc()
+            newX = defaultRect.x + rawX
+            newY = defaultRect.y + rawY
+            clampedX, clampedY = clampPosition(
+                newX,
+                newY,
+                defaultRect.width,
+                defaultRect.height,
+                screenWidth,
+                screenHeight,
+            )
+            element.offsetX = clampedX - defaultRect.x
+            element.offsetY = clampedY - defaultRect.y

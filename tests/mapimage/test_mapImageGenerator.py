@@ -86,3 +86,37 @@ def test_room_past_low_boundary_is_skipped(test_config, tmp_path):
     _paste(generator, ["-6_0.png"])
 
     generator.mapImage.paste.assert_not_called()
+
+
+def test_get_existing_map_image_loads_and_returns_copy(test_config, tmp_path):
+    generator = _createGenerator(test_config, tmp_path)
+
+    with patch("mapimage.mapImageGenerator.Image.open") as mockOpen:
+        contextImage = mockOpen.return_value.__enter__.return_value
+        contextImage.copy.return_value = "COPIED"
+
+        result = generator.getExistingMapImage()
+
+    assert result == "COPIED"
+    contextImage.load.assert_called_once_with()
+    contextImage.copy.assert_called_once_with()
+
+
+def test_get_existing_map_image_recreates_and_logs_error(test_config, tmp_path):
+    generator = _createGenerator(test_config, tmp_path)
+    error = OSError("bad png")
+
+    with (
+        patch("mapimage.mapImageGenerator.Image.open", side_effect=error),
+        patch.object(generator, "createNewMapImage", return_value="NEW") as mockCreate,
+        patch("mapimage.mapImageGenerator._logger.warning") as mockWarning,
+    ):
+        result = generator.getExistingMapImage()
+
+    assert result == "NEW"
+    mockCreate.assert_called_once_with()
+    mockWarning.assert_called_once_with(
+        "map image unreadable, recreating",
+        path=generator.getMapImagePath(),
+        error=str(error),
+    )
