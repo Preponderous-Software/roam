@@ -39,7 +39,9 @@ class StatsScreen(Screen):
     def handleKeyDownEvent(self, key):
         if key in (KeyCode.ESCAPE, KeyCode.RETURN, KeyCode.KP_ENTER):
             self.switchToOptionsScreen()
-        elif key == self.keyBindings.getKey("screenshot"):
+        elif key == self.keyBindings.getKey(
+            "screenshot"
+        ) or key == self.keyBindings.getKey("alt_screenshot"):
             self.renderer.captureScreenshot()
 
     def switchToOptionsScreen(self):

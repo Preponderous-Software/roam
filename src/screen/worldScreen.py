@@ -1084,7 +1084,7 @@ class WorldScreen:
             self._handleMovementKey(2)
         elif key == kb.getKey("move_right") or key == kb.getKey("alt_move_right"):
             self._handleMovementKey(3)
-        elif key == kb.getKey("screenshot"):
+        elif key == kb.getKey("screenshot") or key == kb.getKey("alt_screenshot"):
             result = self.renderer.captureScreenshot()
             self.status.set(
                 "Screenshot saved"
@@ -1160,10 +1160,10 @@ class WorldScreen:
         elif key == kb.getKey("codex"):
             self.nextScreen = ScreenType.CODEX_SCREEN
             self.changeScreen = True
-        elif key == KeyCode.LEFTBRACKET:
+        elif key == kb.getKey("hotbar_cycle_left"):
             current = self.player.getInventory().getSelectedInventorySlotIndex()
             self.changeSelectedInventorySlot((current - 1) % 10)
-        elif key == KeyCode.RIGHTBRACKET:
+        elif key == kb.getKey("hotbar_cycle_right"):
             current = self.player.getInventory().getSelectedInventorySlotIndex()
             self.changeSelectedInventorySlot((current + 1) % 10)
 
@@ -1654,7 +1654,7 @@ class WorldScreen:
                         f"{keyName('place')}  -  Interact / Place (facing tile)",
                         f"{keyName('look')}  -  Examine facing tile",
                         "1-0  -  Select hotbar slot",
-                        "[ ]  -  Cycle hotbar",
+                        f"{keyName('hotbar_cycle_left')} {keyName('hotbar_cycle_right')}  -  Cycle hotbar",
                         f"{keyName('inventory')}  -  Inventory",
                         f"{keyName('codex')}  -  Codex",
                     ],
@@ -1665,7 +1665,7 @@ class WorldScreen:
                         f"{keyName('toggle_minimap')}  -  Toggle minimap",
                         f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",
                         f"{keyName('alt_toggle_debug')}  -  Toggle debug info",
-                        f"{keyName('screenshot')}  -  Take screenshot (.txt)",
+                        f"{keyName('alt_screenshot')}  -  Take screenshot (.txt)",
                     ],
                 ),
                 (
@@ -1694,6 +1694,7 @@ class WorldScreen:
                         f"Middle Click  -  Drag HUD elements",
                         f"{keyName('look')}  -  Examine facing tile",
                         "1-0 / Scroll  -  Select hotbar slot",
+                        f"{keyName('hotbar_cycle_left')} {keyName('hotbar_cycle_right')}  -  Cycle hotbar",
                         f"{keyName('inventory')}  -  Inventory",
                         f"{keyName('codex')}  -  Codex",
                     ],
