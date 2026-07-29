@@ -36,6 +36,16 @@ def test_screenshot_key_captures_a_screenshot(resolve):
     assert screen.changeScreen is False
 
 
+def test_alt_screenshot_key_captures_a_screenshot(resolve):
+    # Print Screen never arrives from a terminal, so --text needs the ASCII alt.
+    screen = resolve(StatsScreen)
+
+    screen.handleKeyDownEvent(screen.keyBindings.getKey("alt_screenshot"))
+
+    screen.renderer.captureScreenshot.assert_called_once()
+    assert screen.changeScreen is False
+
+
 def test_draw_runs_through_the_stats_and_goals_path(resolve):
     # Headless smoke: the full stats/goals draw path must run without raising
     # against the renderer interface (drawStats + drawGoals + back button).

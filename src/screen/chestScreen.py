@@ -270,7 +270,7 @@ class ChestScreen(Screen):
         kb = self.keyBindings
         if key == kb.getKey("inventory") or key == KeyCode.ESCAPE:
             self.switchToWorldScreen()
-        elif key == kb.getKey("screenshot"):
+        elif key == kb.getKey("screenshot") or key == kb.getKey("alt_screenshot"):
             self.renderer.captureScreenshot()
         elif key == KeyCode.T:
             self.takeAll()

@@ -117,6 +117,46 @@ def test_active_conflicts_detects_a_pending_collision(resolve):
     assert "move_left" in conflicts
 
 
+def test_s_saves_pending_bindings_instead_of_moving_the_cursor(resolve):
+    # The on-screen hint advertises "S: save". A W/S navigation alias used to
+    # shadow this branch, leaving --text players (no mouse, so no Save button)
+    # with no way to persist a rebind at all.
+    screen = resolve(ControlsScreen)
+    screen.startRemap("move_up")
+    screen.handleKeyDownEvent(KeyCode.U)
+
+    screen.handleKeyDownEvent(KeyCode.S)
+
+    assert screen.keyBindings.getKey("move_up") == KeyCode.U
+    assert screen.pendingBindings is None
+    assert screen.changeScreen is True
+    assert screen._cursor == 0
+
+
+def test_s_does_not_save_while_a_conflict_is_unresolved(resolve):
+    screen = resolve(ControlsScreen)
+    screen.startRemap("move_up")
+    screen.handleKeyDownEvent(KeyCode.A)  # collides with move_left
+
+    screen.handleKeyDownEvent(KeyCode.S)
+
+    assert screen.keyBindings.getKey("move_up") == KeyCode.W
+    assert screen.pendingBindings is not None
+    assert screen.changeScreen is False
+
+
+def test_arrow_keys_navigate_the_binding_list(resolve):
+    screen = resolve(ControlsScreen)
+
+    screen.handleKeyDownEvent(KeyCode.DOWN)
+    assert screen._cursor == 1
+    screen.handleKeyDownEvent(KeyCode.UP)
+    assert screen._cursor == 0
+    # Already at the top — clamps rather than going negative.
+    screen.handleKeyDownEvent(KeyCode.UP)
+    assert screen._cursor == 0
+
+
 def test_cursor_moves_with_scroll(resolve):
     screen = resolve(ControlsScreen)
 

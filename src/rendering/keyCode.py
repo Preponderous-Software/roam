@@ -29,6 +29,7 @@ class KeyCode(IntEnum):
     I = 105
     L = 108
     M = 109
+    P = 112
     R = 114
     S = 115
     T = 116
@@ -90,6 +91,7 @@ _DISPLAY_NAMES = {
     KeyCode.I: "i",
     KeyCode.L: "l",
     KeyCode.M: "m",
+    KeyCode.P: "p",
     KeyCode.S: "s",
     KeyCode.T: "t",
     KeyCode.U: "u",

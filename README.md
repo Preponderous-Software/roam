@@ -26,7 +26,7 @@ Middle Mouse (drag) | Reposition a HUD element — hotbar, status, energy bar or
 F1 (or H) | Toggle controls help overlay
 F3 (or `\`) | Toggle debug info
 L | Open Codex
-Print Screen | Take screenshot
+Print Screen (or P) | Take screenshot
 Esc | Quit (main menu) / Open menu (world) / Go back (other screens)
 Left Mouse (outside inventory panel) | Drop entire cursor stack (inventory screen)
 Middle Mouse (outside inventory panel) | Drop single item from cursor (inventory screen)
@@ -36,7 +36,7 @@ Right Mouse (inventory slot) | Select inventory slot (inventory screen)
 >
 > **Tip:** On keyboards without F-keys (e.g. Android / Userland), use **H** for the help overlay and **`\`** for debug info.
 >
-> **Tip:** In text / terminal mode (`--text`), a terminal can't detect held keys, so use the toggles **R** (run) and **Z** (crouch) instead of holding Shift / Ctrl. The active state is shown in the status bar.
+> **Tip:** In text / terminal mode (`--text`), a terminal can't detect held keys, so use the toggles **R** (run) and **Z** (crouch) instead of holding Shift / Ctrl. The active state is shown in the status bar. A terminal also can't send Print Screen — use **P** to save a `.txt` screenshot instead.
 
 ## Download & Install (recommended)
 The easiest way to play Roam — no Python and no command line. Grab the latest build from the [Releases page](https://github.com/Preponderous-Software/roam/releases):
