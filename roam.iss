@@ -30,11 +30,17 @@ OutputBaseFilename=RoamSetup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+LicenseFile=LICENSE
 ; Install into the real Program Files (64-bit) so the standalone build lives
 ; with other applications. User data is stored under %APPDATA%\Roam, so the
 ; install directory can be read-only.
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
+; Let the user choose "install for all users" (admin, Program Files) or
+; "install for me only" (no elevation, {localappdata}) instead of forcing
+; UAC elevation. Silent installs (/VERYSILENT) are unaffected and keep the
+; PrivilegesRequired=admin default above.
+PrivilegesRequiredOverridesAllowed=dialog
 #if FileExists("src\media\icon.ico")
 SetupIconFile=src\media\icon.ico
 #endif
