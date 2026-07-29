@@ -93,7 +93,7 @@ To produce a setup wizard (a `RoamSetup.exe` that installs the game with Start M
 
 > "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" roam.iss
 
-This writes `installer-output\RoamSetup.exe`. Run it (or `RoamSetup.exe /VERYSILENT` for an unattended install) to install Roam into `Program Files`; user data is kept under `%APPDATA%\Roam`.
+This writes `installer-output\RoamSetup.exe`. Run it (or `RoamSetup.exe /VERYSILENT` for an unattended install, which installs into `Program Files`) to install Roam; the wizard lets you choose between installing for all users (`Program Files`, requires admin) or for yourself only (no elevation required). User data is kept under `%APPDATA%\Roam` either way.
 
 #### macOS
 On macOS the same spec produces an app bundle (`dist/Roam.app`). Build it, then wrap it in a disk image:
