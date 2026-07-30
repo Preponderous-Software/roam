@@ -31,6 +31,7 @@ def test_config(tmp_path):
     config.dayNightCycleLengthTicks = 54000
     config.cropGrowthTicks = 1800
     config.ticksPerSecond = 30
+    config.npcEnabled = False
     # Delegate to the real implementation so room-path construction reflects
     # the (possibly per-test overridden) pathToSaveDirectory.
     config.getRoomsDirectory = lambda: Config.getRoomsDirectory(config)
