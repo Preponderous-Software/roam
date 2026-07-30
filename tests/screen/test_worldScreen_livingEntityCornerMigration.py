@@ -23,6 +23,7 @@ def createWorldScreen(gridSize=3):
 
     config = Config()
     config.gridSize = gridSize
+    config.npcEnabled = False
     gameDisplay = pygame.display.set_mode((800, 600))
     graphik = MagicMock()
     graphik.getGameDisplay.return_value = gameDisplay
