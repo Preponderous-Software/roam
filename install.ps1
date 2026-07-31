@@ -128,16 +128,38 @@ function Get-IconPath {
     return $null
 }
 
+function Resolve-WindowlessPython {
+    param([string]$Python)
+
+    # The shortcut target needs the windowless counterpart of the resolved
+    # interpreter (pythonw.exe next to python.exe, or pyw.exe next to the py
+    # launcher) so the game doesn't trail a console window for the whole
+    # session. Both ship alongside their console counterpart on a standard
+    # python.org install.
+    $command = Get-Command $Python -ErrorAction SilentlyContinue
+    if (-not $command) {
+        return $null
+    }
+    $windowlessName = if ($Python -eq "py") { "pyw.exe" } else { "pythonw.exe" }
+    $windowlessPath = Join-Path (Split-Path -Parent $command.Source) $windowlessName
+    if (Test-Path $windowlessPath) {
+        return $windowlessPath
+    }
+    return $null
+}
+
 function New-RoamShortcut {
     param(
         [string]$ShortcutPath,
         [string]$TargetPath,
+        [string]$Arguments,
         [string]$IconPath
     )
 
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($ShortcutPath)
     $shortcut.TargetPath = $TargetPath
+    $shortcut.Arguments = $Arguments
     $shortcut.WorkingDirectory = $RepoRoot
     $shortcut.Description = "Launch Roam"
     if ($IconPath) {
@@ -147,23 +169,37 @@ function New-RoamShortcut {
 }
 
 function Create-Shortcuts {
-    param([string]$IconPath)
+    param(
+        [string]$IconPath,
+        [string]$Python
+    )
 
     Write-Step "Creating shortcuts"
 
-    $launcher = Join-Path $RepoRoot "run.bat"
-    if (-not (Test-Path $launcher)) {
-        Write-Host "Launcher run.bat was not found; skipping shortcut creation." -ForegroundColor Yellow
-        return
+    $windowlessPython = Resolve-WindowlessPython -Python $Python
+    if ($windowlessPython) {
+        $target = $windowlessPython
+        $arguments = '"' + (Join-Path $RepoRoot "src\roam.py") + '"'
+    } else {
+        # No windowless interpreter available; fall back to run.bat so the
+        # shortcut still works, at the cost of a trailing console window.
+        Write-Host "No windowless Python interpreter (pythonw.exe/pyw.exe) found; shortcuts will use run.bat and show a console window." -ForegroundColor Yellow
+        $launcher = Join-Path $RepoRoot "run.bat"
+        if (-not (Test-Path $launcher)) {
+            Write-Host "Launcher run.bat was not found; skipping shortcut creation." -ForegroundColor Yellow
+            return
+        }
+        $target = $launcher
+        $arguments = ""
     }
 
     $desktop = [Environment]::GetFolderPath("Desktop")
     $startMenu = [Environment]::GetFolderPath("Programs")
 
-    New-RoamShortcut -ShortcutPath (Join-Path $desktop "Roam.lnk") -TargetPath $launcher -IconPath $IconPath
+    New-RoamShortcut -ShortcutPath (Join-Path $desktop "Roam.lnk") -TargetPath $target -Arguments $arguments -IconPath $IconPath
     Write-Host "Created Desktop shortcut."
 
-    New-RoamShortcut -ShortcutPath (Join-Path $startMenu "Roam.lnk") -TargetPath $launcher -IconPath $IconPath
+    New-RoamShortcut -ShortcutPath (Join-Path $startMenu "Roam.lnk") -TargetPath $target -Arguments $arguments -IconPath $IconPath
     Write-Host "Created Start Menu shortcut."
 }
 
@@ -188,7 +224,7 @@ if (-not (Install-Dependencies -Python $python)) {
 }
 
 $iconPath = Get-IconPath -Python $python
-Create-Shortcuts -IconPath $iconPath
+Create-Shortcuts -IconPath $iconPath -Python $python
 
 Write-Step "Installation complete"
 Write-Host "Roam is installed. Launch it from the Desktop or Start Menu shortcut," -ForegroundColor Green

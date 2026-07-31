@@ -45,6 +45,19 @@ jobs:
           }
           Write-Host "Installer artifacts present: icon.ico, Desktop and Start Menu shortcuts."
 
+          # Shortcuts must target a windowless interpreter (pythonw.exe/pyw.exe),
+          # not run.bat, so the game doesn't trail a console window (#405).
+          $shell = New-Object -ComObject WScript.Shell
+          $desktopShortcut = $shell.CreateShortcut($desktop)
+          if ($desktopShortcut.TargetPath -notmatch '(pythonw|pyw)\.exe$') {
+              throw "Expected Desktop shortcut to target a windowless Python interpreter, got: $($desktopShortcut.TargetPath)"
+          }
+          $startMenuShortcut = $shell.CreateShortcut($startMenu)
+          if ($startMenuShortcut.TargetPath -notmatch '(pythonw|pyw)\.exe$') {
+              throw "Expected Start Menu shortcut to target a windowless Python interpreter, got: $($startMenuShortcut.TargetPath)"
+          }
+          Write-Host "Shortcuts target a windowless interpreter: $($desktopShortcut.TargetPath)"
+
       - name: Run tests on Windows
         shell: pwsh
         env:
