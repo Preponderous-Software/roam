@@ -25,6 +25,7 @@ C | Toggle camera follow mode
 Middle Mouse (drag) | Reposition a HUD element — hotbar, status, energy bar or minimap (saved between sessions)
 F1 (or H) | Toggle controls help overlay
 F3 (or `\`) | Toggle debug info
+F2 (or N) | Toggle NPC/CPC mode
 L | Open Codex
 Print Screen (or P) | Take screenshot
 Esc | Quit (main menu) / Open menu (world) / Go back (other screens)
