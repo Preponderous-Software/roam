@@ -34,9 +34,10 @@ def resolveBootTimeout(bootTimeout=None):
     alone can take tens of seconds under load) every boot-dependent test
     otherwise fails at 10s with an empty transcript.
 
-    A malformed or non-positive value falls back to the default rather than
-    raising: a typo in a shell export should not turn every playthrough into
-    a failure that reads like a game bug."""
+    A malformed or non-positive *env* value falls back to the default rather
+    than raising: a typo in a shell export should not turn every playthrough
+    into a failure that reads like a game bug. An explicit argument is taken
+    at face value — it's a per-call decision, so a deliberate 0 stays 0."""
     if bootTimeout is not None:
         return float(bootTimeout)
     raw = os.environ.get(BOOT_TIMEOUT_ENV_VAR)
