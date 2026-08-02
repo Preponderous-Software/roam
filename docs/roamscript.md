@@ -28,6 +28,39 @@ PASS/FAIL, exit code 0/1):
 python3 tests/integration/roamScript.py tests/integration/scripts/create_save_and_enter_world.roamscript
 ```
 
+## Boot timeout on a slow machine
+
+Every script starts by waiting for the game subprocess to import pygame, boot
+and paint its first screen. That wait defaults to **10 seconds**, tuned for
+the ubuntu CI runner. On a slower host it can be exceeded — and because
+nothing has been painted yet, the failure looks like an empty screen rather
+than a slow one:
+
+```
+timed out after 10.0s waiting for 'Roam'; child: still running, no stderr
+last output:
+```
+
+(The `child:` clause is there to tell "still booting" apart from a child that
+crashed — if the process died, its exit code and stderr are quoted instead.)
+
+Raise the budget for a whole `pytest` run with the `ROAM_TEST_BOOT_TIMEOUT`
+environment variable, in seconds:
+
+```
+ROAM_TEST_BOOT_TIMEOUT=60 python3 -m pytest tests/integration/ -q
+```
+
+It applies to the `TextPlaythrough` tests too, since both modules go through
+the same harness. For a single standalone script, `--boot-timeout N` does the
+same thing and takes precedence:
+
+```
+python3 tests/integration/roamScript.py --boot-timeout 60 tests/integration/scripts/boot_to_main_menu.roamscript
+```
+
+An individual step's own `timeout=N` always wins over both.
+
 ## Grammar
 
 Blank lines and lines starting with `#` are ignored. Every other line is

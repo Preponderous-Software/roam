@@ -194,10 +194,10 @@ def runScript(path, saveName=None, bootTimeout=None, verbose=False):
     `bootTimeout` overrides the default wait for the *first* `expect` (an
     individual step's own `timeout=N` always wins) — useful on machines
     slower to import/boot the game than the CI runner this default is
-    tuned for."""
+    tuned for. Leave it None to take the harness default, which itself
+    honours $ROAM_TEST_BOOT_TIMEOUT."""
     steps = loadScript(path)
-    playthroughKwargs = {} if bootTimeout is None else {"bootTimeout": bootTimeout}
-    with TextPlaythrough(saveName=saveName, **playthroughKwargs) as game:
+    with TextPlaythrough(saveName=saveName, bootTimeout=bootTimeout) as game:
         for step in steps:
             if verbose:
                 print("  %-18s %s" % (step.command, step.rest))
