@@ -21,6 +21,10 @@ cropGrowthTicks: 1800
 # Web frontend ports — change these if the defaults conflict with other services.
 webHttpPort: 8282
 webWsPort: 8766
+# Read-only REST API for external client tools (e.g. a world viewer). Opt-in;
+# disabled by default. Endpoints are documented in src/api/restApiServer.py.
+restEnabled: false
+restPort: 8090
 
 # dynamic (can be changed in game)
 debug: true

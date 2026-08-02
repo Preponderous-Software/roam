@@ -81,6 +81,22 @@ def test_create_random_room(resolve, test_config):
     assert room.getY() == 0
 
 
+def test_create_room_sets_room_type(resolve, test_config):
+    factory = createRoomFactory(resolve, test_config)
+
+    room = factory.createRoom(RoomType.GRASSLAND, 0, 0)
+
+    assert room.getRoomType() == RoomType.GRASSLAND
+
+
+def test_create_cave_room_sets_room_type(resolve, test_config):
+    factory = createRoomFactory(resolve, test_config)
+
+    room = factory.createCaveRoom(0, 0, -1)
+
+    assert room.getRoomType() == RoomType.CAVE
+
+
 def test_create_empty_room_color(resolve, test_config):
     factory = createRoomFactory(resolve, test_config)
 
