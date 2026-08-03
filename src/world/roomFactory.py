@@ -53,6 +53,7 @@ class RoomFactory:
             room = None
         if room is not None:
             self.lastRoomTypeCreated = roomType
+            room.setRoomType(roomType)
         _logger.debug(
             "room created",
             roomType=str(roomType),
@@ -166,6 +167,7 @@ class RoomFactory:
         bgIntensity = max(5, 30 - depth * 8)
         bgColor = (bgIntensity, max(3, bgIntensity - 4), max(2, bgIntensity - 6))
         room = self.createEmptyRoom(bgColor, x, y, z)
+        room.setRoomType(RoomType.CAVE)
         self._generateCaveTiles(room, depth)
         return room
 

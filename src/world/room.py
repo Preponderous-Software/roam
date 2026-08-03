@@ -30,9 +30,18 @@ class Room(Environment):
         self.z = z
         self.renderer = renderer
         self.livingEntities = dict()
+        # In-memory only (not persisted by RoomJsonReaderWriter); a room
+        # reloaded from a save file has this as None until regenerated.
+        self.roomType = None
 
     def getBackgroundColor(self):
         return self.backgroundColor
+
+    def getRoomType(self):
+        return self.roomType
+
+    def setRoomType(self, roomType):
+        self.roomType = roomType
 
     def getX(self):
         return self.x

@@ -18,6 +18,7 @@ from codex.codexJsonReaderWriter import CodexJsonReaderWriter
 from inventory.inventoryJsonReaderWriter import InventoryJsonReaderWriter
 from inventory.inventorySlot import InventorySlot
 from jsonPersistence import writeJsonAtomically
+from api.restApiServer import RestApiServer
 from mapimage.mapImageUpdater import MapImageUpdater
 from screen.pickupableEntities import canBePickedUp as _canBePickedUp
 from screen.screenType import ScreenType
@@ -106,6 +107,7 @@ class WorldScreen:
         self.persistence = self.container.resolve(WorldScreenPersistence)
         self.roomPreloader = self.container.resolve(RoomPreloader)
         self.mapImageUpdater = self.container.resolve(MapImageUpdater)
+        self.restApiServer = self.container.resolve(RestApiServer)
         self.hudDragManager = self.container.resolve(HudDragManager)
         self.codex = self.container.resolve(Codex)
         self.dayNightCycle = self.container.resolve(DayNightCycle)
@@ -143,6 +145,7 @@ class WorldScreen:
 
     def initialize(self):
         self.map = self.container.resolve(Map)
+        self.restApiServer.setMap(self.map)
         self.currentRoom = None
         shouldSaveNewWorld = False
 
@@ -2433,6 +2436,7 @@ class WorldScreen:
         self._saveExecutor = ThreadPoolExecutor(max_workers=1)
         self.roomPreloader.shutdown(wait=True)
         self.mapImageUpdater.shutdown(wait=True)
+        self.restApiServer.shutdown()
 
     def _processEvents(self):
         for event in self.inputSource.pollEvents():
@@ -2581,6 +2585,7 @@ class WorldScreen:
             self.mapImageUpdater.updateIfCooldownOver()
 
     def run(self):
+        self.restApiServer.start()
         while not self.changeScreen:
             self._processEvents()
             self._updateLivingEntities()

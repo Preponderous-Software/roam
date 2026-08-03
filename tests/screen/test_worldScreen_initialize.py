@@ -14,6 +14,7 @@ def _makeWorldScreen(test_config):
     ws.startingHomeGenerator = MagicMock()
     ws.player = MagicMock()
     ws.stats = MagicMock()
+    ws.restApiServer = MagicMock()
     ws.renderer = MagicMock(spec=Renderer)
     ws.renderer.getGameAreaRect.return_value = MagicMock(width=720, height=720)
     ws.renderer.getDisplaySize.return_value = (720, 720)

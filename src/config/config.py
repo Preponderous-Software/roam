@@ -289,6 +289,10 @@ class Config:
         )
         self.webHttpPort = self.getIntValue(configValues, "webHttpPort", 8080)
         self.webWsPort = self.getIntValue(configValues, "webWsPort", 8765)
+        # Read-only REST API for external client tools (issue #231). Opt-in and
+        # on a distinct port from the web frontend's webHttpPort above.
+        self.restEnabled = self.getBoolValue(configValues, "restEnabled", False)
+        self.restPort = self.getIntValue(configValues, "restPort", 8090)
 
         # dynamic (can be changed in game)
         self.debug = self.getBoolValue(configValues, "debug", True)

@@ -30,6 +30,20 @@ def test_get_background_color():
     assert room.getBackgroundColor() == (100, 200, 50)
 
 
+def test_room_type_defaults_to_none():
+    room = createRoom()
+
+    assert room.getRoomType() is None
+
+
+def test_set_room_type():
+    room = createRoom()
+
+    room.setRoomType("grassland")
+
+    assert room.getRoomType() == "grassland"
+
+
 def test_get_x():
     room = createRoom()
 
