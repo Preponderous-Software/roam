@@ -123,6 +123,22 @@ def test_get_room_by_coordinates_not_found(resolve, override_dependency, test_co
     assert "error" in payload
 
 
+def test_get_room_by_coordinates_cave_room(resolve, override_dependency, test_config):
+    server, _, _ = _createServer(resolve, override_dependency)
+    room = _makeRoom(0, 0, z=-1, roomType="cave", numEntities=0)
+    server.setMap(_makeMap([room]))
+
+    # z=0 should not find a cave room (z=-1)
+    status, _ = server.getRoomByCoordinates(0, 0, z=0)
+    assert status == 404
+
+    # z=-1 should find it
+    status, payload = server.getRoomByCoordinates(0, 0, z=-1)
+    assert status == 200
+    assert payload["z"] == -1
+    assert payload["roomType"] == "cave"
+
+
 def test_get_room_by_coordinates_returns_entities(
     resolve, override_dependency, test_config
 ):
@@ -274,6 +290,15 @@ def test_start_serves_endpoints_over_http(resolve, override_dependency, test_con
             {"x": 1, "y": 1, "z": 0, "roomType": "mountain", "numEntities": 0}
         ]
 
+        # query strings must not break routing
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}/api/v1/rooms?foo=bar", timeout=5
+        ) as response:
+            body = json.loads(response.read())
+        assert body == [
+            {"x": 1, "y": 1, "z": 0, "roomType": "mountain", "numEntities": 0}
+        ]
+
         with urllib.request.urlopen(
             f"http://127.0.0.1:{port}/api/v1/rooms/9/9", timeout=5
         ) as response:
@@ -285,6 +310,30 @@ def test_start_serves_endpoints_over_http(resolve, override_dependency, test_con
         server.shutdown()
 
     assert server.isRunning() is False
+
+
+def test_start_serves_cave_room_by_z_coordinate(
+    resolve, override_dependency, test_config
+):
+    test_config.restEnabled = True
+    test_config.restPort = 0
+    server, _, _ = _createServer(resolve, override_dependency)
+    surface_room = _makeRoom(0, 0, z=0, roomType="grassland")
+    cave_room = _makeRoom(0, 0, z=-1, roomType="cave")
+    server.setMap(_makeMap([surface_room, cave_room]))
+
+    server.start()
+    try:
+        port = server._httpServer.server_address[1]
+
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}/api/v1/rooms/0/0/-1", timeout=5
+        ) as response:
+            body = json.loads(response.read())
+        assert body["z"] == -1
+        assert body["roomType"] == "cave"
+    finally:
+        server.shutdown()
 
 
 def test_shutdown_without_start_is_a_noop(resolve, override_dependency, test_config):

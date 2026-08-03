@@ -1,6 +1,7 @@
 import json
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import urlparse
 
 from appContainer import component
 from config.config import Config
@@ -21,9 +22,9 @@ def _findRoomContainingEntity(rooms, environmentId):
     return None
 
 
-def _findRoomByCoordinates(rooms, x, y):
+def _findRoomByCoordinates(rooms, x, y, z=0):
     for room in rooms:
-        if room.getX() == x and room.getY() == y and room.getZ() == 0:
+        if room.getX() == x and room.getY() == y and room.getZ() == z:
             return room
     return None
 
@@ -121,68 +122,68 @@ class RestApiServer:
             return _NOT_INITIALIZED
         with self.map._lock:
             rooms = list(self.map.getRooms())
-        room = _findRoomContainingEntity(rooms, self.player.getEnvironmentID())
-        if room is None:
-            return _NOT_INITIALIZED
-        location = room.getGrid().getLocation(self.player.getLocationID())
-        return 200, {
-            "roomX": room.getX(),
-            "roomY": room.getY(),
-            "roomZ": room.getZ(),
-            "roomType": room.getRoomType(),
-            "tickCount": self.tickCounter.getTick(),
-            "playerLocation": {"x": location.getX(), "y": location.getY()},
-        }
+            room = _findRoomContainingEntity(rooms, self.player.getEnvironmentID())
+            if room is None:
+                return _NOT_INITIALIZED
+            location = room.getGrid().getLocation(self.player.getLocationID())
+            return 200, {
+                "roomX": room.getX(),
+                "roomY": room.getY(),
+                "roomZ": room.getZ(),
+                "roomType": room.getRoomType(),
+                "tickCount": self.tickCounter.getTick(),
+                "playerLocation": {"x": location.getX(), "y": location.getY()},
+            }
 
     def getRooms(self):
         if self.map is None:
             return _NOT_INITIALIZED
         with self.map._lock:
             rooms = list(self.map.getRooms())
-        return 200, [_serializeRoomSummary(room) for room in rooms]
+            return 200, [_serializeRoomSummary(room) for room in rooms]
 
-    def getRoomByCoordinates(self, x, y):
+    def getRoomByCoordinates(self, x, y, z=0):
         if self.map is None:
             return _NOT_INITIALIZED
         with self.map._lock:
             rooms = list(self.map.getRooms())
-        room = _findRoomByCoordinates(rooms, x, y)
-        if room is None:
-            return _NOT_FOUND
-        return 200, {
-            "x": room.getX(),
-            "y": room.getY(),
-            "z": room.getZ(),
-            "roomType": room.getRoomType(),
-            "entities": _collectEntities(room),
-        }
+            room = _findRoomByCoordinates(rooms, x, y, z)
+            if room is None:
+                return _NOT_FOUND
+            return 200, {
+                "x": room.getX(),
+                "y": room.getY(),
+                "z": room.getZ(),
+                "roomType": room.getRoomType(),
+                "entities": _collectEntities(room),
+            }
 
     def getPlayerStatus(self):
         if self.map is None or self.player.getEnvironmentID() == -1:
             return _NOT_INITIALIZED
         with self.map._lock:
             rooms = list(self.map.getRooms())
-        room = _findRoomContainingEntity(rooms, self.player.getEnvironmentID())
-        if room is None:
-            return _NOT_INITIALIZED
-        return 200, {
-            "energy": self.player.getEnergy(),
-            "direction": self.player.getDirection(),
-            "inventoryItemCount": self.player.getInventory().getNumItems(),
-            "roomX": room.getX(),
-            "roomY": room.getY(),
-            "roomZ": room.getZ(),
-        }
+            room = _findRoomContainingEntity(rooms, self.player.getEnvironmentID())
+            if room is None:
+                return _NOT_INITIALIZED
+            return 200, {
+                "energy": self.player.getEnergy(),
+                "direction": self.player.getDirection(),
+                "inventoryItemCount": self.player.getInventory().getNumItems(),
+                "roomX": room.getX(),
+                "roomY": room.getY(),
+                "roomZ": room.getZ(),
+            }
 
     def getEntities(self):
         if self.map is None:
             return _NOT_INITIALIZED
         with self.map._lock:
             rooms = list(self.map.getRooms())
-        entities = []
-        for room in rooms:
-            entities.extend(_collectEntities(room))
-        return 200, entities
+            entities = []
+            for room in rooms:
+                entities.extend(_collectEntities(room))
+            return 200, entities
 
 
 class _RestApiHTTPServer(HTTPServer):
@@ -203,19 +204,21 @@ class _RestApiRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         restApiServer = self.server.restApiServer
-        parts = [segment for segment in self.path.split("/") if segment]
+        path = urlparse(self.path).path
+        parts = [segment for segment in path.split("/") if segment]
         try:
             if parts == ["api", "v1", "world"]:
                 self._writeJson(*restApiServer.getWorldStatus())
             elif parts == ["api", "v1", "rooms"]:
                 self._writeJson(*restApiServer.getRooms())
-            elif len(parts) == 5 and parts[:3] == ["api", "v1", "rooms"]:
+            elif len(parts) in (5, 6) and parts[:3] == ["api", "v1", "rooms"]:
                 try:
                     x, y = int(parts[3]), int(parts[4])
+                    z = int(parts[5]) if len(parts) == 6 else 0
                 except ValueError:
                     self._writeJson(*_NOT_FOUND)
                 else:
-                    self._writeJson(*restApiServer.getRoomByCoordinates(x, y))
+                    self._writeJson(*restApiServer.getRoomByCoordinates(x, y, z))
             elif parts == ["api", "v1", "player"]:
                 self._writeJson(*restApiServer.getPlayerStatus())
             elif parts == ["api", "v1", "entities"]:
