@@ -22,11 +22,25 @@
 .PARAMETER NoLaunch
     Complete the install (dependencies, icon, shortcuts) but skip the
     "play now?" prompt and do not launch the game.
+
+.PARAMETER Uninstall
+    Undo what this wizard created: the Desktop/Start Menu shortcuts and the
+    generated icon.ico. Does not touch the cloned repository, the Python
+    installation, or (by default) your saves/settings under %APPDATA%\Roam.
+    Combine with -RemoveData to also delete that user data, or with
+    -NonInteractive to skip the confirmation prompt (user data is kept
+    unless -RemoveData is also given).
+
+.PARAMETER RemoveData
+    Only meaningful with -Uninstall. Also deletes %APPDATA%\Roam (saves,
+    config.yml, screenshots).
 #>
 
 param(
     [switch]$NonInteractive,
-    [switch]$NoLaunch
+    [switch]$NoLaunch,
+    [switch]$Uninstall,
+    [switch]$RemoveData
 )
 
 # Run from the directory this script lives in so relative paths resolve.
@@ -203,7 +217,86 @@ function Create-Shortcuts {
     Write-Host "Created Start Menu shortcut."
 }
 
+function Remove-RoamShortcuts {
+    # Symmetric with Create-Shortcuts: removes exactly the two shortcuts that
+    # function creates, if present.
+    $removed = @()
+
+    $desktopShortcut = Join-Path ([Environment]::GetFolderPath("Desktop")) "Roam.lnk"
+    if (Test-Path $desktopShortcut) {
+        Remove-Item $desktopShortcut -Force
+        $removed += "Desktop shortcut ($desktopShortcut)"
+    }
+
+    $startMenuShortcut = Join-Path ([Environment]::GetFolderPath("Programs")) "Roam.lnk"
+    if (Test-Path $startMenuShortcut) {
+        Remove-Item $startMenuShortcut -Force
+        $removed += "Start Menu shortcut ($startMenuShortcut)"
+    }
+
+    return $removed
+}
+
+function Remove-GeneratedIcon {
+    # Symmetric with Get-IconPath: removes the icon.ico that wizard generated
+    # from icon.PNG, if present. icon.PNG itself is a repo asset, not
+    # generated, so it is left alone.
+    $icoPath = Join-Path $RepoRoot "src\media\icon.ico"
+    if (Test-Path $icoPath) {
+        Remove-Item $icoPath -Force
+        return $icoPath
+    }
+    return $null
+}
+
+function Invoke-Uninstall {
+    Write-Step "Roam Windows uninstall wizard"
+
+    $removed = @()
+    $removed += Remove-RoamShortcuts
+
+    $icon = Remove-GeneratedIcon
+    if ($icon) {
+        $removed += "Generated icon ($icon)"
+    }
+
+    $dataDir = Join-Path $env:APPDATA "Roam"
+    $deleteData = $RemoveData
+    if ((-not $deleteData) -and (-not $NonInteractive) -and (Test-Path $dataDir)) {
+        $answer = Read-Host "Also delete your saves, settings, and screenshots at $dataDir ? (y/N)"
+        if ($answer -match '^(y|yes)$') {
+            $deleteData = $true
+        }
+    }
+
+    if (Test-Path $dataDir) {
+        if ($deleteData) {
+            Remove-Item $dataDir -Recurse -Force
+            $removed += "User data ($dataDir)"
+        } else {
+            Write-Host "Keeping user data at $dataDir (pass -RemoveData to delete it)."
+        }
+    }
+
+    Write-Step "Uninstall summary"
+    if ($removed.Count -eq 0) {
+        Write-Host "Nothing to remove; install.ps1's shortcuts and icon were not found."
+    } else {
+        foreach ($item in $removed) {
+            Write-Host "Removed: $item" -ForegroundColor Green
+        }
+    }
+    Write-Host ""
+    Write-Host "The cloned repository and your Python installation were left untouched."
+}
+
 # --- main -------------------------------------------------------------------
+
+if ($Uninstall) {
+    Invoke-Uninstall
+    Pause-IfInteractive
+    exit 0
+}
 
 Write-Step "Roam Windows installation wizard"
 Print-Version

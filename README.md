@@ -82,6 +82,11 @@ If you're [running from source](#run-from-source-for-developers) on Windows, `in
 
 If Python is not installed, the wizard opens the [Python download page](https://www.python.org/downloads/) for you — install it (make sure **Add python.exe to PATH** is checked) and run the wizard again.
 
+To undo what the wizard created (the Desktop/Start Menu shortcuts and the generated `icon.ico`), run it with `-Uninstall`:
+> powershell -ExecutionPolicy Bypass -File .\install.ps1 -Uninstall
+
+By default your saves/settings/screenshots under `%APPDATA%\Roam` are kept; you'll be asked whether to delete them too, or pass `-RemoveData` to delete them without asking. It does not touch the cloned repository or your Python installation. (The `RoamSetup.exe` installer registers its own uninstaller in Add/Remove Programs instead — this `-Uninstall` flag is only for the script-based wizard above.)
+
 ### Building a standalone executable (advanced)
 A self-contained Windows build that bundles Python and all dependencies can be produced with [PyInstaller](https://pyinstaller.org/):
 

@@ -58,6 +58,24 @@ jobs:
           }
           Write-Host "Shortcuts target a windowless interpreter: $($desktopShortcut.TargetPath)"
 
+      - name: Run the uninstall wizard (non-interactive) and verify cleanup
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          .\install.ps1 -Uninstall -NonInteractive -RemoveData
+          if (Test-Path "src/media/icon.ico") {
+              throw "Expected src/media/icon.ico to be removed by -Uninstall"
+          }
+          $desktop = Join-Path ([Environment]::GetFolderPath("Desktop")) "Roam.lnk"
+          if (Test-Path $desktop) {
+              throw "Expected Desktop shortcut to be removed by -Uninstall"
+          }
+          $startMenu = Join-Path ([Environment]::GetFolderPath("Programs")) "Roam.lnk"
+          if (Test-Path $startMenu) {
+              throw "Expected Start Menu shortcut to be removed by -Uninstall"
+          }
+          Write-Host "Uninstall removed icon.ico and both shortcuts."
+
       - name: Run tests on Windows
         shell: pwsh
         env:
