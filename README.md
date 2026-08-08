@@ -139,7 +139,7 @@ Linux / other | `saves/` | `config.yml` | `screenshots/`
 
 `%APPDATA%` is typically `C:\Users\<you>\AppData\Roaming`. The settings file is seeded from the shipped defaults the first time it is needed, so the version in the install directory is left untouched.
 
-You can override the save location by setting `pathToSaveDirectory` in `config.yml`, or the whole saves directory by setting the `ROAM_SAVE_DIR` environment variable — which takes precedence over everything above and is the hook to use when pointing a containerized deployment at a mounted volume.
+You can override the save location by setting `pathToSaveDirectory` in `config.yml`, or the whole saves directory by setting the `ROAM_SAVE_DIR` environment variable, which takes precedence over both `pathToSaveDirectory` and the table above. `ROAM_SAVE_DIR` applies to a server-side run of the game; saves made in the [browser build](#play-in-a-browser-from-source) are held by the browser, so it has no effect there.
 
 ## Support
 You can find the support discord server [here](https://discord.gg/49J4RHQxhy).
