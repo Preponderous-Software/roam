@@ -5,7 +5,7 @@ across the codebase.
 
 ## Configuration
 
-Logging behaviour is controlled by two environment variables:
+Logging behaviour is controlled by three environment variables:
 
 | Variable | Default | Description |
 |---|---|---|

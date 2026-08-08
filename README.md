@@ -56,13 +56,13 @@ Want the latest code, or to contribute? Run Roam from a clone. (To just play, us
 
 ### Install Dependencies
 3. If you don't have python installed, install it from [here](https://www.python.org/downloads/).
-4. Install pygame with the following command:
-> pip install pygame --pre
-5. Install rest of dependencies with the following command:
+4. Install the dependencies with the following command:
 > pip install -r requirements.txt
 
+`requirements.txt` covers everything the game needs — pygame included — as lower bounds rather than exact pins, so pip can pick wheels that match your Python version.
+
 ### Run
-6. Run the game with the following command:
+5. Run the game with the following command:
 > python src/roam.py
 
 Roam auto-detects whether a display is available. If no display server is found (e.g. SSH without X forwarding, Android Userland without XServer), it switches to **text / TUI mode** automatically — no extra flags needed. You can also force text mode explicitly:
@@ -70,6 +70,24 @@ Roam auto-detects whether a display is available. If no display server is found 
 
 ## Run Script (Linux Only)
 There is also a run.sh script you can execute if you're on linux which will automatically attempt to install the dependencies for you.
+
+## Play in a Browser (from source)
+Roam also runs in a browser. The Python game itself is executed client-side by [Pyodide](https://pyodide.org/) inside a Web Worker, so the server only ever hands out static files.
+
+1. Build the bundle the browser downloads (`web/game.zip`):
+> python3 web/build_zip.py
+2. Start the static file server:
+> python3 web/serve.py
+3. Open <http://localhost:8080/play>.
+
+Set `PORT` to serve somewhere else (`PORT=9000 python3 web/serve.py`). A plain `python -m http.server` will not do: the page allocates a `SharedArrayBuffer` to deliver input to the worker, which browsers only permit on a cross-origin-isolated page, and `web/serve.py` is what sends the required `Cross-Origin-Opener-Policy` / `Cross-Origin-Embedder-Policy` headers.
+
+A `Dockerfile` is included that does both steps and exposes port 8080:
+> docker build -t roam .
+>
+> docker run -p 8080:8080 roam
+
+Saves made in the browser live in that browser's own storage (an IndexedDB database named `roam-saves`), not on the server — clearing site data clears them. Re-run `web/build_zip.py` after changing anything under `src/` or `schemas/`, otherwise the worker keeps unpacking the previously built bundle.
 
 ## Windows setup script (run from source)
 If you're [running from source](#run-from-source-for-developers) on Windows, `install.ps1` is a setup *script* — the from-source counterpart to `run.sh`. It checks that Python and pip are available, installs the dependencies, and creates Desktop and Start Menu shortcuts so you can launch the game without using the command line. (For a normal install, use the `RoamSetup.exe` **installer** from [Download & Install](#download--install-recommended) instead — it needs no Python.)
@@ -111,12 +129,17 @@ On macOS the same spec produces an app bundle (`dist/Roam.app`). Build it, then 
 Open `Roam.dmg` and drag `Roam.app` to Applications. User data (saves, settings, screenshots) is kept under `~/Library/Application Support/Roam`.
 
 ### Where your data is stored
-On Windows, Roam keeps your user data under `%APPDATA%\Roam` (e.g. `C:\Users\<you>\AppData\Roaming\Roam`) so it stays with your account and works even when the game is installed to a read-only location like `Program Files`. This includes:
-- **Saves** — `%APPDATA%\Roam\saves`
-- **Settings** — `%APPDATA%\Roam\config.yml` (seeded from the shipped defaults on first run)
-- **Screenshots** — `%APPDATA%\Roam\screenshots`
+On Windows and macOS, Roam keeps your user data in a per-user directory so it stays with your account and works even when the game is installed somewhere read-only (`Program Files`, `/Applications`). On other platforms it stays next to the game.
 
-On Linux and macOS these stay next to the game (`saves/`, `config.yml`, `screenshots/`). You can override the save location by setting `pathToSaveDirectory` in `config.yml`.
+Platform | Saves | Settings | Screenshots
+------------ | ------------- | ------------- | -------------
+Windows | `%APPDATA%\Roam\saves` | `%APPDATA%\Roam\config.yml` | `%APPDATA%\Roam\screenshots`
+macOS | `~/Library/Application Support/Roam/saves` | `~/Library/Application Support/Roam/config.yml` | `~/Library/Application Support/Roam/screenshots`
+Linux / other | `saves/` | `config.yml` | `screenshots/`
+
+`%APPDATA%` is typically `C:\Users\<you>\AppData\Roaming`. The settings file is seeded from the shipped defaults the first time it is needed, so the version in the install directory is left untouched.
+
+You can override the save location by setting `pathToSaveDirectory` in `config.yml`, or the whole saves directory by setting the `ROAM_SAVE_DIR` environment variable — which takes precedence over everything above and is the hook to use when pointing a containerized deployment at a mounted volume.
 
 ## Support
 You can find the support discord server [here](https://discord.gg/49J4RHQxhy).
