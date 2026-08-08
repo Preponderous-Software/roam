@@ -68,6 +68,17 @@ Want the latest code, or to contribute? Run Roam from a clone. (To just play, us
 Roam auto-detects whether a display is available. If no display server is found (e.g. SSH without X forwarding, Android Userland without XServer), it switches to **text / TUI mode** automatically — no extra flags needed. You can also force text mode explicitly:
 > python src/roam.py --text
 
+### Command-line options
+Run `python src/roam.py --help` to print this list.
+
+Option | Effect
+------ | ------
+`--text` | Force text / TUI mode instead of the graphical frontend. Only needed to override a working display — text mode is selected automatically when none is available.
+`--selftest` | Start up, load assets/schemas/config, then exit without opening a window. Used to verify a packaged build (see [Building a standalone executable](#building-a-standalone-executable-advanced)).
+`-h`, `--help` | Print the usage summary and exit.
+
+Any other argument is rejected with an error and a non-zero exit status.
+
 ## Run Script (Linux Only)
 There is also a run.sh script you can execute if you're on linux which will automatically attempt to install the dependencies for you.
 

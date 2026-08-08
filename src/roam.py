@@ -2,6 +2,53 @@ import os
 import sys
 
 
+_USAGE_TEMPLATE = """Usage: {program} [OPTIONS]
+
+Roam - a procedurally generated 2D survival game.
+
+Options:
+  --text        Force text / TUI mode instead of the graphical frontend. Text
+                mode is selected automatically when no display is available,
+                so this is only needed to override a working display.
+  --selftest    Start up, load assets/schemas/config, then exit without opening
+                a window. Used to verify a packaged build.
+  -h, --help    Show this message and exit.
+"""
+
+# Flags main() acts on. --web is accepted but deliberately left out of the usage
+# text: it is broken end to end (see issue #550), and the supported way to play
+# in a browser is web/serve.py, documented in README.md.
+_KNOWN_FLAGS = frozenset({"--text", "--web", "--selftest", "--help", "-h"})
+
+
+def _programName(argv):
+    """Name to print in usage / error output — 'roam.py' from source, 'Roam.exe'
+    or 'Roam' from a packaged build."""
+    return os.path.basename(argv[0]) if argv and argv[0] else "roam.py"
+
+
+def _usage(argv):
+    return _USAGE_TEMPLATE.format(program=_programName(argv))
+
+
+def _wantsHelp(argv):
+    return "--help" in argv[1:] or "-h" in argv[1:]
+
+
+def _unknownArguments(argv):
+    """Return the arguments main() does not recognise, in the order given."""
+    unknown = []
+    for argument in argv[1:]:
+        if argument in _KNOWN_FLAGS:
+            continue
+        # macOS passes a process serial number to a launched .app bundle; it is
+        # not ours to reject.
+        if argument.startswith("-psn_"):
+            continue
+        unknown.append(argument)
+    return unknown
+
+
 # ---------------------------------------------------------------------------
 # Early display probe — must run before any import that pulls in the logger.
 # config.py and bootstrap.py both import gameLogging.logger at module level,
@@ -23,7 +70,10 @@ def _earlyDetectTextMode():
         return True
 
 
-if _earlyDetectTextMode() and os.environ.get("LOG_FILE") is None:
+if _wantsHelp(sys.argv):
+    # Printing usage must not initialise a display or create a log file.
+    pass
+elif _earlyDetectTextMode() and os.environ.get("LOG_FILE") is None:
     os.environ["LOG_FILE"] = "roam.log"
 
 # ---------------------------------------------------------------------------
@@ -268,6 +318,20 @@ def _shouldUseTextMode(argv):
 
 
 def main(argv):
+    # Argument handling comes before Config(), so usage is still available when
+    # configuration cannot be loaded.
+    if _wantsHelp(argv):
+        print(_usage(argv), end="")
+        return 0
+
+    unknown = _unknownArguments(argv)
+    if unknown:
+        program = _programName(argv)
+        for argument in unknown:
+            print(f"{program}: unrecognized argument: {argument}", file=sys.stderr)
+        print(_usage(argv), end="", file=sys.stderr)
+        return 2
+
     # Frozen executables start in an arbitrary working directory; make relative
     # asset/schema paths resolve against the bundle. No-op when run from source.
     prepareWorkingDirectory()
