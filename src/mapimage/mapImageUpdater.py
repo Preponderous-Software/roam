@@ -29,6 +29,20 @@ class MapImageUpdater:
             threading.Lock()
         )  # shared with WorldScreen to synchronize roompngs access
 
+    def getRoomImagePath(self, x, y, z=0):
+        """Where WorldScreen should write the capture of the room at
+        ``(x, y, z)``. Routed through the generator so the roompngs layout has
+        a single owner, in the same spirit as the shared roompngsLock."""
+        return self.mapImageGenerator.getRoomImagePath(x, y, z)
+
+    def getRoomImagesDirectoryPath(self):
+        return self.mapImageGenerator.getRoomImagesDirectoryPath()
+
+    def getMapImagePath(self, z=0):
+        """Where the stitched map for level ``z`` is written, and so where
+        WorldScreen's minimap should read it from."""
+        return self.mapImageGenerator.getMapImagePath(z)
+
     def updateIfCooldownOver(self):
         if (
             self.tickCounter.getTick() - self.tickLastUpdated
@@ -52,13 +66,16 @@ class MapImageUpdater:
         self.updateMapImageAsync()
 
     def _doUpdateMapImage(self):
-        """Perform the actual map image generation. Runs on a background thread."""
+        """Stitch every level that has captured rooms waiting, each into its own
+        map image. Runs on a background thread."""
         try:
             with self.roompngsLock:
-                image = self.mapImageGenerator.generate()
-                image.save(self.mapImageGenerator.getMapImagePath())
-                self.mapImageGenerator.clearRoomImages()
-            _logger.info("map image update completed")
+                levels = self.mapImageGenerator.getLevelsWithRoomImages()
+                for z in levels:
+                    image = self.mapImageGenerator.generate(z)
+                    image.save(self.mapImageGenerator.getMapImagePath(z))
+                    self.mapImageGenerator.clearRoomImages(z)
+            _logger.info("map image update completed", levels=levels)
         except Exception:
             _logger.exception("error updating map image")
         finally:

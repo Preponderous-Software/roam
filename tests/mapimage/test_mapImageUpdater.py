@@ -14,6 +14,16 @@ def _createUpdater(resolve, override_dependency, test_config, tmp_path):
     return updater, tickCounter
 
 
+def _mockGenerator(updater, levels=(0,)):
+    """Swap in a mock generator reporting `levels` as having captures waiting,
+    and return the image its generate() hands back."""
+    updater.mapImageGenerator = MagicMock()
+    updater.mapImageGenerator.getLevelsWithRoomImages.return_value = list(levels)
+    mockImage = MagicMock()
+    updater.mapImageGenerator.generate.return_value = mockImage
+    return mockImage
+
+
 def test_initialization(resolve, override_dependency, test_config, tmp_path):
     updater, _ = _createUpdater(resolve, override_dependency, test_config, tmp_path)
 
@@ -26,9 +36,7 @@ def test_update_map_image_async_runs_in_background(
     resolve, override_dependency, test_config, tmp_path
 ):
     updater, _ = _createUpdater(resolve, override_dependency, test_config, tmp_path)
-    updater.mapImageGenerator = MagicMock()
-    mockImage = MagicMock()
-    updater.mapImageGenerator.generate.return_value = mockImage
+    mockImage = _mockGenerator(updater)
 
     updater.updateMapImageAsync()
     updater.shutdown(wait=True)
@@ -42,9 +50,7 @@ def test_update_map_image_delegates_to_async(
     resolve, override_dependency, test_config, tmp_path
 ):
     updater, _ = _createUpdater(resolve, override_dependency, test_config, tmp_path)
-    updater.mapImageGenerator = MagicMock()
-    mockImage = MagicMock()
-    updater.mapImageGenerator.generate.return_value = mockImage
+    _mockGenerator(updater)
 
     updater.updateMapImage()
     updater.shutdown(wait=True)
@@ -56,9 +62,7 @@ def test_skips_if_update_already_in_progress(
     resolve, override_dependency, test_config, tmp_path
 ):
     updater, _ = _createUpdater(resolve, override_dependency, test_config, tmp_path)
-    updater.mapImageGenerator = MagicMock()
-    mockImage = MagicMock()
-    updater.mapImageGenerator.generate.return_value = mockImage
+    _mockGenerator(updater)
 
     # Simulate in-progress state
     updater._updateInProgress = True
@@ -74,9 +78,7 @@ def test_update_in_progress_flag_resets_after_completion(
     resolve, override_dependency, test_config, tmp_path
 ):
     updater, _ = _createUpdater(resolve, override_dependency, test_config, tmp_path)
-    updater.mapImageGenerator = MagicMock()
-    mockImage = MagicMock()
-    updater.mapImageGenerator.generate.return_value = mockImage
+    _mockGenerator(updater)
 
     updater.updateMapImageAsync()
     updater.shutdown(wait=True)
@@ -88,7 +90,7 @@ def test_update_in_progress_flag_resets_on_error(
     resolve, override_dependency, test_config, tmp_path
 ):
     updater, _ = _createUpdater(resolve, override_dependency, test_config, tmp_path)
-    updater.mapImageGenerator = MagicMock()
+    _mockGenerator(updater)
     updater.mapImageGenerator.generate.side_effect = RuntimeError("test error")
 
     updater.updateMapImageAsync()
@@ -104,9 +106,7 @@ def test_update_if_cooldown_over_triggers_when_past_cooldown(
     updater, tickCounter = _createUpdater(
         resolve, override_dependency, test_config, tmp_path
     )
-    updater.mapImageGenerator = MagicMock()
-    mockImage = MagicMock()
-    updater.mapImageGenerator.generate.return_value = mockImage
+    _mockGenerator(updater)
     updater.tickLastUpdated = 0
 
     # Simulate enough ticks passing
@@ -124,7 +124,7 @@ def test_update_if_cooldown_over_skips_when_within_cooldown(
     updater, tickCounter = _createUpdater(
         resolve, override_dependency, test_config, tmp_path
     )
-    updater.mapImageGenerator = MagicMock()
+    _mockGenerator(updater)
     updater.tickLastUpdated = 0
 
     # Only 100 ticks, cooldown is 300
@@ -161,6 +161,46 @@ def test_map_image_written_to_active_save_directory_after_change(
 
     assert (saveDir / "mapImage.png").is_file()
     assert not (startupDir / "mapImage.png").is_file()
+
+
+def test_every_level_with_captures_is_stitched_into_its_own_map_image(
+    resolve, override_dependency, test_config, tmp_path
+):
+    # #557: surface and cave captures at the same (x, y) used to land in one
+    # flat mapImage.png and overwrite each other. Each level now gets its own.
+    from PIL import Image
+
+    updater, _ = _createUpdater(resolve, override_dependency, test_config, tmp_path)
+    roompngs = tmp_path / "roompngs"
+    roompngs.mkdir()
+    Image.new("RGB", (10, 10), "green").save(str(roompngs / "0_0.png"))
+    Image.new("RGB", (10, 10), "gray").save(str(roompngs / "0_0_-1.png"))
+
+    updater._doUpdateMapImage()
+    updater.shutdown(wait=True)
+
+    assert (tmp_path / "mapImage.png").is_file()
+    assert (tmp_path / "mapImage_z-1.png").is_file()
+    # Every level's captures are consumed once stitched.
+    assert list(roompngs.iterdir()) == []
+
+
+def test_captures_are_not_stitched_into_another_levels_map(
+    resolve, override_dependency, test_config, tmp_path
+):
+    # A cave capture must leave the surface map untouched, and vice versa.
+    from PIL import Image
+
+    updater, _ = _createUpdater(resolve, override_dependency, test_config, tmp_path)
+    roompngs = tmp_path / "roompngs"
+    roompngs.mkdir()
+    Image.new("RGB", (10, 10), "gray").save(str(roompngs / "0_0_-1.png"))
+
+    updater._doUpdateMapImage()
+    updater.shutdown(wait=True)
+
+    assert (tmp_path / "mapImage_z-1.png").is_file()
+    assert not (tmp_path / "mapImage.png").exists()
 
 
 def test_shutdown(resolve, override_dependency, test_config, tmp_path):

@@ -121,6 +121,10 @@ class WorldScreen:
         self.minimapY = 5
         self._cachedMiniMapImage = None
         self._miniMapLastLoadTick = 0
+        # The level the cached minimap image belongs to, so descending or
+        # ascending forces a reload of that level's map instead of redrawing
+        # the previous level's.
+        self._miniMapCachedZ = 0
         # Tracks whether the last minimap-image load failed, so the failure is
         # logged once on the good->failed transition rather than every reload.
         self._miniMapLoadFailed = False
@@ -1309,24 +1313,26 @@ class WorldScreen:
         self.nextScreen = ScreenType.INVENTORY_SCREEN
         self.changeScreen = True
 
-    def isCurrentRoomSavedAsPNG(self):
-        path = (
-            self.config.pathToSaveDirectory
-            + "/roompngs/"
-            + str(self.currentRoom.getX())
-            + "_"
-            + str(self.currentRoom.getY())
-            + ".png"
+    def getCurrentRoomImagePath(self):
+        """Return where the current room's capture lives. The level is part of
+        the name so a cave room never overwrites the surface room above it."""
+        return self.mapImageUpdater.getRoomImagePath(
+            self.currentRoom.getX(), self.currentRoom.getY(), self.currentZ
         )
-        return os.path.isfile(path)
+
+    def isCurrentRoomSavedAsPNG(self):
+        return os.path.isfile(self.getCurrentRoomImagePath())
 
     def saveCurrentRoomAsPNG(self):
-        roomKey = (self.currentRoom.getX(), self.currentRoom.getY())
+        roomKey = (
+            self.currentRoom.getX(),
+            self.currentRoom.getY(),
+            self.currentZ,
+        )
         if roomKey in self._pngSavePending:
             return
 
-        if not os.path.exists(self.config.pathToSaveDirectory + "/roompngs"):
-            os.makedirs(self.config.pathToSaveDirectory + "/roompngs")
+        os.makedirs(self.mapImageUpdater.getRoomImagesDirectoryPath(), exist_ok=True)
 
         locationOfPlayer = self.currentRoom.getGrid().getLocation(
             self.player.getLocationID()
@@ -1346,14 +1352,7 @@ class WorldScreen:
         finally:
             self.renderer.setRenderTarget(originalTarget)
 
-        path = (
-            self.config.pathToSaveDirectory
-            + "/roompngs/"
-            + str(self.currentRoom.getX())
-            + "_"
-            + str(self.currentRoom.getY())
-            + ".png"
-        )
+        path = self.getCurrentRoomImagePath()
         self._pngSavePending.add(roomKey)
         self._saveExecutor.submit(self._saveSurfaceToDisk, offscreen, path, roomKey)
 
@@ -1381,7 +1380,13 @@ class WorldScreen:
         show ``.``. North is up (smaller y at the top)."""
         currentX = self.currentRoom.getX()
         currentY = self.currentRoom.getY()
-        knownRooms = {(room.getX(), room.getY()) for room in self.map.getRooms()}
+        # Restricted to the current level so exploring a cave never marks the
+        # surface room directly above it as explored.
+        knownRooms = {
+            (room.getX(), room.getY())
+            for room in self.map.getRooms()
+            if room.getZ() == self.currentZ
+        }
         dirArrows = {0: "^", 1: "<", 2: "v", 3: ">"}
         facing = dirArrows.get(self.player.getDirection(), "@")
         radius = self._TEXT_MINIMAP_RADIUS
@@ -1427,7 +1432,14 @@ class WorldScreen:
         if not self.renderer.supportsImageLoading():
             self._drawTextMinimap()
             return
-        mapImagePath = self.config.pathToSaveDirectory + "/mapImage.png"
+        # Each level has its own stitched map, so a change of level must drop
+        # the cached surface -- otherwise the previous level's image keeps being
+        # drawn after descending or ascending.
+        if self._miniMapCachedZ != self.currentZ:
+            self._cachedMiniMapImage = None
+            self._miniMapLoadFailed = False
+            self._miniMapCachedZ = self.currentZ
+        mapImagePath = self.mapImageUpdater.getMapImagePath(self.currentZ)
         if not os.path.isfile(mapImagePath):
             if self._cachedMiniMapImage is not None:
                 mapImage = self._cachedMiniMapImage
