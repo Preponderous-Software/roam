@@ -52,13 +52,16 @@ class MapImageUpdater:
         self.updateMapImageAsync()
 
     def _doUpdateMapImage(self):
-        """Perform the actual map image generation. Runs on a background thread."""
+        """Stitch every level that has captured rooms waiting, each into its own
+        map image. Runs on a background thread."""
         try:
             with self.roompngsLock:
-                image = self.mapImageGenerator.generate()
-                image.save(self.mapImageGenerator.getMapImagePath())
-                self.mapImageGenerator.clearRoomImages()
-            _logger.info("map image update completed")
+                levels = self.mapImageGenerator.getLevelsWithRoomImages()
+                for z in levels:
+                    image = self.mapImageGenerator.generate(z)
+                    image.save(self.mapImageGenerator.getMapImagePath(z))
+                    self.mapImageGenerator.clearRoomImages(z)
+            _logger.info("map image update completed", levels=levels)
         except Exception:
             _logger.exception("error updating map image")
         finally:

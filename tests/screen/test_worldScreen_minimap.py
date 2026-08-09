@@ -17,7 +17,9 @@ def _makeWorldScreen(test_config, tmp_path):
     ws.config = test_config
     ws._cachedMiniMapImage = None
     ws._miniMapLastLoadTick = 0
+    ws._miniMapCachedZ = 0
     ws._miniMapLoadFailed = False
+    ws.currentZ = 0
     ws.tickCounter = MagicMock()
     ws.tickCounter.getTick.return_value = 100  # >= 60 so a reload is due
     # Default the renderer to a failing load (tryLoadImage -> None); the failure
@@ -92,10 +94,11 @@ def test_successful_load_resets_failure_flag(test_config, tmp_path, monkeypatch)
     assert ws._miniMapLoadFailed is False
 
 
-def _makeRoom(x, y):
+def _makeRoom(x, y, z=0):
     room = MagicMock()
     room.getX.return_value = x
     room.getY.return_value = y
+    room.getZ.return_value = z
     return room
 
 
@@ -134,6 +137,64 @@ def test_text_minimap_rows_mark_known_rooms(test_config, tmp_path):
 
     # Center row: current room '>' at center, '#' for the known east neighbor.
     assert rows[2] == "..>#."
+
+
+def test_text_minimap_rows_ignore_rooms_on_other_levels(test_config, tmp_path):
+    # #557: visiting the cave room at (1, 0, -1) used to mark the surface room
+    # at (1, 0) as explored, because the known-room set had no z filter.
+    ws = _makeTextMinimapWorldScreen(test_config, tmp_path, direction=3)
+    ws.map.getRooms.return_value = [_makeRoom(0, 0), _makeRoom(1, 0, z=-1)]
+
+    rows = ws._buildTextMinimapRows()
+
+    assert rows[2] == "..>.."
+
+
+def test_text_minimap_rows_show_rooms_on_the_current_level_underground(
+    test_config, tmp_path
+):
+    ws = _makeTextMinimapWorldScreen(test_config, tmp_path, direction=3)
+    ws.currentZ = -1
+    # The surface neighbour is hidden; the cave neighbour on this level shows.
+    ws.map.getRooms.return_value = [
+        _makeRoom(0, 0, z=-1),
+        _makeRoom(1, 0),
+        _makeRoom(0, 1, z=-1),
+    ]
+
+    rows = ws._buildTextMinimapRows()
+
+    assert rows[2] == "..>.."
+    assert rows[3] == "..#.."
+
+
+def test_minimap_loads_the_current_levels_map_image(test_config, tmp_path):
+    ws = _makeWorldScreen(test_config, tmp_path)
+    ws.currentZ = -1
+    ws._miniMapCachedZ = -1
+    (tmp_path / "mapImage_z-1.png").write_text("not a valid png")
+
+    ws.drawMiniMap()
+
+    assert ws.renderer.tryLoadImage.call_args.args[0].endswith("mapImage_z-1.png")
+
+
+def test_changing_level_drops_the_cached_minimap_image(test_config, tmp_path):
+    # #557: without invalidation the surface map kept being drawn underground,
+    # because the cached surface is only reloaded every 60 ticks.
+    ws = _makeWorldScreen(test_config, tmp_path)
+    ws._cachedMiniMapImage = "SURFACE"
+    ws._miniMapLoadFailed = True
+    ws._miniMapLastLoadTick = 100  # inside the reload window
+    ws.currentZ = -1  # descended since the cache was filled
+
+    # No mapImage_z-1.png exists yet, so the draw bails out; what matters is
+    # that the stale surface frame was discarded rather than reused.
+    ws.drawMiniMap()
+
+    assert ws._cachedMiniMapImage is None
+    assert ws._miniMapCachedZ == -1
+    assert ws._miniMapLoadFailed is False
 
 
 def test_draw_text_minimap_renders_label_and_each_grid_row(test_config, tmp_path):
