@@ -9,6 +9,22 @@ from unittest.mock import MagicMock
 import pygame
 
 
+def _makeMapImageUpdater(test_config):
+    """A real MapImageUpdater over a mock generator's paths would defeat the
+    point, so give the screen a real generator behind a mock updater: the path
+    helpers are exercised for real, the background stitching is not."""
+    from mapimage.mapImageGenerator import MapImageGenerator
+
+    generator = MapImageGenerator(test_config)
+    updater = MagicMock()
+    updater.getMapImagePath.side_effect = generator.getMapImagePath
+    updater.getRoomImagePath.side_effect = generator.getRoomImagePath
+    updater.getRoomImagesDirectoryPath.side_effect = (
+        generator.getRoomImagesDirectoryPath
+    )
+    return updater
+
+
 def _makeWorldScreen(test_config, tmp_path):
     from screen.worldScreen import WorldScreen
 
@@ -26,6 +42,7 @@ def _makeWorldScreen(test_config, tmp_path):
     # tests rely on this, the success test overrides ws.renderer.
     ws.renderer = MagicMock()
     ws.renderer.tryLoadImage.return_value = None
+    ws.mapImageUpdater = _makeMapImageUpdater(test_config)
     return ws
 
 

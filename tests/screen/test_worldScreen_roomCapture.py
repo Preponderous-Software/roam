@@ -7,10 +7,20 @@ from unittest.mock import MagicMock
 
 
 def _makeWorldScreen(test_config, tmp_path, x=0, y=0, z=0):
+    from mapimage.mapImageGenerator import MapImageGenerator
     from screen.worldScreen import WorldScreen
 
     test_config.pathToSaveDirectory = str(tmp_path)
+    # A real generator behind a mock updater: the capture paths are built by
+    # the production code that owns the roompngs layout, without starting the
+    # updater's background stitching.
+    generator = MapImageGenerator(test_config)
     ws = WorldScreen.__new__(WorldScreen)
+    ws.mapImageUpdater = MagicMock()
+    ws.mapImageUpdater.getRoomImagePath.side_effect = generator.getRoomImagePath
+    ws.mapImageUpdater.getRoomImagesDirectoryPath.side_effect = (
+        generator.getRoomImagesDirectoryPath
+    )
     ws.config = test_config
     ws.currentZ = z
     ws.currentRoom = MagicMock()

@@ -19,7 +19,6 @@ from inventory.inventoryJsonReaderWriter import InventoryJsonReaderWriter
 from inventory.inventorySlot import InventorySlot
 from jsonPersistence import writeJsonAtomically
 from api.restApiServer import RestApiServer
-from mapimage.mapImagePaths import getMapImageFilename, getRoomImageFilename
 from mapimage.mapImageUpdater import MapImageUpdater
 from screen.pickupableEntities import canBePickedUp as _canBePickedUp
 from screen.screenType import ScreenType
@@ -1317,12 +1316,8 @@ class WorldScreen:
     def getCurrentRoomImagePath(self):
         """Return where the current room's capture lives. The level is part of
         the name so a cave room never overwrites the surface room above it."""
-        return (
-            self.config.pathToSaveDirectory
-            + "/roompngs/"
-            + getRoomImageFilename(
-                self.currentRoom.getX(), self.currentRoom.getY(), self.currentZ
-            )
+        return self.mapImageUpdater.getRoomImagePath(
+            self.currentRoom.getX(), self.currentRoom.getY(), self.currentZ
         )
 
     def isCurrentRoomSavedAsPNG(self):
@@ -1337,8 +1332,7 @@ class WorldScreen:
         if roomKey in self._pngSavePending:
             return
 
-        if not os.path.exists(self.config.pathToSaveDirectory + "/roompngs"):
-            os.makedirs(self.config.pathToSaveDirectory + "/roompngs")
+        os.makedirs(self.mapImageUpdater.getRoomImagesDirectoryPath(), exist_ok=True)
 
         locationOfPlayer = self.currentRoom.getGrid().getLocation(
             self.player.getLocationID()
@@ -1445,9 +1439,7 @@ class WorldScreen:
             self._cachedMiniMapImage = None
             self._miniMapLoadFailed = False
             self._miniMapCachedZ = self.currentZ
-        mapImagePath = (
-            self.config.pathToSaveDirectory + "/" + getMapImageFilename(self.currentZ)
-        )
+        mapImagePath = self.mapImageUpdater.getMapImagePath(self.currentZ)
         if not os.path.isfile(mapImagePath):
             if self._cachedMiniMapImage is not None:
                 mapImage = self._cachedMiniMapImage
