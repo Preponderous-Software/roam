@@ -2399,7 +2399,7 @@ class WorldScreen:
             _logger.error("error preparing room snapshot for save", error=str(e))
             roomJson = None
         roomPath = self.config.getRoomFilePath(
-            self.currentRoom.getX(), self.currentRoom.getY()
+            self.currentRoom.getX(), self.currentRoom.getY(), self.currentRoom.getZ()
         )
         self._saveExecutor.submit(self._doSave, roomJson, roomPath)
 
