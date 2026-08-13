@@ -68,3 +68,41 @@ def test_from_int_h():
 
 def test_from_int_backslash():
     assert fromInt(92) is KeyCode.BACKSLASH
+
+
+# --- every bound key needs a display name (#562) ---
+
+
+def test_every_default_binding_has_a_display_name():
+    # displayName() falls back to str(keyCode) for anything missing from the
+    # table, which renders "KeyCode.F2" (or a bare SDL int on Python 3.11+) in
+    # the Controls screen's key column instead of a readable name.
+    from config.keyBindings import KeyBindings
+
+    for action, key in KeyBindings.DEFAULT_BINDINGS.items():
+        assert displayName(key) != str(key), action
+
+
+def test_f2_display_name():
+    assert displayName(KeyCode.F2) == "f2"
+
+
+# --- keys added for paging the minimap between levels (#559) ---
+
+
+def test_minimap_paging_keys_are_sdl_keycodes():
+    assert KeyCode.PAGEUP == 1073741899
+    assert KeyCode.PAGEDOWN == 1073741902
+    assert KeyCode.HOME == 1073741898
+    assert KeyCode.COMMA == 44
+    assert KeyCode.PERIOD == 46
+    assert KeyCode.SLASH == 47
+
+
+def test_minimap_paging_display_names():
+    assert displayName(KeyCode.PAGEUP) == "page up"
+    assert displayName(KeyCode.PAGEDOWN) == "page down"
+    assert displayName(KeyCode.HOME) == "home"
+    assert displayName(KeyCode.COMMA) == ","
+    assert displayName(KeyCode.PERIOD) == "."
+    assert displayName(KeyCode.SLASH) == "/"

@@ -8,6 +8,9 @@ from unittest.mock import MagicMock
 
 import pygame
 
+from config.keyBindings import KeyBindings
+from rendering.keyCode import KeyCode
+
 
 def _makeMapImageUpdater(test_config):
     """A real MapImageUpdater over a mock generator's paths would defeat the
@@ -35,6 +38,7 @@ def _makeWorldScreen(test_config, tmp_path):
     ws._miniMapLastLoadTick = 0
     ws._miniMapCachedZ = 0
     ws._miniMapLoadFailed = False
+    ws._miniMapViewZ = None
     ws.currentZ = 0
     ws.tickCounter = MagicMock()
     ws.tickCounter.getTick.return_value = 100  # >= 60 so a reload is due
@@ -259,3 +263,226 @@ def test_doSave_updates_map_image_in_image_mode(test_config, tmp_path):
     ws._doSave(None, str(tmp_path / "room.json"))
 
     ws.mapImageUpdater.updateMapImage.assert_called_once()
+
+
+# --- Paging the minimap through levels the player is not standing on (#559) ---
+
+
+def _makePagingWorldScreen(test_config, tmp_path, currentZ=0):
+    """A world screen wired for the level-paging keys: real key bindings, a
+    mock status bar, and the minimap switched on."""
+    ws = _makeTextMinimapWorldScreen(test_config, tmp_path)
+    ws.currentZ = currentZ
+    ws._miniMapCachedZ = currentZ
+    ws.keyBindings = KeyBindings()
+    ws.status = MagicMock()
+    ws.config.showMiniMap = True
+    ws.minimapScaleFactor = 0.2
+    # Default to the graphical frontend; the text-mode tests below flip this.
+    ws.renderer.supportsImageLoading.return_value = True
+    ws.map.getRooms.return_value = [_makeRoom(0, 0)]
+    return ws
+
+
+def test_display_level_follows_the_player_until_paged(test_config, tmp_path):
+    ws = _makePagingWorldScreen(test_config, tmp_path, currentZ=-2)
+
+    assert ws.getMiniMapDisplayZ() == -2
+
+
+def test_paging_down_shows_the_level_below_without_moving_the_player(
+    test_config, tmp_path
+):
+    ws = _makePagingWorldScreen(test_config, tmp_path)
+
+    ws._handleUtilityKey(KeyCode.PAGEDOWN, ws.keyBindings)
+
+    assert ws.getMiniMapDisplayZ() == -1
+    assert ws.currentZ == 0
+    assert ws.status.set.call_args.args[0] == "Map: cave level 1 — HOME to return"
+
+
+def test_paging_status_names_the_ascii_return_key_in_text_mode(test_config, tmp_path):
+    # Home is unreachable from a terminal, so pointing a --text player at it
+    # would be advice they cannot follow.
+    ws = _makePagingWorldScreen(test_config, tmp_path)
+    ws.renderer.supportsImageLoading.return_value = False
+
+    ws._handleUtilityKey(KeyCode.PERIOD, ws.keyBindings)
+
+    assert ws.status.set.call_args.args[0] == "Map: cave level 1 — / to return"
+
+
+def test_alt_paging_keys_are_reachable_from_a_terminal(test_config, tmp_path):
+    ws = _makePagingWorldScreen(test_config, tmp_path)
+
+    ws._handleUtilityKey(KeyCode.PERIOD, ws.keyBindings)
+    assert ws.getMiniMapDisplayZ() == -1
+
+    ws._handleUtilityKey(KeyCode.COMMA, ws.keyBindings)
+    assert ws.getMiniMapDisplayZ() == 0
+
+    ws._handleUtilityKey(KeyCode.PERIOD, ws.keyBindings)
+    ws._handleUtilityKey(KeyCode.SLASH, ws.keyBindings)
+    assert ws.getMiniMapDisplayZ() == 0
+
+
+def test_paging_stops_at_the_surface(test_config, tmp_path):
+    ws = _makePagingWorldScreen(test_config, tmp_path)
+
+    ws._handleUtilityKey(KeyCode.PAGEUP, ws.keyBindings)
+
+    assert ws.getMiniMapDisplayZ() == 0
+    ws.status.set.assert_called_with("Map already at the surface")
+
+
+def test_paging_stops_at_the_deepest_level(test_config, tmp_path):
+    ws = _makePagingWorldScreen(test_config, tmp_path, currentZ=-3)
+
+    ws._handleUtilityKey(KeyCode.PAGEDOWN, ws.keyBindings)
+
+    assert ws.getMiniMapDisplayZ() == -3
+    ws.status.set.assert_called_with("Map already at cave level 3")
+
+
+def test_reset_key_returns_to_the_players_level_in_one_press(test_config, tmp_path):
+    ws = _makePagingWorldScreen(test_config, tmp_path, currentZ=-3)
+    ws._miniMapViewZ = 0
+
+    ws._handleUtilityKey(KeyCode.HOME, ws.keyBindings)
+
+    assert ws.getMiniMapDisplayZ() == -3
+    assert ws._miniMapViewZ is None
+
+
+def test_paging_keys_do_nothing_while_the_minimap_is_hidden(test_config, tmp_path):
+    ws = _makePagingWorldScreen(test_config, tmp_path)
+    ws.config.showMiniMap = False
+
+    ws._handleUtilityKey(KeyCode.PAGEDOWN, ws.keyBindings)
+
+    assert ws._miniMapViewZ is None
+    ws.status.set.assert_called_with("Minimap is off")
+
+
+def test_paging_works_in_text_mode_even_with_the_minimap_toggled_off(
+    test_config, tmp_path
+):
+    # The text minimap is drawn whatever the toggle says (see the elif branch
+    # beside drawMiniMap), so refusing to page it would leave a --text player
+    # looking at a minimap that ignores the keys.
+    ws = _makePagingWorldScreen(test_config, tmp_path)
+    ws.renderer.supportsImageLoading.return_value = False
+    ws.config.showMiniMap = False
+
+    ws._handleUtilityKey(KeyCode.PERIOD, ws.keyBindings)
+
+    assert ws.getMiniMapDisplayZ() == -1
+
+
+def test_hiding_the_minimap_forgets_the_paged_level(test_config, tmp_path):
+    ws = _makePagingWorldScreen(test_config, tmp_path)
+    ws._miniMapViewZ = -2
+
+    ws._handleUtilityKey(KeyCode.M, ws.keyBindings)
+
+    assert ws.config.showMiniMap is False
+    assert ws._miniMapViewZ is None
+
+
+def _wireLevelChange(ws):
+    ws.currentRoom = MagicMock()
+    ws._loadOrGenerateRoom = MagicMock()
+    ws._placePlayerAtCaveEntry = MagicMock()
+    ws.initializeLocationWidthAndHeight = MagicMock()
+    ws.roomPreloader = MagicMock()
+    ws.discoverEntitiesInRoom = MagicMock()
+    ws.save = MagicMock()
+
+
+def test_descending_forgets_the_paged_level(test_config, tmp_path):
+    ws = _makePagingWorldScreen(test_config, tmp_path)
+    ws._miniMapViewZ = -3
+    _wireLevelChange(ws)
+
+    ws._descend()
+
+    assert ws.currentZ == -1
+    assert ws._miniMapViewZ is None
+    assert ws.getMiniMapDisplayZ() == -1
+
+
+def test_ascending_forgets_the_paged_level(test_config, tmp_path):
+    ws = _makePagingWorldScreen(test_config, tmp_path, currentZ=-2)
+    ws._miniMapViewZ = -3
+    _wireLevelChange(ws)
+
+    ws._ascend()
+
+    assert ws.currentZ == -1
+    assert ws._miniMapViewZ is None
+
+
+def test_minimap_loads_the_paged_levels_map_image(test_config, tmp_path):
+    ws = _makeWorldScreen(test_config, tmp_path)
+    ws._miniMapViewZ = -2
+    (tmp_path / "mapImage_z-2.png").write_text("not a valid png")
+
+    ws.drawMiniMap()
+
+    assert ws.renderer.tryLoadImage.call_args.args[0].endswith("mapImage_z-2.png")
+    assert ws._miniMapCachedZ == -2
+
+
+def test_paging_to_a_level_with_no_map_draws_an_unexplored_panel(test_config, tmp_path):
+    ws = _makeWorldScreen(test_config, tmp_path)
+    ws.keyBindings = KeyBindings()
+    ws._miniMapViewZ = -2  # no mapImage_z-2.png on disk
+    ws.minimapScaleFactor = 0.2
+    ws.minimapX = 5
+    ws.minimapY = 5
+    ws.renderer.getGameAreaRect.return_value = MagicMock(width=100)
+    ws.hudDragManager = MagicMock()
+    ws.hudDragManager.getOffset.return_value = (0, 0)
+
+    ws.drawMiniMap()
+
+    drawnText = [
+        call.args[0] for call in ws.renderer.drawTextLeftAligned.call_args_list
+    ]
+    assert any("unexplored" in text for text in drawnText)
+    assert any("Viewing cave level 2" in text for text in drawnText)
+
+
+def test_text_minimap_rows_show_the_paged_levels_rooms(test_config, tmp_path):
+    ws = _makeTextMinimapWorldScreen(test_config, tmp_path, direction=3)
+    ws._miniMapViewZ = -1
+    ws.map.getRooms.return_value = [
+        _makeRoom(0, 0),
+        _makeRoom(1, 0),
+        _makeRoom(0, 1, z=-1),
+    ]
+
+    rows = ws._buildTextMinimapRows()
+
+    # The player is not on the paged-to level, so the center cell marks their
+    # column rather than their facing, and only that level's rooms are known.
+    assert rows[2] == "..+.."
+    assert rows[3] == "..#.."
+
+
+def test_text_minimap_labels_a_paged_level(test_config, tmp_path):
+    ws = _makeTextMinimapWorldScreen(test_config, tmp_path)
+    ws.keyBindings = KeyBindings()
+    ws.renderer.supportsImageLoading.return_value = False
+    ws._miniMapViewZ = -1
+    ws.map.getRooms.return_value = [_makeRoom(0, 0, z=-1)]
+
+    ws._drawTextMinimap()
+
+    drawnText = [
+        call.args[0] for call in ws.renderer.drawTextLeftAligned.call_args_list
+    ]
+    # Room label + the "not your level" caption + one line per grid row.
+    assert len(drawnText) == 7
+    assert "Viewing cave level 1 — / to return" in drawnText

@@ -62,6 +62,29 @@ def test_alt_screenshot_is_in_get_actions():
     assert "alt_screenshot" in kb.getActions()
 
 
+def test_minimap_level_paging_alt_bindings_default_to_ascii_keys():
+    # Page Up / Page Down / Home cannot be typed in --text mode, so the level
+    # paging keys need the punctuation trio next to each other on the keyboard.
+    kb = KeyBindings()
+    assert kb.getKey("alt_minimap_level_up") is KeyCode.COMMA
+    assert kb.getKey("alt_minimap_level_down") is KeyCode.PERIOD
+    assert kb.getKey("alt_minimap_level_reset") is KeyCode.SLASH
+
+
+def test_minimap_level_paging_primary_bindings():
+    kb = KeyBindings()
+    assert kb.getKey("minimap_level_up") is KeyCode.PAGEUP
+    assert kb.getKey("minimap_level_down") is KeyCode.PAGEDOWN
+    assert kb.getKey("minimap_level_reset") is KeyCode.HOME
+
+
+def test_minimap_level_paging_labels():
+    kb = KeyBindings()
+    assert kb.getLabel("minimap_level_up") == "Minimap Level Up"
+    assert kb.getLabel("alt_minimap_level_down") == "Minimap Level Down (Alt)"
+    assert kb.getLabel("minimap_level_reset") == "Minimap Back To My Level"
+
+
 def test_every_binding_has_an_action_label():
     # The Controls screen renders getLabel(action) for every action, so a
     # binding with no label would show its raw key there.
