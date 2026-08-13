@@ -1408,6 +1408,14 @@ class WorldScreen:
             return "surface"
         return f"cave level {abs(z)}"
 
+    def _getMiniMapResetKeyName(self):
+        """Name of the key that returns the minimap to the player's own level.
+        Home cannot be typed in a terminal, so text mode is told the ASCII
+        alternate instead."""
+        isTextMode = not self.renderer.supportsImageLoading()
+        resetAction = "alt_minimap_level_reset" if isTextMode else "minimap_level_reset"
+        return self.keyBindings.getKeyName(resetAction).upper()
+
     def _setMiniMapViewZ(self, z):
         """Point the minimap at level ``z``, and report it in the status bar."""
         # Storing None for the player's own level keeps a later descent or
@@ -1417,7 +1425,7 @@ class WorldScreen:
         if z == self.currentZ:
             self.status.set(f"Map: {description} (your level)")
         else:
-            returnKey = self.keyBindings.getKeyName("minimap_level_reset").upper()
+            returnKey = self._getMiniMapResetKeyName()
             self.status.set(f"Map: {description} — {returnKey} to return")
 
     def _buildMiniMapViewLabel(self):
@@ -1426,15 +1434,23 @@ class WorldScreen:
         displayZ = self.getMiniMapDisplayZ()
         if displayZ == self.currentZ:
             return None
-        isTextMode = not self.renderer.supportsImageLoading()
-        resetAction = "alt_minimap_level_reset" if isTextMode else "minimap_level_reset"
-        resetKeyName = self.keyBindings.getKeyName(resetAction).upper()
-        return f"Viewing {self._describeLevel(displayZ)} — {resetKeyName} to return"
+        return (
+            f"Viewing {self._describeLevel(displayZ)} — "
+            f"{self._getMiniMapResetKeyName()} to return"
+        )
+
+    def _isMiniMapVisible(self):
+        """Whether a minimap is actually on screen. Mirrors the two branches of
+        the draw call in ``drawWorldScreen``: the text minimap is drawn even
+        while the toggle is off, so the toggle alone does not answer this."""
+        if self.config.showMiniMap and self.minimapScaleFactor > 0:
+            return True
+        return not self.renderer.supportsImageLoading()
 
     def _pageMiniMapLevel(self, delta):
         """Show the map of the level ``delta`` levels above (+1) or below (-1)
         the one currently displayed, without moving the player."""
-        if not self.config.showMiniMap:
+        if not self._isMiniMapVisible():
             self.status.set("Minimap is off")
             return
         target = self.getMiniMapDisplayZ() + delta
@@ -1448,7 +1464,7 @@ class WorldScreen:
 
     def _resetMiniMapLevel(self):
         """Snap the minimap back to the level the player is standing on."""
-        if not self.config.showMiniMap:
+        if not self._isMiniMapVisible():
             self.status.set("Minimap is off")
             return
         self._setMiniMapViewZ(self.currentZ)

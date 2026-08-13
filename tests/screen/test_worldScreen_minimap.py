@@ -277,6 +277,9 @@ def _makePagingWorldScreen(test_config, tmp_path, currentZ=0):
     ws.keyBindings = KeyBindings()
     ws.status = MagicMock()
     ws.config.showMiniMap = True
+    ws.minimapScaleFactor = 0.2
+    # Default to the graphical frontend; the text-mode tests below flip this.
+    ws.renderer.supportsImageLoading.return_value = True
     ws.map.getRooms.return_value = [_makeRoom(0, 0)]
     return ws
 
@@ -296,7 +299,18 @@ def test_paging_down_shows_the_level_below_without_moving_the_player(
 
     assert ws.getMiniMapDisplayZ() == -1
     assert ws.currentZ == 0
-    assert "cave level 1" in ws.status.set.call_args.args[0]
+    assert ws.status.set.call_args.args[0] == "Map: cave level 1 — HOME to return"
+
+
+def test_paging_status_names_the_ascii_return_key_in_text_mode(test_config, tmp_path):
+    # Home is unreachable from a terminal, so pointing a --text player at it
+    # would be advice they cannot follow.
+    ws = _makePagingWorldScreen(test_config, tmp_path)
+    ws.renderer.supportsImageLoading.return_value = False
+
+    ws._handleUtilityKey(KeyCode.PERIOD, ws.keyBindings)
+
+    assert ws.status.set.call_args.args[0] == "Map: cave level 1 — / to return"
 
 
 def test_alt_paging_keys_are_reachable_from_a_terminal(test_config, tmp_path):
@@ -349,6 +363,21 @@ def test_paging_keys_do_nothing_while_the_minimap_is_hidden(test_config, tmp_pat
 
     assert ws._miniMapViewZ is None
     ws.status.set.assert_called_with("Minimap is off")
+
+
+def test_paging_works_in_text_mode_even_with_the_minimap_toggled_off(
+    test_config, tmp_path
+):
+    # The text minimap is drawn whatever the toggle says (see the elif branch
+    # beside drawMiniMap), so refusing to page it would leave a --text player
+    # looking at a minimap that ignores the keys.
+    ws = _makePagingWorldScreen(test_config, tmp_path)
+    ws.renderer.supportsImageLoading.return_value = False
+    ws.config.showMiniMap = False
+
+    ws._handleUtilityKey(KeyCode.PERIOD, ws.keyBindings)
+
+    assert ws.getMiniMapDisplayZ() == -1
 
 
 def test_hiding_the_minimap_forgets_the_paged_level(test_config, tmp_path):
