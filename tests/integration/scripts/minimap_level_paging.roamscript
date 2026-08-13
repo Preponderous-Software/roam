@@ -1,0 +1,36 @@
+# The minimap can be paged to a level the player is not standing on (#559).
+# Page Up / Page Down / Home are unreachable from a terminal, so the ASCII
+# alt bindings , . and / are what a --text player uses — this script drives
+# exactly those (see alt_minimap_level_up / _down / _reset in
+# src/config/keyBindings.py).
+#
+# The tracked config.yml ships `showMiniMap: true`, so the minimap is up from
+# the moment the world is entered and the paging keys are live. Assertions
+# stay ASCII-only: the status line and the minimap caption both contain an
+# em dash, which is not worth matching through a pty.
+expect Roam
+send enter
+expect Select Save
+send c
+expect Enter save name
+send {saveName} enter
+expect Tick timeout=15
+# A fresh save starts on the surface, so paging down shows the cave below
+# without the player descending; the depth indicator stays absent because the
+# player themselves is still at z = 0.
+send .
+assertContains "Map: cave level 1"
+assertContains "Viewing cave level 1"
+# The level below is unvisited, so the room grid shows the player's column as
+# '+' rather than their facing arrow.
+send ,
+assertContains "Map: surface (your level)"
+# Paging stops at the deepest level the world generates rather than running on.
+send . . . .
+assertContains "Map already at cave level 3"
+# One press of the reset key comes back to the level being stood on. The
+# buffer is reset first so the match is new output rather than the earlier
+# surface message still sitting in the transcript.
+resetBuffer
+send /
+assertContains "Map: surface (your level)"

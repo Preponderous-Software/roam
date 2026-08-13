@@ -73,6 +73,12 @@ class KeyCode(IntEnum):
     RIGHTBRACKET = 93
     EQUALS = 61
     MINUS = 45
+    COMMA = 44
+    PERIOD = 46
+    SLASH = 47
+    PAGEUP = 1073741899
+    PAGEDOWN = 1073741902
+    HOME = 1073741898
     ESCAPE = 27
     RETURN = 13
     KP_ENTER = 1073741912
@@ -118,6 +124,7 @@ _DISPLAY_NAMES = {
     KeyCode.LCTRL: "left ctrl",
     KeyCode.RCTRL: "right ctrl",
     KeyCode.F1: "f1",
+    KeyCode.F2: "f2",
     KeyCode.F3: "f3",
     KeyCode.PRINTSCREEN: "print screen",
     KeyCode.LEFTBRACKET: "[",
@@ -125,6 +132,12 @@ _DISPLAY_NAMES = {
     KeyCode.RIGHTBRACKET: "]",
     KeyCode.EQUALS: "=",
     KeyCode.MINUS: "-",
+    KeyCode.COMMA: ",",
+    KeyCode.PERIOD: ".",
+    KeyCode.SLASH: "/",
+    KeyCode.PAGEUP: "page up",
+    KeyCode.PAGEDOWN: "page down",
+    KeyCode.HOME: "home",
     KeyCode.R: "r",
     KeyCode.X: "x",
     KeyCode.Z: "z",

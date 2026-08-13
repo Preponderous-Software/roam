@@ -72,6 +72,10 @@ _logger = getLogger(__name__)
 
 MIDDLE_MOUSE_BUTTON = 2
 
+# The deepest cave level the world generates: descending stops here, and so
+# does paging the minimap down through the levels.
+DEEPEST_Z = -3
+
 
 # @author Daniel McCoy Stephenson
 # @since August 16th, 2022
@@ -128,6 +132,10 @@ class WorldScreen:
         # Tracks whether the last minimap-image load failed, so the failure is
         # logged once on the good->failed transition rather than every reload.
         self._miniMapLoadFailed = False
+        # The level whose map the minimap shows while the player pages through
+        # the other levels; None means "follow the player", which is also what
+        # descending, ascending or hiding the minimap restores it to.
+        self._miniMapViewZ = None
         self._saveExecutor = ThreadPoolExecutor(
             max_workers=1
         )  # serialize save operations off main thread
@@ -984,11 +992,12 @@ class WorldScreen:
 
     def _descend(self):
         """Move the player one level deeper (z − 1) into the cave below."""
-        if self.currentZ <= -3:
+        if self.currentZ <= DEEPEST_Z:
             self.status.set("Too deep — no way further down", duration=150)
             return
         self.currentRoom.removeEntity(self.player)
         self.currentZ -= 1
+        self._miniMapViewZ = None
         self.currentRoom = self._loadOrGenerateRoom(
             self.currentRoom.getX(), self.currentRoom.getY(), z=self.currentZ
         )
@@ -1010,6 +1019,7 @@ class WorldScreen:
             return
         self.currentRoom.removeEntity(self.player)
         self.currentZ += 1
+        self._miniMapViewZ = None
         self.currentRoom = self._loadOrGenerateRoom(
             self.currentRoom.getX(), self.currentRoom.getY(), z=self.currentZ
         )
@@ -1144,7 +1154,23 @@ class WorldScreen:
             self.status.set("Debug info " + ("ON" if self.config.debug else "OFF"))
         elif key == kb.getKey("toggle_minimap"):
             self.config.showMiniMap = not self.config.showMiniMap
+            if not self.config.showMiniMap:
+                # Hiding the minimap discards the paged-to level, so bringing it
+                # back always starts on the level the player is standing on.
+                self._miniMapViewZ = None
             self.status.set("Minimap " + ("ON" if self.config.showMiniMap else "OFF"))
+        elif key == kb.getKey("minimap_level_up") or key == kb.getKey(
+            "alt_minimap_level_up"
+        ):
+            self._pageMiniMapLevel(1)
+        elif key == kb.getKey("minimap_level_down") or key == kb.getKey(
+            "alt_minimap_level_down"
+        ):
+            self._pageMiniMapLevel(-1)
+        elif key == kb.getKey("minimap_level_reset") or key == kb.getKey(
+            "alt_minimap_level_reset"
+        ):
+            self._resetMiniMapLevel()
         elif key == kb.getKey("minimap_zoom_in"):
             if self.minimapScaleFactor < 1.0:
                 self.minimapScaleFactor = min(1.0, self.minimapScaleFactor + 0.1)
@@ -1369,6 +1395,64 @@ class WorldScreen:
         finally:
             self._pngSavePending.discard(roomKey)
 
+    def getMiniMapDisplayZ(self):
+        """The level whose map the minimap is showing. Equal to the player's own
+        level unless they have paged the minimap to another one."""
+        if self._miniMapViewZ is None:
+            return self.currentZ
+        return self._miniMapViewZ
+
+    def _describeLevel(self, z):
+        """Human-readable name for a level, for minimap captions and status."""
+        if z == 0:
+            return "surface"
+        return f"cave level {abs(z)}"
+
+    def _setMiniMapViewZ(self, z):
+        """Point the minimap at level ``z``, and report it in the status bar."""
+        # Storing None for the player's own level keeps a later descent or
+        # ascent from leaving the minimap pinned to the level just left.
+        self._miniMapViewZ = None if z == self.currentZ else z
+        description = self._describeLevel(z)
+        if z == self.currentZ:
+            self.status.set(f"Map: {description} (your level)")
+        else:
+            returnKey = self.keyBindings.getKeyName("minimap_level_reset").upper()
+            self.status.set(f"Map: {description} — {returnKey} to return")
+
+    def _buildMiniMapViewLabel(self):
+        """Caption marking the minimap as showing a level other than the one the
+        player stands on, or None when it shows their own level."""
+        displayZ = self.getMiniMapDisplayZ()
+        if displayZ == self.currentZ:
+            return None
+        isTextMode = not self.renderer.supportsImageLoading()
+        resetAction = "alt_minimap_level_reset" if isTextMode else "minimap_level_reset"
+        resetKeyName = self.keyBindings.getKeyName(resetAction).upper()
+        return f"Viewing {self._describeLevel(displayZ)} — {resetKeyName} to return"
+
+    def _pageMiniMapLevel(self, delta):
+        """Show the map of the level ``delta`` levels above (+1) or below (-1)
+        the one currently displayed, without moving the player."""
+        if not self.config.showMiniMap:
+            self.status.set("Minimap is off")
+            return
+        target = self.getMiniMapDisplayZ() + delta
+        if target > 0:
+            self.status.set("Map already at the surface")
+            return
+        if target < DEEPEST_Z:
+            self.status.set(f"Map already at {self._describeLevel(DEEPEST_Z)}")
+            return
+        self._setMiniMapViewZ(target)
+
+    def _resetMiniMapLevel(self):
+        """Snap the minimap back to the level the player is standing on."""
+        if not self.config.showMiniMap:
+            self.status.set("Minimap is off")
+            return
+        self._setMiniMapViewZ(self.currentZ)
+
     # Half-width of the explored-rooms grid drawn in the text-mode minimap; the
     # grid is (2 * radius + 1) rooms on a side, centered on the current room.
     _TEXT_MINIMAP_RADIUS = 2
@@ -1377,25 +1461,34 @@ class WorldScreen:
         """Build the ASCII rows of the text-mode minimap: a square window of
         rooms centered on the current room. The current room shows the facing
         arrow, other rooms known this session show ``#``, and unknown rooms
-        show ``.``. North is up (smaller y at the top)."""
+        show ``.``. North is up (smaller y at the top).
+
+        While another level is being paged through, its known rooms are shown
+        instead and the center cell becomes ``+`` — the player is not on that
+        level, so the marker means "directly above or below you" rather than
+        "you are here"."""
         currentX = self.currentRoom.getX()
         currentY = self.currentRoom.getY()
-        # Restricted to the current level so exploring a cave never marks the
+        displayZ = self.getMiniMapDisplayZ()
+        # Restricted to the displayed level so exploring a cave never marks the
         # surface room directly above it as explored.
         knownRooms = {
             (room.getX(), room.getY())
             for room in self.map.getRooms()
-            if room.getZ() == self.currentZ
+            if room.getZ() == displayZ
         }
-        dirArrows = {0: "^", 1: "<", 2: "v", 3: ">"}
-        facing = dirArrows.get(self.player.getDirection(), "@")
+        if displayZ == self.currentZ:
+            dirArrows = {0: "^", 1: "<", 2: "v", 3: ">"}
+            center = dirArrows.get(self.player.getDirection(), "@")
+        else:
+            center = "+"
         radius = self._TEXT_MINIMAP_RADIUS
         rows = []
         for y in range(currentY - radius, currentY + radius + 1):
             cells = []
             for x in range(currentX - radius, currentX + radius + 1):
                 if x == currentX and y == currentY:
-                    cells.append(facing)
+                    cells.append(center)
                 elif (x, y) in knownRooms:
                     cells.append("#")
                 else:
@@ -1404,9 +1497,7 @@ class WorldScreen:
         return rows
 
     def _drawTextMinimap(self):
-        minimapOx, minimapOy = self.hudDragManager.getOffset("minimap")
-        drawX = self.minimapX + minimapOx
-        drawY = self.minimapY + minimapOy
+        drawX, drawY = self._getMiniMapPanelOrigin()
         roomX = self.currentRoom.getX()
         roomY = self.currentRoom.getY() * -1
         dirArrows = {0: "^", 1: "<", 2: "v", 3: ">"}
@@ -1416,34 +1507,46 @@ class WorldScreen:
             phase = self.dayNightCycle.getPhase(self.tickCounter.getTick())
             label += f" {phase}"
         rows = self._buildTextMinimapRows()
+        # A paged-to level is not where the player is standing, so say so rather
+        # than letting an unfamiliar room grid look like their own surroundings.
+        viewLabel = self._buildMiniMapViewLabel()
+        lines = [label] if viewLabel is None else [label, viewLabel]
         lineHeight = 14
-        width = max(96, len(label) * 8, len(rows[0]) * 8)
-        height = 20 + len(rows) * lineHeight
+        width = max(96, max(len(line) for line in lines) * 8, len(rows[0]) * 8)
+        height = 20 + (len(lines) - 1) * lineHeight + len(rows) * lineHeight
         self.renderer.drawRectangle(drawX, drawY, width, height, palette.NEAR_BLACK)
-        self.renderer.drawTextLeftAligned(
-            label, drawX, drawY + 10, 12, palette.MEDIUM_GRAY
-        )
+        for index, line in enumerate(lines):
+            self.renderer.drawTextLeftAligned(
+                line, drawX, drawY + 10 + index * lineHeight, 12, palette.MEDIUM_GRAY
+            )
+        rowsTop = drawY + 24 + (len(lines) - 1) * lineHeight
         for index, row in enumerate(rows):
             self.renderer.drawTextLeftAligned(
-                row, drawX, drawY + 24 + index * lineHeight, 12, palette.MEDIUM_GRAY
+                row, drawX, rowsTop + index * lineHeight, 12, palette.MEDIUM_GRAY
             )
 
     def drawMiniMap(self):
         if not self.renderer.supportsImageLoading():
             self._drawTextMinimap()
             return
-        # Each level has its own stitched map, so a change of level must drop
-        # the cached surface -- otherwise the previous level's image keeps being
-        # drawn after descending or ascending.
-        if self._miniMapCachedZ != self.currentZ:
+        displayZ = self.getMiniMapDisplayZ()
+        # Each level has its own stitched map, so a change of the displayed level
+        # must drop the cached surface -- otherwise the previous level's image
+        # keeps being drawn after descending, ascending or paging.
+        if self._miniMapCachedZ != displayZ:
             self._cachedMiniMapImage = None
             self._miniMapLoadFailed = False
-            self._miniMapCachedZ = self.currentZ
-        mapImagePath = self.mapImageUpdater.getMapImagePath(self.currentZ)
+            self._miniMapCachedZ = displayZ
+        mapImagePath = self.mapImageUpdater.getMapImagePath(displayZ)
         if not os.path.isfile(mapImagePath):
             if self._cachedMiniMapImage is not None:
                 mapImage = self._cachedMiniMapImage
             else:
+                # On the player's own level a missing map simply draws nothing
+                # (it appears as soon as the first capture is stitched), but a
+                # level paged to deliberately needs to say why it is blank.
+                if displayZ != self.currentZ:
+                    self._drawMiniMapUnexploredPanel()
                 return
         else:
             # only reload from disk every 60 ticks to avoid I/O every frame
@@ -1486,9 +1589,7 @@ class WorldScreen:
             ),
         )
 
-        minimapOx, minimapOy = self.hudDragManager.getOffset("minimap")
-        drawX = self.minimapX + minimapOx
-        drawY = self.minimapY + minimapOy
+        drawX, drawY = self._getMiniMapPanelOrigin()
 
         backgroundColor = palette.GRAY
         # mapImage was scaled to (minimapSize, minimapSize) above, so its drawn
@@ -1503,6 +1604,42 @@ class WorldScreen:
 
         # blit in top left corner with 10px padding
         self.renderer.drawImage(mapImage, (drawX + 10, drawY + 10))
+
+        self._drawMiniMapViewCaption(drawX, drawY + minimapSize + 20)
+
+    def _getMiniMapPanelOrigin(self):
+        """Top-left corner of the drawn minimap panel, drag offset included."""
+        minimapOx, minimapOy = self.hudDragManager.getOffset("minimap")
+        return self.minimapX + minimapOx, self.minimapY + minimapOy
+
+    def _drawMiniMapViewCaption(self, drawX, drawY):
+        """Draw the "not your level" caption under the graphical minimap. Does
+        nothing while the minimap shows the player's own level."""
+        caption = self._buildMiniMapViewLabel()
+        if caption is None:
+            return
+        fontSize = 14
+        self.renderer.drawRectangle(
+            drawX, drawY, len(caption) * 8 + 12, fontSize + 10, palette.NEAR_BLACK
+        )
+        self.renderer.drawTextLeftAligned(
+            caption, drawX + 6, drawY + 5, fontSize, (200, 160, 50)
+        )
+
+    def _drawMiniMapUnexploredPanel(self):
+        """Stand in for the minimap when the level being paged through has no
+        stitched map yet, so the paging keys never look like they did nothing."""
+        gameArea = self.renderer.getGameAreaRect()
+        minimapSize = gameArea.width * self.minimapScaleFactor
+        drawX, drawY = self._getMiniMapPanelOrigin()
+        self.renderer.drawRectangle(
+            drawX, drawY, minimapSize + 20, minimapSize + 20, palette.NEAR_BLACK
+        )
+        label = f"{self._describeLevel(self.getMiniMapDisplayZ()).capitalize()} — unexplored"
+        self.renderer.drawTextLeftAligned(
+            label, drawX + 10, drawY + 10, 14, palette.MEDIUM_GRAY
+        )
+        self._drawMiniMapViewCaption(drawX, drawY + minimapSize + 20)
 
     def _iterateVisibleRoomOffsets(self, gameArea):
         """Yield (roomX, roomY, roomOffsetX, roomOffsetY) for visible rooms."""
@@ -1691,6 +1828,8 @@ class WorldScreen:
                     "HUD",
                     [
                         f"{keyName('toggle_minimap')}  -  Toggle minimap",
+                        f"{keyName('alt_minimap_level_up')}/{keyName('alt_minimap_level_down')}  -  Map of level above/below",
+                        f"{keyName('alt_minimap_level_reset')}  -  Map back to your level",
                         f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",
                         f"{keyName('alt_toggle_debug')}  -  Toggle debug info",
                         f"{keyName('alt_screenshot')}  -  Take screenshot (.txt)",
@@ -1732,6 +1871,8 @@ class WorldScreen:
                     [
                         f"{keyName('toggle_minimap')}  -  Toggle minimap",
                         f"{keyName('minimap_zoom_in')}/{keyName('minimap_zoom_out')}  -  Resize minimap",
+                        f"{keyName('minimap_level_up')}/{keyName('minimap_level_down')}  -  Map of level above/below",
+                        f"{keyName('minimap_level_reset')}  -  Map back to your level",
                         f"{keyName('toggle_camera_follow')}  -  Toggle camera follow",
                         f"{keyName('toggle_debug')}  -  Toggle debug info",
                         f"{keyName('screenshot')}  -  Take screenshot",
