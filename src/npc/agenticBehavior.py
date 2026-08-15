@@ -27,7 +27,6 @@ from npc.npcBehavior import NpcBehavior
 from npc.programmaticBehavior import (
     ProgrammaticBehavior,
     _getNeighbor,
-    _hasSolid,
     _locationOf,
     _npcMove,
 )
@@ -36,6 +35,7 @@ _logger = getLogger(__name__)
 
 _MODEL = "claude-haiku-4-5-20251001"
 _CALL_INTERVAL_TICKS = 90  # ~3 s at 30 TPS
+_OFF_GRID_GLYPH = "X"  # tile outside the room grid; distinct from "?" (creature)
 
 _SYSTEM_PROMPT = """You are the brain of a player character in a top-down 2-D survival game.
 The world is a grid of tiles. Your character executes one action per game tick.
@@ -227,7 +227,7 @@ class AgenticBehavior(NpcBehavior):
                     row.append("@")
                     continue
                 loc = room.getGrid().getLocationByCoordinates(x + dx, y + dy)
-                row.append("?" if loc == -1 else _cellGlyph(loc))
+                row.append(_OFF_GRID_GLYPH if loc == -1 else _cellGlyph(loc))
             rows.append(" ".join(row))
         gridStr = "\n".join(rows)
 
@@ -237,6 +237,7 @@ class AgenticBehavior(NpcBehavior):
             f"Grid (5×5, @ = you, top = north):\n{gridStr}\n"
             "Legend: . empty  T OakWood  S Stone  A Apple  B Banana"
             "  W wood-floor  # solid/wall  ? creature"
+            f"  {_OFF_GRID_GLYPH} outside the room"
         )
 
     # ------------------------------------------------------------------ #
@@ -276,9 +277,6 @@ class AgenticBehavior(NpcBehavior):
         else:
             npc.setTickLastMoved(tick)
             self._stateName = "cpc-idle"
-
-    def _doMove(self, npc, location, room, tick, direction):
-        _npcMove(npc, location, room, tick, direction)
 
     def _doGather(self, npc, location, room, tick):
         for entity in list(location.getEntities().values()):
