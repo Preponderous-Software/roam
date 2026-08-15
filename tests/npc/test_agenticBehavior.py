@@ -409,15 +409,32 @@ def test_build_world_state_places_neighbours_relative_to_the_npc():
     assert gridRows[1].split(" ")[2] == "T"
 
 
-def test_build_world_state_marks_off_grid_cells_with_a_question_mark():
-    # Characterizes current behavior: out-of-bounds cells reuse the "?" glyph
-    # that the legend assigns to creatures. Reported as a separate issue.
+def test_build_world_state_marks_off_grid_cells_with_their_own_glyph():
+    # Out-of-bounds cells use a glyph of their own so that they are not
+    # confused with the "?" the legend assigns to creatures.
     room, npc, behavior = _setup(gridSize=5, npcX=0, npcY=0)
 
     gridRows = behavior._buildWorldState(npc, room).splitlines()[3:8]
 
-    assert gridRows[0] == "? ? ? ? ?"
-    assert gridRows[2].split(" ")[0] == "?"
+    assert gridRows[0] == "X X X X X"
+    assert gridRows[2].split(" ")[0] == "X"
+
+
+def test_build_world_state_does_not_reuse_the_creature_glyph_off_grid():
+    room, npc, behavior = _setup(gridSize=5, npcX=0, npcY=0)
+
+    gridRows = behavior._buildWorldState(npc, room).splitlines()[3:8]
+
+    assert "?" not in " ".join(gridRows)
+
+
+def test_build_world_state_legend_documents_the_off_grid_glyph():
+    room, npc, behavior = _setup()
+
+    legend = behavior._buildWorldState(npc, room).splitlines()[-1]
+
+    assert "? creature" in legend
+    assert "X outside the room" in legend
 
 
 # ------------------------------------------------------------------ #
