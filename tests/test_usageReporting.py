@@ -75,6 +75,8 @@ def _reporting_env_unset(monkeypatch):
     # The harness / a developer shell may carry the override; each test here
     # decides for itself.
     monkeypatch.delenv(ENVIRONMENT_VARIABLE, raising=False)
+    monkeypatch.delenv("TRACE_USAGE_REPORTING", raising=False)
+    monkeypatch.delenv("DO_NOT_TRACK", raising=False)
     monkeypatch.setattr(sys, "platform", "linux")
 
 
@@ -116,6 +118,49 @@ def test_environment_override_forces_reporting_off(monkeypatch, stub, value):
     config = _config(endpoint=stub.url)
     assert isReportingActive(config) is False
     assert createTraceClient(config).enabled is False
+
+
+@pytest.mark.parametrize(
+    "variable, value",
+    [
+        ("DO_NOT_TRACK", "1"),
+        ("DO_NOT_TRACK", "true"),
+        ("TRACE_USAGE_REPORTING", "off"),
+        ("TRACE_USAGE_REPORTING", "0"),
+        ("TRACE_USAGE_REPORTING", "False"),
+    ],
+)
+def test_trace_wide_environment_opt_out_wins_over_config(
+    monkeypatch, stub, variable, value
+):
+    # The variables every trace client honours, so one setting silences every
+    # trace-reporting program on the machine: nothing is sent even with
+    # usageReportingEnabled: true and a key.
+    monkeypatch.setenv(variable, value)
+    config = _config(endpoint=stub.url)
+    assert isReportingActive(config) is False
+    client = createTraceClient(config)
+    assert client.enabled is False
+    client.report("startup", tags={"version": "9.9.9"})
+    client.report("world-loaded", tags={"version": "9.9.9"})
+    client.close()
+    assert not stub.arrived.wait(0.3)
+    assert stub.requests == []
+
+
+def test_trace_wide_environment_opt_out_is_honoured_by_the_client_itself(
+    monkeypatch, stub
+):
+    # Belt and braces: even a client built straight from the config, past
+    # isReportingActive(), reports nothing under DO_NOT_TRACK=1.
+    monkeypatch.setenv("DO_NOT_TRACK", "1")
+    client = TraceClient(stub.url, APPLICATION, key="test-key", enabled=True)
+    assert client.enabled is False
+    assert client.disabled_reason == "environment"
+    client.report("startup")
+    client.close()
+    assert not stub.arrived.wait(0.3)
+    assert stub.requests == []
 
 
 @pytest.mark.parametrize("value", ["1", "true", "", "yes"])
@@ -223,11 +268,18 @@ def test_first_run_notice_is_logged_once_and_then_acknowledged(caplog):
     assert FIRST_RUN_NOTICE not in caplog.text
 
 
-def test_first_run_notice_names_the_opt_out_and_what_is_sent():
+def test_first_run_notice_names_every_opt_out_and_what_is_sent():
     assert FIRST_RUN_NOTICE.startswith("Usage reporting is on: roam sends")
-    assert "trace.danielstephenson.dev" in FIRST_RUN_NOTICE
+    assert "https://trace.danielstephenson.dev" in FIRST_RUN_NOTICE
     assert "program name and version only" in FIRST_RUN_NOTICE
     assert "usageReportingEnabled: false in config.yml" in FIRST_RUN_NOTICE
+    assert "TRACE_USAGE_REPORTING=off" in FIRST_RUN_NOTICE
+    assert usageReporting.DETAILS_URL in FIRST_RUN_NOTICE
+    assert (
+        usageReporting.DETAILS_URL
+        == "https://github.com/Stephenson-Software/trace#usage-reporting"
+    )
+    assert "\n" not in FIRST_RUN_NOTICE
 
 
 def test_first_run_notice_is_not_shown_when_reporting_is_off(monkeypatch, caplog):
@@ -242,6 +294,14 @@ def test_first_run_notice_is_not_shown_when_reporting_is_off(monkeypatch, caplog
     assert showFirstRunNotice(silenced) is False
     silenced.acknowledgeUsageReporting.assert_not_called()
     monkeypatch.delenv(ENVIRONMENT_VARIABLE)
+
+    # The trace-wide variables silence the notice too, and the marker is not
+    # written: the next run without them still gets its one notice.
+    monkeypatch.setenv("DO_NOT_TRACK", "1")
+    doNotTrack = _config()
+    assert showFirstRunNotice(doNotTrack) is False
+    doNotTrack.acknowledgeUsageReporting.assert_not_called()
+    monkeypatch.delenv("DO_NOT_TRACK")
 
     monkeypatch.setattr(sys, "platform", "emscripten")
     browser = _config()

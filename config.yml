@@ -49,6 +49,10 @@ checkForUpdates: true
 # browser build. On by default; the first launch logs a one-line notice and
 # writes usageReportingEnabled here so it is not shown again.
 # usageReportingEnabled: false
+# The environment variables TRACE_USAGE_REPORTING=off or DO_NOT_TRACK=1 also
+# turn it off, for every program that reports to trace, and win over this
+# file; ROAM_USAGE_REPORTING=0 does the same for Roam alone.
+# Details: https://github.com/Stephenson-Software/trace#usage-reporting
 # usageReportingEndpoint and usageReportingKey may be set here to point a
 # build at a different trace server; the defaults are built in.
 # NPCs / CPCs — autonomous agents that mimic player behavior.
