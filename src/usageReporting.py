@@ -15,14 +15,16 @@ by default and turned off with ``usageReportingEnabled: false`` in
 config.yml. It is never on in the browser (Pyodide) build, which has no real
 threads or sockets, and it can be forced off for a process with the
 ``ROAM_USAGE_REPORTING=0`` environment variable — the test harness does that
-so a test run is never counted as a player.
+so a test run is never counted as a player — or, for every program that
+reports to trace, with ``TRACE_USAGE_REPORTING=off`` or ``DO_NOT_TRACK=1``.
+Details: https://github.com/Stephenson-Software/trace#usage-reporting
 """
 import os
 import sys
 
 from config.config import Config
 from gameLogging.logger import getLogger
-from lib.trace_client import TraceClient
+from lib.trace_client import TraceClient, environment_opts_out
 
 _logger = getLogger(__name__)
 
@@ -36,10 +38,16 @@ _OFF_VALUES = frozenset({"0", "false", "off", "no"})
 
 OPT_OUT_INSTRUCTION = "usageReportingEnabled: false in config.yml"
 
+# Where what is sent, what is not, and every opt-out are written up.
+DETAILS_URL = "https://github.com/Stephenson-Software/trace#usage-reporting"
+
 FIRST_RUN_NOTICE = (
     "Usage reporting is on: roam sends a startup event and a world-loaded "
-    "event (program name and version only) to trace.danielstephenson.dev. "
-    "Turn it off with " + OPT_OUT_INSTRUCTION + "."
+    "event (program name and version only) to https://trace.danielstephenson.dev "
+    "- nothing about you, your machine or your saves. Turn it off with "
+    + OPT_OUT_INSTRUCTION
+    + ", or for every trace-reporting program with the environment variable "
+    "TRACE_USAGE_REPORTING=off. Details: " + DETAILS_URL
 )
 
 
@@ -50,6 +58,11 @@ def isBrowserBuild():
 
 
 def isDisabledByEnvironment():
+    """Roam's own ROAM_USAGE_REPORTING override, or the TRACE_USAGE_REPORTING
+    / DO_NOT_TRACK variables every trace client honours. Checked before the
+    config so the notice is never shown for a run that will not report."""
+    if environment_opts_out():
+        return True
     value = os.environ.get(ENVIRONMENT_VARIABLE)
     if value is None:
         return False

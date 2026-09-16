@@ -154,16 +154,24 @@ Linux / other | `saves/` | `config.yml` | `screenshots/`
 
 You can override the save location by setting `pathToSaveDirectory` in `config.yml`, or the whole saves directory by setting the `ROAM_SAVE_DIR` environment variable, which takes precedence over both `pathToSaveDirectory` and the table above. `ROAM_SAVE_DIR` applies to a server-side run of the game; saves made in the [browser build](#play-in-a-browser-from-source) are held by the browser, so it has no effect there.
 
-### Usage reporting
-Roam reports that it is being played, anonymously, so the number of installations actually in use can be seen. On launch it sends a `startup` event, and each time a save is opened a `world-loaded` event, to [trace](https://github.com/Stephenson-Software/trace) at `https://trace.danielstephenson.dev`. Each event carries the program name (`roam`) and the game version only — never a username, machine name, IP address, path or save name. The request is made on a background thread, never blocks or interrupts the game, and is dropped if the service cannot be reached.
+## Usage reporting
+Usage reporting is on by default: Roam sends its name (`roam`), the game version and two events to [trace](https://github.com/Stephenson-Software/trace) at `https://trace.danielstephenson.dev`, so the number of installations actually in use can be seen — a `startup` event on launch and a `world-loaded` event each time a save is opened. Never a username, machine name, IP address, path or save name; nothing about your saves' contents. The request is made on a background thread, never blocks or interrupts the game, and is dropped if the service cannot be reached.
 
-Reporting is on by default. The first launch after installing a version with it logs a one-line notice and records the setting in your `config.yml` (see the table above for where that is). To turn it off, set:
+The first launch after installing a version with it logs a one-line notice and records the setting in your `config.yml` (see the table above for where that is). To turn it off, any one of these is enough:
 
-```yaml
-usageReportingEnabled: false
-```
+- in `config.yml`:
 
-The [browser build](#play-in-a-browser-from-source) never reports. Setting the `ROAM_USAGE_REPORTING=0` environment variable also turns reporting off for a single run, which is what the test harness does. The client is the vendored `src/lib/trace_client.py` (standard library only).
+  ```yaml
+  usageReportingEnabled: false
+  ```
+
+- the environment variable `TRACE_USAGE_REPORTING=off` (also `false`, `0`, `no`), which turns off every program that reports to trace
+- the environment variable `DO_NOT_TRACK=1` (see [consoledonottrack.com](https://consoledonottrack.com))
+- the environment variable `ROAM_USAGE_REPORTING=0`, for Roam alone (what the test harness sets)
+
+The environment variables win over `config.yml`. The [browser build](#play-in-a-browser-from-source) never reports: the Pyodide build has no threads or sockets, so the client is never even started there. The client is the vendored `src/lib/trace_client.py` (standard library only).
+
+Details: https://github.com/Stephenson-Software/trace#usage-reporting
 
 ## Support
 You can find the support discord server [here](https://discord.gg/49J4RHQxhy).
