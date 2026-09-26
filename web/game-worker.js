@@ -106,6 +106,26 @@ async function loadSavesFromIDB(pyodide) {
 // which writes to IDB from its own event loop. self.postMessage is synchronous
 // and does NOT require the Worker event loop to be running.
 
+// IDB record format (store 'files', keyed by absolute FS path):
+//   string      — a file whose bytes are valid UTF-8 (the JSON saves). This is
+//                 the format every record had before binary support, so
+//                 existing players' records keep restoring unchanged.
+//   ArrayBuffer — any other file (map PNGs), stored as its exact bytes.
+// FS.readFile(..., {encoding:'utf8'}) must not be used to decide this: it never
+// throws and stops at the first NUL byte, so a PNG came back as a ~5-char
+// string and was restored corrupted.
+const _utf8Strict = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
+
+function encodeSaveRecord(bytes) {
+    try {
+        return _utf8Strict.decode(bytes);
+    } catch {
+        // Copy into a standalone ArrayBuffer (bytes may be a view into a
+        // larger FS buffer).
+        return bytes.slice().buffer;
+    }
+}
+
 function makeSyncSaves(pyodide) {
     return () => {
         const files = {};
@@ -120,16 +140,9 @@ function makeSyncSaves(pyodide) {
                 if ((stat.mode & 0o170000) === 0o040000) {
                     walk(full);
                 } else {
-                    // Try UTF-8 (JSON saves); fall back to binary (map PNGs).
-                    try {
-                        files[full] = pyodide.FS.readFile(full, { encoding: 'utf8' });
-                    } catch {
-                        try {
-                            // ArrayBuffer is transferable — main thread can
-                            // receive and write it to IDB without copying.
-                            files[full] = pyodide.FS.readFile(full).buffer;
-                        } catch {}
-                    }
+                    let bytes;
+                    try { bytes = pyodide.FS.readFile(full); } catch { continue; }
+                    files[full] = encodeSaveRecord(bytes);
                 }
             }
         }
