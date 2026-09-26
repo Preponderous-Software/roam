@@ -124,6 +124,12 @@ async function newGameThenQuit(page) {
     await pressKey(page, "ArrowDown", 1, 400);
     await pressKey(page, "Enter", 3, 800);
     await page.waitForTimeout(5000);
+    await saveAndQuit(page);
+}
+
+// World → options → save and return to the title screen. Saving on the way
+// out is synchronous, so this always ends with a Worker sync of /saves.
+async function saveAndQuit(page) {
     await pressKey(page, "Escape", 1, 1500);
     await pressKey(page, "Enter", 1, 1500);
     await pressKey(page, "Enter", 1, 3000);
@@ -251,6 +257,6 @@ function attachConsole(page, sink) {
 
 module.exports = {
     BASE, launch, installSaveMessageRecorder, readIDB, seedIDB, toSeedRecords, makePng, saveMessages,
-    waitForStatus, pressKey, newGameThenQuit, loadExistingSave, waitFor,
+    waitForStatus, pressKey, newGameThenQuit, saveAndQuit, loadExistingSave, waitFor,
     isCompletePng, attachConsole,
 };

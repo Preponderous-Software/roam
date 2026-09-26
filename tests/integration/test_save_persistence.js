@@ -21,7 +21,7 @@
 
 const {
     BASE, launch, installSaveMessageRecorder, readIDB, seedIDB, toSeedRecords,
-    makePng, saveMessages, waitForStatus, newGameThenQuit, loadExistingSave,
+    makePng, saveMessages, waitForStatus, newGameThenQuit, loadExistingSave, saveAndQuit,
     waitFor, isCompletePng, attachConsole,
 } = require("./roamBrowser");
 
@@ -114,6 +114,10 @@ const MAP_IMAGE = "/saves/defaultsavefile/mapImage.png";
     // ── Load the save; the Worker's syncs show what it restored ──────────────
     process.stderr.write("\n--- Loading the save after reload\n");
     await loadExistingSave(page);
+    // An existing world is not saved on entry; save and quit so the Worker
+    // syncs what it restored (the first sync after loading).
+    await page.waitForTimeout(5000);
+    await saveAndQuit(page);
     const msgs = await waitFor(page, async () => {
         const m = await saveMessages(page);
         return m.length ? m : null;

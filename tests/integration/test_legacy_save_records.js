@@ -18,7 +18,7 @@
 
 const {
     BASE, launch, installSaveMessageRecorder, readIDB, seedIDB, toSeedRecords,
-    saveMessages, waitForStatus, newGameThenQuit, loadExistingSave, waitFor,
+    saveMessages, waitForStatus, newGameThenQuit, loadExistingSave, saveAndQuit, waitFor,
     attachConsole,
 } = require("./roamBrowser");
 
@@ -85,6 +85,10 @@ const LEGACY_MANGLED_PNG = "\u{50387}\r\n\x1a\n";
 
     process.stderr.write("\n--- Loading the legacy save\n");
     await loadExistingSave(page);
+    // An existing world is not saved on entry; save and quit so the Worker
+    // syncs what it restored (the first sync after loading).
+    await page.waitForTimeout(5000);
+    await saveAndQuit(page);
     const msgs = await waitFor(page, async () => {
         const m = await saveMessages(page);
         return m.length ? m : null;
