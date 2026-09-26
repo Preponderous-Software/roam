@@ -52,6 +52,12 @@ jobs:
           NODE_PATH: /usr/local/lib/node_modules
         run: node tests/integration/test_save_persistence.js
 
+      - name: Run legacy save-record integration test
+        env:
+          ROAM_URL: http://localhost:8080
+          NODE_PATH: /usr/local/lib/node_modules
+        run: node tests/integration/test_legacy_save_records.js
+
       - name: Stop game server
         if: always()
         run: kill "$SERVER_PID" 2>/dev/null || true
