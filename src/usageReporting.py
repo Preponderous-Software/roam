@@ -5,7 +5,8 @@
 Roam reports two events to https://trace.danielstephenson.dev so the number
 of installations actually being played can be seen: ``startup`` once per
 launch and ``world-loaded`` each time a save is opened. Each carries the
-program name ("roam") and the game version — nothing else. No usernames,
+program name ("roam") and the game version (the tag ``version``, which the
+client adds to every event) — nothing else. No usernames,
 hostnames, IPs, paths or save names are ever sent.
 
 The transport is the vendored ``lib.trace_client`` (standard library only),
@@ -35,6 +36,10 @@ APPLICATION = "roam"
 # (case-insensitive) forces reporting off regardless of config.yml.
 ENVIRONMENT_VARIABLE = "ROAM_USAGE_REPORTING"
 _OFF_VALUES = frozenset({"0", "false", "off", "no"})
+
+# Sent as the version when version.txt is missing or empty: the client requires
+# a non-blank version, and a missing one must never stop the game starting.
+UNKNOWN_VERSION = "unknown"
 
 OPT_OUT_INSTRUCTION = "usageReportingEnabled: false in config.yml"
 
@@ -90,6 +95,7 @@ def createTraceClient(config):
         return TraceClient(
             config.usageReportingEndpoint,
             APPLICATION,
+            programVersion(),
             key=config.usageReportingKey,
             enabled=True,
         )
@@ -109,5 +115,10 @@ def showFirstRunNotice(config):
     return True
 
 
-def versionTags():
-    return {"version": Config.getVersion()}
+def programVersion():
+    """The game version every event carries: version.txt, or UNKNOWN_VERSION
+    when it is missing or blank."""
+    version = Config.getVersion()
+    if not isinstance(version, str) or not version.strip():
+        return UNKNOWN_VERSION
+    return version

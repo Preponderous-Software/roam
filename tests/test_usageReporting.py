@@ -23,8 +23,9 @@ from usageReporting import (
     FIRST_RUN_NOTICE,
     createTraceClient,
     isReportingActive,
+    UNKNOWN_VERSION,
+    programVersion,
     showFirstRunNotice,
-    versionTags,
 )
 
 
@@ -141,8 +142,8 @@ def test_trace_wide_environment_opt_out_wins_over_config(
     assert isReportingActive(config) is False
     client = createTraceClient(config)
     assert client.enabled is False
-    client.report("startup", tags={"version": "9.9.9"})
-    client.report("world-loaded", tags={"version": "9.9.9"})
+    client.report("startup")
+    client.report("world-loaded")
     client.close()
     assert not stub.arrived.wait(0.3)
     assert stub.requests == []
@@ -154,7 +155,7 @@ def test_trace_wide_environment_opt_out_is_honoured_by_the_client_itself(
     # Belt and braces: even a client built straight from the config, past
     # isReportingActive(), reports nothing under DO_NOT_TRACK=1.
     monkeypatch.setenv("DO_NOT_TRACK", "1")
-    client = TraceClient(stub.url, APPLICATION, key="test-key", enabled=True)
+    client = TraceClient(stub.url, APPLICATION, "9.9.9", key="test-key", enabled=True)
     assert client.enabled is False
     assert client.disabled_reason == "environment"
     client.report("startup")
@@ -191,16 +192,32 @@ def test_a_bad_endpoint_in_config_costs_the_report_not_the_game():
 # --- what is sent ------------------------------------------------------------
 
 
-def test_version_tag_comes_from_the_bundled_version_file(monkeypatch):
+def test_version_comes_from_the_bundled_version_file(monkeypatch):
     monkeypatch.setattr(Config, "getVersion", staticmethod(lambda: "9.8.7"))
-    assert versionTags() == {"version": "9.8.7"}
+    assert programVersion() == "9.8.7"
+
+
+@pytest.mark.parametrize("missing", ["", "   "])
+def test_a_blank_version_file_is_sent_as_unknown_and_never_raises(
+    stub, monkeypatch, missing
+):
+    monkeypatch.setattr(Config, "getVersion", staticmethod(lambda: missing))
+    assert programVersion() == UNKNOWN_VERSION == "unknown"
+    client = createTraceClient(_config(endpoint=stub.url))
+    try:
+        assert client.enabled is True
+        client.report("startup")
+        assert stub.arrived.wait(5), "the startup report should reach the stub"
+    finally:
+        client.close()
+    assert stub.requests[0]["body"]["tags"] == {"version": "unknown"}
 
 
 def test_startup_event_carries_only_the_program_name_and_version(stub, monkeypatch):
     monkeypatch.setattr(Config, "getVersion", staticmethod(lambda: "1.2.3-test"))
     client = createTraceClient(_config(endpoint=stub.url))
     try:
-        client.report("startup", tags=versionTags())
+        client.report("startup")
         assert stub.arrived.wait(5), "the startup report should reach the stub"
     finally:
         client.close()
