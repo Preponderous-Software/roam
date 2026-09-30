@@ -119,7 +119,7 @@ from screen.statsScreen import StatsScreen
 from stats.stats import Stats
 from ui.status import Status
 from screen.worldScreen import WorldScreen
-from usageReporting import createTraceClient, showFirstRunNotice, versionTags
+from usageReporting import createTraceClient, showFirstRunNotice
 from world.tickCounter import TickCounter
 
 _logger = getLogger(__name__)
@@ -220,7 +220,7 @@ class Roam:
         self.worldScreen.initialize()
         # A save was opened (new or existing): the one usage action reported
         # besides startup. Version only — never the save name or path.
-        self.traceClient.report("world-loaded", tags=versionTags())
+        self.traceClient.report("world-loaded")
 
     def quitApplication(self):
         if self.renderer.supportsImageLoading():
@@ -358,7 +358,7 @@ def main(argv):
     # logged once, before the frontend takes over the terminal in text mode.
     traceClient = createTraceClient(config)
     showFirstRunNotice(config)
-    traceClient.report("startup", tags=versionTags())
+    traceClient.report("startup")
 
     if "--web" in argv:
         from rendering.webFrontend import WebFrontend
