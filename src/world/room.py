@@ -137,10 +137,6 @@ class Room(Environment):
         elif directionIndex == 3:
             return self.getGrid().getLeft(location)
 
-    def checkEntityMovementCooldown(self, tickToCheck, entity):
-        ticksPerSecond = self.config.ticksPerSecond
-        return tickToCheck + ticksPerSecond / entity.getSpeed() < self.tick
-
     def moveLivingEntities(self, tick) -> list:
         entitiesToMoveToNewRoom = []
         for entityId in self.livingEntities:
@@ -348,8 +344,9 @@ class Room(Environment):
                 continue
 
             if isinstance(targetEntity, LivingEntity) and targetEntity.getEnergy() > 0:
+                preyEnergy = targetEntity.getEnergy()
                 targetEntity.kill()
-                entity.addEnergy(targetEntity.getEnergy())
+                entity.addEnergy(preyEnergy)
             else:
                 self.removeEntity(targetEntity)
                 entity.addEnergy(10)

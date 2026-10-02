@@ -759,7 +759,7 @@ def test_hungry_entity_ignores_inedible_entity_at_destination(monkeypatch):
     assert chicken.getEnergy() == 4
 
 
-def test_hungry_predator_kills_living_prey_but_gains_no_energy(monkeypatch):
+def test_hungry_predator_kills_living_prey_and_gains_its_energy(monkeypatch):
     room = createRoom()
     bear = Bear(0)
     bear.setEnergy(5)
@@ -771,11 +771,27 @@ def test_hungry_predator_kills_living_prey_but_gains_no_energy(monkeypatch):
 
     room.moveLivingEntities(0)
 
-    # Characterizes current behavior: the prey is killed before its energy
-    # is read, so the predator is credited with 0 rather than 20.
+    # 5, minus 1 for the move, plus the chicken's 20.
     assert chicken.getEnergy() == 0
     assert chicken.isDead()
-    assert bear.getEnergy() == 4
+    assert bear.getEnergy() == 24
+
+
+def test_predator_energy_from_living_prey_is_capped_at_100(monkeypatch):
+    room = createRoom()
+    bear = Bear(0)
+    bear.setTargetEnergy(100)
+    bear.setEnergy(40)
+    chicken = Chicken(0)
+    chicken.setEnergy(90)
+    room.addEntityToLocation(chicken, _locationAt(room, 2, 1))
+    _placeLivingEntity(room, bear, _locationAt(room, 1, 1))
+    _patchMovementRandom(monkeypatch, moveRoll=1, direction=1)
+
+    room.moveLivingEntities(0)
+
+    assert chicken.isDead()
+    assert bear.getEnergy() == 100
 
 
 # --- reproduction ---
