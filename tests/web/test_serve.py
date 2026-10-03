@@ -39,3 +39,17 @@ def test_unknown_path_is_404_for_head_too(base_url):
     with pytest.raises(urllib.error.HTTPError) as error:
         _request(base_url + "/no-such-page", "HEAD")
     assert error.value.code == 404
+
+
+def test_a_tap_sends_mouse_up_with_coordinates_captured_before_reset():
+    # The touchend handler clears _tapStart right after scheduling the
+    # delayed mouse_up; the callback must not read _tapStart (it is null by
+    # then, which threw and dropped every tap's mouse_up).
+    import os
+    import re
+
+    page = open(os.path.join(os.path.dirname(__file__), "..", "..", "web", "index.html")).read()
+    delayed = re.findall(r"setTimeout\(\(\) => sendMouseEvent\(\"mouse_up\", ([^)]*)\)", page)
+    assert delayed, "no delayed mouse_up found"
+    for args in delayed:
+        assert "_tapStart" not in args, args

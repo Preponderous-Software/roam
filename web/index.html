@@ -638,9 +638,13 @@
     } else if (_dragActive) {
       sendMouseEvent("mouse_up", t.clientX, t.clientY, 1);
     } else if (_tapStart) {
-      triggerFlash(_tapStart.x, _tapStart.y);
-      sendMouseEvent("mouse_down", _tapStart.x, _tapStart.y, 1);
-      setTimeout(() => sendMouseEvent("mouse_up", _tapStart.x, _tapStart.y, 1), 60);
+      // Copy the point: _tapStart is cleared just below, long before the
+      // delayed mouse_up runs, and reading it then threw - so the game got
+      // a mouse_down with no mouse_up for every plain tap.
+      const tapX = _tapStart.x, tapY = _tapStart.y;
+      triggerFlash(tapX, tapY);
+      sendMouseEvent("mouse_down", tapX, tapY, 1);
+      setTimeout(() => sendMouseEvent("mouse_up", tapX, tapY, 1), 60);
     }
     _tapStart   = null;
     _tapLong    = false;
