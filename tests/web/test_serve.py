@@ -48,8 +48,12 @@ def test_a_tap_sends_mouse_up_with_coordinates_captured_before_reset():
     import os
     import re
 
-    page = open(os.path.join(os.path.dirname(__file__), "..", "..", "web", "index.html")).read()
-    delayed = re.findall(r"setTimeout\(\(\) => sendMouseEvent\(\"mouse_up\", ([^)]*)\)", page)
+    page = open(
+        os.path.join(os.path.dirname(__file__), "..", "..", "web", "index.html")
+    ).read()
+    delayed = re.findall(
+        r"setTimeout\(\(\) => sendMouseEvent\(\"mouse_up\", ([^)]*)\)", page
+    )
     assert delayed, "no delayed mouse_up found"
     for args in delayed:
         assert "_tapStart" not in args, args
