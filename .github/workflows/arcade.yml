@@ -1,0 +1,65 @@
+# Deploys the browser build to arcade (https://github.com/Stephenson-Software/arcade,
+# RFC 0006 / RFC 0012), where it is served as a `kind: static` game with
+# `isolation: on` (SharedArrayBuffer carries the input) at
+# https://roam.play.danielstephenson.dev.
+#
+# This is an ADDITIONAL home for the web build. https://roam.preponderous.org/play
+# (the gateway's roam-game service, web/serve.py) is unchanged and keeps its
+# players' saves; arcade is a different origin, so its saves are separate.
+#
+# A push to main deploys once the repository variable ARCADE_ENABLED is 'true'
+# (or by hand: Actions -> Run workflow). Release tags do not trigger this
+# workflow (release.yml owns those). Each deploy is version.txt plus the
+# commit, so every push is a new, immutable arcade version; rollback is
+# arcade's POST /api/games/roam/current.
+name: Deploy to arcade
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: arcade-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && vars.ARCADE_ENABLED == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pygame pytest jsonschema Pillow structlog
+
+      - name: Tests
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: python -m pytest -q
+
+      - name: Build the static site (index.html, web/, assets/)
+        run: python3 web/build_arcade_site.py "$RUNNER_TEMP/arcade-site"
+
+      - name: Version this build (version.txt + commit)
+        run: echo "$(tr -d '[:space:]' < version.txt)+g${GITHUB_SHA::7}" > "$RUNNER_TEMP/arcade-version.txt"
+
+      - name: Deploy to arcade
+        uses: Stephenson-Software/arcade-deploy@v1
+        with:
+          slug: roam
+          token: ${{ secrets.ARCADE_TOKEN }}
+          site-dir: ${{ runner.temp }}/arcade-site
+          version-file: ${{ runner.temp }}/arcade-version.txt
+          skip-existing: "true"

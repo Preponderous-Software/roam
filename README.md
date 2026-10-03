@@ -102,6 +102,12 @@ A `Dockerfile` is included that does both steps and exposes port 8080:
 
 Saves made in the browser live in that browser's own storage (an IndexedDB database named `roam-saves`), not on the server — clearing site data clears them. Re-run `web/build_zip.py` after changing anything under `src/` or `schemas/`, otherwise the worker keeps unpacking the previously built bundle.
 
+### The arcade copy
+The same build is also published to [arcade](https://github.com/Stephenson-Software/arcade) (RFC 0006 / RFC 0012) as a static site at <https://roam.play.danielstephenson.dev>, by `.github/workflows/arcade.yml` on a push to `main` once the repository variable `ARCADE_ENABLED` is `true` (or by hand from the Actions tab). The site is built with
+> python3 web/build_arcade_site.py [OUT_DIR]
+
+which runs `web/build_zip.py` and lays out `index.html`, `web/game-worker.js`, `web/game.zip`, `web/game_version.txt` and `assets/` exactly as `web/serve.py` serves them. The page uses root-relative URLs, so the site must sit at the root of its host, and it needs `SharedArrayBuffer`, so arcade's registry entry for `roam` must set `kind: static` and `isolation: on`. <https://roam.preponderous.org/play> is unchanged. The two are different origins, so a browser's saves on one are not visible on the other.
+
 ## Windows setup script (run from source)
 If you're [running from source](#run-from-source-for-developers) on Windows, `install.ps1` is a setup *script* — the from-source counterpart to `run.sh`. It checks that Python and pip are available, installs the dependencies, and creates Desktop and Start Menu shortcuts so you can launch the game without using the command line. (For a normal install, use the `RoamSetup.exe` **installer** from [Download & Install](#download--install-recommended) instead — it needs no Python.)
 
