@@ -115,6 +115,28 @@
     .btn.label   { font-size: 16px; font-weight: 600; letter-spacing: 0.03em; }
     .btn-label   { font-size: 9px; font-weight: 400; color: #777; letter-spacing: 0.02em; line-height: 1; }
     .dpad-spacer { }
+    .btn.saves   { font-size: 11px; color: #999; }
+
+    /* ── desktop footer (holds the Saves button; hidden on touch) ────────── */
+    #footer {
+      display: none;
+      flex-shrink: 0;
+      background: #111;
+      border-top: 1px solid #222;
+      padding: 2px 8px;
+      justify-content: flex-end;
+      align-items: center;
+    }
+    #footer button {
+      background: #1e1e1e;
+      border: 1px solid #444;
+      color: #aaa;
+      padding: 2px 12px;
+      cursor: pointer;
+      font: 12px system-ui, sans-serif;
+      border-radius: 3px;
+    }
+    #footer button:hover { background: #2a2a2a; color: #ddd; }
   </style>
 </head>
 <body>
@@ -129,7 +151,7 @@
 
 <div id="controls">
   <div class="dpad">
-    <div class="dpad-spacer"></div>
+    <button class="btn saves" id="saves-touch" type="button" title="Download or load your saves">Saves</button>
     <button class="btn" data-key="up">▲</button>
     <div class="dpad-spacer"></div>
     <button class="btn" data-key="left">◀</button>
@@ -149,6 +171,11 @@
   </div>
 </div>
 
+<div id="footer">
+  <button id="saves-desktop" type="button" title="Download or load your saves">Saves</button>
+</div>
+
+<script src="/web/saves.js"></script>
 <script>
   "use strict";
 
@@ -479,8 +506,16 @@
     });
   }
 
+  // Set by the Saves panel (web/saves.js) just before it loads a saves file:
+  // from then on this page writes nothing to IndexedDB, so a sync already on
+  // its way cannot erase what is being loaded. Checked when the transaction
+  // would be created, not when the Worker's message arrived.
+  let _savesStopped = false;
+
   function _idbWrite(files) {
+    if (_savesStopped) return;
     _idbOpen().then((db) => {
+      if (_savesStopped) { db.close(); return; }
       let tx;
       try { tx = db.transaction(_IDB_STORE, 'readwrite'); }
       catch(e) { console.warn('[roam] IDB write tx failed:', e); db.close(); return; }
@@ -511,7 +546,7 @@
       if (d.type === 'status') { setStatus(d.msg); return; }
       if (d.type === 'ready')  { return; }
       if (d.type === 'error')  { setStatus('Error: ' + d.msg, true); showBar(); }
-      if (d.type === 'save')   { _idbWrite(d.files); return; }
+      if (d.type === 'save')   { if (!_savesStopped) _idbWrite(d.files); return; }
     };
     worker.postMessage({ type: 'init', sab });
   }
@@ -681,10 +716,35 @@
   });
   canvasWrap.addEventListener("contextmenu", (e) => e.preventDefault());
 
+  // ── saves panel (download / load a saves file; web/saves.js) ───────────────
+  // stop() runs before anything is loaded: no more save writes, no Worker.
+  function stopForSaves() {
+    _savesStopped = true;
+    stopKey();
+    if (worker) { worker.terminate(); worker = null; }
+    setStatus("Stopped while saves are loaded.");
+    showBar();
+  }
+
   // ── init ────────────────────────────────────────────────────────────────────
   if (_isTouch) document.getElementById("controls").style.display = "flex";
   resizeCanvas();
   startWorker();
+  // On touch the button sits in the d-pad's top-left corner; on desktop in a
+  // slim footer under the canvas. Neither covers the game.
+  const savesButton = document.getElementById(_isTouch ? "saves-touch" : "saves-desktop");
+  if (!_isTouch) document.getElementById("saves-touch").replaceWith(Object.assign(document.createElement("div"), { className: "dpad-spacer" }));
+  if (window.RoamSaves) {
+    try {
+      window.RoamSaves.attach({ button: savesButton, stop: stopForSaves });
+      if (!_isTouch) { document.getElementById("footer").style.display = "flex"; resizeCanvas(); }
+    } catch (e) {
+      console.warn("[roam] the saves panel could not start:", e);
+      savesButton.style.visibility = "hidden";
+    }
+  } else {
+    savesButton.style.visibility = "hidden";
+  }
 </script>
 </body>
 </html>
