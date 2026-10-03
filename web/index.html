@@ -53,6 +53,19 @@
     }
     #bar-reconnect:hover { background: #2a2a2a; }
 
+    /* ── saves notice (the saves could not be read; nothing will be saved) ─ */
+    #saves-notice {
+      flex-shrink: 0;
+      background: #2a1414;
+      border-bottom: 1px solid #5a2a2a;
+      color: #f0c0c0;
+      padding: 6px 12px;
+      font-size: 13px;
+      line-height: 1.4;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
     /* ── game canvas ─────────────────────────────────────────────────────── */
     #canvas-wrap {
       flex: 1;
@@ -512,20 +525,58 @@
   // would be created, not when the Worker's message arrived.
   let _savesStopped = false;
 
-  function _idbWrite(files) {
+  // The world a save path belongs to: '/saves/<world>/...' -> '<world>'.
+  function _worldOf(path) {
+    const m = /^\/saves\/([^/]+)\//.exec(path);
+    return m ? m[1] : null;
+  }
+
+  // Writes a Worker sync into IndexedDB. Never clears the store: every file
+  // the game has is put, and a stored file the game does not have is deleted
+  // only when its world is one the game still has (a file the game removed,
+  // such as a stitched room capture) or one the player deleted or renamed this
+  // session (removed). Any other stored world, for instance one this tab never
+  // restored, or one another tab added, is left exactly as it is.
+  function _idbWrite(files, removed) {
     if (_savesStopped) return;
     _idbOpen().then((db) => {
       if (_savesStopped) { db.close(); return; }
       let tx;
       try { tx = db.transaction(_IDB_STORE, 'readwrite'); }
       catch(e) { console.warn('[roam] IDB write tx failed:', e); db.close(); return; }
-      try { tx.objectStore(_IDB_STORE).clear(); } catch {}
+      const store = tx.objectStore(_IDB_STORE);
       for (const [path, content] of Object.entries(files)) {
-        try { tx.objectStore(_IDB_STORE).put(content, path); } catch {}
+        try { store.put(content, path); } catch {}
       }
+      const worlds = new Set(Object.keys(files).map(_worldOf).filter(Boolean));
+      for (const world of (Array.isArray(removed) ? removed : [])) worlds.add(world);
+      try {
+        const keys = store.getAllKeys();
+        keys.onsuccess = () => {
+          for (const key of keys.result) {
+            if (typeof key !== 'string' || Object.prototype.hasOwnProperty.call(files, key)) continue;
+            const world = _worldOf(key);
+            if (world !== null && worlds.has(world)) {
+              try { store.delete(key); } catch {}
+            }
+          }
+        };
+      } catch {}
       tx.oncomplete = () => db.close();
       tx.onerror    = () => { console.warn('[roam] IDB write error:', tx.error); db.close(); };
     }).catch((err) => console.warn('[roam] IDB open failed:', err));
+  }
+
+  // A failed save restore (web/game-worker.js): nothing from this session is
+  // saved, so say so where it stays visible (the status bar hides itself).
+  function showSavesNotice(msg) {
+    if (document.getElementById("saves-notice")) return;
+    const notice = document.createElement("div");
+    notice.id = "saves-notice";
+    notice.setAttribute("role", "alert");
+    notice.textContent = msg;
+    barEl.after(notice);
+    resizeCanvas();
   }
 
   function startWorker() {
@@ -546,7 +597,8 @@
       if (d.type === 'status') { setStatus(d.msg); return; }
       if (d.type === 'ready')  { return; }
       if (d.type === 'error')  { setStatus('Error: ' + d.msg, true); showBar(); }
-      if (d.type === 'save')   { if (!_savesStopped) _idbWrite(d.files); return; }
+      if (d.type === 'save')   { if (!_savesStopped) _idbWrite(d.files, d.removed); return; }
+      if (d.type === 'nosave') { showSavesNotice(d.msg); return; }
     };
     worker.postMessage({ type: 'init', sab });
   }

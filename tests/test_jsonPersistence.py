@@ -9,7 +9,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from jsonPersistence import readJsonFile, writeJsonAtomically
+from jsonPersistence import (
+    noteBrowserWorldRemoved,
+    readJsonFile,
+    writeJsonAtomically,
+)
 from stats.stats import Stats
 from world.tickCounter import TickCounter
 
@@ -124,3 +128,44 @@ def test_writeJsonAtomically_syncs_browser_saves_when_available(monkeypatch, tmp
     writeJsonAtomically(path, {"ok": True})
 
     syncSaves.assert_called_once_with()
+
+
+# --- noteBrowserWorldRemoved: a deleted or renamed world, in the browser ------
+
+
+def test_noteBrowserWorldRemoved_is_a_no_op_off_the_browser(monkeypatch):
+    monkeypatch.delitem(sys.modules, "js", raising=False)
+    noteBrowserWorldRemoved("/saves/old_world")  # must not raise
+
+
+def test_noteBrowserWorldRemoved_names_the_world_then_syncs(monkeypatch):
+    calls = []
+    js = SimpleNamespace(
+        noteSavedWorldRemoved=lambda name: calls.append(("note", name)),
+        syncSaves=lambda: calls.append(("sync",)),
+    )
+    monkeypatch.setitem(sys.modules, "js", js)
+
+    noteBrowserWorldRemoved("/saves/old_world/")
+
+    # Named before the sync, so the sync carries the removal.
+    assert calls == [("note", "old_world"), ("sync",)]
+
+
+def test_noteBrowserWorldRemoved_without_the_hook_does_not_sync(monkeypatch):
+    # After a failed restore the Worker installs neither hook.
+    syncSaves = MagicMock()
+    monkeypatch.setitem(sys.modules, "js", SimpleNamespace(syncSaves=syncSaves))
+    noteBrowserWorldRemoved("/saves/old_world")
+    syncSaves.assert_not_called()
+
+
+def test_noteBrowserWorldRemoved_survives_a_failing_hook(monkeypatch):
+    def broken(name):
+        raise RuntimeError("worker gone")
+
+    syncSaves = MagicMock()
+    js = SimpleNamespace(noteSavedWorldRemoved=broken, syncSaves=syncSaves)
+    monkeypatch.setitem(sys.modules, "js", js)
+    noteBrowserWorldRemoved("/saves/old_world")  # must not raise
+    syncSaves.assert_not_called()

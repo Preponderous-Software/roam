@@ -26,7 +26,7 @@ def test_the_page_loads_the_panel_before_its_own_script():
 
 def test_page_writes_nothing_to_indexeddb_once_stopped_for_an_import():
     page = _read("index.html")
-    body = page[page.index("function _idbWrite(files) {") :]
+    body = page[page.index("function _idbWrite(files, removed) {") :]
     body = body[: body.index("\n  }\n")]
     # Checked on entry and again when the transaction would be created.
     assert body.count("if (_savesStopped)") == 2

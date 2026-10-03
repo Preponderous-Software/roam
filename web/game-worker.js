@@ -6,7 +6,9 @@
 //                   { type: 'status', msg: string }
 //                   { type: 'ready' }
 //                   { type: 'error', msg: string }
-//                   { type: 'save', files: { path: content, ... } }
+//                   { type: 'save', files: { path: content, ... }, removed: [world, ...] }
+//                   { type: 'nosave', msg: string }  saves could not be read,
+//                            so none will be written this session
 //
 // Input arrives via the SharedArrayBuffer ring buffer (main thread writes,
 // Python reads) so key/mouse events reach the game loop without depending on
@@ -48,7 +50,11 @@ function idbOpen() {
 // Populate /saves from IndexedDB before Python starts.
 // This runs entirely before runPythonAsync, so Atomics.wait is not yet active
 // and the event loop is free to process IDB callbacks normally.
-// Always resolves (never rejects) — a restore failure starts with empty saves.
+// Always resolves (never rejects): a browser that won't hand back stored data
+// should still start the game. But it reports whether every stored file came
+// back, because a sync after a failed or partial read would write this
+// session's view of /saves over the player's stored worlds (tak#18). Resolves
+// to true when every stored file was written back, false otherwise.
 async function loadSavesFromIDB(pyodide) {
     try {
         const db = await Promise.race([
@@ -90,13 +96,21 @@ async function loadSavesFromIDB(pyodide) {
                     pyodide.FS.writeFile(path, content, { encoding: 'utf8' });
                 }
                 n++;
-            } catch(e) { console.warn('[roam] could not restore', path, e); }
+            } catch(e) {
+                // A file that is not in the FS would be missing from every
+                // sync, so this counts as a failed restore.
+                console.warn('[roam] could not restore', path, e);
+                try { db.close(); } catch {}
+                return false;
+            }
         }
         if (n > 0) console.log(`[roam] ${n} save file(s) restored from IndexedDB`);
         try { db.close(); } catch {}
+        return true;
 
     } catch(err) {
-        console.warn('[roam] save restore skipped (non-fatal):', err);
+        console.warn('[roam] could not read saved worlds:', err);
+        return false;
     }
 }
 
@@ -126,6 +140,12 @@ function encodeSaveRecord(bytes) {
     }
 }
 
+// Worlds the player deleted or renamed this session (by name, the directory
+// under /saves), reported by the game through noteSavedWorldRemoved(). Only
+// these worlds may be dropped from IndexedDB when they are missing from the
+// FS; any other stored world the FS does not have is left alone.
+const removedWorlds = new Set();
+
 function makeSyncSaves(pyodide) {
     return () => {
         const files = {};
@@ -149,7 +169,7 @@ function makeSyncSaves(pyodide) {
         try { walk('/saves'); } catch {}
         // postMessage is synchronous from the Worker's perspective; no event
         // loop is needed.  The main thread queues and drains these on its own.
-        self.postMessage({ type: 'save', files });
+        self.postMessage({ type: 'save', files, removed: [...removedWorlds] });
     };
 }
 
@@ -178,10 +198,23 @@ self.onmessage = async (e) => {
         self.postMessage({ type: 'status', msg: 'Restoring saves…' });
 
         pyodide.FS.mkdir('/saves');
-        await loadSavesFromIDB(pyodide);  // runs before Python; IDB works here
-
-        // Wire syncSaves AFTER pyodide is initialised.
-        globalThis.syncSaves = makeSyncSaves(pyodide);
+        // Runs before Python; IDB works here.
+        const restored = await loadSavesFromIDB(pyodide);
+        if (restored) {
+            // Wire syncSaves AFTER pyodide is initialised.
+            globalThis.syncSaves = makeSyncSaves(pyodide);
+            globalThis.noteSavedWorldRemoved = (name) => {
+                if (typeof name === 'string' && name && !name.includes('/')) removedWorlds.add(name);
+            };
+        } else {
+            // Never sync after a failed or partial read: with no syncSaves the
+            // game's saves stay in this tab only, and the stored worlds are
+            // left exactly as they were.
+            self.postMessage({ type: 'nosave', msg:
+                "Your saved worlds couldn't be read in this browser just now, so nothing from " +
+                "this session will be saved. Your saved worlds are untouched: reload the page to " +
+                "try again, or use Saves to download a copy." });
+        }
 
         self.postMessage({ type: 'status', msg: 'Installing Python packages…' });
 

@@ -604,3 +604,49 @@ def test_c_that_opens_naming_does_not_type_itself_into_the_name(temp_saves_dir):
     screen.draw()  # suppression only lasts the frame naming opened in
     screen.handleEvent(InputEvent(EventType.TEXT_INPUT, text="a"))
     assert screen.newSaveNameInput == "a"
+
+
+# The browser build drops a stored world only when the game says it removed
+# it (web/index.html _idbWrite), so deleting and renaming must say so.
+
+
+def _recordRemovedWorlds(monkeypatch):
+    import sys
+
+    removed = []
+    module = sys.modules[SaveSelectionScreen.__module__]
+    monkeypatch.setattr(module, "noteBrowserWorldRemoved", removed.append)
+    return removed
+
+
+def test_deleteSave_tells_the_browser_build(temp_saves_dir, monkeypatch):
+    removed = _recordRemovedWorlds(monkeypatch)
+    savePath = os.path.join(temp_saves_dir, "save_to_delete")
+    os.makedirs(savePath)
+
+    createSaveSelectionScreen(temp_saves_dir).deleteSave(savePath)
+
+    assert removed == [savePath]
+
+
+def test_deleteSave_outside_base_tells_the_browser_nothing(temp_saves_dir, monkeypatch):
+    removed = _recordRemovedWorlds(monkeypatch)
+    outside = tempfile.mkdtemp()
+    try:
+        createSaveSelectionScreen(temp_saves_dir).deleteSave(outside)
+    finally:
+        shutil.rmtree(outside, ignore_errors=True)
+    assert removed == []
+
+
+def test_confirmRenameSave_tells_the_browser_the_old_name(temp_saves_dir, monkeypatch):
+    removed = _recordRemovedWorlds(monkeypatch)
+    oldPath = os.path.join(temp_saves_dir, "old_name")
+    os.makedirs(oldPath)
+    screen = createSaveSelectionScreen(temp_saves_dir)
+    screen.startRenamingSave(oldPath)
+    screen.renameNameInput = "new_name"
+
+    screen.confirmRenameSave()
+
+    assert removed == [oldPath]
