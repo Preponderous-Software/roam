@@ -293,6 +293,7 @@ def test_installation_id_lives_under_xdg_data_home_on_linux(monkeypatch, tmp_pat
     )
     monkeypatch.delenv("XDG_DATA_HOME")
     monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))  # expanduser on Windows
     assert installIdFile() == os.path.join(
         str(tmp_path / "home"), ".local", "share", "roam", "trace-install-id"
     )
@@ -304,6 +305,7 @@ def test_installation_id_lives_in_roams_own_user_data_directory_on_macos(
     monkeypatch.setattr(os, "name", "posix")
     monkeypatch.setattr(sys, "platform", "darwin")
     monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))  # expanduser on Windows
     assert installIdFile() == os.path.join(
         str(tmp_path / "home"),
         "Library",
