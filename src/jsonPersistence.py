@@ -26,6 +26,28 @@ def _syncBrowserSavesIfAvailable():
         _logger.warning("could not sync browser saves", error=str(e))
 
 
+def noteBrowserWorldRemoved(savePath):
+    """Tell the browser build that the player deleted or renamed a world.
+
+    The browser keeps saves in IndexedDB and only drops a stored world that
+    is missing from the game's files when the game says it removed it, so a
+    world this session never restored can never be lost. Then sync, so the
+    removal is stored now. A no-op outside the browser build.
+    """
+    js = sys.modules.get("js")
+    if js is None:
+        return
+    note = getattr(js, "noteSavedWorldRemoved", None)
+    if note is None:
+        return
+    try:
+        note(os.path.basename(os.path.normpath(savePath)))
+    except Exception as e:
+        _logger.warning("could not note a removed browser world", error=str(e))
+        return
+    _syncBrowserSavesIfAvailable()
+
+
 def writeJsonAtomically(path, data, indent=4):
     """Serialize ``data`` to ``path`` atomically.
 

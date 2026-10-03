@@ -4,6 +4,7 @@ import datetime
 import time
 from config.config import Config
 from gameLogging.logger import getLogger
+from jsonPersistence import noteBrowserWorldRemoved
 from rendering.renderer import Renderer
 from rendering.inputSource import InputSource
 from rendering.inputEvent import EventType
@@ -160,6 +161,7 @@ class SaveSelectionScreen(Screen):
         if os.path.isdir(savePath):
             shutil.rmtree(savePath)
             _logger.info("save deleted", savePath=savePath)
+            noteBrowserWorldRemoved(savePath)
         self.confirmingDelete = None
         self.refreshSaveCache()
         saves = self.getSaveDirectories()
@@ -193,6 +195,7 @@ class SaveSelectionScreen(Screen):
             return
         os.rename(oldPath, newPath)
         _logger.info("save renamed", oldPath=oldPath, newPath=newPath)
+        noteBrowserWorldRemoved(oldPath)
         self.renamingSave = None
         self.renameNameInput = ""
         self.renameNameError = ""
