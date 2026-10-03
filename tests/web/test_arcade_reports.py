@@ -26,7 +26,9 @@ def _read(name):
 
 def test_the_client_is_vendored_unchanged():
     with open(os.path.join(WEB, "arcade-scores.js"), "rb") as f:
-        assert hashlib.sha256(f.read()).hexdigest() == ARCADE_SCORES_SHA256
+        # A Windows checkout may turn LF into CRLF; the pin is of the LF file.
+        content = f.read().replace(b"\r\n", b"\n")
+    assert hashlib.sha256(content).hexdigest() == ARCADE_SCORES_SHA256
 
 
 def test_the_page_loads_the_client_before_its_own_script():
