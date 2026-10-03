@@ -9,6 +9,7 @@
 //                   { type: 'save', files: { path: content, ... }, removed: [world, ...] }
 //                   { type: 'nosave', msg: string }  saves could not be read,
 //                            so none will be written this session
+//                   { type: 'arcade', kind: 'unlock' | 'score', ... }  (src/achievements)
 //
 // Input arrives via the SharedArrayBuffer ring buffer (main thread writes,
 // Python reads) so key/mouse events reach the game loop without depending on

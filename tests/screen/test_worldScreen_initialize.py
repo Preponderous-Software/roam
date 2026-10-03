@@ -115,3 +115,31 @@ def test_initialize_registers_and_loads_hud_layout(test_config):
     ws.hudDragManager.load.assert_called_once()
     loadArgs = ws.hudDragManager.load.call_args.args
     assert loadArgs[1:] == (720, 720)
+
+
+def test_initialize_checks_achievements_for_the_loaded_world(test_config):
+    # An existing save gets credit for what it already did as soon as it loads.
+    from screen.worldScreen import Map, EnergyBar
+
+    ws = _makeWorldScreen(test_config)
+    ws._updateAchievements = MagicMock()
+
+    room = MagicMock()
+    room.getX.return_value = 0
+    room.getY.return_value = 0
+    gameMap = MagicMock()
+    gameMap.getRoom.return_value = room
+    gameMap.consumeIsNewRoom.return_value = False
+
+    def resolve(dependencyType):
+        if dependencyType is Map:
+            return gameMap
+        if dependencyType is EnergyBar:
+            return MagicMock()
+        raise AssertionError(f"unexpected dependency: {dependencyType}")
+
+    ws.container.resolve.side_effect = resolve
+
+    ws.initialize()
+
+    ws._updateAchievements.assert_called_once_with(force=True)

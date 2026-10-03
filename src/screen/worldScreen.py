@@ -25,6 +25,15 @@ from screen.screenType import ScreenType
 from screen.worldScreenPersistence import WorldScreenPersistence
 from stats.stats import Stats
 from ui.energyBar import EnergyBar
+from achievements.achievementRegistry import (
+    EVENT_HARVESTED_WHEAT,
+    EVENT_RECOVERED_GRAVESTONE,
+)
+from achievements.achievements import (
+    AchievementContext,
+    Achievements,
+    heldClassNames,
+)
 from goals.goals import Goals
 from goals.goalsJsonReaderWriter import GoalsJsonReaderWriter
 from rendering.renderer import Renderer
@@ -81,6 +90,10 @@ DEEPEST_Z = -3
 # @since August 16th, 2022
 @component
 class WorldScreen:
+    # Set in __init__; tests that build a WorldScreen without it get no
+    # achievement tracking rather than an AttributeError.
+    achievements = None
+
     def __init__(
         self,
         renderer: Renderer,
@@ -117,6 +130,7 @@ class WorldScreen:
         self.dayNightCycle = self.container.resolve(DayNightCycle)
         self.goals = self.container.resolve(Goals)
         self.goalsJsonReaderWriter = self.container.resolve(GoalsJsonReaderWriter)
+        self.achievements = self.container.resolve(Achievements)
         self.deathRespawnTicksRemaining = 0
         self.pausedByFocusLoss = False
         self._frameLightSources = []
@@ -218,6 +232,9 @@ class WorldScreen:
 
         if shouldSaveNewWorld:
             self.save()
+
+        # Credit what this world has already done (existing saves included).
+        self._updateAchievements(force=True)
 
         self.hudDragManager.register("hotbar", self._getHotbarDefaultRect)
         self.hudDragManager.register("status", lambda: self.status.getDefaultRect())
@@ -603,6 +620,7 @@ class WorldScreen:
                     return True
                 targetRoom.removeEntity(entity)
                 self.status.set("Harvested Wheat")
+                self._noteAchievementEvent(EVENT_HARVESTED_WHEAT)
                 self.player.removeEnergy(self.config.playerInteractionEnergyCost)
                 self.player.setTickLastGathered(self.tickCounter.getTick())
                 return True
@@ -876,6 +894,7 @@ class WorldScreen:
         if isinstance(toPlace, LivingEntity):
             targetRoom.addLivingEntity(toPlace)
         self.status.set("Placed " + toPlace.getName())
+        self._noteAchievementEvent("placed:" + toPlace.__class__.__name__)
         self.player.setTickLastPlaced(self.tickCounter.getTick())
 
     def _plantWheatSeed(self, targetLocation, targetRoom):
@@ -947,6 +966,7 @@ class WorldScreen:
             self.player.getInventory().placeIntoFirstAvailableInventorySlot(item)
         targetRoom.removeEntity(gravestone)
         self.status.set("Retrieved items from Gravestone")
+        self._noteAchievementEvent(EVENT_RECOVERED_GRAVESTONE)
 
     def _inventoryCanFitAll(self, inventory, items):
         """Return True if all items can be placed into inventory without overflow."""
@@ -2715,8 +2735,35 @@ class WorldScreen:
             self.status.set(str(len(newlyCompleted)) + " goals complete!")
         self.goalsJsonReaderWriter.save(self.goals.getCompletedIdentifiers())
 
+    def _noteAchievementEvent(self, event):
+        if self.achievements is not None:
+            self.achievements.noteEvent(event)
+
+    def _buildAchievementContext(self):
+        return AchievementContext(
+            tick=self.tickCounter.getTick(),
+            dayLengthTicks=self.config.dayNightCycleLengthTicks,
+            roomsExplored=self.stats.getRoomsExplored(),
+            foodEaten=self.stats.getFoodEaten(),
+            discovered=self.codex.getDiscoveredEntities(),
+            heldClassNames=heldClassNames(self.player.getInventory()),
+            depth=abs(self.currentZ),
+            deepestDepth=abs(DEEPEST_Z),
+            events=self.achievements.getEvents(),
+        )
+
+    def _updateAchievements(self, force=False):
+        # Arcade achievements and leaderboards: a no-op off arcade, and
+        # Achievements.update never raises, so play and saves are unaffected.
+        if self.achievements is None:
+            return
+        self.achievements.update(
+            self._buildAchievementContext, self.tickCounter.getTick(), force=force
+        )
+
     def _updateGameState(self):
         self._updateGoals()
+        self._updateAchievements()
         if self.pausedByFocusLoss:
             self.draw()
             self.renderer.present()
@@ -2765,6 +2812,7 @@ class WorldScreen:
 
         self.returnCursorSlotToInventory()
         self.saveSynchronous()
+        self._updateAchievements(force=True)
         self.shutdown()
 
         self.changeScreen = False
