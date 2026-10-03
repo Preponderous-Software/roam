@@ -150,6 +150,29 @@
       border-radius: 3px;
     }
     #footer button:hover { background: #2a2a2a; color: #ddd; }
+
+    /* ── achievement toast (arcade only; see reportToArcade) ─────────────── */
+    #achievement-toast {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      max-width: calc(100% - 32px);
+      transform: translate(-50%, -8px);
+      background: rgba(17, 17, 17, 0.92);
+      border: 1px solid #5a4a1a;
+      border-radius: 6px;
+      padding: 6px 14px;
+      color: #ddd;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    #achievement-toast.shown { opacity: 1; transform: translate(-50%, 0); }
+    #achievement-toast b { color: #e8c35a; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -160,6 +183,7 @@
 
 <div id="canvas-wrap">
   <canvas id="game-canvas"></canvas>
+  <div id="achievement-toast" role="status" aria-live="polite"></div>
 </div>
 
 <div id="controls">
@@ -189,6 +213,7 @@
 </div>
 
 <script src="/web/saves.js"></script>
+<script src="/web/arcade-scores.js"></script>
 <script>
   "use strict";
 
@@ -599,8 +624,52 @@
       if (d.type === 'error')  { setStatus('Error: ' + d.msg, true); showBar(); }
       if (d.type === 'save')   { if (!_savesStopped) _idbWrite(d.files, d.removed); return; }
       if (d.type === 'nosave') { showSavesNotice(d.msg); return; }
+      if (d.type === 'arcade') { reportToArcade(d); return; }
     };
     worker.postMessage({ type: 'init', sab });
+  }
+
+  // ── arcade achievements and leaderboards ───────────────────────────────────
+  // The Worker posts { type: 'arcade', kind: 'unlock', achievement, title? } or
+  // { type: 'arcade', kind: 'score', board, value } (src/achievements). The
+  // vendored arcade-social client (web/arcade-scores.js) sends them only on
+  // https://roam.play.danielstephenson.dev for a signed-in player and never
+  // throws or rejects; anywhere else, or if the script did not load, this does
+  // nothing. Nothing here can stop the game or touch its saves.
+  // Unlocks that arrive together (loading a world credits several at once)
+  // are shown one after another.
+  const _toastQueue = [];
+  let _toastBusy = false;
+  function showAchievementToast(title) {
+    _toastQueue.push(title);
+    if (!_toastBusy) _nextToast();
+  }
+  function _nextToast() {
+    const el = document.getElementById("achievement-toast");
+    if (!el || !_toastQueue.length) { _toastBusy = false; return; }
+    _toastBusy = true;
+    el.textContent = "";
+    el.append("Achievement unlocked: ", Object.assign(document.createElement("b"), { textContent: _toastQueue.shift() }));
+    el.classList.add("shown");
+    setTimeout(() => {
+      el.classList.remove("shown");
+      setTimeout(_nextToast, 350);
+    }, 2800);
+  }
+  function reportToArcade(d) {
+    try {
+      const client = window.ArcadeScores;
+      if (!client) return;
+      if (d.kind === "unlock") {
+        client.unlock(d.achievement).then((result) => {
+          if (result && result.newlyUnlocked) showAchievementToast(d.title || d.achievement);
+        }).catch(() => {});
+      } else if (d.kind === "score") {
+        client.submitScore(d.board, d.value);
+      }
+    } catch (e) {
+      console.warn("[roam] arcade report dropped:", e);
+    }
   }
 
   // ── key sequences ──────────────────────────────────────────────────────────

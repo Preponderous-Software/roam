@@ -8,6 +8,7 @@ as web/serve.py lays out the repository for the page:
     index.html              <- web/index.html (serve.py answers / with it)
     web/game-worker.js      <- the Pyodide Worker
     web/saves.js            <- the Saves panel (download / load a saves file)
+    web/arcade-scores.js    <- arcade-social's client (achievements, leaderboards)
     web/game.zip            <- built by web/build_zip.py
     web/game_version.txt    <- the zip's content hash (cache-busting)
     assets/...              <- tile sprites, fetched by the page as /assets/...
@@ -36,6 +37,7 @@ FILES = (
     ("web/index.html", "index.html"),
     ("web/game-worker.js", "web/game-worker.js"),
     ("web/saves.js", "web/saves.js"),
+    ("web/arcade-scores.js", "web/arcade-scores.js"),
     ("web/game.zip", "web/game.zip"),
     ("web/game_version.txt", "web/game_version.txt"),
 )

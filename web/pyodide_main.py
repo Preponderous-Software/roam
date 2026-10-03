@@ -145,6 +145,14 @@ class _PyodideFrontend:
         pass
 
 
+# Arcade achievements and leaderboards: hand each report to the page, which
+# passes it to arcade-social's client (web/arcade-scores.js). The client only
+# sends anything on https://roam.play.danielstephenson.dev for a signed-in
+# player; posting here is synchronous and never waits for an answer.
+from achievements import arcadeBridge  # noqa: E402
+
+arcadeBridge.install(lambda message: _post(dict(message, type="arcade")))
+
 config = Config()
 # No traceClient: the browser build never reports usage (no OS threads or
 # sockets under Emscripten), so Roam keeps its default disabled client.
