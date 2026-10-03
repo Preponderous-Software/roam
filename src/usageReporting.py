@@ -5,9 +5,10 @@
 Roam reports two events to https://trace.danielstephenson.dev so the number
 of installations actually being played can be seen: ``startup`` once per
 launch and ``world-loaded`` each time a save is opened. Each carries the
-program name ("roam") and the game version (the tag ``version``, which the
-client adds to every event) — nothing else. No usernames,
-hostnames, IPs, paths or save names are ever sent.
+program name ("roam"), the game version (the tag ``version``) and a random
+installation ID (the tag ``install``, see ``installIdFile``), both added to
+every event by the client — nothing else. No usernames, hostnames, IPs, paths
+or save names are ever sent.
 
 The transport is the vendored ``lib.trace_client`` (standard library only),
 which posts from a single daemon thread, never raises into the game, and
@@ -23,6 +24,7 @@ Details: https://github.com/Stephenson-Software/trace#usage-reporting
 import os
 import sys
 
+from appPaths import getBundleDirectory
 from config.config import Config
 from gameLogging.logger import getLogger
 from lib.trace_client import TraceClient, environment_opts_out
@@ -41,6 +43,12 @@ _OFF_VALUES = frozenset({"0", "false", "off", "no"})
 # a non-blank version, and a missing one must never stop the game starting.
 UNKNOWN_VERSION = "unknown"
 
+# The file the client keeps this installation's random ID in (see installIdFile).
+INSTALL_ID_FILE_NAME = "trace-install-id"
+
+# Pins the installation ID for a process (a container, say) instead of the file.
+INSTALL_ID_ENVIRONMENT_VARIABLE = "TRACE_INSTALL_ID"
+
 OPT_OUT_INSTRUCTION = "usageReportingEnabled: false in config.yml"
 
 # Where what is sent, what is not, and every opt-out are written up.
@@ -48,8 +56,9 @@ DETAILS_URL = "https://github.com/Stephenson-Software/trace#usage-reporting"
 
 FIRST_RUN_NOTICE = (
     "Usage reporting is on: roam sends a startup event and a world-loaded "
-    "event (program name and version only) to https://trace.danielstephenson.dev "
-    "- nothing about you, your machine or your saves. Turn it off with "
+    "event (program name, version and a random installation ID only) to "
+    "https://trace.danielstephenson.dev - nothing about you or your saves. "
+    "Turn it off with "
     + OPT_OUT_INSTRUCTION
     + ", or for every trace-reporting program with the environment variable "
     "TRACE_USAGE_REPORTING=off. Details: " + DETAILS_URL
@@ -84,6 +93,24 @@ def isReportingActive(config):
     )
 
 
+def installIdFile():
+    """Where the client keeps this installation's random ID: Roam's own
+    per-user data directory where it has one (%APPDATA%\\Roam on Windows,
+    ~/Library/Application Support/Roam on macOS, next to the user config.yml),
+    otherwise $XDG_DATA_HOME/roam (or ~/.local/share/roam) — on Linux the
+    user data directory is the repository/bundle root, which is neither
+    per-user nor, for a frozen build, kept between runs. The client only
+    reads or creates the file when reporting is on; deleting it resets the
+    ID."""
+    userDataDirectory = Config.getUserDataDirectory()
+    if os.path.normpath(userDataDirectory) != os.path.normpath(getBundleDirectory()):
+        return os.path.join(userDataDirectory, INSTALL_ID_FILE_NAME)
+    base = os.environ.get("XDG_DATA_HOME", "").strip() or os.path.join(
+        os.path.expanduser("~"), ".local", "share"
+    )
+    return os.path.join(base, APPLICATION, INSTALL_ID_FILE_NAME)
+
+
 def createTraceClient(config):
     """Build the client for this run. Returns a disabled client (which does
     nothing and starts no thread) whenever reporting is not active, and never
@@ -98,6 +125,10 @@ def createTraceClient(config):
             programVersion(),
             key=config.usageReportingKey,
             enabled=True,
+            # Resolved by the client after its own opt-out checks; a disabled
+            # client never reads or creates the file.
+            install_id=os.environ.get(INSTALL_ID_ENVIRONMENT_VARIABLE),
+            install_id_file=installIdFile(),
         )
     except Exception as failure:  # noqa: BLE001 - reporting must never stop the game
         _logger.warning("usage reporting could not be started", error=str(failure))
