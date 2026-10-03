@@ -1,4 +1,7 @@
 # Roam
+
+[![Play in your browser](https://img.shields.io/badge/Play-in%20your%20browser-2ea44f)](https://danielstephenson.dev/play/roam)
+
 Roam is a **single-player** game that allows you to explore a procedurally-generated 2D world and interact with your surroundings. There are currently no plans to add multiplayer.
 
 ## Planning Document
