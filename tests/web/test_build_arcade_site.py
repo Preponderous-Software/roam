@@ -45,6 +45,8 @@ def test_site_is_laid_out_as_serve_py_serves_the_repository(tmp_path):
         "web/game.zip",
         "web/game_version.txt",
         "web/saves.js",
+        "web/whats-new.js",
+        "web/whats-new.json",
     ]
     assert (out / "index.html").read_text() == "web/index.html"
 
@@ -64,7 +66,9 @@ def test_refuses_when_the_zip_was_not_built(tmp_path):
         build_arcade_site.assemble(str(root), str(tmp_path / "site"))
 
 
-@pytest.mark.parametrize("page", ["web/index.html", "web/game-worker.js"])
+@pytest.mark.parametrize(
+    "page", ["web/index.html", "web/game-worker.js", "web/whats-new.js"]
+)
 def test_every_web_url_the_page_loads_is_in_the_site(page):
     # The page and Worker fetch root-relative /web/... URLs; a new one that the
     # site does not carry would 404 on arcade while still working via serve.py.

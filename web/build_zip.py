@@ -4,7 +4,8 @@
 Bundles the Python source tree, schemas, and config into a single zip that
 the browser's Pyodide Worker downloads and unpacks into its virtual filesystem.
 
-Also writes web/game_version.txt containing the SHA-256 of the zip so the
+Also writes web/whats-new.json (the What's new panel's entries, from
+CHANGELOG.md; see web/whats_new.py) and web/game_version.txt containing the SHA-256 of the zip so the
 Worker can request game.zip?v=<hash> — a content-addressed URL that forces
 the browser to fetch a new zip whenever the source changes.
 """
@@ -43,3 +44,9 @@ with open("web/game_version.txt", "w") as _f:
     _f.write(_digest)
 
 print(f"Built web/game.zip ({_digest[:12]})")
+
+# The What's new panel's entries, from CHANGELOG.md (see web/whats_new.py).
+import runpy  # noqa: E402
+
+_whats_new = runpy.run_path(os.path.join("web", "whats_new.py"))
+print(f"Wrote web/whats-new.json ({len(_whats_new['build']())} entries)")

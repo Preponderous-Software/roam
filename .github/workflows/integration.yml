@@ -70,6 +70,12 @@ jobs:
           NODE_PATH: /usr/local/lib/node_modules
         run: node tests/integration/test_failed_restore.js
 
+      - name: Run What's new panel integration test
+        env:
+          ROAM_URL: http://localhost:8080
+          NODE_PATH: /usr/local/lib/node_modules
+        run: node tests/integration/test_whats_new_panel.js
+
       - name: Stop game server
         if: always()
         run: kill "$SERVER_PID" 2>/dev/null || true

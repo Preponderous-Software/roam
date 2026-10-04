@@ -150,6 +150,7 @@
       border-radius: 3px;
     }
     #footer button:hover { background: #2a2a2a; color: #ddd; }
+    #footer button + button { margin-left: 6px; }
 
     /* ── achievement toast (arcade only; see reportToArcade) ─────────────── */
     #achievement-toast {
@@ -190,7 +191,7 @@
   <div class="dpad">
     <button class="btn saves" id="saves-touch" type="button" title="Download or load your saves">Saves</button>
     <button class="btn" data-key="up">▲</button>
-    <div class="dpad-spacer"></div>
+    <button class="btn saves" id="whats-new-touch" type="button" title="What's new in Roam">New</button>
     <button class="btn" data-key="left">◀</button>
     <button class="btn confirm" data-key="enter">✔</button>
     <button class="btn" data-key="right">▶</button>
@@ -209,10 +210,12 @@
 </div>
 
 <div id="footer">
+  <button id="whats-new-desktop" type="button" title="What's new in Roam">What's new</button>
   <button id="saves-desktop" type="button" title="Download or load your saves">Saves</button>
 </div>
 
 <script src="/web/saves.js"></script>
+<script src="/web/whats-new.js"></script>
 <script src="/web/arcade-scores.js"></script>
 <script>
   "use strict";
@@ -865,6 +868,22 @@
     }
   } else {
     savesButton.style.visibility = "hidden";
+  }
+
+  // ── what's new (web/whats-new.js; reads one JSON file, never the saves) ────
+  // Beside Saves: the d-pad's top-right corner on touch, the footer on desktop.
+  const whatsNewButton = document.getElementById(_isTouch ? "whats-new-touch" : "whats-new-desktop");
+  if (_isTouch) document.getElementById("whats-new-desktop").remove();
+  else document.getElementById("whats-new-touch").replaceWith(Object.assign(document.createElement("div"), { className: "dpad-spacer" }));
+  whatsNewButton.style.visibility = "hidden";
+  if (window.RoamWhatsNew) {
+    window.RoamWhatsNew.attach({ button: whatsNewButton }).then((shown) => {
+      if (!shown && !_isTouch) whatsNewButton.style.display = "none";
+      const footer = document.getElementById("footer");
+      if (shown && !_isTouch && footer.style.display !== "flex") { footer.style.display = "flex"; resizeCanvas(); }
+    }).catch((e) => {
+      console.warn("[roam] the What's new panel could not start:", e);
+    });
   }
 </script>
 </body>
