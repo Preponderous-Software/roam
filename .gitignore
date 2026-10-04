@@ -1,6 +1,7 @@
 *.pyc
 web/game.zip
 web/game_version.txt
+web/whats-new.json
 screenshots/*.png
 saves/
 roam.log
