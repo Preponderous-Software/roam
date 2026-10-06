@@ -173,7 +173,7 @@ Linux / other | `saves/` | `config.yml` | `screenshots/`
 You can override the save location by setting `pathToSaveDirectory` in `config.yml`, or the whole saves directory by setting the `ROAM_SAVE_DIR` environment variable, which takes precedence over both `pathToSaveDirectory` and the table above. `ROAM_SAVE_DIR` applies to a server-side run of the game; saves made in the [browser build](#play-in-a-browser-from-source) are held by the browser, so it has no effect there.
 
 ## Usage reporting
-Usage reporting is on by default: Roam sends its name (`roam`), the game version and two events to [trace](https://github.com/Stephenson-Software/trace) at `https://trace.danielstephenson.dev`, so the number of installations actually in use can be seen — a `startup` event on launch and a `world-loaded` event each time a save is opened. Each event also carries a random installation ID (the tag `install`) so installations can be counted rather than events. Never a username, machine name, IP address, path or save name; nothing about your saves' contents. The request is made on a background thread, never blocks or interrupts the game, and is dropped if the service cannot be reached.
+Usage reporting is on by default: Roam sends its name (`roam`), the game version and two events to [trace](https://danielstephenson.dev/usage-reporting) at `https://trace.danielstephenson.dev`, so the number of installations actually in use can be seen — a `startup` event on launch and a `world-loaded` event each time a save is opened. Each event also carries a random installation ID (the tag `install`) so installations can be counted rather than events. Never a username, machine name, IP address, path or save name; nothing about your saves' contents. The request is made on a background thread, never blocks or interrupts the game, and is dropped if the service cannot be reached.
 
 The first launch after installing a version with it logs a one-line notice and records the setting in your `config.yml` (see the table above for where that is).
 
@@ -193,7 +193,7 @@ To turn it off, any one of these is enough:
 
 The environment variables win over `config.yml`. The [browser build](#play-in-a-browser-from-source) never reports: the Pyodide build has no threads or sockets, so the client is never even started there, and no installation ID is made. The client is the vendored `src/lib/trace_client.py` (standard library only).
 
-Details: https://github.com/Stephenson-Software/trace#usage-reporting
+Details: https://danielstephenson.dev/usage-reporting
 
 ## Support
 You can find the support discord server [here](https://discord.gg/49J4RHQxhy).

@@ -19,7 +19,7 @@ threads or sockets, and it can be forced off for a process with the
 ``ROAM_USAGE_REPORTING=0`` environment variable — the test harness does that
 so a test run is never counted as a player — or, for every program that
 reports to trace, with ``TRACE_USAGE_REPORTING=off`` or ``DO_NOT_TRACK=1``.
-Details: https://github.com/Stephenson-Software/trace#usage-reporting
+Details: https://danielstephenson.dev/usage-reporting
 """
 import os
 import sys
@@ -52,7 +52,7 @@ INSTALL_ID_ENVIRONMENT_VARIABLE = "TRACE_INSTALL_ID"
 OPT_OUT_INSTRUCTION = "usageReportingEnabled: false in config.yml"
 
 # Where what is sent, what is not, and every opt-out are written up.
-DETAILS_URL = "https://github.com/Stephenson-Software/trace#usage-reporting"
+DETAILS_URL = "https://danielstephenson.dev/usage-reporting"
 
 FIRST_RUN_NOTICE = (
     "Usage reporting is on: roam sends a startup event and a world-loaded "

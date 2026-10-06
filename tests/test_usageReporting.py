@@ -387,10 +387,7 @@ def test_first_run_notice_names_every_opt_out_and_what_is_sent():
     assert "usageReportingEnabled: false in config.yml" in FIRST_RUN_NOTICE
     assert "TRACE_USAGE_REPORTING=off" in FIRST_RUN_NOTICE
     assert usageReporting.DETAILS_URL in FIRST_RUN_NOTICE
-    assert (
-        usageReporting.DETAILS_URL
-        == "https://github.com/Stephenson-Software/trace#usage-reporting"
-    )
+    assert usageReporting.DETAILS_URL == "https://danielstephenson.dev/usage-reporting"
     assert "\n" not in FIRST_RUN_NOTICE
 
 
