@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 
@@ -128,6 +129,129 @@ def test_writeJsonAtomically_syncs_browser_saves_when_available(monkeypatch, tmp
     writeJsonAtomically(path, {"ok": True})
 
     syncSaves.assert_called_once_with()
+
+
+# --- writeJsonAtomically: filesystems without fsync / rename (OPFS) ----------
+
+
+def _tempLeftovers(directory):
+    return [name for name in os.listdir(str(directory)) if name.endswith(".tmp")]
+
+
+def test_writeJsonAtomically_tolerates_unsupported_fsync(monkeypatch, tmp_path):
+    def noFsync(fd):
+        raise OSError("fsync not supported")
+
+    monkeypatch.setattr(os, "fsync", noFsync)
+    path = str(tmp_path / "out.json")
+
+    writeJsonAtomically(path, {"ok": True})
+
+    assert readJsonFile(path) == {"ok": True}
+    assert _tempLeftovers(tmp_path) == []
+
+
+def test_writeJsonAtomically_falls_back_to_direct_write_when_rename_fails(
+    monkeypatch, tmp_path
+):
+    path = str(tmp_path / "save.json")
+    writeJsonAtomically(path, {"version": 1})
+
+    def noReplace(src, dst):
+        raise OSError("rename not supported")
+
+    monkeypatch.setattr(os, "replace", noReplace)
+
+    writeJsonAtomically(path, {"version": 2})
+
+    # The new contents land in place, and the unused temp file is removed.
+    assert readJsonFile(path) == {"version": 2}
+    assert _tempLeftovers(tmp_path) == []
+
+
+def test_writeJsonAtomically_direct_write_fallback_still_syncs_browser_saves(
+    monkeypatch, tmp_path
+):
+    def noReplace(src, dst):
+        raise OSError("rename not supported")
+
+    monkeypatch.setattr(os, "replace", noReplace)
+    syncSaves = MagicMock()
+    monkeypatch.setitem(sys.modules, "js", SimpleNamespace(syncSaves=syncSaves))
+
+    writeJsonAtomically(str(tmp_path / "out.json"), {"ok": True})
+
+    syncSaves.assert_called_once_with()
+
+
+def test_writeJsonAtomically_direct_write_survives_failed_temp_cleanup(
+    monkeypatch, tmp_path
+):
+    def noReplace(src, dst):
+        raise OSError("rename not supported")
+
+    def noRemove(path):
+        raise OSError("remove not supported")
+
+    monkeypatch.setattr(os, "replace", noReplace)
+    monkeypatch.setattr(os, "remove", noRemove)
+    path = str(tmp_path / "out.json")
+
+    writeJsonAtomically(path, {"ok": True})
+
+    assert readJsonFile(path) == {"ok": True}
+
+
+def test_writeJsonAtomically_reraises_serialization_error_when_temp_cleanup_fails(
+    monkeypatch, tmp_path
+):
+    # A failed os.remove of the temp file must not mask the original error.
+    path = str(tmp_path / "save.json")
+    writeJsonAtomically(path, {"version": 1})
+
+    def noRemove(path):
+        raise OSError("remove not supported")
+
+    monkeypatch.setattr(os, "remove", noRemove)
+
+    with pytest.raises(TypeError):
+        writeJsonAtomically(path, {"bad": {1, 2, 3}})
+
+    assert readJsonFile(path) == {"version": 1}
+
+
+# --- writeJsonAtomically: the browser sync hook -------------------------------
+
+
+def test_writeJsonAtomically_without_sync_hook_writes_quietly(
+    monkeypatch, tmp_path, caplog
+):
+    # Inside Pyodide before the Worker installs syncSaves, "js" has no hook.
+    # That is expected, not a failure, so nothing is logged.
+    caplog.set_level(logging.WARNING)
+    monkeypatch.setitem(sys.modules, "js", SimpleNamespace())
+    path = str(tmp_path / "out.json")
+
+    writeJsonAtomically(path, {"ok": True})
+
+    assert readJsonFile(path) == {"ok": True}
+    assert "could not sync browser saves" not in caplog.text
+
+
+def test_writeJsonAtomically_survives_a_failing_sync_hook(
+    monkeypatch, tmp_path, caplog
+):
+    def broken():
+        raise RuntimeError("worker gone")
+
+    caplog.set_level(logging.WARNING)
+    monkeypatch.setitem(sys.modules, "js", SimpleNamespace(syncSaves=broken))
+    path = str(tmp_path / "out.json")
+
+    writeJsonAtomically(path, {"ok": True})  # must not raise
+
+    assert readJsonFile(path) == {"ok": True}
+    assert "could not sync browser saves" in caplog.text
 
 
 # --- noteBrowserWorldRemoved: a deleted or renamed world, in the browser ------
