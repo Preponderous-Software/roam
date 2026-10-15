@@ -2,8 +2,10 @@ import io
 import os
 import signal
 import sys
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import rendering.textFrontend as textFrontendModule
 from rendering.clock import Clock
 from rendering.inputEvent import EventType
 from rendering.inputSource import InputSource
@@ -121,15 +123,29 @@ def _enterFakeTerminal(monkeypatch, termios, tty, stdout):
     monkeypatch.setattr("sys.stdout", stdout)
 
 
+def _patchTerminalSize(monkeypatch, getTerminalSize):
+    # Patch only the module's own `os` reference: replacing the real
+    # os.get_terminal_size also breaks pytest's progress output.
+    monkeypatch.setattr(
+        textFrontendModule, "os", SimpleNamespace(get_terminal_size=getTerminalSize)
+    )
+
+
+def _ensureSigwinch(monkeypatch):
+    # SIGWINCH does not exist on Windows; give it a value so the
+    # registration path runs on every platform.
+    monkeypatch.setattr(signal, "SIGWINCH", 28, raising=False)
+
+
 def test_renderer_is_sized_from_the_terminal(monkeypatch):
-    monkeypatch.setattr(os, "get_terminal_size", lambda: os.terminal_size((100, 30)))
+    _patchTerminalSize(monkeypatch, lambda: os.terminal_size((100, 30)))
     renderer = createTextFrontend(MagicMock()).getRenderer()
     assert renderer.columns == 100
     assert renderer.rows == 30
 
 
 def test_zero_terminal_size_falls_back_to_80_by_24(monkeypatch):
-    monkeypatch.setattr(os, "get_terminal_size", lambda: os.terminal_size((0, 0)))
+    _patchTerminalSize(monkeypatch, lambda: os.terminal_size((0, 0)))
     renderer = createTextFrontend(MagicMock()).getRenderer()
     assert renderer.columns == 80
     assert renderer.rows == 24
@@ -139,13 +155,14 @@ def test_unavailable_terminal_size_falls_back_to_80_by_24(monkeypatch):
     def raiseOSError():
         raise OSError("not a terminal")
 
-    monkeypatch.setattr(os, "get_terminal_size", raiseOSError)
+    _patchTerminalSize(monkeypatch, raiseOSError)
     renderer = createTextFrontend(MagicMock()).getRenderer()
     assert renderer.columns == 80
     assert renderer.rows == 24
 
 
 def test_resize_handler_is_registered_for_sigwinch(monkeypatch):
+    _ensureSigwinch(monkeypatch)
     registered = {}
     monkeypatch.setattr(
         signal, "signal", lambda signum, handler: registered.update({signum: handler})
@@ -155,6 +172,8 @@ def test_resize_handler_is_registered_for_sigwinch(monkeypatch):
 
 
 def test_resize_handler_registration_failure_is_swallowed(monkeypatch):
+    _ensureSigwinch(monkeypatch)
+
     def raiseValueError(signum, handler):
         raise ValueError("signal only works in main thread")
 
@@ -165,8 +184,8 @@ def test_resize_handler_registration_failure_is_swallowed(monkeypatch):
 
 def test_on_resize_resizes_renderer_and_queues_window_resize_event(monkeypatch):
     frontend = createTextFrontend(MagicMock())
-    monkeypatch.setattr(os, "get_terminal_size", lambda: os.terminal_size((60, 18)))
-    frontend._onResize(signal.SIGWINCH, None)
+    _patchTerminalSize(monkeypatch, lambda: os.terminal_size((60, 18)))
+    frontend._onResize(None, None)
 
     renderer = frontend.getRenderer()
     assert renderer.columns == 60
