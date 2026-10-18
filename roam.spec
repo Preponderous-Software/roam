@@ -25,6 +25,7 @@ a = Analysis(
     datas=[
         ("assets", "assets"),
         ("schemas", "schemas"),
+        ("spectator", "spectator"),
         ("config.yml", "."),
         ("version.txt", "."),
         (os.path.join("src", "media"), os.path.join("src", "media")),
