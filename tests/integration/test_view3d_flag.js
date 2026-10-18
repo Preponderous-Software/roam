@@ -32,8 +32,13 @@ async function fail(msg) {
     process.exit(1);
 }
 
-async function openGame(query) {
-    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+// A software renderer can starve the page; never let a stuck evaluate hang
+// the job: fail with what is known after this long.
+const OVERALL_TIMEOUT_MS = 12 * 60 * 1000;
+setTimeout(() => fail(`timed out after ${OVERALL_TIMEOUT_MS / 60000} minutes`), OVERALL_TIMEOUT_MS).unref();
+
+async function openGame(query, viewport) {
+    const ctx = await browser.newContext({ viewport: viewport || { width: 1280, height: 800 } });
     const page = await ctx.newPage();
     const requests = [], errors = [];
     page.on("request", r => requests.push(r.url()));
@@ -76,7 +81,9 @@ async function openGame(query) {
     await plain.ctx.close();
 
     // --- ?view=3d: worldview messages drive the 3D canvas ---------------------
-    const three = await openGame("?view=3d");
+    // A smaller viewport for the 3D part: CI renders WebGL in software
+    // (SwiftShader), and the cost scales with pixels.
+    const three = await openGame("?view=3d", { width: 800, height: 600 });
     const ok = await waitFor(three.page, () => three.page.evaluate(() =>
         window.__roam3dView && window.__roam3dView.messages >= 5 && window.__roam3dView.applies >= 3), 90000);
     if (!ok) {
