@@ -99,8 +99,9 @@ async function openGame(query) {
         return { hooks: { ...window.__roam3dView }, colours: colours.size,
                  notice: (document.getElementById("view3d-notice") || {}).textContent || "" };
     });
-    const seconds = 5, messagesPerSecond = (after.hooks.messages - before.messages) / seconds;
-    console.log(`view=3d: fps ${after.hooks.fps}, worldview messages/s ${messagesPerSecond.toFixed(1)}, ` +
+    // Rates come from the page's own clock (performance.now): under a software
+    // renderer the test's waits can stretch well past their nominal length.
+    console.log(`view=3d: fps ${after.hooks.fps}, worldview messages/s ${after.hooks.messagesPerSecond}, ` +
         `worker build+encode+post avg ${after.hooks.buildMs === null ? "n/a" : after.hooks.buildMs.toFixed(2)} ms ` +
         `(every ${after.hooks.every} tick(s)), chunk builds ${after.hooks.chunkBuilds}, cards ${after.hooks.cards}, ` +
         `centre colours ${after.colours}`);
