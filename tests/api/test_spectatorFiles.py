@@ -22,6 +22,14 @@ def test_spectator_page_resolves_with_and_without_index():
         assert os.path.isfile(path)
 
 
+def test_scene_module_resolves():
+    path, contentType = resolveStaticFile(["web", "roam3d.js"])
+
+    assert path == os.path.join(getBundleDirectory(), "web", "roam3d.js")
+    assert contentType.startswith("text/javascript")
+    assert os.path.isfile(path)
+
+
 def test_sprite_resolves_from_the_game_assets():
     path, contentType = resolveStaticFile(["assets", "images", "grass.png"])
 
@@ -41,6 +49,8 @@ def test_sprite_resolves_from_the_game_assets():
         ["saves"],
         ["spectator", "other.html"],
         ["schemas", "room.json"],
+        ["web", "game-worker.js"],
+        ["web", "pyodide_main.py"],
     ],
 )
 def test_nothing_else_is_served(parts):
@@ -54,6 +64,7 @@ def test_spectator_page_is_read_only_and_same_origin():
 
     # It reads the snapshot from its own origin and pins three.js exactly.
     assert '"/api/v1/snapshot"' in html
+    assert '<script src="/web/roam3d.js"></script>' in html
     assert "three@0.147.0/build/three.min.js" in html
     # Only GETs: no request body or non-GET method anywhere in the page.
     for verb in ("POST", "PUT", "DELETE", "PATCH"):

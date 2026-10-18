@@ -43,6 +43,11 @@ from rendering.webInputSource import WebInputSource
 from rendering.webRenderer import WebRenderer
 from roam import Roam
 
+# Opt-in 3D view (/play?view=3d; RFC 0017 stage 3, wire format per
+# Preponderous RFC 0018). False unless the page asked for it, in which case no
+# 3D code path is used: no sink is offered and the renderer stays 2D.
+_VIEW_3D = bool(getattr(_js, "roamView3d", False))
+
 _SAB_RING = int(sabRingSize)
 
 
@@ -111,6 +116,8 @@ class PyodideInputSource(WebInputSource):
                 )
             elif t == "mouse_move":
                 self.moveMouse(int(msg.get("x", 0)), int(msg.get("y", 0)))
+            elif t == "worldview_resync" and world_view_sink is not None:
+                world_view_sink.requestFull()
         except (json.JSONDecodeError, KeyError, ValueError):
             pass
 
@@ -120,7 +127,14 @@ def _send_frame(payload):
 
 
 input_source = PyodideInputSource()
-renderer = WebRenderer(_send_frame, inputSource=input_source)
+renderer = WebRenderer(
+    _send_frame, inputSource=input_source, drawsWorldFromView=_VIEW_3D
+)
+world_view_sink = None
+if _VIEW_3D:
+    from rendering.web3dWorldViewSink import Web3DWorldViewSink
+
+    world_view_sink = Web3DWorldViewSink(_post)
 input_source._renderer = renderer  # needed so resize events can call renderer.resize()
 clock = TextClock()
 
@@ -134,6 +148,9 @@ class _PyodideFrontend:
 
     def getClock(self):
         return clock
+
+    def getWorldViewSink(self):
+        return world_view_sink
 
     def setCaption(self, c):
         pass

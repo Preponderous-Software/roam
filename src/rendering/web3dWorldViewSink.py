@@ -20,11 +20,16 @@ MESSAGE_VERSION = 1
 # Cadence: it times its own cost (from the wantsWorldView() that said yes to
 # the end of publish(), so build + encode + post) as a moving average, and asks
 # for a view only every k-th tick, k = clamp(ceil(average / BUDGET_MS), 1,
-# MAX_EVERY), so the average stays near the per-tick budget.
+# MAX_EVERY), so the average stays near the per-tick budget; and never more
+# than 30 times a second of wall time.
 class Web3DWorldViewSink(WorldViewSink):
     BUDGET_MS = 2.0
     MAX_EVERY = 6
     EMA_ALPHA = 0.2
+    # Never more often than the page can show: the browser build's loop is
+    # not always held to 30 TPS, and a message per tick beyond the display
+    # rate only costs both threads time.
+    MIN_INTERVAL_SECONDS = 1.0 / 30.0
 
     def __init__(self, post, radiusRooms=1, clock=time.perf_counter):
         self._post = post
@@ -33,6 +38,7 @@ class Web3DWorldViewSink(WorldViewSink):
         self._every = 1
         self._ticksUntilNext = 0
         self._wantedAt = None
+        self._lastPublishedAt = None
         self._averageMs = None
         self._sentRevisions = {}
         self._classes = []
@@ -47,7 +53,13 @@ class Web3DWorldViewSink(WorldViewSink):
         if self._ticksUntilNext > 0:
             self._ticksUntilNext -= 1
             return False
-        self._wantedAt = self._clock()
+        now = self._clock()
+        if (
+            self._lastPublishedAt is not None
+            and now - self._lastPublishedAt < self.MIN_INTERVAL_SECONDS * 0.9
+        ):
+            return False
+        self._wantedAt = now
         return True
 
     def getWantedRadiusRooms(self):
@@ -55,8 +67,12 @@ class Web3DWorldViewSink(WorldViewSink):
 
     def publish(self, worldView):
         self._post(self.encode(worldView))
+        now = self._clock()
+        # Spaced by when publishing started, so a tick-paced loop at exactly
+        # 30 TPS publishes every tick.
+        self._lastPublishedAt = self._wantedAt if self._wantedAt is not None else now
         if self._wantedAt is not None:
-            self._recordCost((self._clock() - self._wantedAt) * 1000.0)
+            self._recordCost((now - self._wantedAt) * 1000.0)
             self._wantedAt = None
         self._ticksUntilNext = self._every - 1
 

@@ -105,15 +105,14 @@ class _FakeClock:
         return self.now
 
 
-def _runTicks(sink, clock, costMs, ticks):
+def _runTicks(sink, clock, costMs, ticks, tickSeconds=1.0 / 30.0):
+    sink.encode = lambda worldView: {}
     published = 0
     for _ in range(ticks):
+        clock.now += tickSeconds
         if sink.wantsWorldView():
             clock.now += costMs / 1000.0
-            sink._post({})
-            sink._recordCost((clock.now - sink._wantedAt) * 1000.0)
-            sink._wantedAt = None
-            sink._ticksUntilNext = sink.getEvery() - 1
+            sink.publish(None)
             published += 1
     return published
 
@@ -135,6 +134,18 @@ def test_cadence_adapts_to_measured_cost():
     assert huge.getEvery() == Web3DWorldViewSink.MAX_EVERY
 
 
+def test_never_publishes_faster_than_30_a_second():
+    clock = _FakeClock()
+    sink = Web3DWorldViewSink(lambda m: None, clock=clock)
+
+    # An uncapped loop at 300 ticks a second for one second.
+    published = _runTicks(sink, clock, 0.1, 300, tickSeconds=1.0 / 300.0)
+
+    # 30 a second, with 10% slack so a loop paced at exactly 30 TPS is never
+    # skipped.
+    assert 28 <= published <= 34
+
+
 def test_publish_posts_and_times_itself():
     rooms, player, fakeMap, builder = _world()
     clock = _FakeClock()
@@ -148,7 +159,11 @@ def test_publish_posts_and_times_itself():
     assert len(posted) == 1 and posted[0]["full"] is True
     assert sink.getAverageMs() == 9.0
     assert sink.getEvery() == 5
-    assert [sink.wantsWorldView() for _ in range(5)] == [False] * 4 + [True]
+    answers = []
+    for _ in range(5):
+        clock.now += 1.0 / 30.0
+        answers.append(sink.wantsWorldView())
+    assert answers == [False] * 4 + [True]
 
 
 # --- the web renderer's 3D capability ----------------------------------------

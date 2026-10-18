@@ -426,6 +426,12 @@
         case "unclip":
           if (clipDepth > 0) { ctx.restore(); clipDepth--; }
           break;
+
+        // Only sent with the opt-in 3D view (?view=3d): a transparent hole
+        // in the 2D layer where the 3D world canvas behind it shows through.
+        case "cut":
+          ctx.clearRect(c.x, c.y, c.w, c.h);
+          break;
       }
     }
 
@@ -628,8 +634,11 @@
       if (d.type === 'save')   { if (!_savesStopped) _idbWrite(d.files, d.removed); return; }
       if (d.type === 'nosave') { showSavesNotice(d.msg); return; }
       if (d.type === 'arcade') { reportToArcade(d); return; }
+      if (d.type === 'worldview') { onWorldView(d); return; }
     };
-    worker.postMessage({ type: 'init', sab });
+    const init = { type: 'init', sab };
+    if (_view3d.enabled) init.view3d = true;
+    worker.postMessage(init);
   }
 
   // ── arcade achievements and leaderboards ───────────────────────────────────
@@ -850,10 +859,94 @@
     showBar();
   }
 
+  // ── opt-in 3D view (?view=3d) ─────────────────────────────────────────────
+  // RFC 0017 stage 3 prototype, wire format per Preponderous RFC 0018. Off
+  // unless the URL asks for it: without ?view=3d nothing below loads three.js
+  // or web/roam3d.js, and the Worker is started exactly as before. With it,
+  // the Worker publishes "worldview" messages (full, then per-room deltas
+  // keyed by revision); they are merged here and drawn by the shared scene
+  // (web/roam3d.js) on a canvas behind the 2D game canvas, which keeps the HUD
+  // and menus and leaves a transparent hole over the world ("cut").
+  const _view3d = {
+    requested: new URLSearchParams(location.search).get("view") === "3d",
+    enabled: false, scene: null, rooms: new Map(), latest: null, scheduled: false, hooks: null,
+  };
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const el = document.createElement("script");
+      el.src = src; el.crossOrigin = "anonymous";
+      el.onload = resolve; el.onerror = () => reject(new Error("could not load " + src));
+      document.head.appendChild(el);
+    });
+  }
+  function view3dNotice(text) {
+    const el = document.createElement("div");
+    el.id = "view3d-notice";
+    el.textContent = text;
+    el.style.cssText = "position:absolute;right:8px;bottom:8px;z-index:2;max-width:60%;padding:4px 8px;" +
+      "background:rgba(17,17,17,.82);color:#bbb;font:12px system-ui,sans-serif;border-radius:4px;pointer-events:none";
+    canvasWrap.appendChild(el);
+  }
+  async function setupView3d() {
+    try {
+      const probe = document.createElement("canvas");
+      if (!(probe.getContext("webgl2") || probe.getContext("webgl"))) throw new Error("WebGL is not available");
+      await loadScript("https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js");
+      await loadScript("/web/roam3d.js");
+      const c3d = document.createElement("canvas");
+      c3d.id = "world3d";
+      c3d.style.cssText = "position:absolute;inset:0;width:100%;height:100%;z-index:0;display:block";
+      canvasWrap.insertBefore(c3d, canvas);
+      canvas.style.position = "relative";
+      canvas.style.zIndex = "1";
+      _view3d.hooks = window.__roam3dView = { messages: 0, buildMs: null, every: null };
+      _view3d.scene = Roam3DScene.create({ canvas: c3d, orbit: false, hooks: _view3d.hooks });
+      _view3d.enabled = true;
+      view3dNotice("3D view (experimental). Mouse clicks on the world still use the 2D layout; keys and the d-pad work.");
+    } catch (err) {
+      console.warn("[roam] 3D view unavailable:", err);
+      const c3d = document.getElementById("world3d");
+      if (c3d) c3d.remove();
+      _view3d.enabled = false;
+      view3dNotice("3D view unavailable (" + err.message + "); showing 2D.");
+    }
+  }
+  function onWorldView(d) {
+    const v = _view3d;
+    if (!v.scene) return;
+    if (d.full) v.rooms.clear();
+    for (const key of d.dropped) v.rooms.delete(key.join(","));
+    for (const r of d.rooms) v.rooms.set(`${r.x},${r.y},${r.z}`, r);
+    v.latest = d;
+    v.hooks.messages++; v.hooks.buildMs = d.buildMs; v.hooks.every = d.every;
+    const now = performance.now();
+    if (!v.rateSince) { v.rateSince = now; v.rateCount = 0; }
+    v.rateCount++;
+    if (now - v.rateSince >= 1000) {
+      v.hooks.messagesPerSecond = Math.round(v.rateCount * 1000 / (now - v.rateSince));
+      v.rateSince = now; v.rateCount = 0;
+    }
+    if (v.scheduled) return;  // coalesce: draw only the latest merged state
+    v.scheduled = true;
+    requestAnimationFrame(() => {
+      v.scheduled = false;
+      try {
+        const started = performance.now();
+        v.scene.apply(Object.assign({}, v.latest, { rooms: [...v.rooms.values()] }));
+        const ms = performance.now() - started;
+        v.hooks.applyMs = v.hooks.applyMs == null ? ms : v.hooks.applyMs + 0.2 * (ms - v.hooks.applyMs);
+      } catch (err) {
+        console.error("[roam] 3D view failed:", err);
+        v.hooks.error = String(err);
+      }
+    });
+  }
+
   // ── init ────────────────────────────────────────────────────────────────────
   if (_isTouch) document.getElementById("controls").style.display = "flex";
   resizeCanvas();
-  startWorker();
+  if (_view3d.requested) setupView3d().then(startWorker);
+  else startWorker();
   // On touch the button sits in the d-pad's top-left corner; on desktop in a
   // slim footer under the canvas. Neither covers the game.
   const savesButton = document.getElementById(_isTouch ? "saves-touch" : "saves-desktop");

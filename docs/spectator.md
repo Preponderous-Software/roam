@@ -39,5 +39,7 @@ jsDelivr, so the browser needs an internet connection the first time.
   height, can change; this is cosmetic only.
 - Hover (or tap) a tile to see its room, biome, tile and entity stack.
 
+The scene itself is `web/roam3d.js`, which the spectator shares with the browser game's opt-in 3D view (`/play?view=3d`), so the two cannot drift apart.
+
 Cave lighting in the spectator is a viewing convenience: Roam itself has no
 ambient light underground.
