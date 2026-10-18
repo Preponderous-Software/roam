@@ -13,7 +13,12 @@ def inferBiomeFromClassNames(classNames, z=0):
     example, how high a 3D view draws the room's terrain), never game state,
     and its result is never persisted.
     """
-    counts = Counter(classNames)
+    return inferBiomeFromCounts(Counter(classNames), z)
+
+
+def inferBiomeFromCounts(counts, z=0):
+    """inferBiomeFromClassNames over a Counter of class name -> entities, so a
+    caller that keeps the counts up to date need not re-list every entity."""
     if z < 0 or counts["CaveFloor"] > 0:
         return RoomType.CAVE
     if counts["JungleWood"] > 0 or counts["Banana"] > 0:

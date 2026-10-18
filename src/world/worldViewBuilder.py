@@ -1,7 +1,9 @@
+from collections import Counter
+
 from appContainer import component
 from config.config import Config
 from rendering.worldView import ActorView, CameraHint, LightView, RoomView, WorldView
-from world.biomeInference import inferBiomeFromClassNames
+from world.biomeInference import inferBiomeFromCounts
 from world.dayNightCycle import DayNightCycle
 from world.lightSources import isLightSource
 
@@ -39,8 +41,9 @@ class _RoomCacheEntry:
         self.images = ()
         self.imageMap = {}
         self.stacks = []
-        # Location (by identity) -> (locationRevision, lights on that location)
-        self.locations = {}
+        self.counts = Counter()
+        # location (by identity) -> lights on it, only for locations with any
+        self.lightsByLocation = {}
 
 
 # @author Claude
@@ -58,11 +61,14 @@ class WorldViewBuilder:
     def __init__(self, dayNightCycle: DayNightCycle, config: Config):
         self.dayNightCycle = dayNightCycle
         self.config = config
-        # (x, y, z) -> (room, revision, roomType, RoomView, lights, images).
-        # A room is re-walked only when it is a different Room object or its
-        # revision (bumped by every entity add/remove, world/trackedLocation)
-        # or roomType changed. In-memory only.
+        # (x, y, z) -> _RoomCacheEntry. A room is re-read only when it is a
+        # different Room object or its revision (moved by every entity
+        # add/remove, world/trackedLocation) or roomType changed, and then only
+        # the locations it reports as changed. In-memory only.
         self._roomCache = {}
+        # living entity (by identity) -> (locationId, direction, image, view)
+        self._actorCache = {}
+        self._seenActors = set()
 
     def build(self, map, player, tick, radiusRooms=1):
         """Return a WorldView of the loaded rooms within radiusRooms of the
@@ -85,6 +91,7 @@ class WorldViewBuilder:
 
         classImages = {}
         seenKeys = set()
+        self._seenActors = set()
         roomViews = []
         actors = []
         lights = []
@@ -104,6 +111,8 @@ class WorldViewBuilder:
             self._collectActors(room, player, actors)
 
         self._pruneCache(seenKeys)
+        for entity in [e for e in self._actorCache if e not in self._seenActors]:
+            del self._actorCache[entity]
 
         playerView = ActorView(
             str(player.getID()),
@@ -153,61 +162,36 @@ class WorldViewBuilder:
             del self._roomCache[key]
 
     def _refreshRoom(self, entry, gridSize, roomKey, revision, roomType):
-        # Re-read only the locations whose own revision moved since the last
-        # build (every tracked location records the revision of its latest
-        # change); the others keep their cached stack and lights. A first
-        # build, or an untracked location, reads everything.
-        room, player = entry.room, entry.player
-        stacks = entry.stacks
-        if len(stacks) != gridSize * gridSize:
-            stacks = entry.stacks = [()] * (gridSize * gridSize)
-        cachedLocations = entry.locations
-        freshLocations = {}
-        images = entry.imageMap
-        lights = []
-        for location in list(room.getGrid().getLocations().values()):
-            getLocationRevision = getattr(location, "getLocationRevision", None)
-            locationRevision = getLocationRevision() if getLocationRevision else None
-            cached = cachedLocations.get(location)
-            if (
-                cached is not None
-                and locationRevision is not None
-                and cached[0] == locationRevision
-            ):
-                freshLocations[location] = cached
-                lights.extend(cached[1])
+        room = entry.room
+        changed = None
+        if entry.revision is not None and len(entry.stacks) == gridSize * gridSize:
+            changed = room.getChangedLocationsSince(entry.revision)
+        if changed is None:
+            # First build, a change the room could not attribute to a
+            # location, or more changes than its log keeps: read everything.
+            entry.stacks = [()] * (gridSize * gridSize)
+            entry.counts = Counter()
+            entry.lightsByLocation = {}
+            changed = list(room.getGrid().getLocations().values())
+        seen = set()
+        for location in changed:
+            if location in seen:
                 continue
-            x, y = location.getX(), location.getY()
-            names = []
-            locationLights = []
-            if 0 <= x < gridSize and 0 <= y < gridSize:
-                for entity in list(location.getEntities().values()):
-                    if entity is player:
-                        continue
-                    name = entity.__class__.__name__
-                    names.append(name)
-                    if name not in images:
-                        images[name] = _imagePathOf(entity)
-                    if isLightSource(entity):
-                        locationLights.append(
-                            LightView(roomKey, x, y, entity.getLightRadius(), name)
-                        )
-                stacks[y * gridSize + x] = tuple(names)
-            locationLights = tuple(locationLights)
-            freshLocations[location] = (locationRevision, locationLights)
-            lights.extend(locationLights)
-        entry.locations = freshLocations
-        tiles = tuple(stacks)
+            seen.add(location)
+            self._readLocation(entry, location, gridSize, roomKey)
+        tiles = tuple(entry.stacks)
         if roomType is not None:
             biome = roomType
         else:
-            biome = inferBiomeFromClassNames(
-                [name for stack in tiles for name in stack], room.getZ()
-            )
+            biome = inferBiomeFromCounts(entry.counts, room.getZ())
         entry.revision = revision
         entry.roomType = roomType
-        entry.lights = tuple(lights)
-        entry.images = tuple(images.items())
+        entry.lights = tuple(
+            light
+            for _, locationLights in sorted(entry.lightsByLocation.values())
+            for light in locationLights
+        )
+        entry.images = tuple(entry.imageMap.items())
         entry.roomView = RoomView(
             room.getX(),
             room.getY(),
@@ -222,27 +206,74 @@ class WorldViewBuilder:
             tiles,
         )
 
+    def _readLocation(self, entry, location, gridSize, roomKey):
+        x, y = location.getX(), location.getY()
+        if not (0 <= x < gridSize and 0 <= y < gridSize):
+            return
+        index = y * gridSize + x
+        player = entry.player
+        images = entry.imageMap
+        names = []
+        lights = []
+        for entity in list(location.getEntities().values()):
+            if entity is player:
+                continue
+            name = entity.__class__.__name__
+            names.append(name)
+            if name not in images:
+                images[name] = _imagePathOf(entity)
+            if isLightSource(entity):
+                lights.append(LightView(roomKey, x, y, entity.getLightRadius(), name))
+        names = tuple(names)
+        counts = entry.counts
+        counts.subtract(entry.stacks[index])
+        counts.update(names)
+        entry.stacks[index] = names
+        if lights:
+            # Sorted by tile index, so lights come out in grid order whichever
+            # location changed last.
+            entry.lightsByLocation[location] = (index, tuple(lights))
+        else:
+            entry.lightsByLocation.pop(location, None)
+
     def _collectActors(self, room, player, actors):
-        # Living entities move and change sprite without a tile-class change
-        # (facing, reproduction cooldown), so actors are re-read every build.
-        # There are few of them, so this stays cheap.
+        # Living entities move and change sprite (facing, reproduction
+        # cooldown) without a tile-class change, so they are checked every
+        # build, but an unchanged one reuses its ActorView.
         roomKey = (room.getX(), room.getY(), room.getZ())
-        grid = room.getGrid()
+        grid = None
+        cache = self._actorCache
         for entity in list(room.getLivingEntities().values()):
             if entity is player:
                 continue
+            self._seenActors.add(entity)
+            locationId = entity.getLocationID()
+            direction = directionName(entity)
+            image = _imagePathOf(entity)
+            cached = cache.get(entity)
+            if (
+                cached is not None
+                and cached[0] == locationId
+                and cached[1] == direction
+                and cached[2] == image
+                and cached[3].getRoom() == roomKey
+            ):
+                actors.append(cached[3])
+                continue
+            if grid is None:
+                grid = room.getGrid()
             try:
-                location = grid.getLocation(entity.getLocationID())
+                location = grid.getLocation(locationId)
             except KeyError:
                 continue
-            actors.append(
-                ActorView(
-                    str(entity.getID()),
-                    entity.__class__.__name__,
-                    roomKey,
-                    location.getX(),
-                    location.getY(),
-                    directionName(entity),
-                    _imagePathOf(entity),
-                )
+            view = ActorView(
+                str(entity.getID()),
+                entity.__class__.__name__,
+                roomKey,
+                location.getX(),
+                location.getY(),
+                direction,
+                image,
             )
+            cache[entity] = (locationId, direction, image, view)
+            actors.append(view)

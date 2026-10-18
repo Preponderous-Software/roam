@@ -273,3 +273,83 @@ def test_room_type_change_rebuilds_the_biome():
     view = builder.build(_map([room]), player, 1)
 
     assert view.getRooms()[0].getBiome() == RoomType.MOUNTAIN
+
+
+# --- the change log: re-read only the locations that changed -----------------
+
+
+def test_changed_locations_since_lists_only_later_changes():
+    room = _room()
+    first, second = _at(room, 0, 0), _at(room, 1, 0)
+    first.addEntity(Stone())
+    mark = room.getRevision()
+    second.addEntity(Stone())
+    first.addEntity(Grass())
+
+    assert room.getChangedLocationsSince(mark) == [second, first]
+    assert room.getChangedLocationsSince(room.getRevision()) == []
+
+
+def test_change_log_overflow_and_set_grid_force_a_full_read():
+    room = _room()
+    mark = room.getRevision()
+    for _ in range(100):  # more than the log keeps
+        _at(room, 2, 2).addEntity(Stone())
+
+    assert room.getChangedLocationsSince(mark) is None
+    recent = room.getRevision()
+    room.setGrid(_room().getGrid())
+    assert room.getChangedLocationsSince(recent) is None
+
+
+def test_many_changes_between_builds_are_never_missed():
+    player = Player(0)
+    room = _room()
+    room.addEntityToLocation(player, _at(room, 0, 0))
+    builder = _builder()
+    builder.build(_map([room]), player, 0)
+    for step in range(150):  # overflows the change log
+        _at(room, step % GRID, (step // GRID) % GRID).addEntity(Stone())
+
+    cached = builder.build(_map([room]), player, 1)
+    fresh = _builder().build(_map([room]), player, 1)
+
+    assert cached.getRooms()[0].getTiles() == fresh.getRooms()[0].getTiles()
+
+
+def test_biome_follows_incremental_changes_for_rooms_without_a_room_type():
+    player = Player(0)
+    room = _room()
+    room.addEntityToLocation(player, _at(room, 0, 0))
+    grass = Grass()
+    _at(room, 1, 1).addEntity(grass)
+    builder = _builder()
+    assert builder.build(_map([room]), player, 0).getRooms()[0].getBiome() == (
+        RoomType.GRASSLAND
+    )
+
+    _at(room, 1, 1).removeEntity(grass)
+    _at(room, 2, 2).addEntity(Stone())
+
+    assert builder.build(_map([room]), player, 1).getRooms()[0].getBiome() == (
+        RoomType.MOUNTAIN
+    )
+
+
+def test_unchanged_actors_reuse_their_view_and_moved_ones_do_not():
+    player = Player(0)
+    room = _room()
+    room.addEntityToLocation(player, _at(room, 0, 0))
+    chicken = Chicken(0)
+    room.addEntityToLocation(chicken, _at(room, 2, 2))
+    room.addLivingEntity(chicken)
+    builder = _builder()
+    [first] = builder.build(_map([room]), player, 0).getActors()
+    [second] = builder.build(_map([room]), player, 1).getActors()
+
+    _at(room, 2, 2).removeEntity(chicken)
+    _at(room, 3, 2).addEntity(chicken)
+    [third] = builder.build(_map([room]), player, 2).getActors()
+
+    assert second is first
+    assert (third.getTileX(), third.getTileY()) == (3, 2)
