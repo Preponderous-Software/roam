@@ -24,7 +24,7 @@ def _roomFactory():
 
 
 def _forgetRoomType(room):
-    # What a room reloaded from a save looks like: roomType is not persisted.
+    # What a room reloaded from an older save looks like: no roomType saved.
     room.setRoomType(None)
     return room
 

@@ -41,8 +41,8 @@ class Room(Environment):
         self.z = z
         self.renderer = renderer
         self.livingEntities = dict()
-        # In-memory only (not persisted by RoomJsonReaderWriter); a room
-        # reloaded from a save file has this as None until regenerated.
+        # Saved by RoomJsonReaderWriter when known; a room reloaded from a
+        # save written before roomType was persisted has this as None.
         self.roomType = None
         # In-memory only, never persisted: changes whenever any location's
         # entity stack changes (see world/trackedLocation.py).

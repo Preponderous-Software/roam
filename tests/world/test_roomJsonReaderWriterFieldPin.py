@@ -26,6 +26,7 @@ ROOM_KEYS = {
     "livingEntityIds",
     "grid",
     "creationDate",
+    "roomType",
 }
 GRID_KEYS = {"id", "columns", "rows", "locations"}
 LOCATION_KEYS = {"id", "x", "y", "entities"}
@@ -75,11 +76,11 @@ def test_room_save_field_set_is_pinned(resolve, test_config, tmp_path):
                     assert set(entity) == ENTITY_KEYS
 
 
-def test_room_type_is_not_persisted(resolve, test_config, tmp_path):
-    # roomType lives in memory only (roam#601 proposes persisting it; until
-    # that separate decision is made, nothing in RFC 0017 may write it).
+def test_view_only_room_state_is_not_persisted(resolve, test_config, tmp_path):
+    # roomType is saved (roam#601); the inferred biome and the WorldView
+    # revision are view-only and must never be.
     roomJson = _roomJson(resolve, test_config, tmp_path, RoomType.FOREST)
 
-    assert "roomType" not in roomJson
+    assert roomJson["roomType"] == RoomType.FOREST
     assert "biome" not in roomJson
     assert "revision" not in roomJson
