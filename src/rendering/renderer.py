@@ -102,6 +102,18 @@ class Renderer(ABC):
         missing or unreadable. For dynamic images (e.g. the regenerated minimap)
         where loadImage's caching + placeholder behavior is not wanted."""
 
+    def drawsWorldFromView(self):
+        """Return True if this frontend draws the world itself from the
+        published WorldView (RFC 0017 stage 3), so WorldScreen must skip its
+        per-tile world blits and day/night overlay and only clearRegion() the
+        game area. Every 2D backend keeps the default False."""
+        return False
+
+    def clearRegion(self, rect):
+        """Make rect transparent so a world layer drawn behind this one shows
+        through. Only meaningful when drawsWorldFromView() is True; a no-op
+        by default."""
+
     def supportsImageLoading(self):
         """Return True if this backend can load and display real image files.
         Text/headless backends that always return None from tryLoadImage should

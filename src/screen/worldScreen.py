@@ -1784,6 +1784,18 @@ class WorldScreen:
                     room, roomOffsetX, roomOffsetY, self._frameLightSources
                 )
 
+    def _prepareWorldForView(self, gameArea):
+        # RFC 0017 stage 3: a frontend that draws the world from the published
+        # WorldView (drawsWorldFromView) owns the tiles and the day/night look,
+        # so only a transparent hole is cut for it. The rooms the 2D view
+        # would have drawn are still loaded through the same getOrLoadRoom
+        # calls, so which rooms exist (and are later saved) does not depend on
+        # the view mode.
+        if self.config.cameraFollowPlayer:
+            for roomX, roomY, _, _ in self._iterateVisibleRoomOffsets(gameArea):
+                self.getOrLoadRoom(roomX, roomY)
+        self.renderer.clearRegion(gameArea)
+
     def _drawPausedOverlay(self):
         width, height = self.renderer.getDisplaySize()
         self.renderer.drawTranslucentOverlay((0, 0, 0, 140))
@@ -2159,25 +2171,31 @@ class WorldScreen:
 
         self.renderer.clearScreen(palette.BLACK)
 
-        self.renderer.setClipRegion(gameArea)
-        self.renderer.clearScreen(self.currentRoom.getBackgroundColor())
-
-        if self.config.cameraFollowPlayer:
-            self.drawFollowMode()
+        if self.renderer.drawsWorldFromView():
+            self._prepareWorldForView(gameArea)
         else:
-            self.currentRoom.drawWithOffset(
-                self.locationWidth, self.locationHeight, gameArea.x, gameArea.y
-            )
-            if self.config.dayNightCycleEnabled:
-                self._frameLightSources = []
-                self._collectLightSourcesFromRoom(
-                    self.currentRoom, gameArea.x, gameArea.y, self._frameLightSources
+            self.renderer.setClipRegion(gameArea)
+            self.renderer.clearScreen(self.currentRoom.getBackgroundColor())
+
+            if self.config.cameraFollowPlayer:
+                self.drawFollowMode()
+            else:
+                self.currentRoom.drawWithOffset(
+                    self.locationWidth, self.locationHeight, gameArea.x, gameArea.y
                 )
+                if self.config.dayNightCycleEnabled:
+                    self._frameLightSources = []
+                    self._collectLightSourcesFromRoom(
+                        self.currentRoom,
+                        gameArea.x,
+                        gameArea.y,
+                        self._frameLightSources,
+                    )
 
-        if self.config.dayNightCycleEnabled:
-            self._drawDayNightOverlay(gameArea)
+            if self.config.dayNightCycleEnabled:
+                self._drawDayNightOverlay(gameArea)
 
-        self.renderer.setClipRegion(None)
+            self.renderer.setClipRegion(None)
 
         statusOx, statusOy = self.hudDragManager.getOffset("status")
         self.status.draw(statusOx, statusOy)
