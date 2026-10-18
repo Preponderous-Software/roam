@@ -119,6 +119,10 @@ class RoomJsonReaderWriter:
         ]
         roomJson["grid"] = self.generateJsonForGrid(room.getGrid())
         roomJson["creationDate"] = str(room.getCreationDate())
+        # Omitted when unknown: a room loaded from an older save has no type,
+        # and re-saving it must not invent one.
+        if room.getRoomType() is not None:
+            roomJson["roomType"] = room.getRoomType()
 
         jsonschema.validate(roomJson, self.roomSchema)
         return roomJson
@@ -196,6 +200,7 @@ class RoomJsonReaderWriter:
             roomJson.get("z", 0),
         )
         room.setID(roomJson["id"])
+        room.setRoomType(roomJson.get("roomType"))
         room.setGrid(self.generateGridFromJson(roomJson["grid"]))
         room.setLivingEntities(self.livingEntities)
         self.livingEntities = dict()

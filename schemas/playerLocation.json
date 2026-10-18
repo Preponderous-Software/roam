@@ -7,6 +7,9 @@
         "roomY": {
             "type": "integer"
         },
+        "roomZ": {
+            "type": "integer"
+        },
         "locationId": {
             "type": "string"
         }

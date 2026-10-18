@@ -1,4 +1,8 @@
+import json
+from unittest.mock import MagicMock
 from uuid import uuid4
+
+import jsonschema
 import pytest
 from entity.apple import Apple
 from entity.banana import Banana
@@ -31,7 +35,9 @@ from entity.wheatSeed import WheatSeed
 from entity.woodFloor import WoodFloor
 from entity.youngCrop import YoungCrop
 from world import roomJsonReaderWriter as roomJsonReaderWriterModule
+from world.room import Room
 from world.roomJsonReaderWriter import RoomJsonReaderWriter
+from world.roomType import RoomType
 
 
 def createRoomJsonReaderWriter(resolve, test_config, tmp_path):
@@ -148,6 +154,123 @@ def test_generate_room_from_json_parses_background_color_string(
     room = roomJsonReaderWriter.generateRoomFromJson(roomJson)
 
     assert room.getBackgroundColor() == (15, 30, 45)
+
+
+def createLegacyRoomJson():
+    # A room file as written before roomType was persisted: no roomType key.
+    stoneJson = createEntityJson("Stone")
+    stoneJson["creationDate"] = "2026-01-01 00:00:00"
+    return {
+        "backgroundColor": "(15, 30, 45)",
+        "x": 4,
+        "y": 7,
+        "z": -1,
+        "name": "Room 4-7",
+        "id": str(uuid4()),
+        "livingEntityIds": [],
+        "grid": {
+            "id": str(uuid4()),
+            "columns": 3,
+            "rows": 3,
+            "locations": [
+                {
+                    "id": str(uuid4()),
+                    "x": 0,
+                    "y": 0,
+                    "entities": [stoneJson],
+                }
+            ],
+        },
+        "creationDate": "2026-01-01 00:00:00",
+    }
+
+
+def test_room_from_legacy_save_loads_with_no_room_type(resolve, test_config, tmp_path):
+    roomJsonReaderWriter = createRoomJsonReaderWriter(resolve, test_config, tmp_path)
+    roomJson = createLegacyRoomJson()
+
+    jsonschema.validate(roomJson, roomJsonReaderWriter.roomSchema)
+    room = roomJsonReaderWriter.generateRoomFromJson(roomJson)
+
+    assert room.getRoomType() is None
+    assert (room.getX(), room.getY(), room.getZ()) == (4, 7, -1)
+    assert str(room.getGrid().getID()) == roomJson["grid"]["id"]
+    entities = [
+        entity
+        for location in room.getGrid().getLocations().values()
+        for entity in location.getEntities().values()
+    ]
+    assert [type(entity) for entity in entities] == [Stone]
+
+
+def test_room_from_legacy_save_resaves_without_inventing_room_type(
+    resolve, test_config, tmp_path
+):
+    roomJsonReaderWriter = createRoomJsonReaderWriter(resolve, test_config, tmp_path)
+    room = roomJsonReaderWriter.generateRoomFromJson(createLegacyRoomJson())
+
+    roomJson = roomJsonReaderWriter.generateJsonForRoom(room)
+
+    assert "roomType" not in roomJson
+
+
+@pytest.mark.parametrize(
+    "roomType",
+    [
+        RoomType.EMPTY,
+        RoomType.GRASSLAND,
+        RoomType.FOREST,
+        RoomType.JUNGLE,
+        RoomType.MOUNTAIN,
+        RoomType.CAVE,
+    ],
+)
+def test_room_type_round_trips_through_save(roomType, resolve, test_config, tmp_path):
+    roomJsonReaderWriter = createRoomJsonReaderWriter(resolve, test_config, tmp_path)
+    room = Room("Room 2-3", 3, (1, 2, 3), 2, 3, MagicMock())
+    room.setRoomType(roomType)
+
+    # generateJsonForRoom validates against schemas/room.json itself.
+    roomJson = roomJsonReaderWriter.generateJsonForRoom(room)
+    restored = roomJsonReaderWriter.generateRoomFromJson(roomJson)
+
+    assert roomJson["roomType"] == roomType
+    assert restored.getRoomType() == roomType
+
+
+def test_room_with_unrecognised_room_type_still_loads(resolve, test_config, tmp_path):
+    # A save written by a later version may carry a type this build lacks.
+    roomJsonReaderWriter = createRoomJsonReaderWriter(resolve, test_config, tmp_path)
+    roomJson = createLegacyRoomJson()
+    roomJson["roomType"] = "volcano"
+
+    jsonschema.validate(roomJson, roomJsonReaderWriter.roomSchema)
+    room = roomJsonReaderWriter.generateRoomFromJson(roomJson)
+
+    assert room.getRoomType() == "volcano"
+
+
+def test_room_loader_ignores_unknown_keys(resolve, test_config, tmp_path):
+    # What an older build sees when it opens a file written by a newer one.
+    roomJsonReaderWriter = createRoomJsonReaderWriter(resolve, test_config, tmp_path)
+    roomJson = createLegacyRoomJson()
+    roomJson["someFutureField"] = {"anything": 1}
+
+    room = roomJsonReaderWriter.generateRoomFromJson(roomJson)
+
+    assert room.getName() == "Room 4-7"
+
+
+def test_player_location_schema_accepts_room_z():
+    with open("schemas/playerLocation.json", encoding="utf-8") as schemaFile:
+        schema = json.load(schemaFile)
+
+    jsonschema.validate(
+        {"roomX": 0, "roomY": 0, "roomZ": -2, "locationId": "abc"}, schema
+    )
+    jsonschema.validate({"roomX": 0, "roomY": 0, "locationId": "abc"}, schema)
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate({"roomX": 0, "roomY": 0, "roomZ": "deep"}, schema)
 
 
 def test_young_crop_preserves_tick_planted(resolve, test_config, tmp_path):

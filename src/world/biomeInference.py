@@ -39,7 +39,8 @@ def inferBiome(room):
     """Return the room's biome: its in-memory roomType when it has one,
     otherwise one inferred from its tile contents.
 
-    Room.roomType is not persisted, so a room reloaded from a save has None.
+    A room reloaded from a save written before Room.roomType was persisted
+    has None.
     """
     roomType = room.getRoomType()
     if roomType is not None:

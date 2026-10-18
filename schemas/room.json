@@ -103,6 +103,9 @@
         },
         "creationDate": {
             "type": "string"
+        },
+        "roomType": {
+            "type": "string"
         }
     },
     "required": [
