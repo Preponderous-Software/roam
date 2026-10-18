@@ -187,6 +187,9 @@ self.onmessage = async (e) => {
     globalThis.sabData     = sabData;
     globalThis.sabRingSize = SAB_RING_SIZE;
     globalThis.sendToMain  = (data) => self.postMessage(data);
+    // Opt-in 3D view (?view=3d on the page): pyodide_main.py publishes
+    // "worldview" messages only when this is true.
+    globalThis.roamView3d  = e.data.view3d === true;
 
     try {
         self.postMessage({ type: 'status', msg: 'Loading Python runtime…' });

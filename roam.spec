@@ -26,6 +26,7 @@ a = Analysis(
         ("assets", "assets"),
         ("schemas", "schemas"),
         ("spectator", "spectator"),
+        (os.path.join("web", "roam3d.js"), "web"),
         ("config.yml", "."),
         ("version.txt", "."),
         (os.path.join("src", "media"), os.path.join("src", "media")),

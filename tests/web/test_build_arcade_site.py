@@ -44,6 +44,7 @@ def test_site_is_laid_out_as_serve_py_serves_the_repository(tmp_path):
         "web/game-worker.js",
         "web/game.zip",
         "web/game_version.txt",
+        "web/roam3d.js",
         "web/saves.js",
         "web/whats-new.js",
         "web/whats-new.json",

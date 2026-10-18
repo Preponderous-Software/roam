@@ -105,6 +105,9 @@ A `Dockerfile` is included that does both steps and exposes port 8080:
 
 Saves made in the browser live in that browser's own storage (an IndexedDB database named `roam-saves`), not on the server — clearing site data clears them. Re-run `web/build_zip.py` after changing anything under `src/` or `schemas/`, otherwise the worker keeps unpacking the previously built bundle.
 
+### Experimental 3D view
+Add `?view=3d` to the address (<http://localhost:8080/play?view=3d>) to play with the world drawn in 3D behind the usual HUD and menus. It is opt-in and experimental: without the parameter the page is the normal 2D game and loads none of the 3D code. Keys and the touch d-pad work. Mouse clicks on the world still use the 2D layout, and the camera is fixed. If the browser has no WebGL, the page says so and stays 2D. Saves are the same either way.
+
 ### Moving your saves
 The **Saves** button (in the footer on desktop, in the d-pad's corner on a phone) downloads every world in the browser as one file (`roam-saves-<date>.json`) and loads such a file in another browser, device or Roam site, such as from roam.preponderous.org to the arcade copy below. Loading a file never replaces or deletes anything:
 
