@@ -171,19 +171,21 @@ def test_revision_is_stable_until_a_stack_changes():
     rooms, home, player, _ = _world()
     builder = _builder()
 
-    first = builder.build(_map(rooms), player, 1).getRooms()[0].getRevision()
-    second = builder.build(_map(rooms), player, 2).getRooms()[0].getRevision()
+    first = builder.build(_map(rooms), player, 1).getRooms()[0]
+    second = builder.build(_map(rooms), player, 2).getRooms()[0]
     # A direct Location mutation (as worldScreen does) bypasses Room.
     location = home.getGrid().getLocationByCoordinates(0, 3)
     stone = Stone()
     location.addEntity(stone)
-    third = builder.build(_map(rooms), player, 3).getRooms()[0].getRevision()
+    third = builder.build(_map(rooms), player, 3).getRooms()[0]
     location.removeEntity(stone)
-    fourth = builder.build(_map(rooms), player, 4).getRooms()[0].getRevision()
+    fourth = builder.build(_map(rooms), player, 4).getRooms()[0]
 
-    assert first == second
-    assert third != first
-    assert fourth == first
+    assert second is first  # unchanged room: the cached view is reused
+    assert third.getRevision() != first.getRevision()
+    assert third.getTiles()[3 * GRID + 0] == ("Stone",)
+    assert fourth.getRevision() not in (first.getRevision(), third.getRevision())
+    assert fourth.getTiles() == first.getTiles()
 
 
 def test_no_view_when_the_player_is_not_in_a_loaded_room():

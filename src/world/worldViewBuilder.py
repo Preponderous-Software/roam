@@ -27,6 +27,22 @@ def _imagePathOf(entity):
     return getImagePath() if getImagePath else None
 
 
+class _RoomCacheEntry:
+    # WorldViewBuilder's in-memory cache for one room (never persisted).
+    def __init__(self, room, player):
+        self.room = room
+        self.player = player
+        self.revision = None
+        self.roomType = None
+        self.roomView = None
+        self.lights = ()
+        self.images = ()
+        self.imageMap = {}
+        self.stacks = []
+        # Location (by identity) -> (locationRevision, lights on that location)
+        self.locations = {}
+
+
 # @author Claude
 # @since October 18th, 2026
 #
@@ -42,6 +58,11 @@ class WorldViewBuilder:
     def __init__(self, dayNightCycle: DayNightCycle, config: Config):
         self.dayNightCycle = dayNightCycle
         self.config = config
+        # (x, y, z) -> (room, revision, roomType, RoomView, lights, images).
+        # A room is re-walked only when it is a different Room object or its
+        # revision (bumped by every entity add/remove, world/trackedLocation)
+        # or roomType changed. In-memory only.
+        self._roomCache = {}
 
     def build(self, map, player, tick, radiusRooms=1):
         """Return a WorldView of the loaded rooms within radiusRooms of the
@@ -63,6 +84,7 @@ class WorldViewBuilder:
         playerTile = (playerLocation.getX(), playerLocation.getY())
 
         classImages = {}
+        seenKeys = set()
         roomViews = []
         actors = []
         lights = []
@@ -72,9 +94,16 @@ class WorldViewBuilder:
                 or abs(room.getY() - playerRoomKey[1]) > radiusRooms
             ):
                 continue
-            roomViews.append(
-                self._buildRoomView(room, player, gridSize, classImages, actors, lights)
+            roomView, roomLights, roomImages = self._getRoomParts(
+                room, player, gridSize, seenKeys
             )
+            roomViews.append(roomView)
+            lights.extend(roomLights)
+            for name, imagePath in roomImages:
+                classImages.setdefault(name, imagePath)
+            self._collectActors(room, player, actors)
+
+        self._pruneCache(seenKeys)
 
         playerView = ActorView(
             str(player.getID()),
@@ -105,33 +134,100 @@ class WorldViewBuilder:
             classImages=tuple(classImages.items()),
         )
 
-    def _buildRoomView(self, room, player, gridSize, classImages, actors, lights):
-        # One pass over the room's grid collects the tile stacks, the class
-        # sprites and the lights; it runs every tick a sink wants a view, so it
-        # is kept tight (see the timing note in CHANGELOG.md, 2026-10-18).
-        roomKey = (room.getX(), room.getY(), room.getZ())
-        stacks = [()] * (gridSize * gridSize)
-        grid = room.getGrid()
-        for location in list(grid.getLocations().values()):
-            entities = location.getEntities()
-            if not entities:
+    def _getRoomParts(self, room, player, gridSize, seenKeys):
+        key = (room.getX(), room.getY(), room.getZ())
+        seenKeys.add(key)
+        revision = room.getRevision()
+        roomType = room.getRoomType()
+        entry = self._roomCache.get(key)
+        if entry is None or entry.room is not room or entry.player is not player:
+            entry = self._roomCache[key] = _RoomCacheEntry(room, player)
+        elif entry.revision == revision and entry.roomType == roomType:
+            return entry.roomView, entry.lights, entry.images
+        self._refreshRoom(entry, gridSize, key, revision, roomType)
+        return entry.roomView, entry.lights, entry.images
+
+    def _pruneCache(self, keepKeys):
+        """Forget cached rooms whose keys are not in keepKeys."""
+        for key in [key for key in self._roomCache if key not in keepKeys]:
+            del self._roomCache[key]
+
+    def _refreshRoom(self, entry, gridSize, roomKey, revision, roomType):
+        # Re-read only the locations whose own revision moved since the last
+        # build (every tracked location records the revision of its latest
+        # change); the others keep their cached stack and lights. A first
+        # build, or an untracked location, reads everything.
+        room, player = entry.room, entry.player
+        stacks = entry.stacks
+        if len(stacks) != gridSize * gridSize:
+            stacks = entry.stacks = [()] * (gridSize * gridSize)
+        cachedLocations = entry.locations
+        freshLocations = {}
+        images = entry.imageMap
+        lights = []
+        for location in list(room.getGrid().getLocations().values()):
+            getLocationRevision = getattr(location, "getLocationRevision", None)
+            locationRevision = getLocationRevision() if getLocationRevision else None
+            cached = cachedLocations.get(location)
+            if (
+                cached is not None
+                and locationRevision is not None
+                and cached[0] == locationRevision
+            ):
+                freshLocations[location] = cached
+                lights.extend(cached[1])
                 continue
             x, y = location.getX(), location.getY()
-            if not (0 <= x < gridSize and 0 <= y < gridSize):
-                continue
             names = []
-            for entity in list(entities.values()):
-                if entity is player:
-                    continue
-                name = entity.__class__.__name__
-                names.append(name)
-                if name not in classImages:
-                    classImages[name] = _imagePathOf(entity)
-                if isLightSource(entity):
-                    lights.append(
-                        LightView(roomKey, x, y, entity.getLightRadius(), name)
-                    )
-            stacks[y * gridSize + x] = tuple(names)
+            locationLights = []
+            if 0 <= x < gridSize and 0 <= y < gridSize:
+                for entity in list(location.getEntities().values()):
+                    if entity is player:
+                        continue
+                    name = entity.__class__.__name__
+                    names.append(name)
+                    if name not in images:
+                        images[name] = _imagePathOf(entity)
+                    if isLightSource(entity):
+                        locationLights.append(
+                            LightView(roomKey, x, y, entity.getLightRadius(), name)
+                        )
+                stacks[y * gridSize + x] = tuple(names)
+            locationLights = tuple(locationLights)
+            freshLocations[location] = (locationRevision, locationLights)
+            lights.extend(locationLights)
+        entry.locations = freshLocations
+        tiles = tuple(stacks)
+        if roomType is not None:
+            biome = roomType
+        else:
+            biome = inferBiomeFromClassNames(
+                [name for stack in tiles for name in stack], room.getZ()
+            )
+        entry.revision = revision
+        entry.roomType = roomType
+        entry.lights = tuple(lights)
+        entry.images = tuple(images.items())
+        entry.roomView = RoomView(
+            room.getX(),
+            room.getY(),
+            room.getZ(),
+            biome,
+            roomType,
+            room.getBackgroundColor(),
+            # Room.getRevision(): a process-wide sequence value that changes on
+            # every entity add/remove in the room and is never reused, so equal
+            # revisions mean equal tiles. In-memory only, never saved.
+            revision,
+            tiles,
+        )
+
+    def _collectActors(self, room, player, actors):
+        # Living entities move and change sprite without a tile-class change
+        # (facing, reproduction cooldown), so actors are re-read every build.
+        # There are few of them, so this stays cheap.
+        roomKey = (room.getX(), room.getY(), room.getZ())
+        grid = room.getGrid()
         for entity in list(room.getLivingEntities().values()):
             if entity is player:
                 continue
@@ -150,25 +246,3 @@ class WorldViewBuilder:
                     _imagePathOf(entity),
                 )
             )
-        tiles = tuple(stacks)
-        roomType = room.getRoomType()
-        if roomType is not None:
-            biome = roomType
-        else:
-            biome = inferBiomeFromClassNames(
-                [name for stack in tiles for name in stack], room.getZ()
-            )
-        return RoomView(
-            room.getX(),
-            room.getY(),
-            room.getZ(),
-            biome,
-            roomType,
-            room.getBackgroundColor(),
-            # A signature of the tile stacks: equal stacks give an equal
-            # revision, so consumers can skip rebuilding unchanged rooms. It
-            # covers every mutation path, including direct Location.addEntity /
-            # removeEntity calls, at O(tiles) per build.
-            hash(tiles),
-            tiles,
-        )

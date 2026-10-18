@@ -1,3 +1,4 @@
+import itertools
 import random
 
 from entity.excrement import Excrement
@@ -11,10 +12,15 @@ from entity.woodFloor import WoodFloor
 from lib.pyenvlib.environment import Environment
 from rendering.renderer import Renderer
 from gameLogging.logger import getLogger
+from world.trackedLocation import trackLocation
 
 _logger = getLogger(__name__)
 
 _IMAGE_CACHE_MAX = 512
+
+# One process-wide sequence, so a revision value is never reused, not even by a
+# different Room object at the same coordinates (e.g. a room reloaded from disk).
+_revisionSequence = itertools.count(1)
 
 
 # @author Daniel McCoy Stephenson
@@ -33,6 +39,26 @@ class Room(Environment):
         # In-memory only (not persisted by RoomJsonReaderWriter); a room
         # reloaded from a save file has this as None until regenerated.
         self.roomType = None
+        # In-memory only, never persisted: changes whenever any location's
+        # entity stack changes (see world/trackedLocation.py).
+        self.revision = next(_revisionSequence)
+        self._trackLocations()
+
+    def getRevision(self):
+        return self.revision
+
+    def bumpRevision(self):
+        self.revision = next(_revisionSequence)
+        return self.revision
+
+    def setGrid(self, grid):
+        Environment.setGrid(self, grid)
+        self._trackLocations()
+        self.bumpRevision()
+
+    def _trackLocations(self):
+        for location in self.grid.getLocations().values():
+            trackLocation(location, self)
 
     def getBackgroundColor(self):
         return self.backgroundColor
