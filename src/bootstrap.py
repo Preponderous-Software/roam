@@ -11,6 +11,7 @@ from di import Container
 
 from config.config import Config
 from rendering.renderer import Renderer
+from rendering.worldViewSink import NullWorldViewSink, WorldViewSink
 from gameLogging.logger import LoggerFactory
 from player.player import Player
 from world.map import Map
@@ -32,6 +33,10 @@ def createContainer(config):
 
     # Logger factory as a singleton service.
     container.registerInstance(LoggerFactory, LoggerFactory())
+
+    # RFC 0017 stage 2: no frontend draws from a WorldView by default; one
+    # that does registers its own sink after this (in createFrontend).
+    container.register(WorldViewSink, NullWorldViewSink)
 
     # Player requires a tick value from TickCounter, so use a factory.
     container.register(Player, lambda: Player(container.resolve(TickCounter).getTick()))

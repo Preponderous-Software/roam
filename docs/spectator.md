@@ -18,7 +18,12 @@ It never sends input to the game and cannot change it or its saves.
 
 The page is served by Roam's embedded REST server, which binds to
 `127.0.0.1` only, so it is not reachable from other machines. It polls
-`GET /api/v1/snapshot` twice a second. three.js 0.147.0 is loaded from
+`GET /api/v1/snapshot` twice a second.
+
+The game builds the snapshot on its own thread (a `WorldView`, RFC 0017
+stage 2) only while something is polling: with `restEnabled: true` and no
+spectator open, it does no extra work per tick. While the page is open, the
+game builds at most four views a second, covering only the radius asked for. three.js 0.147.0 is loaded from
 jsDelivr, so the browser needs an internet connection the first time.
 
 ## What it shows
