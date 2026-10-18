@@ -72,6 +72,10 @@ def test_input_source():
     inputSource.getMousePosition.return_value = (0, 0)
     inputSource.getMouseButtons.return_value = (False, False, False)
     inputSource.isPressed.return_value = False
+    # The optional 3D hooks keep their 2D defaults (RFC 0021).
+    inputSource.getMovementRotation.return_value = 0
+    inputSource.supportsTilePicking.return_value = False
+    inputSource.getPointedTile.return_value = None
     return inputSource
 
 

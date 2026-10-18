@@ -552,6 +552,8 @@ class WorldScreen:
         return _canBePickedUp(entity)
 
     def getLocationAndRoomAtMousePosition(self):
+        if self.inputSource.supportsTilePicking():
+            return self._getLocationAndRoomAtPointedTile()
         x, y = self.inputSource.getMousePosition()
         gameArea = self.renderer.getGameAreaRect()
         if self.config.cameraFollowPlayer:
@@ -597,6 +599,38 @@ class WorldScreen:
             gridY = int((y - gameArea.y) // self.locationHeight)
             location = self.currentRoom.getGrid().getLocationByCoordinates(gridX, gridY)
             return (location, self.currentRoom)
+
+    def _getLocationAndRoomAtPointedTile(self):
+        # The opt-in 3D view raycasts the pointer itself and reports the world
+        # tile under it (Preponderous RFC 0021). From the world tile on, this
+        # is the same arithmetic, border check and room lookup as the
+        # follow-camera branch of the 2D path above, so both resolve the same
+        # (location, room) for the same tile.
+        pointed = self.inputSource.getPointedTile()
+        if pointed is None:
+            return (-1, None)
+        worldGridX, worldGridY, z = pointed
+        if z != self.currentZ:
+            return (-1, None)
+        gridSize = self.config.gridSize
+        targetRoomX = math.floor(worldGridX / gridSize)
+        targetRoomY = math.floor(worldGridY / gridSize)
+        localX = worldGridX - targetRoomX * gridSize
+        localY = worldGridY - targetRoomY * gridSize
+        if (
+            targetRoomX == self.currentRoom.getX()
+            and targetRoomY == self.currentRoom.getY()
+        ):
+            targetRoom = self.currentRoom
+        else:
+            if self.config.worldBorder != 0 and (
+                abs(targetRoomX) > self.config.worldBorder
+                or abs(targetRoomY) > self.config.worldBorder
+            ):
+                return (-1, None)
+            targetRoom = self.getOrLoadRoom(targetRoomX, targetRoomY)
+        location = targetRoom.getGrid().getLocationByCoordinates(localX, localY)
+        return (location, targetRoom)
 
     def getLocationAtMousePosition(self):
         location, room = self.getLocationAndRoomAtMousePosition()
@@ -1100,6 +1134,10 @@ class WorldScreen:
         self.status.set("Selected " + item.getName())
 
     def _handleMovementKey(self, direction):
+        # The opt-in 3D view reports how far its camera is turned, in quarter
+        # turns, so "up" moves away from the camera; every 2D frontend reports
+        # 0. Only the grid direction changes, never the move rules.
+        direction = (direction + self.inputSource.getMovementRotation()) % 4
         self.player.setDirection(direction)
         if self.checkPlayerMovementCooldown(self.player.getTickLastMoved()):
             self.movePlayer(self.player.direction)

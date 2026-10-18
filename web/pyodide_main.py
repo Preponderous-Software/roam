@@ -116,6 +116,17 @@ class PyodideInputSource(WebInputSource):
                 )
             elif t == "mouse_move":
                 self.moveMouse(int(msg.get("x", 0)), int(msg.get("y", 0)))
+            elif t == "camera":
+                # 3D view only: the camera's yaw in quarter turns.
+                self.setMovementRotation(int(msg.get("quadrant", 0)))
+            elif t == "pointed_tile":
+                # 3D view only: the world tile under the pointer, or none.
+                if msg.get("none"):
+                    self.setPointedTile(None)
+                else:
+                    self.setPointedTile(
+                        (int(msg["x"]), int(msg["y"]), int(msg.get("z", 0)))
+                    )
             elif t == "worldview_resync" and world_view_sink is not None:
                 world_view_sink.requestFull()
         except (json.JSONDecodeError, KeyError, ValueError):

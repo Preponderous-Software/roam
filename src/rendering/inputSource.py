@@ -31,3 +31,22 @@ class InputSource(ABC):
     def getMouseButtons(self):
         """Current mouse button states as a tuple of bools, left-to-right
         (replaces pygame.mouse.get_pressed())."""
+
+    # --- optional 3D hooks (RFC 0017 stage 4, Preponderous RFC 0021) ---------
+    # Concrete defaults, so every existing frontend keeps its behaviour.
+
+    def getMovementRotation(self):
+        """Quarter turns (0-3) to add to a movement key's grid direction so
+        that "up" means "away from the camera". 0 for every 2D frontend."""
+        return 0
+
+    def supportsTilePicking(self):
+        """True when this frontend resolves the pointer to a world tile itself
+        (the 3D view); WorldScreen then uses getPointedTile() instead of its
+        top-down pixel math."""
+        return False
+
+    def getPointedTile(self):
+        """(worldTileX, worldTileY, z) under the pointer, or None when the
+        pointer is over no tile. Only meaningful when supportsTilePicking()."""
+        return None
