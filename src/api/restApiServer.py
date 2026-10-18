@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlparse
 
+from api.spectatorFiles import resolveStaticFile
 from api.worldSnapshot import DEFAULT_RADIUS, buildWorldSnapshot, clampRadius
 from appContainer import component
 from config.config import Config
@@ -75,6 +76,8 @@ def _collectEntities(room):
 #       tile's entity stack, background colours, light sources and the
 #       player's tile and facing. For 3D viewers (RFC 0017); see
 #       api/worldSnapshot.py.
+#   /spectator/  a three.js page that renders /api/v1/snapshot in 3D, plus
+#       /assets/images/{name}.png for its sprites (see api/spectatorFiles.py)
 #
 # `map` is handed in via setMap() rather than constructor-injected: Map is
 # registered transient in bootstrap.py (a fresh instance per resolve), so this
@@ -252,6 +255,17 @@ class _RestApiRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _writeFile(self, path, contentType):
+        with open(path, "rb") as staticFile:
+            body = staticFile.read()
+        self.send_response(200)
+        self.send_header("Content-Type", contentType)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        self.wfile.write(body)
+
     def do_GET(self):
         restApiServer = self.server.restApiServer
         parsedUrl = urlparse(self.path)
@@ -283,7 +297,11 @@ class _RestApiRequestHandler(BaseHTTPRequestHandler):
                 else:
                     self._writeJson(*restApiServer.getSnapshot(radius))
             else:
-                self._writeJson(404, {"error": "not found"})
+                staticFile = resolveStaticFile(parts)
+                if staticFile is None:
+                    self._writeJson(404, {"error": "not found"})
+                else:
+                    self._writeFile(*staticFile)
         except Exception:
             _logger.exception("rest api request failed", path=self.path)
             self._writeJson(500, {"error": "internal server error"})
