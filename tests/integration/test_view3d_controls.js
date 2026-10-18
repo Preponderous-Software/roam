@@ -161,51 +161,53 @@ const FACING_AFTER_W = ["up", "left", "down", "right"];
     if (matches.length < 15) await fail(`only ${matches.length} tiles picked back to themselves`);
     if (unexplained.length) await fail(`picks that missed with no occluder: ${JSON.stringify(unexplained.slice(0, 5))}`);
 
-    // The game must act on the picked tile: hover a visible tile whose first
-    // entity's name is not on screen yet; the game's own status line must
-    // then show that name (WorldScreen.handleMouseOver -> pointed tile).
-    const onScreen = new Set(await page.evaluate(() => window.__frames.flatMap(f => {
-        try { return JSON.parse(f).calls.filter(c => c.text).map(c => c.text); } catch (e) { return []; }
-    })));
-    let b = matches.find(r => r.hit.entities.length && NAMES[r.hit.entities[0]] && !onScreen.has(NAMES[r.hit.entities[0]]));
-    if (!b) {
-        // Everything near the player shares one name (all grass, say): look
-        // further out for a visible tile whose first entity has another name.
-        const far = await page.evaluate(([names, seen]) => {
-            const s = window.__roam3dView.snapshot, G = s.gridSize, P = s.player;
-            const px = P.room[0] * G + P.x, py = P.room[1] * G + P.y, out = [];
-            for (const r of s.rooms) {
-                if (r.z !== P.room[2]) continue;
-                r.tiles.forEach((stack, i) => {
-                    const first = stack.length ? s.classes[stack[0]] : null;
-                    if (!first || !names[first] || seen.includes(names[first])) return;
-                    const x = r.x * G + (i % G), y = r.y * G + Math.floor(i / G);
-                    const d = Math.max(Math.abs(x - px), Math.abs(y - py));
-                    if (d >= 1 && d <= 8) out.push({ x, y, d });
-                });
-            }
-            return out.sort((a, b) => a.d - b.d).slice(0, 40);
-        }, [NAMES, [...onScreen]]);
-        for (let i = 0; i < far.length && !b; i += 8) {
-            const got = await page.evaluate(batch => batch.map(t => {
-                const c = window.__roam3dScene.tileToClient(t.x, t.y);
-                const hit = c && window.__roam3dScene.pick(c.x, c.y);
-                return hit && hit.world[0] === t.x && hit.world[1] === t.y ? { t, c, hit: { world: hit.world, entities: hit.entities } } : null;
-            }).filter(Boolean), far.slice(i, i + 8));
-            b = got[0];
+    // The game must act on the picked tile: hover visible tiles until the
+    // game's own status line (WorldScreen.handleMouseOver -> pointed tile)
+    // shows a name that was not on screen before. Candidates: the player's
+    // tile ("Player"), tiles with a creature (its class name), then tiles
+    // whose first entity has a known name (almost every tile's first entity
+    // is Grass, so those rarely differ).
+    const onScreen = await page.evaluate(() => [...new Set(window.__frames.flatMap(f => {
+        try { return JSON.parse(f).calls.filter(c => c.text).map(c => String(c.text)); } catch (e) { return []; }
+    }))]);
+    const shown = prefix => onScreen.some(t => t.startsWith(prefix));
+    const candidates = await page.evaluate(([names, living]) => {
+        const s = window.__roam3dView.snapshot, G = s.gridSize, P = s.player;
+        const px = P.room[0] * G + P.x, py = P.room[1] * G + P.y, out = [{ x: px, y: py, d: 0, name: "Player" }];
+        for (const r of s.rooms) {
+            if (r.z !== P.room[2]) continue;
+            r.tiles.forEach((stack, i) => {
+                const x = r.x * G + (i % G), y = r.y * G + Math.floor(i / G);
+                const d = Math.max(Math.abs(x - px), Math.abs(y - py));
+                if (d < 1 || d > 8) return;
+                const classes = stack.map(k => s.classes[k]);
+                const creature = classes.find(c => living.includes(c));
+                if (creature) out.push({ x, y, d, name: creature });
+                else if (classes.length && names[classes[0]]) out.push({ x, y, d: d + 100, name: names[classes[0]] });
+            });
         }
-    }
-    if (!b) await fail(`no visible tile whose name is not already on screen (${[...onScreen].slice(0, 6).join(", ")})`);
+        return out.sort((a, b) => a.d - b.d);
+    }, [NAMES, ["Chicken", "Rabbit", "Deer", "Bear", "Wolf", "Snake"]]);
     step("hovering");
-    await page.evaluate(() => { window.__frames.length = 0; });
-    await page.mouse.move(b.c.x, b.c.y, { steps: 3 });
-    const want = NAMES[b.hit.entities[0]];
-    const said = await waitFor(page, () => page.evaluate(w =>
-        window.__frames.some(f => f.includes(`"text":"${w}"`)), want), 20000, 500);
+    let hovered = null;
+    for (const cand of candidates.filter(c => !shown(c.name)).slice(0, 12)) {
+        const at = await page.evaluate(t => {
+            const c = window.__roam3dScene.tileToClient(t.x, t.y);
+            const hit = c && window.__roam3dScene.pick(c.x, c.y);
+            return hit && hit.world[0] === t.x && hit.world[1] === t.y ? c : null;
+        }, cand);
+        if (!at) continue;  // hidden behind something from this camera
+        await page.evaluate(() => { window.__frames.length = 0; });
+        await page.mouse.move(at.x, at.y, { steps: 3 });
+        const said = await waitFor(page, () => page.evaluate(w =>
+            window.__frames.some(f => f.includes(`"text":"${w}`)), cand.name), 10000, 500);
+        if (said) { hovered = cand; break; }
+        process.stderr.write(`  [hover ${JSON.stringify(cand)}: no status yet (a creature may have moved)]\n`);
+    }
     const pointed = await page.evaluate(() => window.__roam3dView.pointed);
-    console.log(`hover: tile ${JSON.stringify(b.t)} (${b.hit.entities.join("+")}); page sent ${JSON.stringify(pointed)}; ` +
-        `game status named "${want}": ${!!said}`);
-    if (!said) await fail(`hovering ${JSON.stringify(b.t)} in 3D did not make the game name "${want}"`);
+    console.log(`hover: ${hovered ? `tile (${hovered.x}, ${hovered.y}) "${hovered.name}"` : "none"}; page sent ${JSON.stringify(pointed)}; ` +
+        `game status named it: ${!!hovered}`);
+    if (!hovered) await fail("hovering visible tiles in 3D never made the game name what was on them");
     await shot(page, "view3d-hover.png");
 
     if (errors.length) await fail(`page errors: ${errors.join("; ")}`);
