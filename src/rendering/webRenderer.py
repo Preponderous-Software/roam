@@ -37,8 +37,13 @@ class WebRenderer(Renderer):
         width=_DEFAULT_WIDTH,
         height=_DEFAULT_HEIGHT,
         inputSource=None,
+        drawsWorldFromView=False,
     ):
         self._send = sendCallback
+        # True only for the opt-in 3D view (/play?view=3d, RFC 0017 stage 3):
+        # the page draws the world from WorldView messages behind this 2D
+        # layer. False (the default) keeps the 2D browser game unchanged.
+        self._drawsWorldFromView = bool(drawsWorldFromView)
         self._w = int(width)
         self._h = int(height)
         self._inputSource = inputSource
@@ -71,6 +76,9 @@ class WebRenderer(Renderer):
 
     def supportsImageLoading(self):
         return True
+
+    def drawsWorldFromView(self):
+        return self._drawsWorldFromView
 
     def setCaption(self, text):
         pass
@@ -194,6 +202,17 @@ class WebRenderer(Renderer):
             if mb[0] and xpos <= mx < xpos + width and ypos <= my < ypos + height:
                 self._inputSource.consumeLeftClick()
                 function()
+
+    def clearRegion(self, rect):
+        self._emit(
+            {
+                "op": "cut",
+                "x": int(rect.x),
+                "y": int(rect.y),
+                "w": int(rect.width),
+                "h": int(rect.height),
+            }
+        )
 
     def drawTranslucentOverlay(self, color):
         c = list(color[:3]) + [int(color[3]) if len(color) > 3 else 128]

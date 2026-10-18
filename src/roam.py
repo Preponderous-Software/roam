@@ -105,6 +105,7 @@ from player.player import Player
 from rendering.renderer import Renderer
 from rendering.inputSource import InputSource
 from rendering.clock import Clock
+from rendering.worldViewSink import WorldViewSink
 from rendering.textFrontend import createTextFrontend
 from screen.configScreen import ConfigScreen
 from screen.controlsScreen import ControlsScreen
@@ -123,6 +124,16 @@ from usageReporting import createTraceClient, showFirstRunNotice
 from world.tickCounter import TickCounter
 
 _logger = getLogger(__name__)
+
+
+def registerFrontendWorldViewSink(container, frontend):
+    """RFC 0017: a frontend that draws the world from WorldViews (the opt-in
+    web 3D view) offers its sink through getWorldViewSink(); every other
+    frontend keeps bootstrap.py's NullWorldViewSink."""
+    getWorldViewSink = getattr(frontend, "getWorldViewSink", None)
+    worldViewSink = getWorldViewSink() if getWorldViewSink else None
+    if worldViewSink is not None:
+        container.registerInstance(WorldViewSink, worldViewSink)
 
 
 # @author Daniel McCoy Stephenson
@@ -180,6 +191,7 @@ class Roam:
         # no longer references pygame.time directly.
         self.clock = self.frontend.getClock()
         self.container.registerInstance(Clock, self.clock)
+        registerFrontendWorldViewSink(self.container, self.frontend)
         self.status = self.container.resolve(Status)
         self.stats = self.container.resolve(Stats)
         self.player = self.container.resolve(Player)
