@@ -1,18 +1,21 @@
 import json
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
+from api.worldSnapshot import DEFAULT_RADIUS, buildWorldSnapshot, clampRadius
 from appContainer import component
 from config.config import Config
 from gameLogging.logger import getLogger
 from player.player import Player
+from world.dayNightCycle import DayNightCycle
 from world.tickCounter import TickCounter
 
 _logger = getLogger(__name__)
 
 _NOT_INITIALIZED = (503, {"error": "game world not yet initialized"})
 _NOT_FOUND = (404, {"error": "room not found"})
+_BAD_RADIUS = (400, {"error": "radius must be an integer"})
 
 
 def _findRoomContainingEntity(rooms, environmentId):
@@ -64,16 +67,32 @@ def _collectEntities(room):
 # (e.g. a world viewer) can query live game state without coupling to Roam's
 # internals. Disabled unless config.restEnabled is true.
 #
+# Endpoints (all GET, JSON, bound to 127.0.0.1 only):
+#   /api/v1/world, /api/v1/rooms, /api/v1/rooms/{x}/{y}[/{z}], /api/v1/player,
+#   /api/v1/entities
+#   /api/v1/snapshot?radius=R  world-shaped snapshot of the loaded rooms within
+#       R rooms (default 1, max 3) of the player's room, on every level: each
+#       tile's entity stack, background colours, light sources and the
+#       player's tile and facing. For 3D viewers (RFC 0017); see
+#       api/worldSnapshot.py.
+#
 # `map` is handed in via setMap() rather than constructor-injected: Map is
 # registered transient in bootstrap.py (a fresh instance per resolve), so this
 # component must share WorldScreen's actual live Map object instead of
 # resolving its own disconnected one.
 @component
 class RestApiServer:
-    def __init__(self, player: Player, tickCounter: TickCounter, config: Config):
+    def __init__(
+        self,
+        player: Player,
+        tickCounter: TickCounter,
+        config: Config,
+        dayNightCycle: DayNightCycle,
+    ):
         self.player = player
         self.tickCounter = tickCounter
         self.config = config
+        self.dayNightCycle = dayNightCycle
         self.map = None
         self._httpServer = None
         self._executor = None
@@ -185,6 +204,37 @@ class RestApiServer:
                 entities.extend(_collectEntities(room))
             return 200, entities
 
+    def getSnapshot(self, radius=DEFAULT_RADIUS):
+        # RFC 0017 stage 1: built from already-loaded rooms only (see
+        # api/worldSnapshot.py). Like the endpoints above, it reads room grids
+        # on this HTTP thread while the game thread may be mutating them, so a
+        # "dict changed size during iteration" RuntimeError is possible (or a
+        # KeyError when the player changes rooms mid-read); one retry covers
+        # the common case, and a second failure becomes the usual 500.
+        if self.map is None or self.player.getEnvironmentID() == -1:
+            return _NOT_INITIALIZED
+        radius = clampRadius(radius)
+        for attempt in range(2):
+            try:
+                with self.map._lock:
+                    rooms = list(self.map.getRooms())
+                snapshot = buildWorldSnapshot(
+                    rooms,
+                    self.player,
+                    self.tickCounter.getTick(),
+                    self.dayNightCycle,
+                    self.config,
+                    radius,
+                )
+                break
+            except (RuntimeError, KeyError):
+                if attempt == 1:
+                    raise
+                _logger.debug("rest api snapshot retried after concurrent change")
+        if snapshot is None:
+            return _NOT_INITIALIZED
+        return 200, snapshot
+
 
 class _RestApiHTTPServer(HTTPServer):
     allow_reuse_address = True
@@ -204,7 +254,8 @@ class _RestApiRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         restApiServer = self.server.restApiServer
-        path = urlparse(self.path).path
+        parsedUrl = urlparse(self.path)
+        path = parsedUrl.path
         parts = [segment for segment in path.split("/") if segment]
         try:
             if parts == ["api", "v1", "world"]:
@@ -223,6 +274,14 @@ class _RestApiRequestHandler(BaseHTTPRequestHandler):
                 self._writeJson(*restApiServer.getPlayerStatus())
             elif parts == ["api", "v1", "entities"]:
                 self._writeJson(*restApiServer.getEntities())
+            elif parts == ["api", "v1", "snapshot"]:
+                radiusValues = parse_qs(parsedUrl.query).get("radius")
+                try:
+                    radius = int(radiusValues[0]) if radiusValues else DEFAULT_RADIUS
+                except ValueError:
+                    self._writeJson(*_BAD_RADIUS)
+                else:
+                    self._writeJson(*restApiServer.getSnapshot(radius))
             else:
                 self._writeJson(404, {"error": "not found"})
         except Exception:
