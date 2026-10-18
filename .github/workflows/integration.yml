@@ -79,3 +79,55 @@ jobs:
       - name: Stop game server
         if: always()
         run: kill "$SERVER_PID" 2>/dev/null || true
+
+  spectator:
+    name: 3D spectator (Playwright)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pygame pytest jsonschema Pillow structlog
+
+      - name: Install Node + Playwright
+        run: |
+          npm install -g playwright
+          npx playwright install chromium
+          npx playwright install-deps chromium
+
+      - name: Enable the REST API (workspace copy of config.yml only)
+        run: sed -i 's/^restEnabled: false/restEnabled: true/' config.yml && grep -n '^restEnabled: true' config.yml
+
+      - name: Start a text-mode game in a fresh world
+        env:
+          ROAM_USAGE_REPORTING: "0"
+        run: |
+          python3 tests/integration/spectatorGame.py --boot-timeout 60 > "$RUNNER_TEMP/spectator-game.log" 2>&1 &
+          echo "GAME_PID=$!" >> "$GITHUB_ENV"
+          for i in $(seq 1 90); do
+            grep -q READY "$RUNNER_TEMP/spectator-game.log" && break
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/spectator-game.log"
+          grep -q READY "$RUNNER_TEMP/spectator-game.log"
+
+      - name: Run spectator smoke test
+        env:
+          ROAM_REST_URL: http://127.0.0.1:8090
+          NODE_PATH: /usr/local/lib/node_modules
+        run: node tests/integration/test_spectator_smoke.js
+
+      - name: Stop the game
+        if: always()
+        run: |
+          kill -TERM "$GAME_PID" 2>/dev/null || true
+          sleep 3
+          cat "$RUNNER_TEMP/spectator-game.log" || true
