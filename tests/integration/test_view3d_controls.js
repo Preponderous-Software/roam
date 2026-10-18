@@ -100,6 +100,11 @@ const FACING_AFTER_W = ["up", "left", "down", "right"];
         if (await page.evaluate(() => !!document.getElementById("view3d-slow"))) await fail("Keep 3D did not close the prompt");
     }
 
+    // Rendering is covered by test_view3d_flag.js; from here on the test is
+    // about input, so drawing is paused to keep CI's software renderer from
+    // starving the page (camera, picking and messages keep working).
+    await page.evaluate(() => window.__roam3dScene.setRenderingPaused(true));
+
     // --- camera-relative movement -------------------------------------------
     for (let q = 0; q < 4; q++) {
         step(`quadrant ${q}: reading camera`);

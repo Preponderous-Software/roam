@@ -447,7 +447,7 @@
     // camera on the east side looking west. Never stored outside the page.
     const QUARTER = Math.PI / 2, PITCH = 0.82, MIN_DIST = 12, MAX_DIST = 80;
     const rig = { yaw: 0, yawTarget: 0, dist: 35, distTarget: 35, quadrant: 0 };
-    let dirty = true, lastVisual = "";
+    let dirty = true, lastVisual = "", renderingPaused = false;
     if (opts.camera) {
       rig.yaw = rig.yawTarget = (opts.camera.quadrant || 0) * QUARTER;
       rig.dist = rig.distTarget = Math.min(MAX_DIST, Math.max(MIN_DIST, opts.camera.dist || 35));
@@ -547,6 +547,7 @@
       const yaw = Math.atan2(-camDir.x, -camDir.z);
       player.rotation.y = yaw;
       for (const c of cardGroup.children) c.rotation.y = yaw;
+      if (renderingPaused) { camera.updateMatrixWorld(); drewLast = false; requestAnimationFrame(frame); return; }
       applyLighting(reducedMotion ? 0 : t);
       renderer.render(scene, camera);
       hooks.frames++;
@@ -564,6 +565,10 @@
       getCamera() { return { quadrant: rig.quadrant, dist: rig.distTarget, yaw: rig.yawTarget }; },
       getPlayerTile() { return snap ? { room: snap.player.room.slice(), x: snap.player.x, y: snap.player.y } : null; },
       setFollow(on) { follow = !!on; },
+      // Stops drawing (the camera, picking and messages keep working). Used
+      // by the input tests, where a software renderer would otherwise starve
+      // the page; also a hook for pausing a hidden tab.
+      setRenderingPaused(on) { renderingPaused = !!on; dirty = true; },
       readPixels(size) {
         const gl = renderer.getContext();
         const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight, n = size || 64;
