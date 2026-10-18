@@ -162,9 +162,35 @@ const FACING_AFTER_W = ["up", "left", "down", "right"];
     const onScreen = new Set(await page.evaluate(() => window.__frames.flatMap(f => {
         try { return JSON.parse(f).calls.filter(c => c.text).map(c => c.text); } catch (e) { return []; }
     })));
-    const named = matches.filter(r => r.hit.entities.length && NAMES[r.hit.entities[0]]);
-    const b = named.find(r => !onScreen.has(NAMES[r.hit.entities[0]]));
-    if (!b) await fail(`no visible tile whose name is not already on screen (${[...onScreen].join(", ")})`);
+    let b = matches.find(r => r.hit.entities.length && NAMES[r.hit.entities[0]] && !onScreen.has(NAMES[r.hit.entities[0]]));
+    if (!b) {
+        // Everything near the player shares one name (all grass, say): look
+        // further out for a visible tile whose first entity has another name.
+        const far = await page.evaluate(([names, seen]) => {
+            const s = window.__roam3dView.snapshot, G = s.gridSize, P = s.player;
+            const px = P.room[0] * G + P.x, py = P.room[1] * G + P.y, out = [];
+            for (const r of s.rooms) {
+                if (r.z !== P.room[2]) continue;
+                r.tiles.forEach((stack, i) => {
+                    const first = stack.length ? s.classes[stack[0]] : null;
+                    if (!first || !names[first] || seen.includes(names[first])) return;
+                    const x = r.x * G + (i % G), y = r.y * G + Math.floor(i / G);
+                    const d = Math.max(Math.abs(x - px), Math.abs(y - py));
+                    if (d >= 1 && d <= 8) out.push({ x, y, d });
+                });
+            }
+            return out.sort((a, b) => a.d - b.d).slice(0, 40);
+        }, [NAMES, [...onScreen]]);
+        for (let i = 0; i < far.length && !b; i += 8) {
+            const got = await page.evaluate(batch => batch.map(t => {
+                const c = window.__roam3dScene.tileToClient(t.x, t.y);
+                const hit = c && window.__roam3dScene.pick(c.x, c.y);
+                return hit && hit.world[0] === t.x && hit.world[1] === t.y ? { t, c, hit: { world: hit.world, entities: hit.entities } } : null;
+            }).filter(Boolean), far.slice(i, i + 8));
+            b = got[0];
+        }
+    }
+    if (!b) await fail(`no visible tile whose name is not already on screen (${[...onScreen].slice(0, 6).join(", ")})`);
     step("hovering");
     await page.evaluate(() => { window.__frames.length = 0; });
     await page.mouse.move(b.c.x, b.c.y, { steps: 3 });
