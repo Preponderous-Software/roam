@@ -23,6 +23,11 @@ class WebInputSource(TextInputSource):
         self._inputQueue = queue.Queue()
         self._mousePos = (0, 0)
         self._mouseButtons = [False, False, False]  # left, middle, right
+        # Set only by the opt-in 3D view's page (camera / pointed_tile
+        # messages); until then this behaves as the 2D web frontend always did.
+        self._movementRotation = 0
+        self._tilePicking = False
+        self._pointedTile = None
         super().__init__(charReader=self._readFromQueue)
 
     def feed(self, data: str):
@@ -63,6 +68,24 @@ class WebInputSource(TextInputSource):
 
     def getMousePosition(self):
         return self._mousePos
+
+    def setMovementRotation(self, quarterTurns):
+        self._movementRotation = int(quarterTurns) % 4
+
+    def getMovementRotation(self):
+        return self._movementRotation
+
+    def setPointedTile(self, tile):
+        """tile: (worldTileX, worldTileY, z), or None for "over no tile".
+        The first call switches this source to 3D tile picking."""
+        self._tilePicking = True
+        self._pointedTile = None if tile is None else tuple(int(v) for v in tile)
+
+    def supportsTilePicking(self):
+        return self._tilePicking
+
+    def getPointedTile(self):
+        return self._pointedTile
 
     def getMouseButtons(self):
         return tuple(self._mouseButtons)
