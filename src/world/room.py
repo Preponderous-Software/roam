@@ -1,3 +1,4 @@
+import collections
 import itertools
 import random
 
@@ -22,6 +23,10 @@ _IMAGE_CACHE_MAX = 512
 # different Room object at the same coordinates (e.g. a room reloaded from disk).
 _revisionSequence = itertools.count(1)
 
+# How many recent location changes a room remembers, so a reader can re-read
+# just those locations instead of the whole grid (see getChangedLocationsSince).
+_CHANGE_LOG_SIZE = 64
+
 
 # @author Daniel McCoy Stephenson
 # @since August 8th, 2022
@@ -42,14 +47,38 @@ class Room(Environment):
         # In-memory only, never persisted: changes whenever any location's
         # entity stack changes (see world/trackedLocation.py).
         self.revision = next(_revisionSequence)
+        # (revision, location) of the latest location changes, oldest first,
+        # and the revision at or below which changes may have been forgotten.
+        self._changeLog = collections.deque(maxlen=_CHANGE_LOG_SIZE)
+        self._changeLogFloor = self.revision
         self._trackLocations()
 
     def getRevision(self):
         return self.revision
 
     def bumpRevision(self):
+        """Record a change that is not tied to one location: readers must
+        re-read the whole room."""
         self.revision = next(_revisionSequence)
+        self._changeLogFloor = self.revision
         return self.revision
+
+    def noteLocationChanged(self, location):
+        """Record that location's entity stack changed; returns the new
+        revision. Called by TrackedLocation."""
+        self.revision = next(_revisionSequence)
+        if len(self._changeLog) == _CHANGE_LOG_SIZE:
+            self._changeLogFloor = self._changeLog[0][0]
+        self._changeLog.append((self.revision, location))
+        return self.revision
+
+    def getChangedLocationsSince(self, revision):
+        """Return the locations changed after revision (oldest first, may
+        repeat), or None when the room cannot tell and the caller must re-read
+        every location."""
+        if revision < self._changeLogFloor:
+            return None
+        return [location for changed, location in self._changeLog if changed > revision]
 
     def setGrid(self, grid):
         Environment.setGrid(self, grid)

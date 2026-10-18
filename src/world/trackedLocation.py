@@ -34,7 +34,7 @@ class TrackedLocation(Location):
         return self._locationRevision
 
     def _changed(self):
-        self._locationRevision = self._revisionRoom.bumpRevision()
+        self._locationRevision = self._revisionRoom.noteLocationChanged(self)
 
 
 def trackLocation(location, room):
