@@ -15,6 +15,11 @@
 # viewport width, so it never appears as one contiguous substring in the
 # captured transcript — "discard held" is a short fragment confirmed to
 # land clear of the overlap.
+#
+# Opening the panel is a screen transition, so it is awaited with `expect`
+# and a 10 s bound rather than an assertContains with the short default:
+# on a loaded CI runner the first inventory frame took over 1 s to paint
+# (roam#612), and the old 1 s budget failed the run while the game was fine.
 expect Roam
 send enter
 expect Select Save
@@ -23,13 +28,13 @@ expect Enter save name
 send {saveName} enter
 expect Tick timeout=15
 send i
-assertContains "press [I] or [Esc] to close"
+expect "press [I] or [Esc] to close" timeout=10
 assertContains "discard held"
 resetBuffer
 send esc
 assertNotContains "press [I] or [Esc] to close" timeout=1
 send i
-assertContains "press [I] or [Esc] to close"
+expect "press [I] or [Esc] to close" timeout=10
 resetBuffer
 send esc
 assertNotContains "press [I] or [Esc] to close" timeout=1

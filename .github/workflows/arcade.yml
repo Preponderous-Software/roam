@@ -43,11 +43,26 @@ jobs:
           python -m pip install --upgrade pip
           pip install pygame pytest jsonschema Pillow structlog
 
+      # A failing test must never skip a deploy without saying so (roam#612).
+      # The tests that failed are re-run ONCE, with a warning annotation; a
+      # real regression fails twice and the run ends red with an error
+      # annotation and a job-summary line saying this commit was NOT deployed.
       - name: Tests
         env:
           SDL_VIDEODRIVER: dummy
           SDL_AUDIODRIVER: dummy
-        run: python -m pytest -q
+        run: |
+          if python -m pytest -q; then
+            exit 0
+          fi
+          echo "::warning title=Arcade deploy: tests retried::The first test run failed. Re-running only the failed tests once (roam#612); the deploy continues only if they pass."
+          if python -m pytest -q --last-failed --last-failed-no-failures none; then
+            echo "Tests passed on the single retry; the first failure is in the log above." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "::error title=Arcade deploy skipped::Tests failed twice, so ${GITHUB_SHA::7} was NOT deployed to arcade. Fix the failure, then re-run this workflow."
+          echo "**Arcade deploy skipped:** tests failed twice, so \`${GITHUB_SHA::7}\` was **not** deployed to arcade." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
 
       - name: Build the static site (index.html, web/, assets/)
         run: python3 web/build_arcade_site.py "$RUNNER_TEMP/arcade-site"
