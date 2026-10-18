@@ -6,7 +6,7 @@
 //   Movement: for each camera quadrant (turned with E), pressing W must make
 //             the player face the grid direction "away from the camera"
 //             (read back from the worldview messages).
-//   Picking:  the page's raycast at each nearby tile's projected centre
+//   Picking:  the page's raycast at each tile within 3 of the player, at its projected centre
 //             returns that tile (or, when hidden, the wall/trunk/rock in
 //             front of it), and hovering a tile makes the game itself (the
 //             2D status line in its frames) name what is on it, which is only
@@ -67,13 +67,15 @@ const FACING_AFTER_W = ["up", "left", "down", "right"];
         executablePath: process.env.ROAM_CHROMIUM || undefined,
         args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"],
     });
-    const ctx = await browser.newContext({ viewport: { width: 800, height: 600 } });
+    // Low graphics (no shadow maps) and a small viewport: CI renders WebGL in
+    // software, and this test is about input, not looks.
+    const ctx = await browser.newContext({ viewport: { width: 640, height: 480 } });
     const page = await ctx.newPage();
     const errors = [];
     page.on("pageerror", e => errors.push(e.message));
     attachConsole(page);
     await page.addInitScript(recordFrames);
-    await page.goto(BASE + "/play?view=3d", { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.goto(BASE + "/play?view=3d&gfx=low", { waitUntil: "domcontentloaded", timeout: 30000 });
     if (!await waitForStatus(page, "Starting game…", 180000)) await fail("game did not start");
     await page.waitForTimeout(3000);
     await pressKey(page, "Enter", 3, 600);
@@ -83,11 +85,12 @@ const FACING_AFTER_W = ["up", "left", "down", "right"];
         await fail("no worldview reached the 3D scene");
     }
 
+    const step = (msg) => process.stderr.write(`  [step] ${msg}\n`);
     // --- fallback prompt (software WebGL is slow) ---------------------------
     const prompted = await waitFor(page, () => page.evaluate(() => !!document.getElementById("view3d-slow")), 45000, 1000);
     const fps = await page.evaluate(() => window.__roam3dView.fps);
     console.log(`fallback: prompt ${prompted ? "shown" : "not shown"} at ${fps} fps`);
-    if (fps < 12 && !prompted) await fail("slow 3D (under 12 fps) did not offer the 2D view");
+    if (fps > 0 && fps < 12 && !prompted) await fail("slow 3D (under 12 fps) did not offer the 2D view");
     if (prompted) {
         await shot(page, "view3d-slow-prompt.png");
         // A DOM click, not page.click: under a starved software renderer
@@ -99,7 +102,9 @@ const FACING_AFTER_W = ["up", "left", "down", "right"];
 
     // --- camera-relative movement -------------------------------------------
     for (let q = 0; q < 4; q++) {
+        step(`quadrant ${q}: reading camera`);
         const cam = await page.evaluate(() => window.__roam3dScene.getCamera());
+        step(`quadrant ${q}: camera ${JSON.stringify(cam)}; pressing W`);
         if (cam.quadrant !== q) await fail(`camera quadrant ${cam.quadrant}, expected ${q}`);
         await page.keyboard.down("w");
         await page.waitForTimeout(250);
@@ -107,7 +112,7 @@ const FACING_AFTER_W = ["up", "left", "down", "right"];
         const facing = await waitFor(page, () => page.evaluate(want => {
             const s = window.__roam3dView.snapshot;
             return s && s.player.direction === want ? s.player.direction : null;
-        }, FACING_AFTER_W[q]), 15000, 300);
+        }, FACING_AFTER_W[q]), 45000, 500);
         const now = await page.evaluate(() => window.__roam3dView.snapshot.player);
         console.log(`quadrant ${q}: W -> facing ${now.direction} (expected ${FACING_AFTER_W[q]}), tile ${JSON.stringify(now)}`);
         if (!facing) await fail(`quadrant ${q}: W made the player face ${now.direction}, expected ${FACING_AFTER_W[q]}`);
@@ -125,36 +130,42 @@ const FACING_AFTER_W = ["up", "left", "down", "right"];
     const NAMES = { Grass: "Grass", WoodFloor: "Wood Floor", Stone: "Stone", OakWood: "Oak Wood",
                     Bed: "Bed", Torch: "Torch", Leaves: "Leaves", Apple: "Apple", CaveFloor: "Cave Floor" };
     const TALL = new Set(["OakWood", "JungleWood", "Stone", "CoalOre", "IronOre", "GoldOre", "Leaves"]);
-    const survey = await page.evaluate(() => {
+    // In small batches: each raycast tests every triangle of the rooms in
+    // view, and one long evaluate would starve the page under software GL.
+    step("picking survey");
+    const tiles = await page.evaluate(() => {
         const s = window.__roam3dView.snapshot, G = s.gridSize, P = s.player;
         const px = P.room[0] * G + P.x, py = P.room[1] * G + P.y, out = [];
-        for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
-            if (!dx && !dy) continue;
-            const t = { x: px + dx, y: py + dy };
-            const c = window.__roam3dScene.tileToClient(t.x, t.y);
-            if (!c) continue;
-            const hit = window.__roam3dScene.pick(c.x, c.y);
-            out.push({ t, c, hit: hit ? { world: hit.world, entities: hit.entities } : null });
-        }
+        for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (dx || dy) out.push({ x: px + dx, y: py + dy });
         return out;
     });
+    const survey = [];
+    for (let i = 0; i < tiles.length; i += 8) {
+        survey.push(...await page.evaluate(batch => batch.map(t => {
+            const c = window.__roam3dScene.tileToClient(t.x, t.y);
+            if (!c) return null;
+            const hit = window.__roam3dScene.pick(c.x, c.y);
+            return { t, c, hit: hit ? { world: hit.world, entities: hit.entities } : null };
+        }).filter(Boolean), tiles.slice(i, i + 8)));
+    }
     const matches = survey.filter(r => r.hit && r.hit.world[0] === r.t.x && r.hit.world[1] === r.t.y);
     const misses = survey.filter(r => !matches.includes(r));
     const unexplained = misses.filter(r => !(r.hit && r.hit.entities.some(e => TALL.has(e))));
     console.log(`pick: ${matches.length}/${survey.length} tiles around the player pick back to themselves; ` +
         `${misses.length - unexplained.length} hidden behind a wall/trunk/rock; unexplained: ${JSON.stringify(unexplained.slice(0, 5))}`);
-    if (matches.length < 20) await fail(`only ${matches.length} tiles picked back to themselves`);
+    if (matches.length < 15) await fail(`only ${matches.length} tiles picked back to themselves`);
     if (unexplained.length) await fail(`picks that missed with no occluder: ${JSON.stringify(unexplained.slice(0, 5))}`);
 
-    // The game must act on the picked tile: hover two visible tiles whose
-    // first entity differs, and the game's own status line must name the
-    // second one (WorldScreen.handleMouseOver -> pointed tile).
+    // The game must act on the picked tile: hover a visible tile whose first
+    // entity's name is not on screen yet; the game's own status line must
+    // then show that name (WorldScreen.handleMouseOver -> pointed tile).
+    const onScreen = new Set(await page.evaluate(() => window.__frames.flatMap(f => {
+        try { return JSON.parse(f).calls.filter(c => c.text).map(c => c.text); } catch (e) { return []; }
+    })));
     const named = matches.filter(r => r.hit.entities.length && NAMES[r.hit.entities[0]]);
-    const a = named[0];
-    const b = named.find(r => r.hit.entities[0] !== a.hit.entities[0]);
-    if (!a || !b) await fail("could not find two visible tiles with different entities to hover");
-    await page.mouse.move(a.c.x, a.c.y, { steps: 3 });
-    await page.waitForTimeout(1500);
+    const b = named.find(r => !onScreen.has(NAMES[r.hit.entities[0]]));
+    if (!b) await fail(`no visible tile whose name is not already on screen (${[...onScreen].join(", ")})`);
+    step("hovering");
     await page.evaluate(() => { window.__frames.length = 0; });
     await page.mouse.move(b.c.x, b.c.y, { steps: 3 });
     const want = NAMES[b.hit.entities[0]];

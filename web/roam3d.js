@@ -50,10 +50,14 @@
     const onApplied = opts.onApplied || (() => {});
     const followOffset = opts.followOffset || [0, 26, 24];
     const reducedMotion = !!opts.reducedMotion;
+    // Low graphics: no shadow maps (the sun's 2048 px map and the point
+    // lights' cube maps are most of the cost on a software or phone GPU).
+    const lowGraphics = !!opts.lowGraphics;
     const onCameraChange = opts.onCameraChange || (() => {});
 
     // ---- textures ---------------------------------------------------------
     const texCache = new Map();
+    let texturesLoading = 0;
     function pixelTex(t) {
       t.wrapS = t.wrapT = THREE.RepeatWrapping;
       t.magFilter = THREE.NearestFilter;
@@ -88,7 +92,9 @@
       if (key === "ground" || key === "cliff") t = noiseTex(key);
       else if (key === "missing") t = missingTex();
       else {
-        t = pixelTex(new THREE.TextureLoader().load("/" + key, undefined, undefined, () => {
+        texturesLoading++;
+        t = pixelTex(new THREE.TextureLoader().load("/" + key, () => { texturesLoading--; }, undefined, () => {
+          texturesLoading--;
           t.image = missingTex().image; t.needsUpdate = true;
         }));
       }
@@ -253,10 +259,10 @@
     }
 
     // ---- scene ------------------------------------------------------------
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, alpha: false });
-    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: !lowGraphics, preserveDrawingBuffer: true, alpha: false });
+    renderer.setPixelRatio(lowGraphics ? 1 : Math.min(2, window.devicePixelRatio || 1));
     renderer.outputEncoding = THREE.sRGBEncoding;
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = !lowGraphics;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(32, 1, 0.5, 2000);
@@ -356,6 +362,13 @@
       sun.shadow.camera.updateProjectionMatrix();
       sun.target.position.set(pX, 0, pZ);
       updateCanopyFade();
+      // Follow mode draws on demand: only when something visible changed
+      // (rooms' revisions, the player, lights, time of day), not on every
+      // message, which saves CPU / battery and keeps a slow device usable.
+      const visual = [P.room.join(","), P.x, P.y, P.direction, s.dayNight.overlayOpacity,
+        lights.map(l => l.x + ":" + l.z).join(";"),
+        s.rooms.map(r => r.revision === undefined ? s.tick : r.revision).join(",")].join("|");
+      if (visual !== lastVisual) { lastVisual = visual; dirty = true; }
       hooks.applies++; hooks.lastTick = s.tick;
       onApplied(s, { rooms: s.rooms.filter(r => r.z === viewZ).length, lights: lights.length, viewZ });
     }
@@ -434,6 +447,7 @@
     // camera on the east side looking west. Never stored outside the page.
     const QUARTER = Math.PI / 2, PITCH = 0.82, MIN_DIST = 12, MAX_DIST = 80;
     const rig = { yaw: 0, yawTarget: 0, dist: 35, distTarget: 35, quadrant: 0 };
+    let dirty = true, lastVisual = "";
     if (opts.camera) {
       rig.yaw = rig.yawTarget = (opts.camera.quadrant || 0) * QUARTER;
       rig.dist = rig.distTarget = Math.min(MAX_DIST, Math.max(MIN_DIST, opts.camera.dist || 35));
@@ -494,6 +508,7 @@
     function resize() {
       const w = canvas.clientWidth || window.innerWidth, h = canvas.clientHeight || window.innerHeight;
       renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+      dirty = true;
     }
     window.addEventListener("resize", resize);
     resize();
@@ -502,13 +517,21 @@
 
     const clock = new THREE.Clock();
     const camDir = new THREE.Vector3(), step = new THREE.Vector3();
-    let fpsFrames = 0, fpsSince = performance.now();
+    // FPS counts only frames drawn back to back, so idle (nothing to draw)
+    // never reads as slow.
+    let fpsFrames = 0, fpsTime = 0, lastDrawAt = 0, drewLast = false;
     let lastT = 0;
     function frame() {
       const t = clock.getElapsedTime(), dt = Math.min(0.1, t - lastT);
       lastT = t;
       step.copy(playerTarget).sub(player.position);
+      const tweening = step.lengthSq() > 1e-6;
       if (step.lengthSq() > 64) player.position.copy(playerTarget); else player.position.addScaledVector(step, 0.2);
+      const easing = Math.abs(rig.yawTarget - rig.yaw) > 1e-4 || Math.abs(rig.distTarget - rig.dist) > 1e-3;
+      const flickering = !reducedMotion && pointLights.some(l => l.userData.on) && snap && snap.dayNight.overlayOpacity > 10;
+      const draw = !!controls || dirty || tweening || easing || flickering || texturesLoading > 0;
+      if (!draw) { drewLast = false; requestAnimationFrame(frame); return; }
+      dirty = false;
       if (controls) {
         if (follow && playerPlaced) {
           const delta = player.position.clone().sub(target);
@@ -526,9 +549,11 @@
       for (const c of cardGroup.children) c.rotation.y = yaw;
       applyLighting(reducedMotion ? 0 : t);
       renderer.render(scene, camera);
-      hooks.frames++; fpsFrames++;
+      hooks.frames++;
       const now = performance.now();
-      if (now - fpsSince >= 1000) { hooks.fps = Math.round(fpsFrames * 1000 / (now - fpsSince)); fpsFrames = 0; fpsSince = now; }
+      if (drewLast) { fpsFrames++; fpsTime += now - lastDrawAt; }
+      drewLast = true; lastDrawAt = now;
+      if (fpsTime >= 1000) { hooks.fps = Math.round(fpsFrames * 1000 / fpsTime); fpsFrames = 0; fpsTime = 0; }
       requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);

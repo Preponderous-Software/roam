@@ -115,7 +115,7 @@ Add `?view=3d` to the address (<http://localhost:8080/play?view=3d>) to play wit
 | Move | W A S D or arrows: "up" is always away from the camera | D-pad (same rule) |
 | Gather / place / inspect | Click (or hover) what you see | Tap / long-press what you see |
 
-The camera is remembered in this browser only. If 3D stays slow, the page offers to switch to 2D; it never switches on its own. Without WebGL the page says so and stays 2D.
+The camera is remembered in this browser only. On a weak GPU, add `&gfx=low` (no shadows). If 3D stays slow, the page offers to switch to 2D; it never switches on its own. Without WebGL the page says so and stays 2D.
 
 ### Moving your saves
 The **Saves** button (in the footer on desktop, in the d-pad's corner on a phone) downloads every world in the browser as one file (`roam-saves-<date>.json`) and loads such a file in another browser, device or Roam site, such as from roam.preponderous.org to the arcade copy below. Loading a file never replaces or deletes anything:

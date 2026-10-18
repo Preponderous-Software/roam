@@ -904,6 +904,7 @@
       try { savedCamera = JSON.parse(localStorage.getItem("roam3d.camera") || "null"); } catch (e) { /* storage unavailable */ }
       _view3d.scene = Roam3DScene.create({
         canvas: c3d, orbit: false, hooks: _view3d.hooks, camera: savedCamera,
+        lowGraphics: new URLSearchParams(location.search).get("gfx") === "low",
         reducedMotion: !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches),
         onCameraChange: onCameraChange3d,
       });
@@ -935,8 +936,18 @@
     _view3d.rooms.clear();
     sendJSON({ type: "worldview_resync" });
   }
-  let _lastPointed = "";
+  let _lastPointed = "", _lastPickAt = 0, _pickTimer = null;
   function sendPointedTile(clientX, clientY, force) {
+    // A raycast tests the rooms' triangles: on plain moves, at most every
+    // 50 ms (with a trailing pick at the last position); always before a
+    // click or tap.
+    const now = performance.now();
+    clearTimeout(_pickTimer);
+    if (!force && now - _lastPickAt < 50) {
+      _pickTimer = setTimeout(() => sendPointedTile(clientX, clientY, false), 60);
+      return;
+    }
+    _lastPickAt = now;
     const hit = _view3d.scene.pick(clientX, clientY);
     const msg = hit ? { type: "pointed_tile", x: hit.world[0], y: hit.world[1], z: hit.world[2] }
                     : { type: "pointed_tile", none: true };
