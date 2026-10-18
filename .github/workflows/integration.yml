@@ -104,7 +104,9 @@ jobs:
           npx playwright install-deps chromium
 
       - name: Enable the REST API (workspace copy of config.yml only)
-        run: sed -i 's/^restEnabled: false/restEnabled: true/' config.yml && grep -n '^restEnabled: true' config.yml
+        run: |
+          sed -i 's/^restEnabled: false/restEnabled: true/' config.yml
+          grep -n '^restEnabled: true' config.yml
 
       - name: Start a text-mode game in a fresh world
         env:
