@@ -456,6 +456,9 @@ async function poll() {
   try {
     const res = await fetch(`${API}?radius=${radius}`, { cache: "no-store" });
     const body = await res.json();
+    // The game builds views only while someone polls, so the first poll (or
+    // one after a pause) can arrive before a view exists: just poll again.
+    if (res.status === 503 && hooks.polls === 0 && !hooks.error) { setTimeout(poll, 150); return; }
     if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
     apply(body);
     hooks.polls++;

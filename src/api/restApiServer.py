@@ -1,21 +1,27 @@
 import json
+import time
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from api.spectatorFiles import resolveStaticFile
-from api.worldSnapshot import DEFAULT_RADIUS, buildWorldSnapshot, clampRadius
+from api.worldSnapshot import (
+    DEFAULT_RADIUS,
+    clampRadius,
+    worldViewToSnapshot,
+)
 from appContainer import component
 from config.config import Config
 from gameLogging.logger import getLogger
 from player.player import Player
-from world.dayNightCycle import DayNightCycle
+from rendering.worldViewSink import WorldViewSink
 from world.tickCounter import TickCounter
 
 _logger = getLogger(__name__)
 
 _NOT_INITIALIZED = (503, {"error": "game world not yet initialized"})
 _NOT_FOUND = (404, {"error": "room not found"})
+_NO_VIEW_YET = (503, {"error": "no world view published yet; retry shortly"})
 _BAD_RADIUS = (400, {"error": "radius must be an integer"})
 
 
@@ -90,15 +96,17 @@ class RestApiServer:
         player: Player,
         tickCounter: TickCounter,
         config: Config,
-        dayNightCycle: DayNightCycle,
     ):
         self.player = player
         self.tickCounter = tickCounter
         self.config = config
-        self.dayNightCycle = dayNightCycle
         self.map = None
         self._httpServer = None
         self._executor = None
+        self._worldViewSink = _RestWorldViewSink(self)
+
+    def getWorldViewSink(self):
+        return self._worldViewSink
 
     def setMap(self, map):
         self.map = map
@@ -137,6 +145,7 @@ class RestApiServer:
             self._executor.shutdown(wait=True)
         self._httpServer = None
         self._executor = None
+        self._worldViewSink.clear()
         _logger.info("rest api server stopped")
 
     def getWorldStatus(self):
@@ -208,35 +217,70 @@ class RestApiServer:
             return 200, entities
 
     def getSnapshot(self, radius=DEFAULT_RADIUS):
-        # RFC 0017 stage 1: built from already-loaded rooms only (see
-        # api/worldSnapshot.py). Like the endpoints above, it reads room grids
-        # on this HTTP thread while the game thread may be mutating them, so a
-        # "dict changed size during iteration" RuntimeError is possible (or a
-        # KeyError when the player changes rooms mid-read); one retry covers
-        # the common case, and a second failure becomes the usual 500.
-        if self.map is None or self.player.getEnvironmentID() == -1:
-            return _NOT_INITIALIZED
+        # RFC 0017: serves the most recent WorldView the game thread
+        # published to this server's sink (an atomic reference swap), so this
+        # HTTP thread never iterates live room grids. The request also tells
+        # the sink a spectator is watching, which is what makes the game
+        # thread build views at all (see _RestWorldViewSink).
         radius = clampRadius(radius)
-        for attempt in range(2):
-            try:
-                with self.map._lock:
-                    rooms = list(self.map.getRooms())
-                snapshot = buildWorldSnapshot(
-                    rooms,
-                    self.player,
-                    self.tickCounter.getTick(),
-                    self.dayNightCycle,
-                    self.config,
-                    radius,
-                )
-                break
-            except (RuntimeError, KeyError):
-                if attempt == 1:
-                    raise
-                _logger.debug("rest api snapshot retried after concurrent change")
-        if snapshot is None:
-            return _NOT_INITIALIZED
-        return 200, snapshot
+        self._worldViewSink.noteRequest(radius)
+        worldView = self._worldViewSink.getLatest()
+        if worldView is None:
+            return _NO_VIEW_YET
+        viewRadius = worldView.getCameraHint().getVisibleRadiusRooms()
+        return 200, worldViewToSnapshot(worldView, min(radius, viewRadius))
+
+
+# The REST server's WorldViewSink. Building a view costs the game thread
+# O(tiles in view) (CHANGELOG.md, 2026-10-18 timing), so instead of wanting one
+# every tick whenever restEnabled is true, it wants one only while a spectator
+# is polling /api/v1/snapshot (a request in the last WATCH_SECONDS), at most
+# once per MIN_PUBLISH_SECONDS, and only as wide as the radius last asked for.
+# With no spectator the game pays one boolean check per tick, as the 2D
+# frontends do.
+class _RestWorldViewSink(WorldViewSink):
+    WATCH_SECONDS = 5.0
+    MIN_PUBLISH_SECONDS = 0.25
+
+    def __init__(self, restApiServer):
+        self._restApiServer = restApiServer
+        self._latest = None
+        self._lastRequestTime = None
+        self._lastPublishTime = None
+        self._requestedRadius = DEFAULT_RADIUS
+
+    def noteRequest(self, radius):
+        self._requestedRadius = radius
+        self._lastRequestTime = time.monotonic()
+
+    def wantsWorldView(self):
+        if self._lastRequestTime is None or not self._restApiServer.isRunning():
+            return False
+        now = time.monotonic()
+        if now - self._lastRequestTime > self.WATCH_SECONDS:
+            return False
+        return (
+            self._lastPublishTime is None
+            or now - self._lastPublishTime >= self.MIN_PUBLISH_SECONDS
+            or self._latest is None
+            or self._latest.getCameraHint().getVisibleRadiusRooms()
+            < self._requestedRadius
+        )
+
+    def getWantedRadiusRooms(self):
+        return self._requestedRadius
+
+    def publish(self, worldView):
+        self._latest = worldView
+        self._lastPublishTime = time.monotonic()
+
+    def getLatest(self):
+        return self._latest
+
+    def clear(self):
+        self._latest = None
+        self._lastRequestTime = None
+        self._lastPublishTime = None
 
 
 class _RestApiHTTPServer(HTTPServer):

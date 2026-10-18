@@ -19,6 +19,7 @@ from world.map import Map
 from world.roomFactory import RoomFactory
 from world.roomJsonReaderWriter import RoomJsonReaderWriter
 from world.startingHomeGenerator import StartingHomeGenerator
+from world.worldViewBuilder import WorldViewBuilder
 
 LOADED_ROOMS = [(1, 0, 0), (0, 1, 0), (-1, 0, 0), (1, 1, 0), (0, 0, -1)]
 
@@ -27,6 +28,7 @@ def _seededWorld(resolve, test_config, tmp_path):
     test_config.pathToSaveDirectory = str(tmp_path)
     test_config.gridSize = 17
     test_config.dayNightCycleEnabled = True
+    test_config.cameraFollowPlayer = True
     random.seed(20261018)
     worldMap = resolve(Map)
     home = worldMap.generateNewRoom(0, 0)
@@ -36,7 +38,15 @@ def _seededWorld(resolve, test_config, tmp_path):
     home.addEntityToLocation(player, StartingHomeGenerator().generate(home))
     server = resolve(RestApiServer)
     server.setMap(worldMap)
-    return worldMap, server
+    return worldMap, server, resolve(WorldViewBuilder), player
+
+
+def _viewAndSnapshot(worldMap, server, builder, player, radius, tick=0):
+    # The game thread's publish step (WorldScreen._publishWorldView) followed
+    # by the HTTP thread's read, as in a running game.
+    worldView = builder.build(worldMap, player, tick, MAX_RADIUS)
+    server.getWorldViewSink().publish(worldView)
+    return worldView, server.getSnapshot(radius)
 
 
 def _saveAllRooms(resolve, test_config, worldMap):
@@ -58,13 +68,16 @@ def _readSaveDirectory(path):
 
 
 def test_snapshots_leave_the_save_byte_identical(resolve, test_config, tmp_path):
-    worldMap, server = _seededWorld(resolve, test_config, tmp_path)
+    worldMap, server, builder, player = _seededWorld(resolve, test_config, tmp_path)
     _saveAllRooms(resolve, test_config, worldMap)
     before = _readSaveDirectory(tmp_path)
 
-    for _ in range(5):
+    for tick in range(5):
         for radius in range(MAX_RADIUS + 1):
-            status, _ = server.getSnapshot(radius)
+            worldView, (status, _) = _viewAndSnapshot(
+                worldMap, server, builder, player, radius, tick
+            )
+            assert worldView is not None
             assert status == 200
     _saveAllRooms(resolve, test_config, worldMap)
     after = _readSaveDirectory(tmp_path)
@@ -85,7 +98,7 @@ def _raiser(name):
 def test_snapshot_never_loads_generates_or_writes_rooms(
     resolve, test_config, tmp_path, monkeypatch
 ):
-    worldMap, server = _seededWorld(resolve, test_config, tmp_path)
+    worldMap, server, builder, player = _seededWorld(resolve, test_config, tmp_path)
     _saveAllRooms(resolve, test_config, worldMap)
     roomCount = len(worldMap.getRooms())
     for name in ("getRoom", "generateNewRoom", "addRoom"):
@@ -103,8 +116,11 @@ def test_snapshot_never_loads_generates_or_writes_rooms(
     )
     monkeypatch.setattr(WorldScreen, "getOrLoadRoom", _raiser("getOrLoadRoom"))
 
-    status, snapshot = server.getSnapshot(MAX_RADIUS)
+    worldView, (status, snapshot) = _viewAndSnapshot(
+        worldMap, server, builder, player, MAX_RADIUS
+    )
 
+    assert len(worldView.getRooms()) == roomCount
     assert status == 200
     # Radius 3 reaches 49 surface positions, but only the loaded ones appear.
     assert len(snapshot["rooms"]) == roomCount
@@ -115,8 +131,8 @@ def test_snapshot_never_loads_generates_or_writes_rooms(
 def test_snapshot_does_not_touch_the_rooms_directory(
     resolve, test_config, tmp_path, radius
 ):
-    worldMap, server = _seededWorld(resolve, test_config, tmp_path)
+    worldMap, server, builder, player = _seededWorld(resolve, test_config, tmp_path)
 
-    server.getSnapshot(radius)
+    _viewAndSnapshot(worldMap, server, builder, player, radius)
 
     assert not os.path.exists(test_config.getRoomsDirectory())

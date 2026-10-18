@@ -11,9 +11,8 @@ from api.restApiServer import RestApiServer
 from api.worldSnapshot import (
     MAX_RADIUS,
     SNAPSHOT_FORMAT,
-    buildWorldSnapshot,
     clampRadius,
-    directionName,
+    worldViewToSnapshot,
 )
 from entity.grass import Grass
 from entity.oakWood import OakWood
@@ -25,6 +24,7 @@ from world.dayNightCycle import DayNightCycle
 from world.room import Room
 from world.roomType import RoomType
 from world.tickCounter import TickCounter
+from world.worldViewBuilder import WorldViewBuilder, directionName
 
 GRID = 5
 
@@ -41,6 +41,7 @@ def _config(dayNightEnabled=True):
     config = MagicMock()
     config.dayNightCycleEnabled = dayNightEnabled
     config.dayNightCycleLengthTicks = 1000
+    config.cameraFollowPlayer = True
     return config
 
 
@@ -59,11 +60,22 @@ def _world():
     return [home, east, cave, far], home, player
 
 
-def _build(rooms, player, tick=0, radius=1, config=None):
+def _makeMap(rooms):
+    fakeMap = MagicMock()
+    fakeMap._lock = threading.Lock()
+    fakeMap.getRooms.return_value = rooms
+    return fakeMap
+
+
+def _view(rooms, player, tick=0, config=None, radius=MAX_RADIUS):
     config = config or _config()
-    return buildWorldSnapshot(
-        rooms, player, tick, DayNightCycle(config), config, radius
-    )
+    builder = WorldViewBuilder(DayNightCycle(config), config)
+    return builder.build(_makeMap(rooms), player, tick, radius)
+
+
+def _build(rooms, player, tick=0, radius=1, config=None):
+    worldView = _view(rooms, player, tick, config)
+    return None if worldView is None else worldViewToSnapshot(worldView, radius)
 
 
 def test_snapshot_shape():
@@ -217,13 +229,6 @@ def test_clamp_radius():
 # --- the REST endpoint ----------------------------------------------------
 
 
-def _makeMap(rooms):
-    fakeMap = MagicMock()
-    fakeMap._lock = threading.Lock()
-    fakeMap.getRooms.return_value = rooms
-    return fakeMap
-
-
 def _server(resolve, override_dependency, test_config, player):
     test_config.dayNightCycleEnabled = True
     test_config.dayNightCycleLengthTicks = 1000
@@ -234,7 +239,9 @@ def _server(resolve, override_dependency, test_config, player):
     return resolve(RestApiServer)
 
 
-def test_get_snapshot_503_before_map(resolve, override_dependency, test_config):
+def test_get_snapshot_503_before_a_view_is_published(
+    resolve, override_dependency, test_config
+):
     server = _server(resolve, override_dependency, test_config, Player(0))
 
     status, payload = server.getSnapshot()
@@ -242,54 +249,69 @@ def test_get_snapshot_503_before_map(resolve, override_dependency, test_config):
     assert status == 503
 
 
-def test_get_snapshot_clamps_radius(resolve, override_dependency, test_config):
+def test_get_snapshot_serves_the_published_view_and_clamps_radius(
+    resolve, override_dependency, test_config
+):
     rooms, _, player = _world()
     server = _server(resolve, override_dependency, test_config, player)
-    server.setMap(_makeMap(rooms))
+    server.getWorldViewSink().publish(_view(rooms, player, tick=77))
 
     status, payload = server.getSnapshot(99)
 
     assert status == 200
+    assert payload["tick"] == 77
     assert payload["radius"] == MAX_RADIUS
+    assert {(r["x"], r["y"], r["z"]) for r in payload["rooms"]} == {
+        (0, 0, 0),
+        (1, 0, 0),
+        (0, 0, -1),
+        (3, 0, 0),
+    }
 
 
-def test_get_snapshot_retries_once_after_concurrent_change(
+class _FakeClock:
+    def __init__(self):
+        self.now = 1000.0
+
+    def monotonic(self):
+        return self.now
+
+
+def test_rest_sink_wants_views_only_while_a_spectator_polls(
     resolve, override_dependency, test_config, monkeypatch
 ):
+    clock = _FakeClock()
+    monkeypatch.setattr(restApiServerModule, "time", clock)
     rooms, _, player = _world()
+    test_config.restEnabled = True
+    test_config.restPort = 0
     server = _server(resolve, override_dependency, test_config, player)
-    server.setMap(_makeMap(rooms))
-    realBuild = restApiServerModule.buildWorldSnapshot
-    calls = []
+    sink = server.getWorldViewSink()
 
-    def flakyBuild(*args):
-        calls.append(1)
-        if len(calls) == 1:
-            raise RuntimeError("dictionary changed size during iteration")
-        return realBuild(*args)
+    assert sink.wantsWorldView() is False  # not running
+    server.start()
+    try:
+        assert sink.wantsWorldView() is False  # running, nobody watching
+        assert server.getSnapshot(2)[0] == 503  # first poll: no view yet
+        assert sink.wantsWorldView() is True
+        assert sink.getWantedRadiusRooms() == 2
 
-    monkeypatch.setattr(restApiServerModule, "buildWorldSnapshot", flakyBuild)
+        sink.publish(_view(rooms, player, radius=2))
+        assert sink.wantsWorldView() is False  # throttled
+        clock.now += sink.MIN_PUBLISH_SECONDS
+        assert sink.wantsWorldView() is True
 
-    status, _ = server.getSnapshot()
+        server.getSnapshot(3)  # a wider radius than the latest view
+        sink.publish(_view(rooms, player, radius=2))
+        assert sink.wantsWorldView() is True
 
-    assert status == 200
-    assert len(calls) == 2
+        clock.now += sink.WATCH_SECONDS + 1  # the spectator went away
+        assert sink.wantsWorldView() is False
+    finally:
+        server.shutdown()
 
-
-def test_get_snapshot_gives_up_after_the_retry(
-    resolve, override_dependency, test_config, monkeypatch
-):
-    rooms, _, player = _world()
-    server = _server(resolve, override_dependency, test_config, player)
-    server.setMap(_makeMap(rooms))
-
-    def alwaysRaises(*args):
-        raise RuntimeError("dictionary changed size during iteration")
-
-    monkeypatch.setattr(restApiServerModule, "buildWorldSnapshot", alwaysRaises)
-
-    with pytest.raises(RuntimeError):
-        server.getSnapshot()
+    assert sink.getLatest() is None  # the stale view is dropped
+    assert server.getSnapshot()[0] == 503
 
 
 def test_snapshot_over_http(resolve, override_dependency, test_config):
@@ -297,9 +319,9 @@ def test_snapshot_over_http(resolve, override_dependency, test_config):
     test_config.restEnabled = True
     test_config.restPort = 0
     server = _server(resolve, override_dependency, test_config, player)
-    server.setMap(_makeMap(rooms))
     server.start()
     try:
+        server.getWorldViewSink().publish(_view(rooms, player))
         port = server._httpServer.server_address[1]
         base = "http://127.0.0.1:" + str(port)
         with urllib.request.urlopen(base + "/api/v1/snapshot?radius=0") as response:
@@ -312,3 +334,17 @@ def test_snapshot_over_http(resolve, override_dependency, test_config):
     assert payload["format"] == SNAPSHOT_FORMAT
     assert payload["radius"] == 0
     assert badRadius.value.code == 400
+
+
+def test_snapshot_never_claims_more_radius_than_the_view_has(
+    resolve, override_dependency, test_config
+):
+    rooms, _, player = _world()
+    server = _server(resolve, override_dependency, test_config, player)
+    server.getWorldViewSink().publish(_view(rooms, player, radius=1))
+
+    status, payload = server.getSnapshot(3)
+
+    assert status == 200
+    assert payload["radius"] == 1
+    assert (3, 0, 0) not in {(r["x"], r["y"], r["z"]) for r in payload["rooms"]}

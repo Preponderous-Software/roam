@@ -1,9 +1,23 @@
+_isLightSourceClass = {}
+
+
+def isLightSource(entity):
+    """True when the entity gives light: it has getLightRadius() (Torch,
+    Campfire, GoldenLantern). Cached per class, because this is asked of every
+    entity in view each tick."""
+    entityClass = entity.__class__
+    result = _isLightSourceClass.get(entityClass)
+    if result is None:
+        result = _isLightSourceClass[entityClass] = hasattr(entity, "getLightRadius")
+    return result
+
+
 def collectLightSources(room):
     """Return every light source in the room, in tile coordinates, as a list of
     (tileX, tileY, radiusTiles, entityClassName) tuples.
 
-    An entity is a light source when it has getLightRadius() (Torch, Campfire,
-    GoldenLantern). Read-only: it only walks the room's grid.
+    Read-only: it only walks the room's grid. Shared by the 2D day/night
+    overlay (worldScreen) and WorldViewBuilder.
     """
     sources = []
     grid = room.getGrid()
@@ -11,7 +25,7 @@ def collectLightSources(room):
         if location.getNumEntities() == 0:
             continue
         for entity in list(location.getEntities().values()):
-            if hasattr(entity, "getLightRadius"):
+            if isLightSource(entity):
                 sources.append(
                     (
                         location.getX(),

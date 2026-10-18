@@ -41,6 +41,7 @@ from rendering.inputSource import InputSource
 from rendering.clock import Clock
 from rendering.inputEvent import EventType
 from rendering.keyCode import KeyCode
+from rendering.worldViewSink import WorldViewSink
 from entity.grass import Grass
 from lib.pyenvlib.grid import Grid
 from entity.stone import Stone
@@ -54,6 +55,8 @@ from world.tickCounter import TickCounter
 from world.dayNightCycle import DayNightCycle
 from world.map import Map
 from world.startingHomeGenerator import StartingHomeGenerator
+from world.lightSources import collectLightSources
+from world.worldViewBuilder import WorldViewBuilder
 from player.player import Player
 from ui.status import Status
 from ui.hotbarLayout import (
@@ -125,6 +128,14 @@ class WorldScreen:
         self.roomPreloader = self.container.resolve(RoomPreloader)
         self.mapImageUpdater = self.container.resolve(MapImageUpdater)
         self.restApiServer = self.container.resolve(RestApiServer)
+        # RFC 0017 stage 2: the frontend's sink (NullWorldViewSink unless a
+        # frontend registers one) and the REST server's, which wants a view
+        # only while the REST API is running.
+        self.worldViewSinks = (
+            self.container.resolve(WorldViewSink),
+            self.restApiServer.getWorldViewSink(),
+        )
+        self.worldViewBuilder = self.container.resolve(WorldViewBuilder)
         self.hudDragManager = self.container.resolve(HudDragManager)
         self.codex = self.container.resolve(Codex)
         self.dayNightCycle = self.container.resolve(DayNightCycle)
@@ -1718,24 +1729,37 @@ class WorldScreen:
                 yield roomX, roomY, roomOffsetX, roomOffsetY
 
     def _collectLightSourcesFromRoom(self, room, offsetX, offsetY, sources):
-        grid = room.getGrid()
+        # The tile-coordinate collector is shared with WorldViewBuilder; the 2D
+        # overlay converts each light to the screen pixel at its tile centre.
         locWidth = self.locationWidth
         locHeight = self.locationHeight
         halfW = locWidth / 2
         halfH = locHeight / 2
-        for locationId in grid.getLocations():
-            location = grid.getLocation(locationId)
-            if location.getNumEntities() == 0:
-                continue
-            for entity in location.getEntities().values():
-                if hasattr(entity, "getLightRadius"):
-                    sources.append(
-                        (
-                            offsetX + location.getX() * locWidth + halfW,
-                            offsetY + location.getY() * locHeight + halfH,
-                            entity.getLightRadius(),
-                        )
-                    )
+        for tileX, tileY, radiusTiles, _ in collectLightSources(room):
+            sources.append(
+                (
+                    offsetX + tileX * locWidth + halfW,
+                    offsetY + tileY * locHeight + halfH,
+                    radiusTiles,
+                )
+            )
+
+    def _publishWorldView(self):
+        # One boolean check per sink per tick; the builder runs only when some
+        # sink wants a view, so 2D frontends never pay for it.
+        wanting = [sink for sink in self.worldViewSinks if sink.wantsWorldView()]
+        if not wanting:
+            return
+        worldView = self.worldViewBuilder.build(
+            self.map,
+            self.player,
+            self.tickCounter.getTick(),
+            max(sink.getWantedRadiusRooms() for sink in wanting),
+        )
+        if worldView is None:
+            return
+        for sink in wanting:
+            sink.publish(worldView)
 
     def drawFollowMode(self):
         gameArea = self.renderer.getGameAreaRect()
@@ -2784,6 +2808,7 @@ class WorldScreen:
             self.checkForLivingEntityDeaths()
         self._setFacingTileHint()
         self.status.checkForExpiration(self.tickCounter.getTick())
+        self._publishWorldView()
         self.draw()
 
         self.renderer.present()
