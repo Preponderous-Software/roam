@@ -83,6 +83,13 @@ jobs:
           NODE_PATH: /usr/local/lib/node_modules
         run: node tests/integration/test_view3d_flag.js
 
+      - name: Run 3D view camera and picking integration test
+        timeout-minutes: 15
+        env:
+          ROAM_URL: http://localhost:8080
+          NODE_PATH: /usr/local/lib/node_modules
+        run: node tests/integration/test_view3d_controls.js
+
       - name: Stop game server
         if: always()
         run: kill "$SERVER_PID" 2>/dev/null || true

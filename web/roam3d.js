@@ -49,6 +49,8 @@
     Object.assign(hooks, { frames: 0, fps: 0, chunkBuilds: 0, cards: 0, applies: 0 });
     const onApplied = opts.onApplied || (() => {});
     const followOffset = opts.followOffset || [0, 26, 24];
+    const reducedMotion = !!opts.reducedMotion;
+    const onCameraChange = opts.onCameraChange || (() => {});
 
     // ---- textures ---------------------------------------------------------
     const texCache = new Map();
@@ -353,6 +355,7 @@
       Object.assign(sun.shadow.camera, { left: -span, right: span, top: span, bottom: -span, near: 1, far: 600 });
       sun.shadow.camera.updateProjectionMatrix();
       sun.target.position.set(pX, 0, pZ);
+      updateCanopyFade();
       hooks.applies++; hooks.lastTick = s.tick;
       onApplied(s, { rooms: s.rooms.filter(r => r.z === viewZ).length, lights: lights.length, viewZ });
     }
@@ -381,9 +384,13 @@
 
     function recentre() {
       target.copy(player.position);
-      camera.position.copy(player.position).add(new THREE.Vector3(...followOffset));
-      if (controls) controls.target.copy(target);
-      camera.lookAt(target);
+      if (controls) {
+        camera.position.copy(player.position).add(new THREE.Vector3(...followOffset));
+        controls.target.copy(target);
+        camera.lookAt(target);
+      } else {
+        placeFollowCamera(1);
+      }
     }
 
     const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
@@ -401,7 +408,87 @@
       const rx = Math.floor(X / G), ry = Math.floor(Z / G), c = X - rx * G, r = Z - ry * G;
       const ch = visible.find(v => v.room.x === rx && v.room.y === ry);
       if (!ch) return null;
-      return { room: ch.room, tile: [c, r], entities: names(ch.room.tiles[r * G + c]) };
+      return { room: ch.room, tile: [c, r], world: [X, Z, ch.room.z], entities: names(ch.room.tiles[r * G + c]) };
+    }
+
+    // Screen point (client coordinates) of the centre of a world tile's top
+    // face on the level in view, or null when it is not in a loaded room.
+    // Used by tests to check that picking there returns that tile.
+    const _proj = new THREE.Vector3();
+    function tileToClient(worldX, worldY) {
+      if (!snap) return null;
+      const rx = Math.floor(worldX / G), ry = Math.floor(worldY / G);
+      const ch = chunks.get(roomKey(rx, ry, snap.player.room[2]));
+      if (!ch) return null;
+      const i = (worldY - ry * G) * G + (worldX - rx * G);
+      _proj.set(worldX + 0.5, ch.heights[i] + ch.group.position.y, worldY + 0.5).project(camera);
+      const rect = canvas.getBoundingClientRect();
+      return { x: rect.left + (_proj.x + 1) / 2 * rect.width, y: rect.top + (1 - _proj.y) / 2 * rect.height };
+    }
+
+    // ---- follow camera (the game's 3D view; RFC 0021) ----------------------
+    // Third person behind the player: yaw in 90-degree snaps (rotate), a fixed
+    // pitch, and a zoom distance, eased towards their targets (instantly with
+    // reduced motion). Yaw 0 puts the camera south of the player looking
+    // north; it grows counter-clockwise seen from above, so quadrant 1 is the
+    // camera on the east side looking west. Never stored outside the page.
+    const QUARTER = Math.PI / 2, PITCH = 0.82, MIN_DIST = 12, MAX_DIST = 80;
+    const rig = { yaw: 0, yawTarget: 0, dist: 35, distTarget: 35, quadrant: 0 };
+    if (opts.camera) {
+      rig.yaw = rig.yawTarget = (opts.camera.quadrant || 0) * QUARTER;
+      rig.dist = rig.distTarget = Math.min(MAX_DIST, Math.max(MIN_DIST, opts.camera.dist || 35));
+      rig.quadrant = ((opts.camera.quadrant || 0) % 4 + 4) % 4;
+    }
+    function quadrantOf(yaw) { return ((Math.round(yaw / QUARTER) % 4) + 4) % 4; }
+    function updateQuadrant() {
+      const q = quadrantOf(rig.yawTarget);
+      if (q !== rig.quadrant) { rig.quadrant = q; onCameraChange({ quadrant: q, dist: rig.distTarget }); }
+    }
+    function rotate(quarterTurns) { rig.yawTarget = Math.round(rig.yawTarget / QUARTER + quarterTurns) * QUARTER; updateQuadrant(); }
+    function setYaw(radians) { rig.yawTarget = radians; rig.yaw = radians; updateQuadrant(); }
+    function snapYaw() { rig.yawTarget = Math.round(rig.yawTarget / QUARTER) * QUARTER; updateQuadrant(); }
+    function zoom(factor) {
+      rig.distTarget = Math.min(MAX_DIST, Math.max(MIN_DIST, rig.distTarget * factor));
+      onCameraChange({ quadrant: rig.quadrant, dist: rig.distTarget });
+    }
+    function groundUnder(x, z) {
+      if (!snap) return 0;
+      if (snap.player.room[2] < 0) return CAVE_WALL;
+      return surfaceHeight(Math.floor(x), Math.floor(z));
+    }
+    const _camOffset = new THREE.Vector3();
+    function placeFollowCamera(dt) {
+      const k = reducedMotion ? 1 : 1 - Math.exp(-dt * 12);
+      rig.yaw += (rig.yawTarget - rig.yaw) * k;
+      rig.dist += (rig.distTarget - rig.dist) * k;
+      _camOffset.set(Math.sin(rig.yaw) * Math.cos(PITCH), Math.sin(PITCH), Math.cos(rig.yaw) * Math.cos(PITCH)).multiplyScalar(rig.dist);
+      camera.position.copy(target).add(_camOffset);
+      // Never inside a mountain: keep the camera above the ground under it.
+      const floor = groundUnder(camera.position.x, camera.position.z) + 2;
+      if (camera.position.y < floor) camera.position.y = floor;
+      camera.lookAt(target);
+    }
+
+    // Canopy near the player fades so trees never hide them.
+    let canopyFaded = false;
+    function updateCanopyFade() {
+      if (controls || !snap) return;
+      const P = snap.player, ch = chunks.get(roomKey(...P.room));
+      let near = false;
+      if (ch && P.room[2] === 0) {
+        const room = ch.room;
+        for (let dy = -3; dy <= 3 && !near; dy++) for (let dx = -3; dx <= 3 && !near; dx++) {
+          const x = P.x + dx, y = P.y + dy;
+          if (x < 0 || y < 0 || x >= G || y >= G) continue;
+          if (names(room.tiles[y * G + x]).includes(CANOPY)) near = true;
+        }
+      }
+      if (near === canopyFaded) return;
+      canopyFaded = near;
+      const key = imageOf(CANOPY);
+      if (!matCache.has(key)) return;
+      const m = matCache.get(key);
+      m.transparent = near; m.opacity = near ? 0.35 : 1; m.depthWrite = !near; m.needsUpdate = true;
     }
 
     function resize() {
@@ -416,21 +503,28 @@
     const clock = new THREE.Clock();
     const camDir = new THREE.Vector3(), step = new THREE.Vector3();
     let fpsFrames = 0, fpsSince = performance.now();
+    let lastT = 0;
     function frame() {
-      const t = clock.getElapsedTime();
+      const t = clock.getElapsedTime(), dt = Math.min(0.1, t - lastT);
+      lastT = t;
       step.copy(playerTarget).sub(player.position);
       if (step.lengthSq() > 64) player.position.copy(playerTarget); else player.position.addScaledVector(step, 0.2);
-      if (follow && playerPlaced) {
-        const delta = player.position.clone().sub(target);
-        target.add(delta); camera.position.add(delta);
-        if (controls) controls.target.copy(target); else camera.lookAt(target);
+      if (controls) {
+        if (follow && playerPlaced) {
+          const delta = player.position.clone().sub(target);
+          target.add(delta); camera.position.add(delta);
+          controls.target.copy(target);
+        }
+      } else {
+        if (playerPlaced) target.copy(player.position);
+        placeFollowCamera(dt);
       }
       if (controls) controls.update();
       camera.getWorldDirection(camDir);
       const yaw = Math.atan2(-camDir.x, -camDir.z);
       player.rotation.y = yaw;
       for (const c of cardGroup.children) c.rotation.y = yaw;
-      applyLighting(t);
+      applyLighting(reducedMotion ? 0 : t);
       renderer.render(scene, camera);
       hooks.frames++; fpsFrames++;
       const now = performance.now();
@@ -440,7 +534,10 @@
     requestAnimationFrame(frame);
 
     return {
-      apply, recentre, pick, resize,
+      apply, recentre, pick, resize, tileToClient,
+      rotate, setYaw, snapYaw, zoom,
+      getCamera() { return { quadrant: rig.quadrant, dist: rig.distTarget, yaw: rig.yawTarget }; },
+      getPlayerTile() { return snap ? { room: snap.player.room.slice(), x: snap.player.x, y: snap.player.y } : null; },
       setFollow(on) { follow = !!on; },
       readPixels(size) {
         const gl = renderer.getContext();
