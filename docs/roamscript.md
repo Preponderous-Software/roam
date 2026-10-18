@@ -72,7 +72,7 @@ would otherwise look like a `timeout=` token.
 | --- | --- |
 | `expect TEXT [timeout=N]` | Wait (up to `timeout` seconds, default the harness's boot timeout) for `TEXT` to appear in the rendered output. Fails the script if it never appears. |
 | `send KEYS...` | Type keys. Each token is either a named key or sent as literal characters (see table below). |
-| `assertContains TEXT [timeout=N]` | Like `expect`, but framed as an assertion with a short default timeout (`1.0`s) — use when `TEXT` should already be on screen. |
+| `assertContains TEXT [timeout=N]` | Like `expect`, but framed as an assertion with a short default timeout (`5.0`s) — use when `TEXT` should already be on screen, or will be as soon as the next frame paints. It returns as soon as `TEXT` appears, so the default only matters when the step fails. For a screen that takes longer to open, use `expect TEXT timeout=N`. |
 | `assertNotContains TEXT [timeout=N]` | Fails if `TEXT` appears within `timeout` seconds (default `0.5`). |
 | `assertPathExists PATH` | Fails unless `PATH` (repo-relative) exists on disk. |
 | `assertPathNotExists PATH` | Fails if `PATH` (repo-relative) exists on disk. |

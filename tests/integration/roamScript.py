@@ -125,9 +125,16 @@ def _handleSend(game, rest):
     game.send("".join(_KEY_MAP.get(token.lower(), token) for token in tokens))
 
 
+# assertContains returns as soon as TEXT is on screen, so a generous default
+# costs nothing when it passes. It is often the first check after a `send`,
+# and on a loaded CI runner the next frame can take over a second to paint
+# (roam#612), which a 1 s default turned into an intermittent failure.
+ASSERT_CONTAINS_DEFAULT_TIMEOUT = 5.0
+
+
 def _handleAssertContains(game, rest):
     tokens = shlex.split(_substitute(rest, game))
-    tokens, timeout = _splitTimeout(tokens, 1.0)
+    tokens, timeout = _splitTimeout(tokens, ASSERT_CONTAINS_DEFAULT_TIMEOUT)
     game.expect(" ".join(tokens), timeout=timeout)
 
 
