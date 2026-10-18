@@ -120,6 +120,17 @@ The same build is also published to [arcade](https://github.com/Stephenson-Softw
 
 which runs `web/build_zip.py` and lays out `index.html`, `web/game-worker.js`, `web/game.zip`, `web/game_version.txt` and `assets/` exactly as `web/serve.py` serves them. The page uses root-relative URLs, so the site must sit at the root of its host, and it needs `SharedArrayBuffer`, so arcade's registry entry for `roam` must set `kind: static` and `isolation: on`. <https://roam.preponderous.org/play> is unchanged. The two are different origins, so a browser's saves on one are not visible on the other; use the Saves button to carry them across.
 
+## Watch your world in 3D (spectator)
+![The Roam 3D spectator showing a running world at midday](pics/spectator.jpg)
+
+A running desktop or `--text` game can be watched in 3D from a browser on the same machine. Roam's own sprites stand in a lit 3D diorama: terrain rises with the biome, trees and rocks are blocks, creatures and the player are upright cards, and torches and campfires light up at night. It is read-only: it never sends input to the game and cannot change your saves.
+
+1. In `config.yml`, set `restEnabled: true` (the port is `restPort`, 8090 by default).
+2. Start Roam and open a world.
+3. Open <http://127.0.0.1:8090/spectator/>.
+
+It only listens on `127.0.0.1`, so other machines cannot reach it. The game does no extra work unless the page is open. More detail is in [`docs/spectator.md`](docs/spectator.md).
+
 ## Windows setup script (run from source)
 If you're [running from source](#run-from-source-for-developers) on Windows, `install.ps1` is a setup *script* — the from-source counterpart to `run.sh`. It checks that Python and pip are available, installs the dependencies, and creates Desktop and Start Menu shortcuts so you can launch the game without using the command line. (For a normal install, use the `RoamSetup.exe` **installer** from [Download & Install](#download--install-recommended) instead — it needs no Python.)
 
