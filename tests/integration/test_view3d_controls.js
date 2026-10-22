@@ -158,7 +158,11 @@ const FACING_AFTER_W = ["up", "left", "down", "right"];
     const unexplained = misses.filter(r => !(r.hit && r.hit.entities.some(e => TALL.has(e))));
     console.log(`pick: ${matches.length}/${survey.length} tiles around the player pick back to themselves; ` +
         `${misses.length - unexplained.length} hidden behind a wall/trunk/rock; unexplained: ${JSON.stringify(unexplained.slice(0, 5))}`);
-    if (matches.length < 15) await fail(`only ${matches.length} tiles picked back to themselves`);
+    // How many tiles are visible depends on the unseeded starting terrain (a
+    // dense wood can hide almost all of them), so the count is only required
+    // to be non-zero; a raycast disagreeing with the scene shows up as an
+    // unexplained miss below.
+    if (matches.length < 1) await fail("no tile around the player picked back to itself");
     if (unexplained.length) await fail(`picks that missed with no occluder: ${JSON.stringify(unexplained.slice(0, 5))}`);
 
     // The game must act on the picked tile: hover visible tiles until the
