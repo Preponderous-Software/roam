@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 
@@ -340,6 +340,8 @@ def test_draw_clears_then_draws_every_part(make_screen, update_checker):
     screen.draw()
 
     screen.renderer.clearScreen.assert_called_once_with(palette.BLACK)
+    # The clear comes before anything else is drawn.
+    assert screen.renderer.mock_calls[0] == call.clearScreen(palette.BLACK)
     texts = [args[0] for args in _calls(screen.renderer, "drawText")]
     assert texts == [
         "Roam",
