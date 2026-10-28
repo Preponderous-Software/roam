@@ -42,13 +42,25 @@ async function fail(msg) {
 async function profile(name) {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, acceptDownloads: true });
     const page = await ctx.newPage();
-    const errors = [];
-    attachConsole(page);
+    const errors = [], logs = [];
+    attachConsole(page, logs);
     page.on("pageerror", (e) => { errors.push(e.message); process.stderr.write(`  [${name} pageerror] ${e.message}\n`); });
     await page.goto(PAGE, { waitUntil: "domcontentloaded", timeout: 30000 });
     if (!await waitForStatus(page, "Starting game…", 180000)) await fail(`${name}: game did not start`);
     await page.waitForTimeout(2000);
-    return { ctx, page, errors };
+    return { ctx, page, errors, logs };
+}
+
+// Wait until a game log line logged after index `from` matches every needle.
+// On a slow runner a single tick can take seconds, so fixed sleeps are not
+// enough to know a screen is ready or a save has been written.
+async function waitForLog(p, from, needles, maxMs) {
+    return waitFor(p.page, async () =>
+        p.logs.slice(from).some((l) => needles.every((n) => l.includes(n))), maxMs, 500);
+}
+
+function textOf(record) {
+    return record ? record.text : "(missing)";
 }
 
 // Play a new world: start it, walk, gather, then save and quit to the title.
@@ -208,15 +220,31 @@ async function confirmAndReload(page) {
     const cIdb = await readIDB(C.page);
     for (const [k, v] of Object.entries(aIdb)) if (!same(cIdb[k], v)) await fail(`C: ${k} differs`);
     if (Object.keys(cIdb).length !== Object.keys(aIdb).length) await fail("C has unexpected files");
+    let mark = C.logs.length;
     await loadExistingSave(C.page);
-    await C.page.waitForTimeout(4000);
+    if (!await waitForLog(C, mark, ["screen transition", "world_screen"], 60000)) {
+        await fail("C: the loaded world never reached the world screen");
+    }
+    await C.page.waitForTimeout(2000);
+    mark = C.logs.length;
     await saveAndQuit(C.page);
-    await C.page.waitForTimeout(3000);
-    const cPlayed = await readIDB(C.page);
+    if (!await waitForLog(C, mark, ["returning to main menu"], 60000)) {
+        await fail("C: save and quit never returned to the main menu");
+    }
+    // The Worker syncs /saves to IndexedDB after the save; poll for it.
     const loc = `/saves/${world}/playerLocation.json`;
-    if (!cPlayed[loc] || cPlayed[loc].text !== aIdb[loc].text) await fail("C did not resume at A's location");
     const inv = `/saves/${world}/playerInventory.json`;
-    if (!cPlayed[inv] || cPlayed[inv].text !== aIdb[inv].text) await fail("C did not resume with A's inventory");
+    const resumed = (d) => textOf(d[loc]) === aIdb[loc].text && textOf(d[inv]) === aIdb[inv].text;
+    const cPlayed = await waitFor(C.page, async () => {
+        const d = await readIDB(C.page);
+        return resumed(d) ? d : null;
+    }, 30000) || await readIDB(C.page);
+    if (textOf(cPlayed[loc]) !== aIdb[loc].text) {
+        await fail(`C did not resume at A's location: expected ${aIdb[loc].text}, got ${textOf(cPlayed[loc])}`);
+    }
+    if (textOf(cPlayed[inv]) !== aIdb[inv].text) {
+        await fail(`C did not resume with A's inventory: expected ${aIdb[inv].text}, got ${textOf(cPlayed[inv])}`);
+    }
 
     for (const p of [A, B, C]) if (p.errors.length) await fail(`page errors: ${p.errors.join(" | ")}`);
     process.stderr.write("PASS: C loaded A's world and resumed with the same location and inventory; no page errors\n");
