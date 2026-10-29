@@ -86,11 +86,33 @@ const FACING_AFTER_W = ["up", "left", "down", "right"];
     }
 
     const step = (msg) => process.stderr.write(`  [step] ${msg}\n`);
-    // --- fallback prompt (software WebGL is slow) ---------------------------
-    const prompted = await waitFor(page, () => page.evaluate(() => !!document.getElementById("view3d-slow")), 45000, 1000);
-    const fps = await page.evaluate(() => window.__roam3dView.fps);
-    console.log(`fallback: prompt ${prompted ? "shown" : "not shown"} at ${fps} fps`);
-    if (fps > 0 && fps < 12 && !prompted) await fail("slow 3D (under 12 fps) did not offer the 2D view");
+    // --- fallback prompt ------------------------------------------------------
+    // The page offers 2D only after fps has stayed under 12 for 10 seconds in
+    // a row; one reading of 12 or more restarts that window. CI's software
+    // WebGL runs anywhere from 2 to 22 fps, so a real run cannot be relied on
+    // to stay under 12 for 10 seconds, and a single fps reading after the wait
+    // says nothing about the window. So the test sets the fps itself: drawing
+    // is paused (the scene then stops writing hooks.fps), and the page's own
+    // detector reads the value the test wrote.
+    const promptShown = () => page.evaluate(() => !!document.getElementById("view3d-slow"));
+    const setFps = (fps) => page.evaluate((f) => {
+        window.__roam3dScene.setRenderingPaused(true);
+        window.__roam3dView.fps = f;
+    }, fps);
+    const realFps = await page.evaluate(() => window.__roam3dView.fps);
+    let prompted = await promptShown();
+    console.log(`fallback: measured ${realFps} fps; prompt ${prompted ? "already shown" : "not shown yet"}`);
+    if (!prompted) {
+        step("fallback: holding fps at 30 for 12 s (must not prompt)");
+        await setFps(30);
+        await page.waitForTimeout(12000);
+        if (await promptShown()) await fail("3D at 30 fps offered the 2D view");
+        step("fallback: holding fps at 5 (must prompt within ~10 s)");
+        await setFps(5);
+        prompted = await waitFor(page, promptShown, 20000, 500);
+        console.log(`fallback: prompt ${prompted ? "shown" : "not shown"} within 20 s at 5 fps`);
+        if (!prompted) await fail("slow 3D (5 fps for 20 s) did not offer the 2D view");
+    }
     if (prompted) {
         await shot(page, "view3d-slow-prompt.png");
         // A DOM click, not page.click: under a starved software renderer
