@@ -37,6 +37,25 @@ async function fail(msg) {
 const OVERALL_TIMEOUT_MS = 12 * 60 * 1000;
 setTimeout(() => fail(`timed out after ${OVERALL_TIMEOUT_MS / 60000} minutes`), OVERALL_TIMEOUT_MS).unref();
 
+const step = (msg) => process.stderr.write(`  [step] ${msg}\n`);
+// The ?view=3d hooks the test reads. The page's snapshot (the whole merged
+// world) is left out: serializing it on every read is needless work for a
+// page that software GL already keeps busy.
+const HOOK_FIELDS = ["messages", "applies", "frames", "fps", "messagesPerSecond", "buildMs", "every",
+    "chunkBuilds", "cards", "error"];
+const pickHooks = (fields) => {
+    const h = window.__roam3dView;
+    return h ? Object.fromEntries(fields.map(f => [f, h[f] === undefined ? null : h[f]])) : null;
+};
+let lastHooks = null;
+// A starved page can leave a call pending forever. Fail naming the step and
+// the last hooks the page answered with, instead of waiting for the overall
+// timer, which cannot tell which step stalled.
+async function bounded(label, promise, ms = 60000) {
+    const timer = setTimeout(() => fail(`${label}: no answer in ${ms / 1000} s; last hooks ${JSON.stringify(lastHooks)}`), ms);
+    try { return await promise; } finally { clearTimeout(timer); }
+}
+
 async function openGame(query, viewport) {
     const ctx = await browser.newContext({ viewport: viewport || { width: 1280, height: 800 } });
     const page = await ctx.newPage();
@@ -81,21 +100,35 @@ async function openGame(query, viewport) {
     await plain.ctx.close();
 
     // --- ?view=3d: worldview messages drive the 3D canvas ---------------------
-    // A smaller viewport for the 3D part: CI renders WebGL in software
-    // (SwiftShader), and the cost scales with pixels.
-    const three = await openGame("?view=3d", { width: 800, height: 600 });
-    const ok = await waitFor(three.page, () => three.page.evaluate(() =>
-        window.__roam3dView && window.__roam3dView.messages >= 5 && window.__roam3dView.applies >= 3), 90000);
+    // Low graphics (no shadow maps) and a small viewport for the 3D part: CI
+    // renders WebGL in software (SwiftShader), and the cost scales with pixels.
+    const three = await openGame("?view=3d&gfx=low", { width: 640, height: 480 });
+    const readHooks = async (label) => {
+        lastHooks = await bounded(label, three.page.evaluate(pickHooks, HOOK_FIELDS));
+        return lastHooks;
+    };
+    step("waiting for worldview messages");
+    const ok = await waitFor(three.page, async () => {
+        const h = await readHooks("worldview wait");
+        return h && h.messages >= 5 && h.applies >= 3;
+    }, 90000);
     if (!ok) {
-        const hooks = await three.page.evaluate(() => window.__roam3dView || null);
-        await fail(`no worldview messages reached the 3D scene: ${JSON.stringify(hooks)}; errors: ${three.errors.join("; ")}`);
+        await fail(`no worldview messages reached the 3D scene: ${JSON.stringify(lastHooks)}; errors: ${three.errors.join("; ")}`);
     }
     // Walk a little so deltas (not just the full message) are exercised.
-    await pressKey(three.page, "d", 4, 350);
-    await pressKey(three.page, "s", 3, 350);
-    const before = await three.page.evaluate(() => ({ ...window.__roam3dView }));
+    // Drawing is paused meanwhile so software GL cannot starve the page;
+    // worldview messages keep being applied (as in test_view3d_controls.js).
+    step(`walking with drawing paused (hooks ${JSON.stringify(lastHooks)})`);
+    await bounded("pause drawing", three.page.evaluate(() => window.__roam3dScene.setRenderingPaused(true)));
+    await bounded("walk", (async () => {
+        await pressKey(three.page, "d", 4, 350);
+        await pressKey(three.page, "s", 3, 350);
+    })());
+    const before = await readHooks("hooks after the walk");
+    await bounded("resume drawing", three.page.evaluate(() => window.__roam3dScene.setRenderingPaused(false)));
     await three.page.waitForTimeout(5000);
-    const after = await three.page.evaluate(() => {
+    step(`probing the 3D frame (hooks ${JSON.stringify(before)})`);
+    const after = await bounded("frame probe", three.page.evaluate((fields) => {
         const c = document.getElementById("world3d");
         const gl = c.getContext("webgl2") || c.getContext("webgl");
         const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
@@ -103,9 +136,10 @@ async function openGame(query, viewport) {
         gl.readPixels(Math.floor(w / 2) - 32, Math.floor(h / 2) - 32, 64, 64, gl.RGBA, gl.UNSIGNED_BYTE, px);
         const colours = new Set();
         for (let i = 0; i < px.length; i += 4) colours.add(`${px[i]},${px[i + 1]},${px[i + 2]}`);
-        return { hooks: { ...window.__roam3dView }, colours: colours.size,
+        const hv = window.__roam3dView;
+        return { hooks: Object.fromEntries(fields.map(f => [f, hv[f] === undefined ? null : hv[f]])), colours: colours.size,
                  notice: (document.getElementById("view3d-notice") || {}).textContent || "" };
-    });
+    }, HOOK_FIELDS));
     // Rates come from the page's own clock (performance.now): under a software
     // renderer the test's waits can stretch well past their nominal length.
     console.log(`view=3d: fps ${after.hooks.fps}, worldview messages/s ${after.hooks.messagesPerSecond}, ` +
