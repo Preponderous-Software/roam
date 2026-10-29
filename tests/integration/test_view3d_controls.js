@@ -86,11 +86,33 @@ const FACING_AFTER_W = ["up", "left", "down", "right"];
     }
 
     const step = (msg) => process.stderr.write(`  [step] ${msg}\n`);
-    // --- fallback prompt (software WebGL is slow) ---------------------------
-    const prompted = await waitFor(page, () => page.evaluate(() => !!document.getElementById("view3d-slow")), 45000, 1000);
-    const fps = await page.evaluate(() => window.__roam3dView.fps);
-    console.log(`fallback: prompt ${prompted ? "shown" : "not shown"} at ${fps} fps`);
-    if (fps > 0 && fps < 12 && !prompted) await fail("slow 3D (under 12 fps) did not offer the 2D view");
+    // --- fallback prompt ------------------------------------------------------
+    // The page offers 2D only after fps has stayed under 12 for 10 seconds in
+    // a row; one reading of 12 or more restarts that window. CI's software
+    // WebGL runs anywhere from 2 to 22 fps, so a real run cannot be relied on
+    // to stay under 12 for 10 seconds, and a single fps reading after the wait
+    // says nothing about the window. So the test sets the fps itself: drawing
+    // is paused (the scene then stops writing hooks.fps), and the page's own
+    // detector reads the value the test wrote.
+    const promptShown = () => page.evaluate(() => !!document.getElementById("view3d-slow"));
+    const setFps = (fps) => page.evaluate((f) => {
+        window.__roam3dScene.setRenderingPaused(true);
+        window.__roam3dView.fps = f;
+    }, fps);
+    const realFps = await page.evaluate(() => window.__roam3dView.fps);
+    let prompted = await promptShown();
+    console.log(`fallback: measured ${realFps} fps; prompt ${prompted ? "already shown" : "not shown yet"}`);
+    if (!prompted) {
+        step("fallback: holding fps at 30 for 12 s (must not prompt)");
+        await setFps(30);
+        await page.waitForTimeout(12000);
+        if (await promptShown()) await fail("3D at 30 fps offered the 2D view");
+        step("fallback: holding fps at 5 (must prompt within ~10 s)");
+        await setFps(5);
+        prompted = await waitFor(page, promptShown, 20000, 500);
+        console.log(`fallback: prompt ${prompted ? "shown" : "not shown"} within 20 s at 5 fps`);
+        if (!prompted) await fail("slow 3D (5 fps for 20 s) did not offer the 2D view");
+    }
     if (prompted) {
         await shot(page, "view3d-slow-prompt.png");
         // A DOM click, not page.click: under a starved software renderer
@@ -137,33 +159,56 @@ const FACING_AFTER_W = ["up", "left", "down", "right"];
     const TALL = new Set(["OakWood", "JungleWood", "Stone", "CoalOre", "IronOre", "GoldOre", "Leaves"]);
     // In small batches: each raycast tests every triangle of the rooms in
     // view, and one long evaluate would starve the page under software GL.
-    step("picking survey");
-    const tiles = await page.evaluate(() => {
+    // Rings of tiles around the player, nearest first: radius 3, then out to
+    // 8 only if no tile within 3 picked back. tileToClient aims at a tile's
+    // ground, and a leaf canopy floats above the ground, so a start deep in a
+    // wood can hide every ground tile within 3 (#619 saw 47 of 48 hidden; a
+    // later run saw 48 of 48, every one behind an occluder).
+    const ring = (lo, hi) => page.evaluate(([lo, hi]) => {
         const s = window.__roam3dView.snapshot, G = s.gridSize, P = s.player;
         const px = P.room[0] * G + P.x, py = P.room[1] * G + P.y, out = [];
-        for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (dx || dy) out.push({ x: px + dx, y: py + dy });
+        for (let dy = -hi; dy <= hi; dy++) for (let dx = -hi; dx <= hi; dx++) {
+            const d = Math.max(Math.abs(dx), Math.abs(dy));
+            if (d >= lo && d <= hi) out.push({ x: px + dx, y: py + dy });
+        }
         return out;
-    });
-    const survey = [];
-    for (let i = 0; i < tiles.length; i += 8) {
-        survey.push(...await page.evaluate(batch => batch.map(t => {
-            const c = window.__roam3dScene.tileToClient(t.x, t.y);
-            if (!c) return null;
-            const hit = window.__roam3dScene.pick(c.x, c.y);
-            return { t, c, hit: hit ? { world: hit.world, entities: hit.entities } : null };
-        }).filter(Boolean), tiles.slice(i, i + 8)));
+    }, [lo, hi]);
+    const surveyTiles = async (tiles) => {
+        const out = [];
+        for (let i = 0; i < tiles.length; i += 8) {
+            out.push(...await page.evaluate(batch => batch.map(t => {
+                const c = window.__roam3dScene.tileToClient(t.x, t.y);
+                if (!c) return null;
+                const hit = window.__roam3dScene.pick(c.x, c.y);
+                return { t, c, hit: hit ? { world: hit.world, entities: hit.entities } : null };
+            }).filter(Boolean), tiles.slice(i, i + 8)));
+        }
+        return out;
+    };
+    const isMatch = r => r.hit && r.hit.world[0] === r.t.x && r.hit.world[1] === r.t.y;
+    const report = (label, survey) => {
+        const matches = survey.filter(isMatch);
+        const misses = survey.filter(r => !isMatch(r));
+        const unexplained = misses.filter(r => !(r.hit && r.hit.entities.some(e => TALL.has(e))));
+        const occluders = {};
+        for (const r of misses) if (r.hit) for (const e of r.hit.entities.filter(e => TALL.has(e))) occluders[e] = (occluders[e] || 0) + 1;
+        console.log(`pick (${label}): ${matches.length}/${survey.length} tiles pick back to themselves; ` +
+            `${misses.length - unexplained.length} hidden behind a wall/trunk/rock/canopy ${JSON.stringify(occluders)}; ` +
+            `unexplained: ${JSON.stringify(unexplained.slice(0, 5))}`);
+        return { matches, unexplained };
+    };
+    step("picking survey (within 3 tiles)");
+    let res = report("within 3", await surveyTiles(await ring(1, 3)));
+    if (res.unexplained.length) await fail(`picks that missed with no occluder: ${JSON.stringify(res.unexplained.slice(0, 5))}`);
+    if (res.matches.length < 1) {
+        step("picking survey (4 to 8 tiles): nothing within 3 was visible");
+        res = report("4 to 8", await surveyTiles(await ring(4, 8)));
+        if (res.unexplained.length) await fail(`picks that missed with no occluder: ${JSON.stringify(res.unexplained.slice(0, 5))}`);
     }
-    const matches = survey.filter(r => r.hit && r.hit.world[0] === r.t.x && r.hit.world[1] === r.t.y);
-    const misses = survey.filter(r => !matches.includes(r));
-    const unexplained = misses.filter(r => !(r.hit && r.hit.entities.some(e => TALL.has(e))));
-    console.log(`pick: ${matches.length}/${survey.length} tiles around the player pick back to themselves; ` +
-        `${misses.length - unexplained.length} hidden behind a wall/trunk/rock; unexplained: ${JSON.stringify(unexplained.slice(0, 5))}`);
-    // How many tiles are visible depends on the unseeded starting terrain (a
-    // dense wood can hide almost all of them), so the count is only required
-    // to be non-zero; a raycast disagreeing with the scene shows up as an
-    // unexplained miss below.
-    if (matches.length < 1) await fail("no tile around the player picked back to itself");
-    if (unexplained.length) await fail(`picks that missed with no occluder: ${JSON.stringify(unexplained.slice(0, 5))}`);
+    // How many tiles are visible depends on the unseeded starting terrain
+    // (#600), so the count is only required to be non-zero; a raycast that
+    // disagrees with the scene shows up as an unexplained miss above.
+    if (res.matches.length < 1) await fail("no tile within 8 of the player picked back to itself");
 
     // The game must act on the picked tile: hover visible tiles until the
     // game's own status line (WorldScreen.handleMouseOver -> pointed tile)
