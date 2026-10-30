@@ -237,15 +237,24 @@ const FACING_AFTER_W = ["up", "left", "down", "right"];
         }
         return out.sort((a, b) => a.d - b.d);
     }, [NAMES, ["Chicken", "Rabbit", "Deer", "Bear", "Wolf", "Snake"]]);
-    step("hovering");
-    let hovered = null;
-    for (const cand of candidates.filter(c => !shown(c.name)).slice(0, 12)) {
-        const at = await page.evaluate(t => {
+    // Visibility is checked for every candidate (in batches, as in the
+    // survey) before the 12-hover cap: in a wood the nearest candidates are
+    // all under the canopy, and capping first left the few visible tiles
+    // untried (#631: 2 of 48 visible within 3, no hover attempted).
+    step("hovering: finding visible candidates");
+    const unshown = candidates.filter(c => !shown(c.name));
+    const visible = [];
+    for (let i = 0; i < unshown.length; i += 8) {
+        visible.push(...await page.evaluate(batch => batch.map(t => {
             const c = window.__roam3dScene.tileToClient(t.x, t.y);
             const hit = c && window.__roam3dScene.pick(c.x, c.y);
-            return hit && hit.world[0] === t.x && hit.world[1] === t.y ? c : null;
-        }, cand);
-        if (!at) continue;  // hidden behind something from this camera
+            return hit && hit.world[0] === t.x && hit.world[1] === t.y ? { cand: t, at: c } : null;
+        }).filter(Boolean), unshown.slice(i, i + 8)));
+    }
+    console.log(`hover candidates: ${candidates.length}, ${unshown.length} not already on screen, ${visible.length} visible`);
+    step("hovering");
+    let hovered = null;
+    for (const { cand, at } of visible.slice(0, 12)) {
         await page.evaluate(() => { window.__frames.length = 0; });
         await page.mouse.move(at.x, at.y, { steps: 3 });
         const said = await waitFor(page, () => page.evaluate(w =>
