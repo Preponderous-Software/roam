@@ -4,9 +4,9 @@
 
 Roam is a **single-player** game that allows you to explore a procedurally-generated 2D world and interact with your surroundings. There are currently no plans to add multiplayer.
 
-![Roam's experimental 3D view: the follow camera turns a quarter with E, W walks away from the camera, and a click gathers what is under the cursor](pics/roam3d-play.gif)
+![A walk through a freshly generated Roam world in the experimental 3D view: out of the starting home, a full turn of the camera around the player, then on past the home](pics/roam3d-hero.gif)
 
-*The experimental 3D view of the browser game (`/play?view=3d`), recorded from the real build in headless Chrome with software rendering and `gfx=low` (no shadows). The default game is the 2D view; see [Experimental 3D view](#experimental-3d-view).*
+*The experimental 3D view of the browser game (`/play?view=3d`): a scripted walk through a new world, recorded from the real build by [`scripts/capture_3d_hero.sh`](scripts/capture_3d_hero.sh). The default game is the 2D view; see [Experimental 3D view](#experimental-3d-view).*
 
 ## Planning Document
 The planning document can be found [here](./PLANNING.md)
@@ -110,7 +110,7 @@ A `Dockerfile` is included that does both steps and exposes port 8080:
 Saves made in the browser live in that browser's own storage (an IndexedDB database named `roam-saves`), not on the server — clearing site data clears them. Re-run `web/build_zip.py` after changing anything under `src/` or `schemas/`, otherwise the worker keeps unpacking the previously built bundle.
 
 ### Experimental 3D view
-![The starting home in the 3D view: lit 3D terrain with Roam's own sprites, the 2D HUD and hotbar on top](pics/roam3d-play.jpg)
+![The starting home in the 3D view, with the player inside by the doorway: lit 3D terrain and trees with Roam's own sprites, and the 2D HUD and hotbar on top](pics/roam3d-hero.png)
 
 Add `?view=3d` to the address (<http://localhost:8080/play?view=3d>) to play with the world drawn in 3D behind the usual HUD and menus. It is opt-in and experimental: without the parameter the page is the normal 2D game and loads none of the 3D code. Saves are the same either way.
 
