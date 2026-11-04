@@ -75,6 +75,19 @@ def test_check_for_updates_is_a_toggleable_setting(resolve):
     assert screen.config.checkForUpdates is True
 
 
+def test_steam_build_has_no_check_for_updates_setting(resolve, monkeypatch):
+    # Patched first: the setting list is built when the screen is constructed.
+    monkeypatch.setattr(
+        "screen.configScreen.Config.isSteamBuild", staticmethod(lambda: True)
+    )
+
+    screen = resolve(ConfigScreen)
+
+    attributes = [attribute for _, attribute in screen._toggleButtons]
+    assert "checkForUpdates" not in attributes
+    assert attributes[-1] == "dayNightCycleEnabled"
+
+
 def test_scroll_moves_cursor_and_clamps(resolve):
     screen = resolve(ConfigScreen)
 

@@ -188,6 +188,27 @@ On macOS the same spec produces an app bundle (`dist/Roam.app`). Build it, then 
 
 Open `Roam.dmg` and drag `Roam.app` to Applications. User data (saves, settings, screenshots) is kept under `~/Library/Application Support/Roam`.
 
+#### Steam
+A build for Steam comes from the same spec, with one setting:
+
+> ROAM_DISTRIBUTION=steam pyinstaller roam.spec --noconfirm
+
+On Windows, run `set ROAM_DISTRIBUTION=steam` first. Any value other than `steam` stops the build, so a typo cannot produce a Steam upload that behaves like a GitHub build.
+
+The setting differs from a normal build in one way: the game never checks GitHub for updates, because Steam delivers them. The `checkForUpdates` setting is ignored and **Check For Updates** is left out of the Settings screen. Usage reporting is unchanged, so the store page's privacy section needs to mention it (see [Usage reporting](#usage-reporting)).
+
+Upload the `dist/Roam` folder to the Steam depot, not `RoamSetup.exe`: Steam installs the files itself. Windows is the first target and Linux uses the same steps. macOS needs signing and notarization first.
+
+Saves sync through Steam Auto-Cloud by configuration alone, with no code. These are the Auto-Cloud settings for each OS:
+
+Platform | Root | Subdirectory | Pattern
+------------ | ------------- | ------------- | -------------
+Windows | `WinAppDataRoaming` | `Roam/saves` | `*` (recursive)
+macOS | `MacAppSupport` | `Roam/saves` | `*` (recursive)
+Linux | `App Install Directory` | `_internal/saves` | `*` (recursive)
+
+On Linux the saves folder is inside the install directory rather than a per-user folder. It is `_internal/saves` because a packaged game runs from the folder PyInstaller 6 and later keep the bundled files in. Settings are stored there too, in `_internal/config.yml`, which is part of the depot, so a Steam update or a file verification can replace a Linux player's settings. Saves are not in the depot, so updates leave them alone.
+
 ### Where your data is stored
 On Windows and macOS, Roam keeps your user data in a per-user directory so it stays with your account and works even when the game is installed somewhere read-only (`Program Files`, `/Applications`). On other platforms it stays next to the game.
 

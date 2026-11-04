@@ -33,6 +33,20 @@ class Config:
             return "unknown"
 
     @staticmethod
+    def isSteamBuild():
+        # True for a build packaged with ROAM_DISTRIBUTION=steam, which roam.spec
+        # records in a bundled distribution.txt. The file exists only in such a
+        # build, so running from source and the GitHub release builds return
+        # False. This is baked in rather than read from config.yml because
+        # Steam, not the player, is what delivers updates to this build.
+        distributionPath = os.path.join(getBundleDirectory(), "distribution.txt")
+        try:
+            with open(distributionPath, "r", encoding="utf-8") as distributionFile:
+                return distributionFile.read().strip() == "steam"
+        except OSError:
+            return False
+
+    @staticmethod
     def getUserDataDirectory():
         # Writable per-user directory for config and screenshots. On Windows
         # this is %APPDATA%\Roam and on macOS ~/Library/Application Support/Roam,

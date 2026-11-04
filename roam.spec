@@ -18,19 +18,35 @@ else:
     iconPath = os.path.join("src", "media", "icon.ico")
 icon = iconPath if os.path.exists(iconPath) else None
 
+datas = [
+    ("assets", "assets"),
+    ("schemas", "schemas"),
+    ("spectator", "spectator"),
+    (os.path.join("web", "roam3d.js"), "web"),
+    ("config.yml", "."),
+    ("version.txt", "."),
+    (os.path.join("src", "media"), os.path.join("src", "media")),
+]
+
+# ROAM_DISTRIBUTION=steam bakes a distribution.txt into the bundle, which turns
+# off what Steam does itself (see Config.isSteamBuild). A build without it ships
+# no such file, so the GitHub release builds are unchanged. Any other value stops
+# the build: a typo must not produce a Steam upload that checks GitHub for updates.
+distribution = os.environ.get("ROAM_DISTRIBUTION", "").strip().lower()
+if distribution == "steam":
+    distributionPath = os.path.join("build", "distribution.txt")
+    os.makedirs("build", exist_ok=True)
+    with open(distributionPath, "w", encoding="utf-8") as distributionFile:
+        distributionFile.write(distribution)
+    datas.append((distributionPath, "."))
+elif distribution:
+    raise SystemExit("Unknown ROAM_DISTRIBUTION: " + distribution)
+
 a = Analysis(
     [os.path.join("src", "roam.py")],
     pathex=["src", os.path.join("src", "entity")],
     binaries=[],
-    datas=[
-        ("assets", "assets"),
-        ("schemas", "schemas"),
-        ("spectator", "spectator"),
-        (os.path.join("web", "roam3d.js"), "web"),
-        ("config.yml", "."),
-        ("version.txt", "."),
-        (os.path.join("src", "media"), os.path.join("src", "media")),
-    ],
+    datas=datas,
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
