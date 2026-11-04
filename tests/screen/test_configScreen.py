@@ -1,5 +1,3 @@
-from unittest.mock import MagicMock
-
 import pytest
 
 from rendering.inputEvent import EventType, InputEvent
@@ -77,12 +75,13 @@ def test_check_for_updates_is_a_toggleable_setting(resolve):
     assert screen.config.checkForUpdates is True
 
 
-def test_steam_build_has_no_check_for_updates_setting(monkeypatch):
+def test_steam_build_has_no_check_for_updates_setting(resolve, monkeypatch):
+    # Patched first: the setting list is built when the screen is constructed.
     monkeypatch.setattr(
         "screen.configScreen.Config.isSteamBuild", staticmethod(lambda: True)
     )
 
-    screen = ConfigScreen(MagicMock(), MagicMock(), MagicMock(), MagicMock())
+    screen = resolve(ConfigScreen)
 
     attributes = [attribute for _, attribute in screen._toggleButtons]
     assert "checkForUpdates" not in attributes
