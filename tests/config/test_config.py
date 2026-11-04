@@ -107,6 +107,27 @@ def test_get_version_returns_unknown_when_missing(monkeypatch, tmp_path):
     assert Config.getVersion() == "unknown"
 
 
+def test_is_steam_build_when_the_bundle_says_steam(monkeypatch, tmp_path):
+    (tmp_path / "distribution.txt").write_text("steam\n", encoding="utf-8")
+    monkeypatch.setattr("src.config.config.getBundleDirectory", lambda: str(tmp_path))
+    assert Config.isSteamBuild() is True
+
+
+def test_is_not_steam_build_without_a_distribution_file(monkeypatch, tmp_path):
+    monkeypatch.setattr("src.config.config.getBundleDirectory", lambda: str(tmp_path))
+    assert Config.isSteamBuild() is False
+
+
+def test_is_not_steam_build_for_another_distribution(monkeypatch, tmp_path):
+    (tmp_path / "distribution.txt").write_text("github", encoding="utf-8")
+    monkeypatch.setattr("src.config.config.getBundleDirectory", lambda: str(tmp_path))
+    assert Config.isSteamBuild() is False
+
+
+def test_running_from_source_is_not_a_steam_build():
+    assert Config.isSteamBuild() is False
+
+
 def test_user_data_directory_is_bundle_dir_from_source(monkeypatch):
     monkeypatch.setattr(os, "name", "posix")
     monkeypatch.setattr(sys, "platform", "linux")

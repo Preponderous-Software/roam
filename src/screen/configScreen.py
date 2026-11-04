@@ -42,8 +42,10 @@ class ConfigScreen(Screen):
             ("Limit Speed", "limitTps"),
             ("Pushable Stone", "pushableStone"),
             ("Day/Night Cycle", "dayNightCycleEnabled"),
-            ("Check For Updates", "checkForUpdates"),
         ]
+        # Steam updates a Steam build, so this setting would do nothing there.
+        if not Config.isSteamBuild():
+            self._toggleButtons.append(("Check For Updates", "checkForUpdates"))
 
     def handleKeyDownEvent(self, key):
         n = len(self._toggleButtons)

@@ -126,6 +126,29 @@ def test_async_check_is_noop_when_disabled():
     assert checker.isUpdateAvailable() is False
 
 
+def test_async_check_never_starts_in_a_steam_build():
+    # Steam delivers updates, so even checkForUpdates: true must not poll GitHub.
+    checker = _checker(checkForUpdates=True)
+    with patch(
+        "update.updateChecker.Config.isSteamBuild", return_value=True
+    ), patch.object(checker, "_fetchLatestVersion") as fetch:
+        checker.checkForUpdatesAsync()
+    fetch.assert_not_called()
+    assert checker._checkStarted is False
+
+
+def test_async_check_still_runs_outside_a_steam_build():
+    checker = _checker(checkForUpdates=True)
+    with patch(
+        "update.updateChecker.Config.isSteamBuild", return_value=False
+    ), patch.object(checker, "_checkForUpdates"), patch(
+        "update.updateChecker.threading.Thread"
+    ) as thread:
+        checker.checkForUpdatesAsync()
+    thread.return_value.start.assert_called_once_with()
+    assert checker._checkStarted is True
+
+
 def test_async_check_survives_runtime_error_on_thread_start():
     # Pyodide/WASM can't spawn threads; thread.start() raises RuntimeError.
     # checkForUpdatesAsync must not propagate the error so the main menu loads.

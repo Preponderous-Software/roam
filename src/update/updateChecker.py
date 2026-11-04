@@ -36,11 +36,16 @@ class UpdateChecker:
         return self._updateAvailable
 
     def checkForUpdatesAsync(self):
-        # Kick off a single background check. No-op when disabled in config or
-        # already started. The game is otherwise offline, so this must never
-        # block the main thread — the fetch runs on a daemon thread and fails
-        # silently if there is no network.
-        if self._checkStarted or not self.config.checkForUpdates:
+        # Kick off a single background check. No-op when disabled in config,
+        # already started, or in a Steam build, which Steam itself updates. The
+        # game is otherwise offline, so this must never block the main thread —
+        # the fetch runs on a daemon thread and fails silently if there is no
+        # network.
+        if (
+            self._checkStarted
+            or not self.config.checkForUpdates
+            or Config.isSteamBuild()
+        ):
             return
         self._checkStarted = True
         try:
