@@ -299,6 +299,20 @@ def test_installation_id_lives_under_xdg_data_home_on_linux(monkeypatch, tmp_pat
     )
 
 
+def test_installation_id_is_in_the_same_place_for_a_packaged_linux_build(
+    monkeypatch, tmp_path
+):
+    # A packaged Linux build's user data directory is the XDG directory the ID
+    # already used, so an update does not give the installation a new ID.
+    monkeypatch.setattr(os, "name", "posix")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path / "bundle"), raising=False)
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))
+    assert installIdFile() == os.path.join(
+        str(tmp_path / "xdg"), "roam", "trace-install-id"
+    )
+
+
 def test_installation_id_lives_in_roams_own_user_data_directory_on_macos(
     monkeypatch, tmp_path
 ):
