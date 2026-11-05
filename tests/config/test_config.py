@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -154,6 +155,177 @@ def test_user_data_directory_falls_back_when_appdata_missing(monkeypatch):
     monkeypatch.setattr(os, "name", "nt")
     monkeypatch.delenv("APPDATA", raising=False)
     assert Config.getUserDataDirectory() == getBundleDirectory()
+
+
+@pytest.fixture
+def packaged_linux(monkeypatch, tmp_path):
+    # A frozen Linux build: returns the bundle (install) directory, and points
+    # the XDG data directory into this test's tmp_path.
+    bundle = tmp_path / "install" / "_internal"
+    bundle.mkdir(parents=True)
+    monkeypatch.setattr(os, "name", "posix")
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", str(bundle), raising=False)
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))
+    monkeypatch.delenv("ROAM_SAVE_DIR", raising=False)
+    return bundle
+
+
+def _writeLegacySave(bundle):
+    room = bundle / "saves" / "myworld" / "rooms" / "room_0_0.json"
+    room.parent.mkdir(parents=True)
+    room.write_text('{"x": 0}', encoding="utf-8")
+    return room
+
+
+def test_packaged_linux_keeps_user_data_in_xdg_data_home(packaged_linux, tmp_path):
+    expected = str(tmp_path / "xdg" / "roam")
+    assert Config.getUserDataDirectory() == expected
+    assert Config.getSavesBaseDirectory() == os.path.join(expected, "saves")
+
+
+def test_packaged_linux_defaults_to_local_share(packaged_linux, monkeypatch, tmp_path):
+    monkeypatch.delenv("XDG_DATA_HOME")
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))  # expanduser on Windows
+    assert Config.getUserDataDirectory() == os.path.join(
+        str(tmp_path / "home"), ".local", "share", "roam"
+    )
+
+
+def test_xdg_data_directory_ignores_a_relative_xdg_data_home(monkeypatch, tmp_path):
+    monkeypatch.setenv("XDG_DATA_HOME", "relative/path")
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))  # expanduser on Windows
+    assert Config.getXdgDataDirectory() == os.path.join(
+        str(tmp_path / "home"), ".local", "share", "roam"
+    )
+
+
+def test_packaged_linux_config_path_is_outside_the_install_folder(packaged_linux):
+    # getConfigFilePath itself is patched by the autouse isolation fixture, so
+    # the path it would return is rebuilt from the user data directory here.
+    userConfig = os.path.join(Config.getUserDataDirectory(), "config.yml")
+    bundled = Config.getBundledConfigFilePath()
+    assert bundled == os.path.join(str(packaged_linux), "config.yml")
+    assert not userConfig.startswith(str(packaged_linux))
+
+
+def test_packaged_linux_user_config_is_seeded_from_the_install_folder(
+    packaged_linux, monkeypatch
+):
+    # An in-place update leaves the player's edited config.yml in the bundle,
+    # so seeding from it carries their settings over.
+    (packaged_linux / "config.yml").write_text("debug: false\n", encoding="utf-8")
+    userConfig = os.path.join(Config.getUserDataDirectory(), "config.yml")
+    monkeypatch.setattr(Config, "getConfigFilePath", staticmethod(lambda: userConfig))
+
+    Config.ensureUserConfigExists()
+
+    with open(userConfig, encoding="utf-8") as seeded:
+        assert seeded.read() == "debug: false\n"
+
+
+def test_migrate_copies_install_folder_saves_to_the_user_directory(packaged_linux):
+    legacyRoom = _writeLegacySave(packaged_linux)
+
+    Config.migrateLegacySaves()
+
+    migrated = os.path.join(
+        Config.getSavesBaseDirectory(), "myworld", "rooms", "room_0_0.json"
+    )
+    with open(migrated, encoding="utf-8") as room:
+        assert room.read() == '{"x": 0}'
+    assert legacyRoom.exists()
+    assert not os.path.exists(Config.getSavesBaseDirectory() + ".migrating")
+
+
+def test_constructing_config_migrates_saves(packaged_linux):
+    _writeLegacySave(packaged_linux)
+
+    config = Config()
+
+    assert os.path.isdir(os.path.join(Config.getSavesBaseDirectory(), "myworld"))
+    assert config.pathToSaveDirectory == Config.getDefaultSaveDirectory()
+
+
+def test_migrate_does_nothing_once_user_saves_exist(packaged_linux):
+    # A world the player deleted from the per-user folder must not come back.
+    _writeLegacySave(packaged_linux)
+    userSaves = Config.getSavesBaseDirectory()
+    os.makedirs(userSaves)
+
+    Config.migrateLegacySaves()
+
+    assert os.listdir(userSaves) == []
+
+
+def test_migrate_does_nothing_without_legacy_saves(packaged_linux, monkeypatch):
+    copied = []
+    monkeypatch.setattr(shutil, "copytree", lambda *args: copied.append(args))
+
+    Config.migrateLegacySaves()
+
+    assert copied == []
+    assert not os.path.exists(Config.getSavesBaseDirectory())
+
+
+def test_migrate_respects_roam_save_dir(packaged_linux, monkeypatch, tmp_path):
+    _writeLegacySave(packaged_linux)
+    target = tmp_path / "volume"
+    monkeypatch.setenv("ROAM_SAVE_DIR", str(target))
+
+    Config.migrateLegacySaves()
+
+    assert not target.exists()
+
+
+def test_migrate_does_nothing_from_source(monkeypatch, tmp_path):
+    monkeypatch.setattr(os, "name", "posix")
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr("src.config.config.getBundleDirectory", lambda: str(tmp_path))
+    monkeypatch.setattr(
+        Config, "getSavesBaseDirectory", staticmethod(lambda: str(tmp_path / "new"))
+    )
+    (tmp_path / "saves").mkdir()
+    copied = []
+    monkeypatch.setattr(shutil, "copytree", lambda *args: copied.append(args))
+
+    Config.migrateLegacySaves()
+
+    assert copied == []
+
+
+def test_migrate_replaces_a_leftover_staging_folder(packaged_linux):
+    # An interrupted earlier copy must not end up inside the saves folder.
+    _writeLegacySave(packaged_linux)
+    leftover = Config.getSavesBaseDirectory() + ".migrating"
+    os.makedirs(os.path.join(leftover, "partial"))
+
+    Config.migrateLegacySaves()
+
+    userSaves = Config.getSavesBaseDirectory()
+    assert os.listdir(userSaves) == ["myworld"]
+    assert not os.path.exists(leftover)
+
+
+def test_migrate_failure_leaves_originals_and_no_partial_copy(
+    packaged_linux, monkeypatch
+):
+    legacyRoom = _writeLegacySave(packaged_linux)
+
+    def failingCopy(source, destination):
+        os.makedirs(os.path.join(destination, "partial"))
+        raise OSError("disk full")
+
+    monkeypatch.setattr(shutil, "copytree", failingCopy)
+
+    Config.migrateLegacySaves()
+
+    assert legacyRoom.exists()
+    assert not os.path.exists(Config.getSavesBaseDirectory())
+    assert not os.path.exists(Config.getSavesBaseDirectory() + ".migrating")
 
 
 def test_ensure_user_config_seeds_from_bundled(monkeypatch, tmp_path):

@@ -205,20 +205,23 @@ Platform | Root | Subdirectory | Pattern
 ------------ | ------------- | ------------- | -------------
 Windows | `WinAppDataRoaming` | `Roam/saves` | `*` (recursive)
 macOS | `MacAppSupport` | `Roam/saves` | `*` (recursive)
-Linux | `App Install Directory` | `_internal/saves` | `*` (recursive)
+Linux | `LinuxXdgDataHome` | `roam/saves` | `*` (recursive)
 
-On Linux the saves folder is inside the install directory rather than a per-user folder. It is `_internal/saves` because a packaged game runs from the folder PyInstaller 6 and later keep the bundled files in. Settings are stored there too, in `_internal/config.yml`, which is part of the depot, so a Steam update or a file verification can replace a Linux player's settings. Saves are not in the depot, so updates leave them alone.
+Saves and settings live outside the install folder on every OS, so a Steam update or a file verification cannot replace them.
 
 ### Where your data is stored
-On Windows and macOS, Roam keeps your user data in a per-user directory so it stays with your account and works even when the game is installed somewhere read-only (`Program Files`, `/Applications`). On other platforms it stays next to the game.
+Installed and packaged builds keep your user data in a per-user directory, so it stays with your account, works even when the game is installed somewhere read-only (`Program Files`, `/Applications`), and is left alone by updates. Running from source on Linux or another platform, it stays next to the game.
 
 Platform | Saves | Settings | Screenshots
 ------------ | ------------- | ------------- | -------------
 Windows | `%APPDATA%\Roam\saves` | `%APPDATA%\Roam\config.yml` | `%APPDATA%\Roam\screenshots`
 macOS | `~/Library/Application Support/Roam/saves` | `~/Library/Application Support/Roam/config.yml` | `~/Library/Application Support/Roam/screenshots`
-Linux / other | `saves/` | `config.yml` | `screenshots/`
+Linux, packaged | `~/.local/share/roam/saves` | `~/.local/share/roam/config.yml` | `~/.local/share/roam/screenshots`
+Linux / other, from source | `saves/` | `config.yml` | `screenshots/`
 
-`%APPDATA%` is typically `C:\Users\<you>\AppData\Roaming`. The settings file is seeded from the shipped defaults the first time it is needed, so the version in the install directory is left untouched.
+`%APPDATA%` is typically `C:\Users\<you>\AppData\Roaming`. On Linux, `$XDG_DATA_HOME/roam` is used instead of `~/.local/share/roam` when `XDG_DATA_HOME` is set. The settings file is seeded from the shipped defaults the first time it is needed, so the version in the install directory is left untouched.
+
+Packaged Linux builds used to keep saves and settings in the install folder (`_internal/`). The first launch of a newer build copies `_internal/saves` to the new location and seeds the settings from `_internal/config.yml`, so existing worlds and settings carry over if those files are still there. The originals are left in place and can be deleted afterwards. Screenshots are not copied.
 
 You can override the save location by setting `pathToSaveDirectory` in `config.yml`, or the whole saves directory by setting the `ROAM_SAVE_DIR` environment variable, which takes precedence over both `pathToSaveDirectory` and the table above. `ROAM_SAVE_DIR` applies to a server-side run of the game; saves made in the [browser build](#play-in-a-browser-from-source) are held by the browser, so it has no effect there.
 

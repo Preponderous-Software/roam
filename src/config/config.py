@@ -4,7 +4,7 @@ import os
 import shutil
 import sys
 
-from appPaths import getBundleDirectory
+from appPaths import getBundleDirectory, isFrozen
 from gameLogging.logger import getLogger
 from rendering.displayInfo import getScreenSize
 
@@ -47,12 +47,22 @@ class Config:
             return False
 
     @staticmethod
+    def getXdgDataDirectory():
+        # $XDG_DATA_HOME/roam, or ~/.local/share/roam. The XDG base directory
+        # spec says to ignore a relative XDG_DATA_HOME.
+        base = os.environ.get("XDG_DATA_HOME", "").strip()
+        if not os.path.isabs(base):
+            base = os.path.join(os.path.expanduser("~"), ".local", "share")
+        return os.path.join(base, "roam")
+
+    @staticmethod
     def getUserDataDirectory():
         # Writable per-user directory for config and screenshots. On Windows
-        # this is %APPDATA%\Roam and on macOS ~/Library/Application Support/Roam,
-        # so writes succeed even when the game is installed to a read-only
-        # location (Program Files, /Applications). Other platforms use the
-        # repository/bundle root (the current from-source behavior). (Saves have
+        # this is %APPDATA%\Roam, on macOS ~/Library/Application Support/Roam
+        # and in a packaged Linux build the XDG data directory, so writes
+        # succeed even when the game is installed to a read-only location
+        # (Program Files, /Applications) and an update cannot replace them.
+        # Running from source elsewhere uses the repository root. (Saves have
         # their own getSavesBaseDirectory, which resolves the same way.)
         if os.name == "nt":
             appData = os.environ.get("APPDATA")
@@ -62,6 +72,8 @@ class Config:
             return os.path.join(
                 os.path.expanduser("~"), "Library", "Application Support", "Roam"
             )
+        elif isFrozen():
+            return Config.getXdgDataDirectory()
         return getBundleDirectory()
 
     @staticmethod
@@ -99,15 +111,55 @@ class Config:
         envDir = os.environ.get("ROAM_SAVE_DIR")
         if envDir:
             return envDir
-        # On Windows store under %APPDATA%; on macOS under ~/Library/Application
-        # Support/Roam/saves; everywhere else use the repo-relative "saves" dir.
+        # On Windows store under %APPDATA%; on macOS and in a packaged Linux
+        # build under the user data directory; everywhere else use the
+        # repo-relative "saves" dir.
         if os.name == "nt":
             appData = os.environ.get("APPDATA")
             if appData:
                 return os.path.join(appData, "Roam", "saves")
-        elif sys.platform == "darwin":
+        elif sys.platform == "darwin" or isFrozen():
             return os.path.join(Config.getUserDataDirectory(), "saves")
         return "saves"
+
+    @staticmethod
+    def migrateLegacySaves():
+        # Packaged Linux builds used to keep saves in the install folder. Copy
+        # them to the per-user location the first time it is needed, so existing
+        # worlds are still listed. The copy is staged and renamed so an
+        # interrupted run retries instead of leaving part of a save behind, and
+        # the originals stay where they are. Once the per-user folder exists
+        # this does nothing, so a world deleted there does not come back.
+        if (
+            not isFrozen()
+            or os.name == "nt"
+            or sys.platform == "darwin"
+            or os.environ.get("ROAM_SAVE_DIR")
+        ):
+            return
+        legacySaves = os.path.join(getBundleDirectory(), "saves")
+        userSaves = Config.getSavesBaseDirectory()
+        if not os.path.isdir(legacySaves) or os.path.exists(userSaves):
+            return
+        staging = userSaves + ".migrating"
+        try:
+            shutil.rmtree(staging, ignore_errors=True)
+            shutil.copytree(legacySaves, staging)
+            os.rename(staging, userSaves)
+        except OSError as e:
+            shutil.rmtree(staging, ignore_errors=True)
+            _logger.warning(
+                "failed to copy saves from the install folder",
+                error=str(e),
+                legacySaves=legacySaves,
+                userSaves=userSaves,
+            )
+            return
+        _logger.info(
+            "copied saves from the install folder",
+            legacySaves=legacySaves,
+            userSaves=userSaves,
+        )
 
     @staticmethod
     def getDefaultSaveDirectory():
@@ -240,6 +292,7 @@ class Config:
 
     def __init__(self):
         self.ensureUserConfigExists()
+        self.migrateLegacySaves()
         configValues = self.readConfigFile()
         # Config is constructed before the frontend creates the window, so the
         # default window size is computed from the OS screen size via the

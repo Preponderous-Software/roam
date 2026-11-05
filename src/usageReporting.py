@@ -96,19 +96,16 @@ def isReportingActive(config):
 def installIdFile():
     """Where the client keeps this installation's random ID: Roam's own
     per-user data directory where it has one (%APPDATA%\\Roam on Windows,
-    ~/Library/Application Support/Roam on macOS, next to the user config.yml),
-    otherwise $XDG_DATA_HOME/roam (or ~/.local/share/roam) — on Linux the
-    user data directory is the repository/bundle root, which is neither
-    per-user nor, for a frozen build, kept between runs. The client only
-    reads or creates the file when reporting is on; deleting it resets the
-    ID."""
+    ~/Library/Application Support/Roam on macOS, $XDG_DATA_HOME/roam or
+    ~/.local/share/roam in a packaged Linux build, next to the user
+    config.yml), otherwise that same XDG directory — running from source on
+    Linux the user data directory is the repository root, which is not
+    per-user. The client only reads or creates the file when reporting is on;
+    deleting it resets the ID."""
     userDataDirectory = Config.getUserDataDirectory()
     if os.path.normpath(userDataDirectory) != os.path.normpath(getBundleDirectory()):
         return os.path.join(userDataDirectory, INSTALL_ID_FILE_NAME)
-    base = os.environ.get("XDG_DATA_HOME", "").strip() or os.path.join(
-        os.path.expanduser("~"), ".local", "share"
-    )
-    return os.path.join(base, APPLICATION, INSTALL_ID_FILE_NAME)
+    return os.path.join(Config.getXdgDataDirectory(), INSTALL_ID_FILE_NAME)
 
 
 def createTraceClient(config):
