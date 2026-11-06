@@ -7,8 +7,8 @@
 //             the player face the grid direction "away from the camera"
 //             (read back from the worldview messages).
 //   Picking:  the page's raycast at each tile within 3 of the player, at its projected centre
-//             returns that tile (or, when hidden, the wall/trunk/rock in
-//             front of it), and hovering a tile makes the game itself (the
+//             returns that tile (or, when hidden, the wall/trunk/rock or
+//             higher ground in front of it), and hovering a tile makes the game itself (the
 //             2D status line in its frames) name what is on it, which is only
 //             possible if the pointed tile reached WorldScreen.
 //   Fallback: under CI's software WebGL the "switch to 2D?" prompt appears
@@ -153,7 +153,11 @@ const FACING_AFTER_W = ["up", "left", "down", "right"];
     // --- picking -------------------------------------------------------------
     // For every tile around the player, pick at its projected centre. A tile
     // whose top is visible must pick back to itself; one hidden behind a wall,
-    // trunk or rock legitimately picks the occluder.
+    // trunk or rock legitimately picks the occluder, and so does one hidden
+    // behind higher ground (#638): the camera looks down from the south, so a
+    // hillside rising towards it covers the tile behind it. A hit on a tile
+    // with neither fails, so a side face resolved to the tile in front of it
+    // on level ground still shows up.
     const NAMES = { Grass: "Grass", WoodFloor: "Wood Floor", Stone: "Stone", OakWood: "Oak Wood",
                     Bed: "Bed", Torch: "Torch", Leaves: "Leaves", Apple: "Apple", CaveFloor: "Cave Floor" };
     const TALL = new Set(["OakWood", "JungleWood", "Stone", "CoalOre", "IronOre", "GoldOre", "Leaves"]);
@@ -180,7 +184,7 @@ const FACING_AFTER_W = ["up", "left", "down", "right"];
                 const c = window.__roam3dScene.tileToClient(t.x, t.y);
                 if (!c) return null;
                 const hit = window.__roam3dScene.pick(c.x, c.y);
-                return { t, c, hit: hit ? { world: hit.world, entities: hit.entities } : null };
+                return { t, c, hit: hit ? { world: hit.world, entities: hit.entities, ground: hit.ground } : null };
             }).filter(Boolean), tiles.slice(i, i + 8)));
         }
         return out;
@@ -189,11 +193,16 @@ const FACING_AFTER_W = ["up", "left", "down", "right"];
     const report = (label, survey) => {
         const matches = survey.filter(isMatch);
         const misses = survey.filter(r => !isMatch(r));
-        const unexplained = misses.filter(r => !(r.hit && r.hit.entities.some(e => TALL.has(e))));
+        const isTall = r => r.hit.entities.some(e => TALL.has(e));
+        const isHigherGround = r => r.hit.ground > r.c.ground;
+        const unexplained = misses.filter(r => !(r.hit && (isTall(r) || isHigherGround(r))));
         const occluders = {};
-        for (const r of misses) if (r.hit) for (const e of r.hit.entities.filter(e => TALL.has(e))) occluders[e] = (occluders[e] || 0) + 1;
+        for (const r of misses) if (r.hit) {
+            for (const e of r.hit.entities.filter(e => TALL.has(e))) occluders[e] = (occluders[e] || 0) + 1;
+            if (!isTall(r) && isHigherGround(r)) occluders["higher ground"] = (occluders["higher ground"] || 0) + 1;
+        }
         console.log(`pick (${label}): ${matches.length}/${survey.length} tiles pick back to themselves; ` +
-            `${misses.length - unexplained.length} hidden behind a wall/trunk/rock/canopy ${JSON.stringify(occluders)}; ` +
+            `${misses.length - unexplained.length} hidden behind a wall/trunk/rock/canopy/hillside ${JSON.stringify(occluders)}; ` +
             `unexplained: ${JSON.stringify(unexplained.slice(0, 5))}`);
         return { matches, unexplained };
     };
