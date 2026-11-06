@@ -407,7 +407,8 @@
     }
 
     const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
-    // Returns { room, tile: [c, r], entities } under a client point, or null.
+    // Returns { room, tile: [c, r], world: [x, y, z], entities, ground } under a
+    // client point, or null. ground is the height of that tile's ground.
     function pick(clientX, clientY) {
       if (!snap) return null;
       const rect = canvas.getBoundingClientRect();
@@ -421,12 +422,13 @@
       const rx = Math.floor(X / G), ry = Math.floor(Z / G), c = X - rx * G, r = Z - ry * G;
       const ch = visible.find(v => v.room.x === rx && v.room.y === ry);
       if (!ch) return null;
-      return { room: ch.room, tile: [c, r], world: [X, Z, ch.room.z], entities: names(ch.room.tiles[r * G + c]) };
+      return { room: ch.room, tile: [c, r], world: [X, Z, ch.room.z], entities: names(ch.room.tiles[r * G + c]), ground: ch.heights[r * G + c] };
     }
 
     // Screen point (client coordinates) of the centre of a world tile's top
     // face on the level in view, or null when it is not in a loaded room.
-    // Used by tests to check that picking there returns that tile.
+    // Used by tests to check that picking there returns that tile; ground is
+    // the height of the tile's ground, as in pick.
     const _proj = new THREE.Vector3();
     function tileToClient(worldX, worldY) {
       if (!snap) return null;
@@ -436,7 +438,7 @@
       const i = (worldY - ry * G) * G + (worldX - rx * G);
       _proj.set(worldX + 0.5, ch.heights[i] + ch.group.position.y, worldY + 0.5).project(camera);
       const rect = canvas.getBoundingClientRect();
-      return { x: rect.left + (_proj.x + 1) / 2 * rect.width, y: rect.top + (1 - _proj.y) / 2 * rect.height };
+      return { x: rect.left + (_proj.x + 1) / 2 * rect.width, y: rect.top + (1 - _proj.y) / 2 * rect.height, ground: ch.heights[i] };
     }
 
     // ---- follow camera (the game's 3D view; RFC 0021) ----------------------
