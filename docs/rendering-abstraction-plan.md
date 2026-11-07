@@ -9,7 +9,9 @@
 > Status: **text frontend shipped** (PR #477). The Renderer / InputSource / Clock
 > seam described here is fully implemented; pygame and a terminal TUI backend
 > both run behind it. Launch with `python3 src/roam.py --text` to use the TUI.
-> Web frontend remains follow-on work.
+> The browser build also runs behind it: `web/pyodide_main.py` drives
+> `WebRenderer` and `WebInputSource` inside Pyodide. The server-side
+> `WebFrontend` (`--web`) is broken; see issue #550.
 
 ## 1. Goal
 
@@ -25,7 +27,7 @@ set of backend-neutral value types. Game logic should never import `pygame`.
 
 This was originally scoped as a **refactor** — the deliverable was the seam
 and the pygame implementation behind it. The text frontend has since been
-built on that seam (PR #477). A web frontend remains follow-on work.
+built on that seam (PR #477), and so has the browser build.
 
 ## 2. Current state (measured, not estimated)
 
