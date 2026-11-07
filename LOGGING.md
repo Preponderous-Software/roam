@@ -13,10 +13,11 @@ Logging behaviour is controlled by three environment variables:
 | `LOG_FORMAT` | `pretty` | Output format (`pretty` or `json`) |
 | `LOG_FILE` | *(see below)* | Path to a log file; set to empty string to force stderr |
 
-`LOG_FILE` defaults to `roam.log` when the game is started with `--text` (TUI
-mode) so that log lines never corrupt the terminal display.  For the graphical
-frontend the default is empty (logs go to stderr).  Set `LOG_FILE=myfile.log`
-to override, or `LOG_FILE=` to suppress file logging even in text mode.
+`LOG_FILE` defaults to `roam.log` in text / TUI mode, whether that was asked for
+with `--text` or selected automatically because no display is available, so
+that log lines never corrupt the terminal display.  For the graphical frontend
+the default is empty (logs go to stderr).  Set `LOG_FILE=myfile.log` to
+override, or `LOG_FILE=` to suppress file logging even in text mode.
 
 ### Setting environment variables by platform
 
@@ -52,7 +53,7 @@ python src\roam.py
 |---|---|---|
 | `DEBUG` | 10 | Room generation decisions, movement/collision, inventory ops, AI behaviour |
 | `INFO` | 20 | Game start/stop, room transitions, save/load, major state changes |
-| `WARN` | 30 | Slow ticks, missing assets with fallback, recoverable save issues |
+| `WARN` or `WARNING` | 30 | Slow ticks, missing assets with fallback, recoverable save issues |
 | `ERROR` | 40 | File I/O failures, deserialization errors, background thread exceptions |
 | `CRITICAL` | 50 | Missing asset dirs, pygame init failure, unrecoverable corruption |
 

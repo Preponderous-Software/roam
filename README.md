@@ -47,6 +47,8 @@ Right Mouse (inventory slot) | Select inventory slot (inventory screen)
 > **Tip:** On keyboards without F-keys (e.g. Android / Userland), use **H** for the help overlay and **`\`** for debug info.
 >
 > **Tip:** In text / terminal mode (`--text`), a terminal can't detect held keys, so use the toggles **R** (run) and **Z** (crouch) instead of holding Shift / Ctrl. The active state is shown in the status bar. A terminal also can't send Print Screen — use **P** to save a `.txt` screenshot instead, and **`,`** / **`.`** / **`/`** in place of Page Up / Page Down / Home to page the minimap between cave levels.
+>
+> **Tip:** CPC mode is driven by Claude. It needs the `anthropic` package (`pip install anthropic`, which `requirements.txt` leaves out because the game runs without it) and the `ANTHROPIC_API_KEY` environment variable. Without either one, CPCs fall back to the built-in NPC behaviour.
 
 ## Download & Install (recommended)
 The easiest way to play Roam — no Python and no command line. Grab the latest build from the [Releases page](https://github.com/Preponderous-Software/roam/releases):
@@ -89,7 +91,7 @@ Option | Effect
 Any other argument is rejected with an error and a non-zero exit status.
 
 ## Run Script (Linux Only)
-There is also a run.sh script you can execute if you're on linux which will automatically attempt to install the dependencies for you.
+There is also a run.sh script you can execute if you're on linux. It runs `git pull`, installs the dependencies, runs the test suite and then starts the game, with the game's output redirected to `output.txt`.
 
 ## Play in a Browser (from source)
 Roam also runs in a browser. The Python game itself is executed client-side by [Pyodide](https://pyodide.org/) inside a Web Worker, so the server only ever hands out static files.
@@ -150,7 +152,7 @@ A running desktop or `--text` game can be watched in 3D from a browser on the sa
 It only listens on `127.0.0.1`, so other machines cannot reach it. The game does no extra work unless the page is open. More detail is in [`docs/spectator.md`](docs/spectator.md).
 
 ## Windows setup script (run from source)
-If you're [running from source](#run-from-source-for-developers) on Windows, `install.ps1` is a setup *script* — the from-source counterpart to `run.sh`. It checks that Python and pip are available, installs the dependencies, and creates Desktop and Start Menu shortcuts so you can launch the game without using the command line. (For a normal install, use the `RoamSetup.exe` **installer** from [Download & Install](#download--install-recommended) instead — it needs no Python.)
+If you're [running from source](#run-from-source-for-developers) on Windows, `install.ps1` is a setup *script* — the from-source counterpart to `run.sh`. It checks that Python and pip are available, installs the dependencies, and creates Desktop and Start Menu shortcuts so you can launch the game without using the command line. (For a normal install, use the `Roam-<version>-Setup.exe` **installer** from [Download & Install](#download--install-recommended) instead — it needs no Python.)
 
 1. [Clone or download](#clone) the repository.
 2. Right-click `install.ps1` and choose **Run with PowerShell**.
@@ -163,7 +165,7 @@ If Python is not installed, the wizard opens the [Python download page](https://
 To undo what the wizard created (the Desktop/Start Menu shortcuts and the generated `icon.ico`), run it with `-Uninstall`:
 > powershell -ExecutionPolicy Bypass -File .\install.ps1 -Uninstall
 
-By default your saves/settings/screenshots under `%APPDATA%\Roam` are kept; you'll be asked whether to delete them too, or pass `-RemoveData` to delete them without asking. It does not touch the cloned repository or your Python installation. (The `RoamSetup.exe` installer registers its own uninstaller in Add/Remove Programs instead — this `-Uninstall` flag is only for the script-based wizard above.)
+By default your saves/settings/screenshots under `%APPDATA%\Roam` are kept; you'll be asked whether to delete them too, or pass `-RemoveData` to delete them without asking. It does not touch the cloned repository or your Python installation. (The `Roam-<version>-Setup.exe` installer registers its own uninstaller in Add/Remove Programs instead — this `-Uninstall` flag is only for the script-based wizard above.)
 
 ### Building a standalone executable (advanced)
 A self-contained Windows build that bundles Python and all dependencies can be produced with [PyInstaller](https://pyinstaller.org/):
@@ -223,7 +225,7 @@ Linux / other, from source | `saves/` | `config.yml` | `screenshots/`
 
 Packaged Linux builds used to keep saves and settings in the install folder (`_internal/`). The first launch of a newer build copies `_internal/saves` to the new location and seeds the settings from `_internal/config.yml`, so existing worlds and settings carry over if those files are still there. The originals are left in place and can be deleted afterwards. Screenshots are not copied.
 
-You can override the save location by setting `pathToSaveDirectory` in `config.yml`, or the whole saves directory by setting the `ROAM_SAVE_DIR` environment variable, which takes precedence over both `pathToSaveDirectory` and the table above. `ROAM_SAVE_DIR` applies to a server-side run of the game; saves made in the [browser build](#play-in-a-browser-from-source) are held by the browser, so it has no effect there.
+To keep saves somewhere else, set the `ROAM_SAVE_DIR` environment variable to the folder that should hold them. It replaces the Saves column of the table above. `pathToSaveDirectory` in `config.yml` currently has no effect, because the save selection screen always opens a world from that folder (#644). `ROAM_SAVE_DIR` applies to a desktop or `--text` run of the game; saves made in the [browser build](#play-in-a-browser-from-source) are held by the browser, so it has no effect there.
 
 ## Usage reporting
 Usage reporting is on by default: Roam sends its name (`roam`), the game version and two events to [trace](https://danielstephenson.dev/usage-reporting) at `https://trace.danielstephenson.dev`, so the number of installations actually in use can be seen — a `startup` event on launch and a `world-loaded` event each time a save is opened. Each event also carries a random installation ID (the tag `install`) so installations can be counted rather than events. Never a username, machine name, IP address, path or save name; nothing about your saves' contents. The request is made on a background thread, never blocks or interrupts the game, and is dropped if the service cannot be reached.

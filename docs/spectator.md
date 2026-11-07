@@ -33,10 +33,10 @@ jsDelivr, so the browser needs an internet connection the first time.
   game load or generate a room.
 - The level the player is on: entering a cave switches the view to that cave
   level.
-- Each room's biome is the generator's room type when the game still knows
-  it, otherwise it is inferred from the room's contents (room types are not
-  saved). On a heavily changed world the inferred biome, and so the terrain
-  height, can change; this is cosmetic only.
+- Each room's biome is its room type, which is saved with the room. A room
+  saved before room types were recorded has none, so its biome is inferred
+  from its contents. If such a room is heavily changed, the inferred biome,
+  and so the terrain height, can change; this is cosmetic only.
 - Hover (or tap) a tile to see its room, biome, tile and entity stack.
 
 The scene itself is `web/roam3d.js`, which the spectator shares with the browser game's opt-in 3D view (`/play?view=3d`), so the two cannot drift apart.
