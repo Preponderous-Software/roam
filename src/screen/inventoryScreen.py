@@ -434,25 +434,18 @@ class InventoryScreen(Screen):
         if not recipe.canCraft(self.inventory):
             self.status.set("Not enough materials")
             return
-        # Pre-validate capacity for all result items
-        availableSpace = 0
-        probe = recipe.getResultClass()()
-        probeName = probe.getName()
-        for slot in self.inventory.getInventorySlots():
-            if slot.isEmpty():
-                availableSpace += slot.getMaxStackSize()
-            elif slot.getContents()[0].getName() == probeName:
-                availableSpace += slot.getMaxStackSize() - slot.getNumItems()
-        if availableSpace < recipe.getResultCount():
-            self.status.set("Inventory full")
-            return
-        results = recipe.craft(self.inventory)
-        if results is not None:
-            for result in results:
-                if not self.inventory.placeIntoFirstAvailableInventorySlot(result):
-                    self.status.set("Inventory full while placing crafted items")
-                    return
-            self.status.set("Crafted " + recipe.getName())
+        # Craft as a transaction: consume the ingredients first so the space
+        # they free counts as room for the result, and put every slot back
+        # exactly as it was if any result does not fit.
+        slots = self.inventory.getInventorySlots()
+        snapshot = [list(slot.getContents()) for slot in slots]
+        for result in recipe.craft(self.inventory):
+            if not self.inventory.placeIntoFirstAvailableInventorySlot(result):
+                for slot, contents in zip(slots, snapshot):
+                    slot.setContents(contents)
+                self.status.set("Inventory full")
+                return
+        self.status.set("Crafted " + recipe.getName())
 
     def drawBackButton(self):
         x, y = self.renderer.getDisplaySize()
