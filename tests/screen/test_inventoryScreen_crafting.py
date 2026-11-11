@@ -105,11 +105,8 @@ def test_craft_recipe_refuses_when_no_room_for_the_result():
     screen.status.set.assert_called_with("Inventory full")
 
 
-def test_craft_recipe_refuses_when_only_the_consumed_ingredients_would_free_room():
-    # The capacity check runs before the ingredients are removed, so a full
-    # inventory whose last free space would come from the consumed stack is
-    # still reported as full. This pins the current behaviour; flip it to
-    # assert a successful craft when #648 is fixed.
+def test_craft_recipe_counts_the_space_the_consumed_ingredients_free():
+    # The only free slot comes from the stack the recipe consumes (#648).
     screen = createScreen()
     slots = screen.inventory.getInventorySlots()
     fillSlot(slots[0], OakWood, 4)
@@ -118,8 +115,27 @@ def test_craft_recipe_refuses_when_only_the_consumed_ingredients_would_free_room
 
     screen.craftRecipe(recipeNamed(screen, "Wood Floor"))
 
-    assert screen.inventory.getNumItemsByType(OakWood) == 4
-    assert screen.inventory.getNumItemsByType(WoodFloor) == 0
+    assert screen.inventory.getNumItemsByType(OakWood) == 0
+    assert screen.inventory.getNumItemsByType(WoodFloor) == 1
+    screen.status.set.assert_called_with("Crafted Wood Floor")
+
+
+def test_craft_recipe_that_cannot_place_every_result_restores_the_inventory():
+    # Two of the three seeds fit on the partial stack and the third does not,
+    # so the consumed grass and the placed seeds are both rolled back.
+    screen = createScreen()
+    slots = screen.inventory.getInventorySlots()
+    fillSlot(slots[0], Grass, 20)
+    fillSlot(slots[1], WheatSeed, 18)
+    for slot in slots[2:]:
+        fillSlot(slot, Stone, 20)
+
+    screen.craftRecipe(recipeNamed(screen, "Wheat Seed"))
+
+    assert slots[0].getNumItems() == 20
+    assert slots[1].getNumItems() == 18
+    assert screen.inventory.getNumItemsByType(Grass) == 20
+    assert screen.inventory.getNumItemsByType(WheatSeed) == 18
     screen.status.set.assert_called_with("Inventory full")
 
 
