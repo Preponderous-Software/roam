@@ -94,17 +94,25 @@ const FACING_AFTER_W = ["up", "left", "down", "right"];
     // says nothing about the window. So the test sets the fps itself: drawing
     // is paused (the scene then stops writing hooks.fps), and the page's own
     // detector reads the value the test wrote.
+    //
+    // The hold at 30 starts before the prompt is first read (#651). A slow
+    // real run (6 fps on PR #650) can complete the page's 10-second window
+    // just before the test takes over; reading the prompt first left a gap in
+    // which the detector could still fire on the real rate, and the prompt was
+    // then blamed on the 30 fps hold. Once setFps has returned, every later
+    // detector tick reads 30, so a prompt seen now was earned by the real
+    // rate, and one that appears during the hold was caused by it.
     const promptShown = () => page.evaluate(() => !!document.getElementById("view3d-slow"));
     const setFps = (fps) => page.evaluate((f) => {
         window.__roam3dScene.setRenderingPaused(true);
         window.__roam3dView.fps = f;
     }, fps);
     const realFps = await page.evaluate(() => window.__roam3dView.fps);
+    await setFps(30);
     let prompted = await promptShown();
     console.log(`fallback: measured ${realFps} fps; prompt ${prompted ? "already shown" : "not shown yet"}`);
     if (!prompted) {
         step("fallback: holding fps at 30 for 12 s (must not prompt)");
-        await setFps(30);
         await page.waitForTimeout(12000);
         if (await promptShown()) await fail("3D at 30 fps offered the 2D view");
         step("fallback: holding fps at 5 (must prompt within ~10 s)");
