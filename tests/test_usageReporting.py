@@ -119,8 +119,12 @@ def test_opt_out_in_config_yields_a_disabled_client(stub):
     assert stub.requests == []
 
 
-@pytest.mark.parametrize("value", ["0", "false", "FALSE", "off", "no", " 0 "])
+@pytest.mark.parametrize(
+    "value", ["0", "false", "FALSE", "off", "no", " 0 ", "disabled", "of", "2"]
+)
 def test_environment_override_forces_reporting_off(monkeypatch, stub, value):
+    # Fails closed like TRACE_USAGE_REPORTING: a typo or an unlisted value is
+    # off too (only 0/false/off/no used to be).
     monkeypatch.setenv(ENVIRONMENT_VARIABLE, value)
     config = _config(endpoint=stub.url)
     assert isReportingActive(config) is False
@@ -170,7 +174,7 @@ def test_trace_wide_environment_opt_out_is_honoured_by_the_client_itself(
     assert stub.requests == []
 
 
-@pytest.mark.parametrize("value", ["1", "true", "", "yes"])
+@pytest.mark.parametrize("value", ["1", "true", "", "  ", "yes", "ON"])
 def test_other_environment_values_leave_config_in_charge(monkeypatch, stub, value):
     monkeypatch.setenv(ENVIRONMENT_VARIABLE, value)
     assert isReportingActive(_config(endpoint=stub.url)) is True
@@ -453,3 +457,66 @@ def test_first_run_notice_round_trips_through_a_real_config_file(
 
     assert showFirstRunNotice(Config()) is False
     assert caplog.text.count(FIRST_RUN_NOTICE) == 1
+
+
+def _useConfigFile(monkeypatch, tmp_path, text=None, data=None):
+    configFilePath = tmp_path / "config.yml"
+    if data is not None:
+        configFilePath.write_bytes(data)
+    else:
+        configFilePath.write_text(text, encoding="utf-8")
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
+    return configFilePath
+
+
+@pytest.mark.parametrize(
+    "value", ["off", "no", "0", '"false"', "'false'", "", "null", "disabled", "flase"]
+)
+def test_a_config_value_that_does_not_clearly_mean_on_keeps_reporting_off(
+    tmp_path, monkeypatch, caplog, value
+):
+    # These used to fall back to the default (on): only a bare true/false was
+    # read, and the setting being present stopped the notice, so reporting
+    # went on silently.
+    configFilePath = _useConfigFile(
+        monkeypatch, tmp_path, "usageReportingEnabled: " + value + "\n"
+    )
+    caplog.set_level(logging.INFO)
+
+    config = Config()
+
+    assert config.usageReportingEnabled is False
+    assert isReportingActive(config) is False
+    assert showFirstRunNotice(config) is False
+    assert configFilePath.read_text(encoding="utf-8") == (
+        "usageReportingEnabled: " + value + "\n"
+    )
+
+
+@pytest.mark.parametrize("value", ["true", "TRUE", "on", "yes", '"true"', '"1"'])
+def test_a_config_value_that_means_on_reports(tmp_path, monkeypatch, value):
+    _useConfigFile(monkeypatch, tmp_path, "usageReportingEnabled: " + value + "\n")
+
+    assert isReportingActive(Config()) is True
+
+
+def test_an_unreadable_config_file_keeps_reporting_off_and_is_not_rewritten(
+    tmp_path, monkeypatch, caplog
+):
+    # Not UTF-8 after the opt-out line: the read used to stop with whatever it
+    # had, which (without the opt-out) defaulted to on, and the first-run
+    # notice then wrote a fresh file holding only usageReportingEnabled: true.
+    data = b"debug: false\n\xff\xfe\nusageReportingEnabled: false\n"
+    configFilePath = _useConfigFile(monkeypatch, tmp_path, data=data)
+    caplog.set_level(logging.INFO)
+
+    config = Config()
+
+    assert config.usageReportingEnabled is False
+    assert config.usageReportingAcknowledged is True
+    assert showFirstRunNotice(config) is False
+    config.saveWindowSize(800, 600)
+    assert configFilePath.read_bytes() == data
+    assert FIRST_RUN_NOTICE not in caplog.text

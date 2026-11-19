@@ -5,6 +5,7 @@ import shutil
 import sys
 
 from appPaths import getBundleDirectory, isFrozen
+from lib.trace_client import allows_reporting
 from gameLogging.logger import getLogger
 from rendering.displayInfo import getScreenSize
 
@@ -17,6 +18,10 @@ _logger = getLogger(__name__)
 # "roam" to the trace service and is not a secret.
 USAGE_REPORTING_ENDPOINT_DEFAULT = "https://trace.danielstephenson.dev"
 USAGE_REPORTING_KEY_DEFAULT = "G8sLnYKFvDhXETxGBQHio6XoLWavuBAjrrvoeoHit2M"
+
+# Set in readConfigFile's result when config.yml exists but could not be read
+# in full. Not a valid config key (it has a space), so no file can set it.
+CONFIG_UNREADABLE = "config file unreadable"
 
 
 class Config:
@@ -201,6 +206,10 @@ class Config:
 
     @classmethod
     def readConfigFile(cls):
+        """The key/value pairs in the user config.yml. When the file exists
+        but cannot be read in full, what was read is returned with
+        CONFIG_UNREADABLE set, so settings that must fail closed (usage
+        reporting) can tell a missing line from an unread one."""
         configValues = {}
         configFilePath = cls.getConfigFilePath()
         if not os.path.exists(configFilePath):
@@ -218,6 +227,7 @@ class Config:
                     value = cls.removeInlineComment(keyAndValue[1]).strip()
                     configValues[key] = cls.parseConfigValue(value)
         except (OSError, UnicodeDecodeError):
+            configValues[CONFIG_UNREADABLE] = True
             return configValues
         return configValues
 
@@ -403,16 +413,30 @@ class Config:
         # usageReportingEnabled: false). usageReportingAcknowledged records
         # whether the setting is present in the file at all, which is how the
         # one-time first-run notice knows it has already been shown.
-        self.usageReportingEnabled = self.getBoolValue(
-            configValues, "usageReportingEnabled", True
-        )
+        #
+        # Fails closed: once the line is there, only true (or the strings
+        # "on", "yes", "1") reports, so off, no, 0, "false", a blank value or
+        # a typo keep reporting off rather than falling back to the default.
+        # A config.yml that could not be read may hold the opt-out, so it is
+        # treated as off and acknowledged (nothing is written over it).
+        if configValues.get(CONFIG_UNREADABLE):
+            self.usageReportingEnabled = False
+        elif "usageReportingEnabled" in configValues:
+            self.usageReportingEnabled = allows_reporting(
+                configValues["usageReportingEnabled"]
+            )
+        else:
+            self.usageReportingEnabled = True
         self.usageReportingEndpoint = self.getStringValue(
             configValues, "usageReportingEndpoint", USAGE_REPORTING_ENDPOINT_DEFAULT
         )
         self.usageReportingKey = self.getStringValue(
             configValues, "usageReportingKey", USAGE_REPORTING_KEY_DEFAULT
         )
-        self.usageReportingAcknowledged = "usageReportingEnabled" in configValues
+        self.usageReportingAcknowledged = (
+            "usageReportingEnabled" in configValues
+            or bool(configValues.get(CONFIG_UNREADABLE))
+        )
 
         _logger.debug(
             "config loaded",
@@ -446,8 +470,11 @@ class Config:
             try:
                 with open(configFilePath, "r", encoding="utf-8") as configFile:
                     lines = configFile.read().splitlines()
-            except (OSError, UnicodeDecodeError):
-                lines = []
+            except (OSError, UnicodeDecodeError) as e:
+                # Writing anyway would replace every line it could not read,
+                # usageReportingEnabled: false among them.
+                _logger.warning(errorMessage, error=str(e), path=str(configFilePath))
+                return
 
         updatedKeys = set()
         newLines = []

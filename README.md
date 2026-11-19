@@ -242,11 +242,11 @@ To turn it off, any one of these is enough:
   usageReportingEnabled: false
   ```
 
-- the environment variable `TRACE_USAGE_REPORTING=off` (also `false`, `0`, `no`), which turns off every program that reports to trace
-- the environment variable `DO_NOT_TRACK=1` (see [consoledonottrack.com](https://consoledonottrack.com))
-- the environment variable `ROAM_USAGE_REPORTING=0`, for Roam alone (what the test harness sets)
+- the environment variable `TRACE_USAGE_REPORTING=off` (any value other than blank, `true`, `on`, `yes` or `1` counts), which turns off every program that reports to trace
+- the environment variable `DO_NOT_TRACK=1` (any value other than blank, `0`, `false`, `off` or `no` counts; see [consoledonottrack.com](https://consoledonottrack.com))
+- the environment variable `ROAM_USAGE_REPORTING=0`, for Roam alone (what the test harness sets; like `TRACE_USAGE_REPORTING`, any value other than blank, `true`, `on`, `yes` or `1` counts)
 
-The environment variables win over `config.yml`. The [browser build](#play-in-a-browser-from-source) never reports: the Pyodide build has no threads or sockets, so the client is never even started there, and no installation ID is made. The client is the vendored `src/lib/trace_client.py` (standard library only).
+Every switch fails closed: once `usageReportingEnabled` is in `config.yml`, only `true` (or `on`, `yes`, `"true"`) reports, so `off`, `no`, `0`, `"false"`, a blank value or a typo keep reporting off. A `config.yml` that cannot be read in full turns reporting off and is never rewritten. The environment variables win over `config.yml`. The [browser build](#play-in-a-browser-from-source) never reports: the Pyodide build has no threads or sockets, so the client is never even started there, and no installation ID is made. The client is the vendored `src/lib/trace_client.py` (standard library only).
 
 Details: https://danielstephenson.dev/usage-reporting
 
