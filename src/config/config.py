@@ -1,6 +1,7 @@
 # @author Daniel McCoy Stephenson
 # @since August 6th, 2022
 import os
+import re
 import shutil
 import sys
 
@@ -22,6 +23,42 @@ USAGE_REPORTING_KEY_DEFAULT = "G8sLnYKFvDhXETxGBQHio6XoLWavuBAjrrvoeoHit2M"
 # Set in readConfigFile's result when config.yml exists but could not be read
 # in full. Not a valid config key (it has a space), so no file can set it.
 CONFIG_UNREADABLE = "config file unreadable"
+
+
+def _normaliseKey(key):
+    return re.sub(r"[^a-z0-9]", "", str(key).lower())
+
+
+def hasNearMissOptOut(configValues):
+    """Whether config.yml holds an attempt to turn usage reporting off that is
+    not written exactly as usageReportingEnabled. Such a line would not be
+    recognised and reporting would stay on by default. A player who wrote any
+    of these did not ask for reporting, so each counts as off -- a key that
+    spells "usage reporting" another way (usage_reporting_enabled,
+    UsageReportingEnabled, usage-reporting-enabled, ...) and:
+
+    - spells "enabled" another way too (usageReportingEnable, ...) with a
+      value that is not clearly on;
+    - spells "disabled" (usageReportingDisabled, ...) with a value that is on;
+    - is the bare name (usageReporting: false, usage_reporting: off) with a
+      value that is not clearly on.
+
+    usageReportingEndpoint and usageReportingKey are not switches and are
+    never read as one.
+    """
+    for key, value in configValues.items():
+        if key == "usageReportingEnabled":
+            continue  # the switch itself, read by the caller
+        name = _normaliseKey(key)
+        if "usagereport" not in name:
+            continue
+        if "disabl" in name:
+            if allows_reporting(value):
+                return True
+        elif "enabl" in name or name in ("usagereport", "usagereporting", "usagereports"):
+            if not allows_reporting(value):
+                return True
+    return False
 
 
 class Config:
@@ -419,7 +456,12 @@ class Config:
         # a typo keep reporting off rather than falling back to the default.
         # A config.yml that could not be read may hold the opt-out, so it is
         # treated as off and acknowledged (nothing is written over it).
-        if configValues.get(CONFIG_UNREADABLE):
+        #
+        # An opt-out written under another spelling (usage_reporting_enabled,
+        # usageReportingEnable, usageReportingDisabled: true, ...) is an
+        # opt-out too, and counts as having seen the notice.
+        nearMissOptOut = hasNearMissOptOut(configValues)
+        if configValues.get(CONFIG_UNREADABLE) or nearMissOptOut:
             self.usageReportingEnabled = False
         elif "usageReportingEnabled" in configValues:
             self.usageReportingEnabled = allows_reporting(
@@ -436,6 +478,7 @@ class Config:
         self.usageReportingAcknowledged = (
             "usageReportingEnabled" in configValues
             or bool(configValues.get(CONFIG_UNREADABLE))
+            or nearMissOptOut
         )
 
         _logger.debug(

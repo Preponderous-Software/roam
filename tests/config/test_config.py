@@ -797,3 +797,67 @@ def test_acknowledge_usage_reporting_keeps_an_opt_out(tmp_path, monkeypatch):
     assert (
         configFilePath.read_text(encoding="utf-8") == "usageReportingEnabled: false\n"
     )
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "usage_reporting_enabled: false",
+        "UsageReportingEnabled: off",
+        "usage-reporting-enabled: \"false\"",
+        "usageReportingEnable: no",
+        "usageReporting: false",
+        "usage_reporting: off",
+        "usageReportingDisabled: true",
+        "usage-reporting-disabled: yes",
+    ],
+)
+def test_an_opt_out_written_under_a_near_miss_name_is_an_opt_out(
+    tmp_path, monkeypatch, line
+):
+    # these used to be ignored, so reporting stayed on by default
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text(line + "\n", encoding="utf-8")
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
+
+    config = Config()
+
+    assert config.usageReportingEnabled is False
+    assert config.usageReportingAcknowledged is True
+
+
+def test_a_near_miss_opt_out_wins_over_the_real_switch_saying_on(
+    tmp_path, monkeypatch
+):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text(
+        "usageReportingEnabled: true\nusageReportingDisabled: true\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
+
+    assert Config().usageReportingEnabled is False
+
+
+@pytest.mark.parametrize(
+    "lines",
+    [
+        "usage_reporting_enabled: true",
+        "usageReporting: on",
+        "usageReportingDisabled: false",
+        "usageReportingDisabled: no",
+        "usageReportingEndpoint: http://127.0.0.1:1\nusageReportingKey: k",
+    ],
+)
+def test_near_miss_names_that_say_on_are_not_an_opt_out(tmp_path, monkeypatch, lines):
+    configFilePath = tmp_path / "config.yml"
+    configFilePath.write_text(lines + "\n", encoding="utf-8")
+    monkeypatch.setattr(
+        Config, "getConfigFilePath", staticmethod(lambda: configFilePath)
+    )
+
+    assert Config().usageReportingEnabled is True
