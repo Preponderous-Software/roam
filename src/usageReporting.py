@@ -27,17 +27,17 @@ import sys
 from appPaths import getBundleDirectory
 from config.config import Config
 from gameLogging.logger import getLogger
-from lib.trace_client import TraceClient, environment_opts_out
+from lib.trace_client import TraceClient, allows_reporting, environment_opts_out
 
 _logger = getLogger(__name__)
 
 # The program name the trace key was issued for. Not the display name.
 APPLICATION = "roam"
 
-# Environment override, for test harnesses and containers: any of these values
-# (case-insensitive) forces reporting off regardless of config.yml.
+# Environment override, for test harnesses and containers. Fails closed like
+# TRACE_USAGE_REPORTING: set to anything but blank, true, on, yes or 1 (any
+# case) it forces reporting off regardless of config.yml.
 ENVIRONMENT_VARIABLE = "ROAM_USAGE_REPORTING"
-_OFF_VALUES = frozenset({"0", "false", "off", "no"})
 
 # Sent as the version when version.txt is missing or empty: the client requires
 # a non-blank version, and a missing one must never stop the game starting.
@@ -77,17 +77,20 @@ def isDisabledByEnvironment():
     config so the notice is never shown for a run that will not report."""
     if environment_opts_out():
         return True
-    value = os.environ.get(ENVIRONMENT_VARIABLE)
-    if value is None:
+    try:
+        value = os.environ.get(ENVIRONMENT_VARIABLE)
+    except Exception:  # noqa: BLE001 - an unreadable environment may hold the opt-out
+        return True
+    if value is None or value.strip() == "":
         return False
-    return value.strip().lower() in _OFF_VALUES
+    return not allows_reporting(value)
 
 
 def isReportingActive(config):
     """Whether this process reports at all: on in config, not the browser
     build, and not switched off through the environment."""
     return (
-        bool(config.usageReportingEnabled)
+        config.usageReportingEnabled is True
         and not isBrowserBuild()
         and not isDisabledByEnvironment()
     )
