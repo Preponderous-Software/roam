@@ -55,7 +55,11 @@ def hasNearMissOptOut(configValues):
         if "disabl" in name:
             if allows_reporting(value):
                 return True
-        elif "enabl" in name or name in ("usagereport", "usagereporting", "usagereports"):
+        elif "enabl" in name or name in (
+            "usagereport",
+            "usagereporting",
+            "usagereports",
+        ):
             if not allows_reporting(value):
                 return True
     return False

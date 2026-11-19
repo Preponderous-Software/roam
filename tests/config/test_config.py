@@ -804,7 +804,7 @@ def test_acknowledge_usage_reporting_keeps_an_opt_out(tmp_path, monkeypatch):
     [
         "usage_reporting_enabled: false",
         "UsageReportingEnabled: off",
-        "usage-reporting-enabled: \"false\"",
+        'usage-reporting-enabled: "false"',
         "usageReportingEnable: no",
         "usageReporting: false",
         "usage_reporting: off",
@@ -828,9 +828,7 @@ def test_an_opt_out_written_under_a_near_miss_name_is_an_opt_out(
     assert config.usageReportingAcknowledged is True
 
 
-def test_a_near_miss_opt_out_wins_over_the_real_switch_saying_on(
-    tmp_path, monkeypatch
-):
+def test_a_near_miss_opt_out_wins_over_the_real_switch_saying_on(tmp_path, monkeypatch):
     configFilePath = tmp_path / "config.yml"
     configFilePath.write_text(
         "usageReportingEnabled: true\nusageReportingDisabled: true\n",
