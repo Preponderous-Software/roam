@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import pygame
 import pytest
 
-from lib.graphik.src.graphik import Graphik
+from preponderous.graphik import Graphik
 from rendering import pygameRenderer as pygameRendererModule
 from rendering.pygameRenderer import PygameRenderer
 from screen.mainMenuScreen import MainMenuScreen

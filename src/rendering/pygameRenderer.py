@@ -3,7 +3,7 @@ import math
 import pygame
 
 from gameLogging.logger import getLogger
-from lib.graphik.src.graphik import Graphik
+from preponderous.graphik import Graphik
 from rendering.renderer import Renderer
 from rendering.screenshotHelper import takeScreenshot
 from ui import palette
@@ -17,8 +17,8 @@ _FALLBACK_IMAGE_SIZE = 32
 # @since June 13th, 2026
 #
 # pygame implementation of the Renderer interface (frontend-abstraction epic
-# #433). Composes the vendored Graphik primitive provider rather than modifying
-# it: drawing primitives delegate to Graphik, and the display-surface lifecycle
+# #433). Composes the graphik package's Graphik primitive provider: drawing
+# primitives delegate to Graphik, and the display-surface lifecycle
 # (clear/present/clip/blit/screenshot/caption) is handled here so screens never
 # reach the raw pygame surface directly.
 class PygameRenderer(Renderer):
@@ -184,7 +184,16 @@ class PygameRenderer(Renderer):
         return surface
 
     def getGameAreaRect(self):
-        return self.graphik.getGameAreaRect()
+        """The largest square that fits the display, centred in it.
+
+        Moved here from Roam's old vendored Graphik copy when Roam switched to
+        the installed graphik package: the square game area is Roam's own
+        layout rule, not a drawing primitive.
+        Returns a pygame.Rect, as before.
+        """
+        width, height = self._display().get_size()
+        size = min(width, height)
+        return pygame.Rect((width - size) // 2, (height - size) // 2, size, size)
 
     # --- region clipping ---
 

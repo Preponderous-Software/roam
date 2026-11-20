@@ -7,6 +7,10 @@
 
 # Runtime
 pygame>=2.6.1
+# graphik draws the pygame screens (through rendering/pygameRenderer.py). It
+# isn't on PyPI: this installs its release tag's source archive, which needs no
+# git (install.ps1 runs this file on players' machines).
+graphik @ https://github.com/Stephenson-Software/graphik/archive/refs/tags/v0.3.0.zip
 Pillow>=10.0.0
 jsonschema>=4.17.3
 structlog>=25.0.0

@@ -1,7 +1,7 @@
 import pygame
 
 from config.config import Config
-from lib.graphik.src.graphik import Graphik
+from preponderous.graphik import Graphik
 from rendering.pygameClock import PygameClock
 from rendering.pygameInputSource import PygameInputSource
 from rendering.pygameRenderer import PygameRenderer

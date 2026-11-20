@@ -10,7 +10,7 @@ Roam is a single-player 2D survival game built with Python and Pygame. Players e
 - **Formatter:** Black (via `format.sh`), autoflake (unused import/variable removal)
 - **Image processing:** Pillow >=10.0.0
 - **JSON schema validation:** jsonschema 4.17.3
-- **Bundled libraries:** [graphik](https://github.com/Preponderous-Software/graphik) (vendored in `src/lib/graphik`), [py_env_lib](https://github.com/Preponderous-Software/py_env_lib) (vendored in `src/lib/pyenvlib`)
+- **Libraries:** [graphik](https://github.com/Stephenson-Software/graphik) (installed from a release tag pinned in `requirements.txt`; import `from preponderous.graphik import Graphik`), [py_env_lib](https://github.com/Preponderous-Software/py_env_lib) (vendored in `src/lib/pyenvlib`)
 - **Version:** 0.11.0-SNAPSHOT (tracked in `version.txt`)
 
 ## Repository Layout
@@ -32,7 +32,7 @@ Roam is a single-player 2D survival game built with Python and Pygame. Players e
   - `di/` — Lightweight dependency injection container (stdlib-only).
   - `appContainer.py` — Module-level container singleton and `component` decorator.
   - `bootstrap.py` — Centralized factory/instance registrations.
-  - `lib/` — Vendored third-party libraries (`graphik`, `pyenvlib`).
+  - `lib/` — Vendored third-party libraries (`pyenvlib`, `trace_client.py`).
   - `media/` — Application icon.
 - **`tests/`** — Unit tests mirroring `src/` structure (`entity/`, `inventory/`, `player/`, `stats/`, `di/`).
 - **`schemas/`** — JSON schemas for save-file validation (`inventory.json`, `room.json`, `playerAttributes.json`, etc.).

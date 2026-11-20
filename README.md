@@ -260,7 +260,7 @@ Name | Main Contributions
 Daniel McCoy Stephenson | Creator
 
 ## Libraries
-This project makes use of [graphik](https://github.com/Preponderous-Software/graphik) and [py_env_lib](https://github.com/Preponderous-Software/py_env_lib).
+This project makes use of [graphik](https://github.com/Stephenson-Software/graphik) (installed from a release tag pinned in `requirements.txt`) and [py_env_lib](https://github.com/Preponderous-Software/py_env_lib) (vendored under `src/lib/`).
 
 ## 📄 License
 

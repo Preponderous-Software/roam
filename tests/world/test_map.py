@@ -1,4 +1,4 @@
-from lib.graphik.src.graphik import Graphik
+from preponderous.graphik import Graphik
 from world.map import Map
 from world.room import Room
 
