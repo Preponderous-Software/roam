@@ -9,7 +9,7 @@ from codex.codexJsonReaderWriter import CodexJsonReaderWriter
 from config.config import Config
 from inventory.inventoryJsonReaderWriter import InventoryJsonReaderWriter
 from config.keyBindings import KeyBindings
-from lib.graphik.src.graphik import Graphik
+from preponderous.graphik import Graphik
 from rendering.renderer import Renderer
 from rendering.pygameRenderer import PygameRenderer
 from rendering.inputSource import InputSource

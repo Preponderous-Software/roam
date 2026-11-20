@@ -213,7 +213,7 @@ const LEVELS = { native: "l-native", approx: "l-approx", skip: "l-skip" };
 const BACKENDS = [
   {
     id: "pygame", name: "Pygame", color: "#3fb950", badge: "b-shipped", status: "Shipped · the live desktop frontend",
-    blurb: "SDL2 via pygame. Composes the vendored Graphik primitive provider; the seam wraps the display-surface lifecycle so screens never touch the raw surface.",
+    blurb: "SDL2 via pygame. Composes the Graphik primitive provider from the installed graphik package; the seam wraps the display-surface lifecycle so screens never touch the raw surface.",
     rows: [
       ["clearScreen / present", "Renderer", "native", "display.fill(color) / pygame.display.update()"],
       ["drawText / drawTextLeftAligned", "Renderer", "native", "pygame.font.Font(...).render, blit centered or left/center-anchored"],

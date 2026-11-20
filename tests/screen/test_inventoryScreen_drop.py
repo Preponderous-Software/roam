@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 from src.config.keyBindings import KeyBindings
 from src.inventory.inventory import Inventory
 from src.entity.grass import Grass
-from src.lib.graphik.src.graphik import Graphik
+from preponderous.graphik import Graphik
 from src.rendering.pygameRenderer import PygameRenderer
 from rendering.inputEvent import EventType, InputEvent
 from rendering.keyCode import KeyCode

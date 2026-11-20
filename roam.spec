@@ -47,7 +47,9 @@ a = Analysis(
     pathex=["src", os.path.join("src", "entity")],
     binaries=[],
     datas=datas,
-    hiddenimports=[],
+    # preponderous.graphik loads its Graphik class lazily (a module
+    # __getattr__), so name the module explicitly for the frozen build.
+    hiddenimports=["preponderous.graphik.graphik"],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
