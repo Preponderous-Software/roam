@@ -186,9 +186,9 @@ class NpcManager:
         npcId = npc.getID()
         if npcId not in self._behaviors:
             if npc.getMode() == "cpc" or self._mode == "cpc":
-                from npc.agenticBehavior import AgenticBehavior
+                from npc.agentic.service import createAgenticBehavior
 
-                self._behaviors[npcId] = AgenticBehavior()
+                self._behaviors[npcId] = createAgenticBehavior()
             else:
                 from npc.programmaticBehavior import ProgrammaticBehavior
 

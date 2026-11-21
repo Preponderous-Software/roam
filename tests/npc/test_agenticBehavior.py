@@ -6,6 +6,7 @@ No network call is ever made: the Anthropic client is replaced by a stub whose
 exercised on the test thread.
 """
 
+import hashlib
 import json
 import queue
 from types import SimpleNamespace
@@ -22,8 +23,12 @@ from entity.living.npc import Npc
 from entity.oakWood import OakWood
 from entity.stone import Stone
 from entity.woodFloor import WoodFloor
-from npc import agenticBehavior as agenticBehaviorModule
-from npc.agenticBehavior import (
+from npc.agentic import core as agenticBehaviorModule
+from npc.agentic.adapters import anthropicLanguageModel as anthropicModule
+from npc.agentic.adapters import daemonThreadRunner as daemonThreadRunnerModule
+from npc.agentic.adapters.anthropicLanguageModel import AnthropicLanguageModel
+from npc.agentic.adapters.daemonThreadRunner import DaemonThreadRunner
+from npc.agentic.core import (
     _CALL_INTERVAL_TICKS,
     AgenticBehavior,
     _cellGlyph,
@@ -45,8 +50,7 @@ def _setup(gridSize=5, npcEnergy=100, npcX=None, npcY=None):
     loc = room.getGrid().getLocationByCoordinates(x, y)
     room.addEntityToLocation(npc, loc)
     room.addLivingEntity(npc)
-    behavior = AgenticBehavior()
-    behavior._client = None
+    behavior = AgenticBehavior(None, DaemonThreadRunner())
     return room, npc, behavior
 
 
@@ -81,7 +85,7 @@ class _InlineThread:
 @pytest.fixture
 def inlineThread(monkeypatch):
     _InlineThread.instances = []
-    monkeypatch.setattr(agenticBehaviorModule.threading, "Thread", _InlineThread)
+    monkeypatch.setattr(daemonThreadRunnerModule.threading, "Thread", _InlineThread)
     return _InlineThread
 
 
@@ -91,42 +95,42 @@ def inlineThread(monkeypatch):
 
 
 def test_build_client_returns_none_without_api_key(monkeypatch):
-    monkeypatch.setattr(agenticBehaviorModule, "_ANTHROPIC_AVAILABLE", True)
+    monkeypatch.setattr(anthropicModule, "_ANTHROPIC_AVAILABLE", True)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    assert AgenticBehavior._buildClient() is None
+    assert AnthropicLanguageModel._buildClient() is None
 
 
 def test_build_client_returns_none_when_package_missing(monkeypatch):
-    monkeypatch.setattr(agenticBehaviorModule, "_ANTHROPIC_AVAILABLE", False)
+    monkeypatch.setattr(anthropicModule, "_ANTHROPIC_AVAILABLE", False)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-    assert AgenticBehavior._buildClient() is None
+    assert AnthropicLanguageModel._buildClient() is None
 
 
 def test_build_client_constructs_with_key(monkeypatch):
-    monkeypatch.setattr(agenticBehaviorModule, "_ANTHROPIC_AVAILABLE", True)
+    monkeypatch.setattr(anthropicModule, "_ANTHROPIC_AVAILABLE", True)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     monkeypatch.setattr(
-        agenticBehaviorModule,
+        anthropicModule,
         "_anthropic_module",
         SimpleNamespace(Anthropic=lambda api_key: f"client:{api_key}"),
         raising=False,
     )
-    assert AgenticBehavior._buildClient() == "client:test-key"
+    assert AnthropicLanguageModel._buildClient() == "client:test-key"
 
 
 def test_build_client_swallows_construction_failure(monkeypatch):
     def explode(api_key):
         raise RuntimeError("no network")
 
-    monkeypatch.setattr(agenticBehaviorModule, "_ANTHROPIC_AVAILABLE", True)
+    monkeypatch.setattr(anthropicModule, "_ANTHROPIC_AVAILABLE", True)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     monkeypatch.setattr(
-        agenticBehaviorModule,
+        anthropicModule,
         "_anthropic_module",
         SimpleNamespace(Anthropic=explode),
         raising=False,
     )
-    assert AgenticBehavior._buildClient() is None
+    assert AnthropicLanguageModel._buildClient() is None
 
 
 # ------------------------------------------------------------------ #
@@ -186,7 +190,7 @@ def test_fallback_path_never_queues_an_ai_call(inlineThread):
 
 def test_tick_skips_when_cooldown_not_expired():
     room, npc, behavior = _setup()
-    behavior._client = _stubClient("{}")
+    behavior._model = AnthropicLanguageModel(_stubClient("{}"))
     behavior._actionQueue.put({"type": "idle"})
     npc.setTickLastMoved(100)
 
@@ -199,7 +203,7 @@ def test_tick_skips_when_cooldown_not_expired():
 
 def test_tick_executes_one_queued_action_per_call():
     room, npc, behavior = _setup()
-    behavior._client = _stubClient("{}")
+    behavior._model = AnthropicLanguageModel(_stubClient("{}"))
     behavior._actionQueue.put({"type": "idle"})
     behavior._actionQueue.put({"type": "idle"})
     npc.setTickLastMoved(-1000)
@@ -212,8 +216,8 @@ def test_tick_executes_one_queued_action_per_call():
 
 def test_tick_schedules_ai_call_when_queue_is_drained(inlineThread):
     room, npc, behavior = _setup()
-    behavior._client = _stubClient(
-        json.dumps({"goal": "find wood", "actions": [{"type": "gather"}]})
+    behavior._model = AnthropicLanguageModel(
+        _stubClient(json.dumps({"goal": "find wood", "actions": [{"type": "gather"}]}))
     )
     npc.setTickLastMoved(-1000)
 
@@ -229,7 +233,9 @@ def test_tick_schedules_ai_call_when_queue_is_drained(inlineThread):
 
 def test_tick_does_not_schedule_a_second_call_before_the_interval(inlineThread):
     room, npc, behavior = _setup()
-    behavior._client = _stubClient(json.dumps({"goal": "", "actions": []}))
+    behavior._model = AnthropicLanguageModel(
+        _stubClient(json.dumps({"goal": "", "actions": []}))
+    )
     npc.setTickLastMoved(-1000)
 
     behavior.tick(npc, room, 0, _config())
@@ -240,7 +246,9 @@ def test_tick_does_not_schedule_a_second_call_before_the_interval(inlineThread):
 
 def test_tick_schedules_again_once_the_interval_has_elapsed(inlineThread):
     room, npc, behavior = _setup()
-    behavior._client = _stubClient(json.dumps({"goal": "", "actions": []}))
+    behavior._model = AnthropicLanguageModel(
+        _stubClient(json.dumps({"goal": "", "actions": []}))
+    )
     npc.setTickLastMoved(-1000)
 
     behavior.tick(npc, room, 0, _config())
@@ -258,12 +266,14 @@ def test_tick_schedules_again_once_the_interval_has_elapsed(inlineThread):
 
 def test_call_ai_queues_actions_and_records_goal():
     _, _, behavior = _setup()
-    behavior._client = _stubClient(
-        json.dumps(
-            {
-                "goal": "build a shelter",
-                "actions": [{"type": "move", "direction": 1}, {"type": "place"}],
-            }
+    behavior._model = AnthropicLanguageModel(
+        _stubClient(
+            json.dumps(
+                {
+                    "goal": "build a shelter",
+                    "actions": [{"type": "move", "direction": 1}, {"type": "place"}],
+                }
+            )
         )
     )
     behavior._pendingCall = True
@@ -279,7 +289,9 @@ def test_call_ai_queues_actions_and_records_goal():
 def test_call_ai_strips_markdown_fences():
     _, _, behavior = _setup()
     payload = json.dumps({"goal": "fenced", "actions": [{"type": "idle"}]})
-    behavior._client = _stubClient("```json\n" + payload + "\n```")
+    behavior._model = AnthropicLanguageModel(
+        _stubClient("```json\n" + payload + "\n```")
+    )
 
     behavior._callAI("world state")
 
@@ -289,12 +301,14 @@ def test_call_ai_strips_markdown_fences():
 
 def test_call_ai_skips_malformed_actions():
     _, _, behavior = _setup()
-    behavior._client = _stubClient(
-        json.dumps(
-            {
-                "goal": "mixed",
-                "actions": ["not-a-dict", {"direction": 0}, {"type": "eat"}],
-            }
+    behavior._model = AnthropicLanguageModel(
+        _stubClient(
+            json.dumps(
+                {
+                    "goal": "mixed",
+                    "actions": ["not-a-dict", {"direction": 0}, {"type": "eat"}],
+                }
+            )
         )
     )
 
@@ -307,7 +321,9 @@ def test_call_ai_skips_malformed_actions():
 def test_call_ai_keeps_previous_goal_when_response_omits_one():
     _, _, behavior = _setup()
     behavior._goalDescription = "previous goal"
-    behavior._client = _stubClient(json.dumps({"goal": "", "actions": []}))
+    behavior._model = AnthropicLanguageModel(
+        _stubClient(json.dumps({"goal": "", "actions": []}))
+    )
 
     behavior._callAI("world state")
 
@@ -316,7 +332,7 @@ def test_call_ai_keeps_previous_goal_when_response_omits_one():
 
 def test_call_ai_survives_invalid_json():
     _, _, behavior = _setup()
-    behavior._client = _stubClient("not json at all")
+    behavior._model = AnthropicLanguageModel(_stubClient("not json at all"))
     behavior._pendingCall = True
 
     behavior._callAI("world state")
@@ -327,8 +343,10 @@ def test_call_ai_survives_invalid_json():
 
 def test_call_ai_survives_a_raising_client():
     _, _, behavior = _setup()
-    behavior._client = SimpleNamespace(
-        messages=SimpleNamespace(create=MagicMock(side_effect=RuntimeError("boom")))
+    behavior._model = AnthropicLanguageModel(
+        SimpleNamespace(
+            messages=SimpleNamespace(create=MagicMock(side_effect=RuntimeError("boom")))
+        )
     )
     behavior._pendingCall = True
 
@@ -341,9 +359,11 @@ def test_call_ai_survives_a_raising_client():
 def test_call_ai_defaults_to_empty_object_without_a_text_block():
     _, _, behavior = _setup()
     block = SimpleNamespace(type="thinking", text="ignored")
-    behavior._client = SimpleNamespace(
-        messages=SimpleNamespace(
-            create=MagicMock(return_value=SimpleNamespace(content=[block]))
+    behavior._model = AnthropicLanguageModel(
+        SimpleNamespace(
+            messages=SimpleNamespace(
+                create=MagicMock(return_value=SimpleNamespace(content=[block]))
+            )
         )
     )
 
@@ -735,3 +755,51 @@ def test_action_queue_is_empty_on_construction():
     _, _, behavior = _setup()
     assert isinstance(behavior._actionQueue, queue.Queue)
     assert behavior._actionQueue.empty()
+
+
+# ------------------------------------------------------------------ #
+# Characterization: the request sent to the model and the worker thread #
+# ------------------------------------------------------------------ #
+
+
+def test_call_ai_sends_the_pinned_request():
+    _, _, behavior = _setup()
+    behavior._model = AnthropicLanguageModel(
+        _stubClient(json.dumps({"goal": "g", "actions": []}))
+    )
+
+    behavior._callAI("the world state")
+
+    behavior._model._client.messages.create.assert_called_once_with(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=512,
+        system=agenticBehaviorModule._SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": "the world state"}],
+    )
+
+
+def test_system_prompt_text_is_pinned():
+    prompt = agenticBehaviorModule._SYSTEM_PROMPT
+    assert prompt.startswith(
+        "You are the brain of a player character in a top-down 2-D survival game."
+    )
+    assert prompt.endswith("Plan 4–8 coherent sequential actions.")
+    assert hashlib.sha256(prompt.encode()).hexdigest() == (
+        "574aa4afbecf50270800b0f989b7d3bf2ecf74c1842fa0be98ccfa376350b9f9"
+    )
+
+
+def test_scheduled_ai_call_runs_on_a_daemon_thread_with_the_world_state(
+    inlineThread,
+):
+    room, npc, behavior = _setup()
+    behavior._model = AnthropicLanguageModel(
+        _stubClient(json.dumps({"goal": "g", "actions": []}))
+    )
+
+    behavior.tick(npc, room, 10_000, _config())
+
+    assert len(inlineThread.instances) == 1
+    thread = inlineThread.instances[0]
+    assert thread.daemon is True
+    assert thread._args == (behavior._buildWorldState(npc, room),)

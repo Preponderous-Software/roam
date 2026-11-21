@@ -6,7 +6,7 @@ from entity.living.chicken import Chicken
 from entity.living.npc import Npc
 from entity.oakWood import OakWood
 from entity.stone import Stone
-from npc.agenticBehavior import AgenticBehavior
+from npc.agentic.core import AgenticBehavior
 from npc.npcManager import NpcManager
 from npc.programmaticBehavior import ProgrammaticBehavior
 from world.room import Room
