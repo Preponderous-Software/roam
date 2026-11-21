@@ -223,7 +223,7 @@ class AgenticBehavior(NpcBehavior):
             return
 
         if atype == "move":
-            direction = int(action.get("direction", 2)) % 4
+            direction = _integerOr(action.get("direction"), 2) % 4
             if _getNeighbor(location, direction, room.getGrid()) is None:
                 # At the room boundary — request crossing rather than sliding.
                 self._wantsRoomChange = True
@@ -241,8 +241,8 @@ class AgenticBehavior(NpcBehavior):
             self._stateName = "cpc-eat"
 
         elif atype == "place":
-            dx = int(action.get("dx", 0))
-            dy = int(action.get("dy", 0))
+            dx = _integerOr(action.get("dx"), 0)
+            dy = _integerOr(action.get("dy"), 0)
             self._doPlace(npc, location, room, tick, dx, dy)
             self._stateName = "cpc-place"
 
@@ -305,6 +305,21 @@ class AgenticBehavior(NpcBehavior):
 # ------------------------------------------------------------------ #
 # Module-level helpers                                                #
 # ------------------------------------------------------------------ #
+
+
+def _integerOr(value, default):
+    """`value` as an int, or `default` when the model sent something else.
+
+    Models do not always follow the schema: some write "not provided", null
+    or a word such as "up" where an integer belongs. A bad field must not
+    raise on the game thread, so it falls back to the default.
+    """
+    if isinstance(value, bool):
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def _cellGlyph(location) -> str:

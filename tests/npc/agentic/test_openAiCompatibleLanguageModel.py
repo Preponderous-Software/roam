@@ -23,6 +23,7 @@ class _Server:
     def __init__(self):
         self.status = 200
         self.body = b"{}"
+        self.headers = {}
         self.requests = []
         server = self
 
@@ -38,6 +39,8 @@ class _Server:
                 )
                 self.send_response(server.status)
                 self.send_header("Content-Type", "application/json")
+                for name, value in server.headers.items():
+                    self.send_header(name, value)
                 self.end_headers()
                 self.wfile.write(server.body)
 
@@ -118,6 +121,65 @@ def test_an_http_error_is_a_failed_completion(server):
     completion = OpenAiCompatibleLanguageModel(server.baseUrl).complete("s", "u")
     assert not completion.isOk()
     assert "503" in completion.getReason()
+
+
+@pytest.mark.parametrize("status", [429, 503])
+def test_a_busy_reply_with_retry_after_holds_off_further_requests(server, status):
+    server.reply("ignored", status=status)
+    server.headers = {"Retry-After": "30"}
+    model = OpenAiCompatibleLanguageModel(server.baseUrl)
+
+    first = model.complete("s", "u")
+    server.reply('{"goal": "g", "actions": []}')
+    second = model.complete("s", "u")
+
+    assert not first.isOk()
+    assert str(status) in first.getReason()
+    assert not second.isOk()
+    assert "retrying in" in second.getReason()
+    assert len(server.requests) == 1
+
+
+def test_requests_resume_once_retry_after_has_passed(server):
+    server.reply("ignored", status=429)
+    server.headers = {"Retry-After": "0.1"}
+    model = OpenAiCompatibleLanguageModel(server.baseUrl)
+    model.complete("s", "u")
+
+    time.sleep(0.2)
+    server.reply('{"goal": "g", "actions": []}')
+    server.headers = {}
+    completion = model.complete("s", "u")
+
+    assert completion.isOk()
+    assert len(server.requests) == 2
+
+
+@pytest.mark.parametrize("retryAfter", [None, "soon", "0"])
+def test_a_busy_reply_without_a_usable_retry_after_does_not_hold_off(
+    server, retryAfter
+):
+    server.reply("ignored", status=429)
+    if retryAfter is not None:
+        server.headers = {"Retry-After": retryAfter}
+    model = OpenAiCompatibleLanguageModel(server.baseUrl)
+    model.complete("s", "u")
+
+    server.reply("{}", status=200)
+    server.headers = {}
+    assert model.complete("s", "u").isOk()
+    assert len(server.requests) == 2
+
+
+def test_retry_after_on_other_errors_is_ignored(server):
+    server.reply("ignored", status=500)
+    server.headers = {"Retry-After": "30"}
+    model = OpenAiCompatibleLanguageModel(server.baseUrl)
+    model.complete("s", "u")
+
+    server.reply("{}", status=200)
+    server.headers = {}
+    assert model.complete("s", "u").isOk()
 
 
 @pytest.mark.parametrize("body", [b"not json", b'{"choices": []}', b"{}"])
