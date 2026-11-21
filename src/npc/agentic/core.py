@@ -1,19 +1,11 @@
-"""Agentic (CPC) NPC behavior driven by Claude claude-haiku-4-5-20251001 via the Anthropic API.
+"""Agentic (CPC) NPC behavior: the policy, with no I/O.
 
-Falls back transparently to ProgrammaticBehavior when ANTHROPIC_API_KEY is unset
-or the `anthropic` package is not installed.
+It asks a `LanguageModel` port for a plan on a `BackgroundRunner` port and
+falls back to ProgrammaticBehavior when no model is available (model=None).
+The production adapters are wired in `npc.agentic.service`.
 """
 import json
-import os
 import queue
-import threading
-
-try:
-    import anthropic as _anthropic_module
-
-    _ANTHROPIC_AVAILABLE = True
-except ImportError:
-    _ANTHROPIC_AVAILABLE = False
 
 from entity.apple import Apple
 from entity.banana import Banana
@@ -33,7 +25,6 @@ from npc.programmaticBehavior import (
 
 _logger = getLogger(__name__)
 
-_MODEL = "claude-haiku-4-5-20251001"
 _CALL_INTERVAL_TICKS = 90  # ~3 s at 30 TPS
 _OFF_GRID_GLYPH = "X"  # tile outside the room grid; distinct from "?" (creature)
 
@@ -92,13 +83,16 @@ _RESPONSE_SCHEMA = {
 
 
 class AgenticBehavior(NpcBehavior):
-    """NPC driven by Claude; degrades gracefully to ProgrammaticBehavior when
+    """NPC driven by a language model; degrades gracefully to ProgrammaticBehavior when
     the API is not reachable.
     """
 
-    def __init__(self):
+    def __init__(self, model, runner):
+        """`model` is a LanguageModel, or None to always use the fallback;
+        `runner` is the BackgroundRunner that model calls run on."""
         self._fallback = ProgrammaticBehavior()
-        self._client = self._buildClient()
+        self._model = model
+        self._runner = runner
         self._actionQueue: queue.Queue = queue.Queue()
         self._pendingCall = False
         self._ticksSinceCall = _CALL_INTERVAL_TICKS  # trigger on first opportunity
@@ -123,7 +117,7 @@ class AgenticBehavior(NpcBehavior):
         self._wantsRoomChange = False
 
     def tick(self, npc, room, tick, config):
-        if self._client is None:
+        if self._model is None:
             self._fallback.tick(npc, room, tick, config)
             self._stateName = "fsm:" + self._fallback.getStateName()
             self._goalDescription = self._fallback.getGoalDescription()
@@ -147,41 +141,19 @@ class AgenticBehavior(NpcBehavior):
             self._ticksSinceCall = 0
             self._pendingCall = True
             worldState = self._buildWorldState(npc, room)
-            threading.Thread(
-                target=self._callAI,
-                args=(worldState,),
-                daemon=True,
-            ).start()
+            self._runner.start(self._callAI, (worldState,))
 
     # ------------------------------------------------------------------ #
-    # Anthropic client construction                                        #
-    # ------------------------------------------------------------------ #
-
-    @staticmethod
-    def _buildClient():
-        if not _ANTHROPIC_AVAILABLE:
-            return None
-        key = os.environ.get("ANTHROPIC_API_KEY")
-        if not key:
-            return None
-        try:
-            return _anthropic_module.Anthropic(api_key=key)
-        except Exception:
-            return None
-
-    # ------------------------------------------------------------------ #
-    # AI call (runs in a daemon background thread)                        #
+    # AI call (runs on the BackgroundRunner)                              #
     # ------------------------------------------------------------------ #
 
     def _callAI(self, worldState: str):
         try:
-            response = self._client.messages.create(
-                model=_MODEL,
-                max_tokens=512,
-                system=_SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": worldState}],
-            )
-            text = next((b.text for b in response.content if b.type == "text"), "{}")
+            completion = self._model.complete(_SYSTEM_PROMPT, worldState)
+            if not completion.isOk():
+                _logger.warning("AI call failed", error=completion.getReason())
+                return
+            text = completion.getText()
             # Strip markdown fences the model may add despite instructions.
             text = text.strip()
             if text.startswith("```"):

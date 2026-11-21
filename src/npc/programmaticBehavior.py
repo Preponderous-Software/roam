@@ -18,7 +18,7 @@ _BUILD_THRESHOLD = 7
 
 
 # ------------------------------------------------------------------ #
-# Module-level helpers (imported by agenticBehavior)                  #
+# Module-level helpers (imported by agentic.core)                    #
 # ------------------------------------------------------------------ #
 
 
