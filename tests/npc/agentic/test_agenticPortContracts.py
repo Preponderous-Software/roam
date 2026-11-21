@@ -1,7 +1,9 @@
 """Contract tests: every LanguageModel / BackgroundRunner implementation,
 fake or production, must pass the same checks."""
 
+import json
 import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -10,6 +12,9 @@ import pytest
 from agenticFakes import FakeLanguageModel, InlineRunner
 from npc.agentic.adapters.anthropicLanguageModel import AnthropicLanguageModel
 from npc.agentic.adapters.daemonThreadRunner import DaemonThreadRunner
+from npc.agentic.adapters.openAiCompatibleLanguageModel import (
+    OpenAiCompatibleLanguageModel,
+)
 from npc.agentic.model import Completion
 
 
@@ -30,19 +35,61 @@ def _textBlock(text):
 # ------------------------------------------------------------------ #
 
 
+class _OneReplyServer:
+    """Serves one fixed chat-completions reply (or error) on 127.0.0.1."""
+
+    def __init__(self, content=None, status=200):
+        body = json.dumps({"choices": [{"message": {"content": content}}]}).encode()
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                self.rfile.read(int(self.headers.get("Content-Length", 0)))
+                self.send_response(status)
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *args):
+                pass
+
+        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(
+            target=self.httpd.serve_forever, args=(0.01,), daemon=True
+        ).start()
+        _servers.append(self.httpd)
+
+    def url(self):
+        return "http://127.0.0.1:%d/v1" % self.httpd.server_address[1]
+
+
+_servers = []
+
+
+@pytest.fixture(autouse=True)
+def _closeServers():
+    yield
+    while _servers:
+        httpd = _servers.pop()
+        httpd.shutdown()
+        httpd.server_close()
+
+
 def _answering(kind, text):
+    if kind == "openai":
+        return OpenAiCompatibleLanguageModel(_OneReplyServer(content=text).url())
     if kind == "fake":
         return FakeLanguageModel(Completion.ok(text))
     return AnthropicLanguageModel(_sdkStub(content=[_textBlock(text)]))
 
 
 def _failing(kind, reason):
+    if kind == "openai":
+        return OpenAiCompatibleLanguageModel(_OneReplyServer(status=500).url())
     if kind == "fake":
         return FakeLanguageModel(Completion.failed(reason))
     return AnthropicLanguageModel(_sdkStub(error=RuntimeError(reason)))
 
 
-@pytest.mark.parametrize("kind", ["fake", "anthropic"])
+@pytest.mark.parametrize("kind", ["fake", "anthropic", "openai"])
 def test_language_model_returns_the_reply_text(kind):
     completion = _answering(kind, '{"goal": "g"}').complete("sys", "user")
     assert completion.isOk()
@@ -55,6 +102,14 @@ def test_language_model_reports_failure_as_a_value(kind):
     completion = _failing(kind, "rate limited").complete("sys", "user")
     assert not completion.isOk()
     assert completion.getReason() == "rate limited"
+    assert completion.getText() is None
+
+
+@pytest.mark.parametrize("kind", ["fake", "anthropic", "openai"])
+def test_language_model_failure_has_a_reason_and_no_text(kind):
+    completion = _failing(kind, "rate limited").complete("sys", "user")
+    assert not completion.isOk()
+    assert completion.getReason()
     assert completion.getText() is None
 
 

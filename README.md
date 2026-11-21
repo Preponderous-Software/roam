@@ -48,7 +48,11 @@ Right Mouse (inventory slot) | Select inventory slot (inventory screen)
 >
 > **Tip:** In text / terminal mode (`--text`), a terminal can't detect held keys, so use the toggles **R** (run) and **Z** (crouch) instead of holding Shift / Ctrl. The active state is shown in the status bar. A terminal also can't send Print Screen — use **P** to save a `.txt` screenshot instead, and **`,`** / **`.`** / **`/`** in place of Page Up / Page Down / Home to page the minimap between cave levels.
 >
-> **Tip:** CPC mode is driven by Claude. It needs the `anthropic` package (`pip install anthropic`, which `requirements.txt` leaves out because the game runs without it) and the `ANTHROPIC_API_KEY` environment variable. Without either one, CPCs fall back to the built-in NPC behaviour.
+> **Tip:** CPC mode (`npcMode: cpc` in `config.yml`) is driven by a language model, chosen from environment variables:
+> - **Any OpenAI-compatible server**, such as a self-hosted llama.cpp `llama-server`, Ollama, vLLM or LM Studio: set `ROAM_NPC_MODEL_URL` to its API root (e.g. `http://localhost:11434/v1` for Ollama). Optional: `ROAM_NPC_MODEL_NAME` (the model to ask for; Ollama needs it, e.g. `llama3.2:3b`), `ROAM_NPC_MODEL_KEY` (sent as a bearer token) and `ROAM_NPC_MODEL_TIMEOUT` (seconds per request, default 60; raise it for slow hardware). No extra package is needed. This wins when set.
+> - **Claude**: install the `anthropic` package (`pip install anthropic`, which `requirements.txt` leaves out because the game runs without it) and set `ANTHROPIC_API_KEY`.
+>
+> With neither, CPCs fall back to the built-in NPC behaviour.
 
 ## Download & Install (recommended)
 The easiest way to play Roam — no Python and no command line. Grab the latest build from the [Releases page](https://github.com/Preponderous-Software/roam/releases):
