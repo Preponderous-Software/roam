@@ -551,6 +551,33 @@ def test_execute_action_wraps_out_of_range_directions():
     assert npc.getLocationID() == expected.getID()
 
 
+@pytest.mark.parametrize("direction", ["not provided", "up", None, [2], True])
+def test_execute_action_moves_down_when_the_direction_is_not_an_integer(direction):
+    # Local models sometimes write "not provided", null or a word here; the
+    # game thread must not raise, so the default direction (2, down) is used.
+    room, npc, behavior = _setup(gridSize=7)
+    location = _locationOfNpc(room, npc)
+    expected = room.getGrid().getLocationByCoordinates(
+        location.getX(), location.getY() + 1
+    )
+
+    behavior._executeAction({"type": "move", "direction": direction}, npc, room, 5)
+
+    assert npc.getLocationID() == expected.getID()
+
+
+def test_execute_action_accepts_a_direction_sent_as_a_numeric_string():
+    room, npc, behavior = _setup(gridSize=7)
+    location = _locationOfNpc(room, npc)
+    expected = room.getGrid().getLocationByCoordinates(
+        location.getX() + 1, location.getY()
+    )
+
+    behavior._executeAction({"type": "move", "direction": "3"}, npc, room, 5)
+
+    assert npc.getLocationID() == expected.getID()
+
+
 def test_execute_action_requests_a_room_change_at_the_boundary():
     room, npc, behavior = _setup(gridSize=5, npcX=0, npcY=0)
     before = npc.getLocationID()
@@ -676,6 +703,23 @@ def test_execute_action_places_wood_on_an_adjacent_tile():
     assert len(target.getEntities()) == 1
     assert npc.getInventory().getNumItemsByType(OakWood) == 0
     assert npc.getTickLastPlaced() == 11
+    assert behavior.getStateName() == "cpc-place"
+
+
+def test_execute_action_place_treats_a_non_integer_offset_as_zero():
+    room, npc, behavior = _setup(gridSize=7)
+    npc.getInventory().placeIntoFirstAvailableInventorySlot(OakWood())
+    location = _locationOfNpc(room, npc)
+    target = room.getGrid().getLocationByCoordinates(
+        location.getX(), location.getY() + 1
+    )
+
+    behavior._executeAction({"type": "place", "dx": None, "dy": 1}, npc, room, 11)
+    behavior._executeAction(
+        {"type": "place", "dx": "not provided", "dy": 1}, npc, room, 12
+    )
+
+    assert len(target.getEntities()) == 1
     assert behavior.getStateName() == "cpc-place"
 
 
